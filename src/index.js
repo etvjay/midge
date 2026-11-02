@@ -12,4 +12,6 @@ export { ResilienceEngine } from './resilience/failure-matrix.js';
 export { OneClickIntentAdapter } from './intents/oneclick.js';
 export { OutLayerPolicyGuard } from './policies/outlayer.js';
 export { FlyMcpServer, FLY_MCP_TOOLS } from './mcp/server.js';
+export { FlyApiDaemon } from './api/server.js';
+export { FlyClient } from './sdk/client.js';
 export { runDarkSwarmSimulation } from './simulation/runner.js';

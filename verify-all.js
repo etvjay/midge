@@ -5,6 +5,7 @@ import { verifyDarkVaultAndEcosystem } from './verifications/04-dark-vault-epoch
 import { verifyConfidentialRfqAndAdjudication } from './verifications/05-confidential-rfq-adjudication.js';
 import { verifyOtcAndComputeFacilities } from './verifications/06-otc-and-compute-facilities.js';
 import { verifyResilienceFailureMatrix } from './verifications/07-resilience-failure-matrix.js';
+import { verifyApiSseMcpE2E } from './verifications/08-api-sse-mcp-e2e.js';
 
 async function runAllVerifications() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
@@ -64,6 +65,13 @@ async function runAllVerifications() {
     results.resilience = { verified: false, error: err.message };
   }
 
+  try {
+    results.apiSseMcp = await verifyApiSseMcpE2E();
+  } catch (err) {
+    console.error('❌ API, SSE, x402 & MCP Check Failed:', err.message);
+    results.apiSseMcp = { verified: false, error: err.message };
+  }
+
   const duration = ((Date.now() - startTotal) / 1000).toFixed(2);
   const allPassed =
     results.tee.verified &&
@@ -72,7 +80,8 @@ async function runAllVerifications() {
     results.darkVault.verified &&
     results.rfq.verified &&
     results.otcCompute.verified &&
-    results.resilience.verified;
+    results.resilience.verified &&
+    results.apiSseMcp.verified;
 
   console.log('\n════════════════════════════════════════════════════════════════');
   console.log('                 FINAL VERIFICATION SUMMARY                     ');
@@ -84,9 +93,10 @@ async function runAllVerifications() {
   console.log(` 5. Confidential RFQ & Private Adjudication:     ${results.rfq.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 6. OTC Block Trades & AI Compute Syndicate:     ${results.otcCompute.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 7. 5-Layer Resilience Failure Matrix (FMEA):    ${results.resilience.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 8. HTTP Gateway Daemon, SSE, x402 & MCP Server: ${results.apiSseMcp.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log('────────────────────────────────────────────────────────────────');
   console.log(` Total Execution Time: ${duration}s`);
-  console.log(` Verdict: ${allPassed ? 'ALL 7 ARCHITECTURAL VERIFICATIONS PASSED (100% COMPLETE)' : 'CHECKS FAILED'}`);
+  console.log(` Verdict: ${allPassed ? 'ALL 8 ARCHITECTURAL VERIFICATIONS PASSED (100% COMPLETE)' : 'CHECKS FAILED'}`);
   console.log('════════════════════════════════════════════════════════════════\n');
 
   if (!allPassed) {
