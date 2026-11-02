@@ -100,7 +100,7 @@ export async function verifyDarkVaultAndEcosystem() {
   });
   console.log(`  ✓ Clean Withdrawal:    ${withdrawal.withdrawalId} (${withdrawal.decoupledFrom})`);
 
-  console.log('\n>>> [PASS] DARK VAULT, PODS & MULTICHAIN MPC 100% VERIFIED.');
+  console.log('\n>>> [PASS] DARK VAULT, PODS & MULTICHAIN MPC VERIFIED (Simulated Environment).');
   return { verified: true, vaultType: vault.type, epochsCompleted: vault.epoch - 1 };
 }
 

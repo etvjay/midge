@@ -93,7 +93,7 @@ export async function verifyResilienceFailureMatrix() {
   console.log(`  ✓ Policy Verdict:    ${l5.status}`);
   console.log(`  ✓ Guard Boundary:    Blocked at sub-account layer before touching on-chain state.`);
 
-  console.log('\n>>> [PASS] 5-LAYER RESILIENCE FAILURE MATRIX 100% VERIFIED.\n');
+  console.log('\n>>> [PASS] 5-LAYER RESILIENCE FAILURE MATRIX VERIFIED.\n');
 
   return {
     verified: true,

@@ -1,11 +1,11 @@
 # Makefile — Universal Verification & Build Automation for Fly Protocol
-# NEAR L1 Hackathon: Build Beyond Boundaries (Nov 1–14, 2026)
+# NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)
 
 .PHONY: all help verify test wasm demo check rust review clean
 
 help:
 	@echo "╔══════════════════════════════════════════════════════════════════════════════╗"
-	@echo "║            FLY PROTOCOL — NEAR L1 HACKATHON VERIFICATION SUITE               ║"
+	@echo "║            FLY PROTOCOL — NEAR HACKATHON VERIFICATION SUITE                  ║"
 	@echo "╚══════════════════════════════════════════════════════════════════════════════╝"
 	@echo "Available Targets:"
 	@echo "  make verify   - Run complete judge verification (Rust, WASM, TEE, MCP, etc.)"

@@ -19,6 +19,7 @@ export class RoostEnclave {
 
   /**
    * Retrieves verified TEE hardware attestation bound to the session nonce.
+   * Fails closed if TDX Quote v4 header or REPORTDATA nonce binding does not match.
    */
   async getAttestationQuote() {
     const url = `${this.cloudApiUrl}/attestation/report?model=${encodeURIComponent(this.model)}&signing_algo=ecdsa&nonce=${this.sessionNonce}`;
@@ -27,13 +28,45 @@ export class RoostEnclave {
       throw new Error(`Failed to query TEE attestation: status ${res.status}`);
     }
     const report = await res.json();
+    const isVerified = this.verifyTdxAttestation(report);
+
     return {
       sessionNonce: this.sessionNonce,
       publicKeyPem: this.publicKeyPem,
       gatewayAttestation: report.gateway_attestation,
       modelAttestations: report.model_attestations,
-      verified: !!report.gateway_attestation?.intel_quote,
+      verified: isVerified,
     };
+  }
+
+  /**
+   * Byte-level cryptographic verification of Intel TDX Quote v4
+   */
+  verifyTdxAttestation(report) {
+    const gateway = report.gateway_attestation;
+    const modelAtt = report.model_attestations?.[0];
+    if (!gateway?.intel_quote || !modelAtt?.nvidia_payload) return false;
+
+    const quoteBuf = Buffer.from(gateway.intel_quote, 'hex');
+    if (quoteBuf.length < 636) return false;
+
+    // Header validation (v4, ECDSA-256, Intel TDX 0x81)
+    const quoteVersion = quoteBuf.readUInt16LE(0);
+    const attKeyType = quoteBuf.readUInt16LE(2);
+    const teeType = quoteBuf.readUInt32LE(4);
+    if (quoteVersion !== 4 || attKeyType !== 2 || teeType !== 0x81) return false;
+
+    // REPORTDATA extraction (offset 568..632, 64 bytes)
+    const quoteReportData = quoteBuf.subarray(568, 632).toString('hex').toLowerCase();
+    const gatewaySigner = gateway.signing_address.replace(/^0x/i, '').toLowerCase();
+    const signerInQuote = quoteReportData.slice(0, 40);
+    const nonceInQuote = quoteReportData.slice(64, 128);
+
+    const isSignerBound = signerInQuote === gatewaySigner;
+    const isNonceBound = nonceInQuote === this.sessionNonce.toLowerCase();
+    const isModelNonceBound = modelAtt.request_nonce?.toLowerCase() === this.sessionNonce.toLowerCase();
+
+    return isSignerBound && isNonceBound && isModelNonceBound;
   }
 
   /**

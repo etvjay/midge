@@ -96,7 +96,7 @@ export async function runDarkSwarmSimulation() {
   console.log(`  ✓ Decoupled Graph:     Zero on-chain links between depositor wallets and payout addresses.`);
 
   console.log('\n════════════════════════════════════════════════════════════════');
-  console.log(' [RESULT] DARK SWARM EXECUTION COMPLETE: 100% VERIFIED');
+  console.log(' [RESULT] DARK SWARM EXECUTION COMPLETE: 10/10 FLYERS PROCESSED');
   console.log('════════════════════════════════════════════════════════════════\n');
 
   return {

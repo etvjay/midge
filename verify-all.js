@@ -10,7 +10,7 @@ import { verifyApiSseMcpE2E } from './verifications/08-api-sse-mcp-e2e.js';
 async function runAllVerifications() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
   console.log('║       FLY PROTOCOL: COMPLETE MASTER VERIFICATION SUITE         ║');
-  console.log('║       NEAR L1 Hackathon: Build Beyond Boundaries (Nov 2026)    ║');
+  console.log('║    NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)          ║');
   console.log('╚════════════════════════════════════════════════════════════════╝');
 
   const startTotal = Date.now();
@@ -96,7 +96,7 @@ async function runAllVerifications() {
   console.log(` 8. HTTP Gateway Daemon, SSE, x402 & MCP Server: ${results.apiSseMcp.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log('────────────────────────────────────────────────────────────────');
   console.log(` Total Execution Time: ${duration}s`);
-  console.log(` Verdict: ${allPassed ? 'ALL 8 ARCHITECTURAL VERIFICATIONS PASSED (100% COMPLETE)' : 'CHECKS FAILED'}`);
+  console.log(` Verdict: ${allPassed ? 'ALL 8 ARCHITECTURAL VERIFICATIONS PASSED (Contract & TEE Bound, Facilities Simulated)' : 'CHECKS FAILED'}`);
   console.log('════════════════════════════════════════════════════════════════\n');
 
   if (!allPassed) {

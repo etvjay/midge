@@ -59,7 +59,7 @@ export async function verifyOtcAndComputeFacilities() {
   console.log(`  ✓ Privacy Protection:  ${inference.privacyGuarantee}`);
   console.log(`  ✓ Result Digest:       ${inference.inferenceResultHash.substring(0, 24)}...`);
 
-  console.log('\n>>> [PASS] OTC BLOCK TRADES & COMPUTE SYNDICATE 100% VERIFIED.\n');
+  console.log('\n>>> [PASS] OTC BLOCK TRADES & COMPUTE SYNDICATE VERIFIED (Simulated Facility).\n');
 
   return {
     verified: true,

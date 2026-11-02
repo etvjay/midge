@@ -69,7 +69,7 @@ export async function verifyConfidentialRfqAndAdjudication() {
   console.log(`  [ETH @ $2,100] Status: ${healthC.verdict} | Current LTV: ${healthC.currentLtvPercent}% | Action: ${healthC.actionRequired}`);
   console.log(`    ↳ Settlement Path:   Orderly private auction on FAR Private Shard (No DEX flash dump).`);
 
-  console.log('\n>>> [PASS] CONFIDENTIAL RFQ & PRIVATE ADJUDICATION 100% VERIFIED.');
+  console.log('\n>>> [PASS] CONFIDENTIAL RFQ & PRIVATE ADJUDICATION VERIFIED (Simulated Facility).');
   return {
     verified: true,
     loanId: loan.loanId,
