@@ -14,7 +14,8 @@
     "verify:rfq": "node verifications/05-confidential-rfq-adjudication.js",
     "verify:otc": "node verifications/06-otc-and-compute-facilities.js",
     "verify:matrix": "node verifications/07-resilience-failure-matrix.js",
-    "verify:rust": "cd contracts/fly-coordinator && cargo test"
+    "verify:rust": "cd contracts/fly-coordinator && cargo test",
+    "build:wasm": "cd contracts/fly-coordinator && cargo build --target wasm32-unknown-unknown --release"
   },
   "keywords": [
     "near",

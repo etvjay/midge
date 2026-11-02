@@ -6,8 +6,10 @@ import crypto from 'node:crypto';
  * and coordinates threshold signing via NEAR's decentralized MPC network (v1.signer).
  */
 export class ChainSignaturesMPC {
-  constructor({ mpcContractId = 'v1.signer' } = {}) {
-    this.mpcContractId = mpcContractId;
+  constructor({ networkId = 'testnet', mpcContractId } = {}) {
+    this.networkId = networkId;
+    this.mpcContractId =
+      mpcContractId || (networkId === 'mainnet' ? 'v1.signer' : 'v1.signer-prod.testnet');
   }
 
   /**

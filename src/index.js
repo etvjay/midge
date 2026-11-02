@@ -11,4 +11,5 @@ export { ConfidentialComputeSyndicate } from './facilities/compute-syndicate.js'
 export { ResilienceEngine } from './resilience/failure-matrix.js';
 export { OneClickIntentAdapter } from './intents/oneclick.js';
 export { OutLayerPolicyGuard } from './policies/outlayer.js';
+export { FlyMcpServer, FLY_MCP_TOOLS } from './mcp/server.js';
 export { runDarkSwarmSimulation } from './simulation/runner.js';
