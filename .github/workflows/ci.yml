@@ -15,8 +15,13 @@ jobs:
     name: Complete Canonical Verification Suite
     runs-on: ubuntu-latest
     steps:
+      # Full history: the foundry audit verifies that every commit recorded in
+      # state.json, claims.jsonl and gaps.jsonl exists (git cat-file -e), which a
+      # shallow clone cannot do.
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
