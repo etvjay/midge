@@ -22,7 +22,8 @@
     "verify:api": "node verifications/08-api-sse-mcp-e2e.js",
     "verify:rust": "cd contracts/fly-coordinator && cargo test",
     "build:wasm": "cd contracts/fly-coordinator && cargo build --target wasm32-unknown-unknown --release",
-    "check:foundry": "node scripts/check-foundry.js"
+    "check:foundry": "node scripts/check-foundry.js",
+    "review:argon": "node scripts/argon-review.js"
   },
   "keywords": [
     "near",
