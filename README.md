@@ -26,7 +26,7 @@ Fly provides a zero-setup, deterministic verification harness requiring standard
 # or: make verify
 # or: npm run verify
 ```
-*Total verification runtime: **<25.0s** (Deterministic, 36 Rust tests, DCAP Root CA bound, zero external keys needed).*
+*Total verification runtime: **<30.0s** (Deterministic, 44 Rust tests, DCAP Root CA bound, on-chain RPC verified, zero external keys needed).*
 
 ---
 
@@ -34,20 +34,38 @@ Fly provides a zero-setup, deterministic verification harness requiring standard
 Fly is deployed and live on NEAR Testnet at coordinator account:  
 👉 **[`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet)**
 
-* **Do:**
+#### Reproducible WASM Build & Cryptographic Verification
+* **Toolchain:** `rustc 1.84+ / cargo 1.98.0` with `wasm32-unknown-unknown`
+* **Build Command:**
   ```bash
-  npm run verify:testnet
+  cd contracts/fly-coordinator && RUSTFLAGS="-C link-arg=-s" cargo build --target wasm32-unknown-unknown --release
   ```
-* **See:**
-  - Audits 8 on-chain transactions executed on NEAR Testnet:
-    1. **Syndicate Hatch:** [`AEZ7Ar5LXQekRUp5RdpYYRAPrGAKGqXA4iVriXPPrhL5`](https://testnet.nearblocks.io/txns/AEZ7Ar5LXQekRUp5RdpYYRAPrGAKGqXA4iVriXPPrhL5)
-    2. **Flyer 1 Deposit (0.02 NEAR):** [`97sBa13ErjwjL3hJQWWQjHhyNJqJGT4uHZ4JwqLBiqpa`](https://testnet.nearblocks.io/txns/97sBa13ErjwjL3hJQWWQjHhyNJqJGT4uHZ4JwqLBiqpa)
-    3. **Flyer 2 Deposit (0.02 NEAR):** [`VshLnMCWvyhXApZyeV35kTLxH5FC3iXAF5XF6Qk42ek`](https://testnet.nearblocks.io/txns/VshLnMCWvyhXApZyeV35kTLxH5FC3iXAF5XF6Qk42ek)
-    4. **Flyer 3 Deposit (0.02 NEAR):** [`J9iVhzc7QUvoFBHfsJ7KSat7LbfMtwXaicTntXyF5PdQ`](https://testnet.nearblocks.io/txns/J9iVhzc7QUvoFBHfsJ7KSat7LbfMtwXaicTntXyF5PdQ)
-    5. **Flash Settlement (5.81 TGas):** [`12vpDrnpZudg8egtdMXvt27sDfQjk9sZTg3SzJREadUh`](https://testnet.nearblocks.io/txns/12vpDrnpZudg8egtdMXvt27sDfQjk9sZTg3SzJREadUh) — Verifies Ed25519 signature and dispatches 0.06 NEAR payout.
-    6. **Escape Hatch Syndicate Hatch:** [`HWZEtG8neAgvseohv63ba4B2FcXW36vvPPmMZyLAyQJu`](https://testnet.nearblocks.io/txns/HWZEtG8neAgvseohv63ba4B2FcXW36vvPPmMZyLAyQJu)
-    7. **Flyer 2 Escape Deposit:** [`DU9ULPqj3rDcht5wQ53nrobq5EdLdJCENhq8tn2nyQNk`](https://testnet.nearblocks.io/txns/DU9ULPqj3rDcht5wQ53nrobq5EdLdJCENhq8tn2nyQNk)
-    8. **Non-Custodial Escape Hatch (4.92 TGas):** [`DR3VmCytXwPM1pk7pvN9GLQnStRWdvEH9eBAZTc7vFgk`](https://testnet.nearblocks.io/txns/DR3VmCytXwPM1pk7pvN9GLQnStRWdvEH9eBAZTc7vFgk) — Repatriates 100% escrow balance after timelock.
+* **Release Binary:** `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (304 KB, 311,421 bytes)
+* **Binary SHA-256:** `ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1`
+* **On-Chain Code Hash:** `GwjB69No5TfDcuFTrff67kNmRUd7fQDW75kMxZp9Mxwi`
+
+* **Do (Independent On-Chain Verification):**
+  ```bash
+  npm run verify:onchain
+  # or: node scripts/verify-onchain.js (use --offline when without network)
+  ```
+* **See (10 Cryptographically Verified Transactions on NEAR Testnet Ledger):**
+  - **Happy Path (Bounded Settlement Authority with ReleasePolicy):**
+    1. **Syndicate Hatch:** [`3x3WcdZeZn8hKeQ3JMUp5QZUzLSqibE93JcTTxCszbht`](https://testnet.nearblocks.io/txns/3x3WcdZeZn8hKeQ3JMUp5QZUzLSqibE93JcTTxCszbht) — Binds immutable `ReleasePolicy` whitelist and records policy hash `a21710781748478e...`.
+    2. **Flyer 1 Deposit (0.02 NEAR):** [`6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT`](https://testnet.nearblocks.io/txns/6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT) — Depositor explicitly consents to `policy_hash`.
+    3. **Flyer 2 Deposit (0.02 NEAR):** [`3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm`](https://testnet.nearblocks.io/txns/3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm) — Depositor explicitly consents to `policy_hash`.
+    4. **Batch Settlement (5.92 TGas):** [`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF) — Verifies Ed25519 6-tuple signature over sorted `allocations_hash`, applies pro-rata balance deductions with exact dust conservation, and dispatches 0.04 NEAR payout.
+  - **Security Track Attack Demos (On-Chain Rejection Proofs):**
+    5. **[Security Proof] Non-Whitelisted Recipient Rejection:** [`ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh`](https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh) — Enclave signature attempting to route funds to an unauthorized address was **rejected on-chain** with failure receipt.
+    6. **[Security Proof] Over-Cap BPS Release Rejection:** [`pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW`](https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW) — Settlement attempting to exceed the 25% max epoch release cap was **rejected on-chain**.
+    7. **[Security Proof] Wrong Nonce Replay Rejection:** [`FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg`](https://testnet.nearblocks.io/txns/FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg) — Replayed settlement with stale nonce was **rejected on-chain**.
+  - **Stalled Enclave Escape Hatch (`hatch_out`):**
+    8. **Escape Hatch Syndicate Hatch:** [`GEWxs59E2xxnDTUQajBzTNvUKgRgzsKFCcrQxVpgjmmp`](https://testnet.nearblocks.io/txns/GEWxs59E2xxnDTUQajBzTNvUKgRgzsKFCcrQxVpgjmmp)
+    9. **Flyer 2 Escape Deposit:** [`DzQvbzpfwPhS59CyESMAwW2YMcBTkzYV341utodbwYAh`](https://testnet.nearblocks.io/txns/DzQvbzpfwPhS59CyESMAwW2YMcBTkzYV341utodbwYAh)
+    10. **Non-Custodial Escape Hatch (5.10 TGas):** [`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB) — Sovereign refund of 100% escrow balance executed without operator action.
+  - **Multi-Syndicate Discovery:**
+    - `list_syndicates()` returned 6 active/settled syndicates on testnet.
+    - `list_syndicates_by_member("f2.fly-1793636729.testnet")` returned 3 syndicates on testnet.
 
 ---
 
@@ -143,7 +161,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 | Component | Implementation File | Status | Nature | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet`. Written in Rust (`near-sdk 5.1`). Compiles to 319 KB release WASM. 36 tests (28 unit, 6 integration, 2 proptest invariant fuzzers). Real on-chain settlements (5.81 TGas) and escape hatch refunds (4.92 TGas). |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet` (code hash `GwjB69No5TfDcuFTrff67kNmRUd7fQDW75kMxZp9Mxwi`). Written in Rust (`near-sdk 5.1`). Compiles to 304 KB release WASM (`ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1`). 44 tests (34 unit, 6 integration, 4 proptest invariant fuzzers). Real on-chain settlements (5.92 TGas), escape hatch refunds (5.10 TGas), and 3 security track rejection proofs verified on-chain. |
 | **TEE Remote Attestation** | `verifications/01-hardware-attestation.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & DCAP-QVL** | Queries live NEAR AI Cloud (`cloud-api.near.ai/v1/attestation/report`) with fresh nonces. Parses binary Intel TDX Quote v4. Verified via `dcap-qvl` to Intel SGX Root CA with TCB `UpToDate`, 0 advisories, and tamper rejection. (GAP-006 CLOSED). |
 | **Chain Signatures MPC** | `scripts/testnet-mpc.js`, `src/multichain/chain-signatures.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & MPC SIGNED** | Executed live threshold signing on `v1.signer-prod.testnet` (tx: `6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk`). Derived BTC Taproot, EVM, and Solana addresses. Cryptographically verified ECDSA recovery. (GAP-005 CLOSED). |
 | **TEE Inference Attestation** | `scripts/verify-inference.js` | **VERIFIED** | **LIVE EXTERNAL / FIXTURE** | Validates official NEAR AI Cloud inference response signatures (`<MODEL>:<req_hash>:<resp_hash>`) via EIP-191 signer recovery against hardware-attested enclave keys. Tamper-rejected on flipped bytes. |
@@ -172,8 +190,8 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 3. **Domain Separation & Cryptographic Settlement:**
    - Every Ed25519 settlement batch signature binds the strict 6-tuple:  
-     `current_account_id:syndicate_id:epoch:round_nonce:payout_recipient:aggregate_order_hash`.
-   - Any front-runner attempting to alter the recipient or replay a signature across contracts, syndicates, or epochs will fail contract verification.
+     `current_account_id:syndicate_id:epoch:round_nonce:allocations_hash:aggregate_order_hash`.
+   - Any front-runner attempting to alter allocations, recipients, or replay a signature across contracts, syndicates, or epochs will fail contract verification.
 
 4. **Non-Custodial Escape Valve (`hatch_out`):**
    - Escrows are stored in a contract-level `LookupMap<(syndicate_id, account_id), NearToken>`.
@@ -190,7 +208,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 ## 5. Network Topology & Discovery Architecture
 
 > [!NOTE]
-> Network discovery methods (`list_syndicates`, `list_syndicates_by_member`, NEP-297 events) are fully implemented and tested in the Rust smart contract (`contracts/fly-coordinator/src/lib.rs`) and demonstrated via `scripts/network-demo.js`. The currently deployed testnet coordinator (`c.fly-1793636729.testnet`) runs the baseline v1 WASM; full on-chain redeployment with testnet transaction proofs is scheduled in Task Y2.
+> Network discovery methods (`list_syndicates`, `list_syndicates_by_member`, NEP-297 events) are deployed and live on NEAR Testnet at `c.fly-1793636729.testnet`. Autonomous agents discover active syndicates and their own memberships directly through RPC view calls with bounded gas.
 
 Fly is designed as an **Autonomous Syndicate Network**: a single NEAR L1 coordinator smart contract hosts multiple independent syndicates, each specialized in a financial or computational mission (e.g. signal research, algorithmic execution, AI compute).
 
