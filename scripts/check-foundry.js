@@ -81,12 +81,12 @@ function runCheck() {
     errors.push('foundry/state.json is missing required fields (project, head, last_verified_head).');
   } else {
     try {
-      execSync(`git cat-file -e ${state.head}^{commit}`, { cwd: rootDir, stdio: 'ignore' });
+      execSync(`git merge-base --is-ancestor ${state.head} HEAD`, { cwd: rootDir, stdio: 'ignore' });
     } catch {
       errors.push(`foundry/state.json head commit '${state.head}' does not exist in git repository.`);
     }
     try {
-      execSync(`git cat-file -e ${state.last_verified_head}^{commit}`, { cwd: rootDir, stdio: 'ignore' });
+      execSync(`git merge-base --is-ancestor ${state.last_verified_head} HEAD`, { cwd: rootDir, stdio: 'ignore' });
     } catch {
       errors.push(`foundry/state.json last_verified_head commit '${state.last_verified_head}' does not exist in git repository.`);
     }
@@ -118,7 +118,7 @@ function runCheck() {
         }
         if (claim.last_verified_head) {
           try {
-            execSync(`git cat-file -e ${claim.last_verified_head}^{commit}`, { cwd: rootDir, stdio: 'ignore' });
+            execSync(`git merge-base --is-ancestor ${claim.last_verified_head} HEAD`, { cwd: rootDir, stdio: 'ignore' });
           } catch {
             errors.push(`Claim ${claim.id} last_verified_head commit '${claim.last_verified_head}' does not exist in git.`);
           }
@@ -164,7 +164,7 @@ function runCheck() {
             errors.push(`Gap ${gap.id} is marked CLOSED but lacks 'closed_by_commit'.`);
           } else {
             try {
-              execSync(`git cat-file -e ${gap.closed_by_commit}^{commit}`, { cwd: rootDir, stdio: 'ignore' });
+              execSync(`git merge-base --is-ancestor ${gap.closed_by_commit} HEAD`, { cwd: rootDir, stdio: 'ignore' });
             } catch {
               errors.push(`Gap ${gap.id} closed_by_commit '${gap.closed_by_commit}' does not exist in git.`);
             }
