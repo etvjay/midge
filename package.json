@@ -8,6 +8,7 @@
     "fly-mcp": "./bin/fly-mcp.js"
   },
   "scripts": {
+    "verify": "./scripts/verify",
     "test": "node verify-all.js",
     "demo:syndicate": "node src/simulation/runner.js",
     "start:daemon": "node -e 'import(\"./src/api/server.js\").then(m => new m.FlyApiDaemon({ port: 3000 }).start().then(s => console.log(\"Fly Daemon live on port \" + s.port)))'",
@@ -20,7 +21,8 @@
     "verify:matrix": "node verifications/07-resilience-failure-matrix.js",
     "verify:api": "node verifications/08-api-sse-mcp-e2e.js",
     "verify:rust": "cd contracts/fly-coordinator && cargo test",
-    "build:wasm": "cd contracts/fly-coordinator && cargo build --target wasm32-unknown-unknown --release"
+    "build:wasm": "cd contracts/fly-coordinator && cargo build --target wasm32-unknown-unknown --release",
+    "check:foundry": "node scripts/check-foundry.js"
   },
   "keywords": [
     "near",
