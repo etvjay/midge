@@ -1,5 +1,5 @@
 use ed25519_dalek::{Signer, SigningKey};
-use fly_coordinator::{FlyCoordinator, SyndicateStatus};
+use fly_coordinator::{compute_allocations_hash, Allocation, FlyCoordinator, SyndicateStatus};
 #[allow(deprecated)]
 use near_sdk::test_utils::testing_env_with_promise_results;
 use near_sdk::test_utils::VMContextBuilder;
@@ -26,14 +26,14 @@ fn generate_enclave_keypair_and_sig(
     syndicate_id: &str,
     epoch: u64,
     nonce: &str,
-    payout_recipient: &str,
+    allocations_hash: &str,
     order_hash: &str,
 ) -> (String, String) {
     let signing_key = SigningKey::from_bytes(&[77u8; 32]);
     let verifying_key = signing_key.verifying_key();
     let message = format!(
         "{}:{}:{}:{}:{}:{}",
-        contract_id, syndicate_id, epoch, nonce, payout_recipient, order_hash
+        contract_id, syndicate_id, epoch, nonce, allocations_hash, order_hash
     );
     let signature = signing_key.sign(message.as_bytes());
     (
@@ -71,6 +71,7 @@ fn test_integration_full_syndicate_lifecycle_with_payout() {
         "mrenclave_code_measurement_hash".to_string(),
         Some(40), // 40 blocks timeout
         Some(payout_treasury.clone()),
+        None,
     );
 
     let syn = contract
@@ -79,6 +80,8 @@ fn test_integration_full_syndicate_lifecycle_with_payout() {
     assert_eq!(syn.payout_recipient, payout_treasury);
     assert_eq!(syn.quorum_threshold, 3);
     assert_eq!(syn.status, SyndicateStatus::Active);
+
+    let p_hash = contract.get_policy_hash(syn_id.clone());
 
     // 2. 3 Multi-Agent Flyers deposit into syndicate escrow
     let flyers: Vec<AccountId> = vec![
@@ -95,7 +98,7 @@ fn test_integration_full_syndicate_lifecycle_with_payout() {
     for (i, flyer) in flyers.iter().enumerate() {
         let ctx = get_context(flyer.clone(), deposits[i], 110 + i as u64);
         testing_env!(ctx.build());
-        contract.deposit(syn_id.clone());
+        contract.deposit(syn_id.clone(), p_hash.clone());
         assert_eq!(
             contract.get_escrow(syn_id.clone(), flyer.clone()),
             deposits[i]
@@ -106,22 +109,33 @@ fn test_integration_full_syndicate_lifecycle_with_payout() {
     assert_eq!(syn_funded.total_escrow, NearToken::from_near(60));
     assert_eq!(syn_funded.active_flyer_count, 3);
 
-    // 3. Deliberation in TEE produces aggregate order and signature
+    // 3. Deliberation in TEE produces aggregate order, allocations and signature
     let active_nonce = syn_funded.round_nonce.clone();
     let order_hash = "agg_twap_batch_root_hash_0x1234".to_string();
+    let allocations = vec![Allocation {
+        recipient: payout_treasury.clone(),
+        amount: NearToken::from_near(60),
+    }];
+    let alloc_hash = compute_allocations_hash(&allocations);
     let (_, enclave_sig) = generate_enclave_keypair_and_sig(
         coordinator_account.as_str(),
         &syn_id,
         1,
         &active_nonce,
-        payout_treasury.as_str(),
+        &alloc_hash,
         &order_hash,
     );
 
     // 4. Settle batch
     let ctx = get_context(owner, NearToken::from_near(0), 130);
     testing_env!(ctx.build());
-    contract.settle_batch(syn_id.clone(), active_nonce, order_hash, enclave_sig);
+    contract.settle_batch(
+        syn_id.clone(),
+        active_nonce,
+        order_hash,
+        allocations,
+        enclave_sig,
+    );
 
     let syn_settled = contract.get_syndicate(syn_id.clone()).unwrap();
     assert_eq!(syn_settled.status, SyndicateStatus::Settled);
@@ -156,7 +170,7 @@ fn test_integration_theft_frontrun_fails() {
         "secure-pool",
         1,
         "",
-        payout_treasury.as_str(),
+        "",
         "",
     );
 
@@ -169,25 +183,32 @@ fn test_integration_theft_frontrun_fails() {
         "mrenclave_code".to_string(),
         Some(50),
         Some(payout_treasury.clone()),
+        None,
     );
 
     // Flyer deposits
     let flyer: AccountId = "flyer-bob.near".parse().unwrap();
     let ctx = get_context(flyer, NearToken::from_near(50), 105);
     testing_env!(ctx.build());
-    contract.deposit(syn_id.clone());
+    let p_hash = contract.get_policy_hash(syn_id.clone());
+    contract.deposit(syn_id.clone(), p_hash);
 
     let syn = contract.get_syndicate(syn_id.clone()).unwrap();
     let active_nonce = syn.round_nonce.clone();
     let order_hash = "order_hash_abc".to_string();
 
-    // Attacker tries to forge signature for attacker-payout.near
+    // Attacker tries to forge signature for attacker-payout.near (not allowed recipient)
+    let bad_allocations = vec![Allocation {
+        recipient: "attacker-payout.near".parse().unwrap(),
+        amount: NearToken::from_near(50),
+    }];
+    let bad_alloc_hash = compute_allocations_hash(&bad_allocations);
     let (_, attacker_sig) = generate_enclave_keypair_and_sig(
         coordinator_account.as_str(),
         &syn_id,
         1,
         &active_nonce,
-        "attacker-payout.near",
+        &bad_alloc_hash,
         &order_hash,
     );
 
@@ -197,11 +218,17 @@ fn test_integration_theft_frontrun_fails() {
 
     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let mut c = contract;
-        c.settle_batch(syn_id, active_nonce, order_hash, attacker_sig);
+        c.settle_batch(
+            syn_id,
+            active_nonce,
+            order_hash,
+            bad_allocations,
+            attacker_sig,
+        );
     }));
     assert!(
         res.is_err(),
-        "Frontrun with altered payout recipient must fail"
+        "Frontrun with non-whitelisted payout recipient must fail"
     );
 }
 
@@ -232,19 +259,21 @@ fn test_integration_escape_hatch_and_storage_reclamation() {
         "mrenclave_code".to_string(),
         Some(20), // 20 blocks timeout
         None,
+        None,
     );
 
+    let p_hash = contract.get_policy_hash(syn_id.clone());
     let f1: AccountId = "flyer1.near".parse().unwrap();
     let f2: AccountId = "flyer2.near".parse().unwrap();
 
     // Both deposit
     let ctx = get_context(f1.clone(), NearToken::from_near(15), 105);
     testing_env!(ctx.build());
-    contract.deposit(syn_id.clone());
+    contract.deposit(syn_id.clone(), p_hash.clone());
 
     let ctx = get_context(f2.clone(), NearToken::from_near(25), 106);
     testing_env!(ctx.build());
-    contract.deposit(syn_id.clone());
+    contract.deposit(syn_id.clone(), p_hash);
 
     // Round stalls past timeout (block 130 > 100 + 20)
     // f1 calls hatch_out
@@ -303,22 +332,24 @@ fn test_integration_repeat_deposit_and_exit_loop() {
         "mrenclave_code".to_string(),
         Some(10), // 10 blocks timeout
         None,
+        None,
     );
 
+    let p_hash = contract.get_policy_hash(syn_id.clone());
     let anchor: AccountId = "anchor-flyer.near".parse().unwrap();
     let looping_flyer: AccountId = "looping-flyer.near".parse().unwrap();
 
     // Anchor flyer deposits 5 NEAR so syndicate stays active during loop tests
     let ctx = get_context(anchor, NearToken::from_near(5), 101);
     testing_env!(ctx.build());
-    contract.deposit(syn_id.clone());
+    contract.deposit(syn_id.clone(), p_hash.clone());
 
     // Looping flyer executes 10 sequential deposit -> exit cycles
     for i in 0..10 {
         let dep_block = 110 + i * 20;
         let ctx = get_context(looping_flyer.clone(), NearToken::from_near(1), dep_block);
         testing_env!(ctx.build());
-        contract.deposit(syn_id.clone());
+        contract.deposit(syn_id.clone(), p_hash.clone());
 
         let syn = contract.get_syndicate(syn_id.clone()).unwrap();
         assert_eq!(syn.active_flyer_count, 2);
@@ -337,7 +368,7 @@ fn test_integration_repeat_deposit_and_exit_loop() {
         let other: AccountId = format!("other-agent-{}.near", i).parse().unwrap();
         let ctx = get_context(other, NearToken::from_near(1), 320 + i as u64);
         testing_env!(ctx.build());
-        contract.deposit(syn_id.clone());
+        contract.deposit(syn_id.clone(), p_hash.clone());
     }
 
     let syn_full = contract.get_syndicate(syn_id).unwrap();
@@ -374,36 +405,50 @@ fn test_integration_settlement_failure_callback_rollback() {
         "mrenclave_code_hash".to_string(),
         Some(30), // 30 blocks timeout
         Some(payout_treasury.clone()),
+        None,
     );
 
+    let p_hash = contract.get_policy_hash(syn_id.clone());
     let f1: AccountId = "agent-01.near".parse().unwrap();
     let f2: AccountId = "agent-02.near".parse().unwrap();
 
     let ctx = get_context(f1.clone(), NearToken::from_near(15), 105);
     testing_env!(ctx.build());
-    contract.deposit(syn_id.clone());
+    contract.deposit(syn_id.clone(), p_hash.clone());
 
     let ctx = get_context(f2.clone(), NearToken::from_near(25), 106);
     testing_env!(ctx.build());
-    contract.deposit(syn_id.clone());
+    contract.deposit(syn_id.clone(), p_hash);
 
     let syn = contract.get_syndicate(syn_id.clone()).unwrap();
     let active_nonce = syn.round_nonce.clone();
     let order_hash = "order_hash_to_fail".to_string();
+
+    let allocations = vec![Allocation {
+        recipient: payout_treasury.clone(),
+        amount: NearToken::from_near(40),
+    }];
+    let alloc_hash = compute_allocations_hash(&allocations);
 
     let (_, enclave_sig) = generate_enclave_keypair_and_sig(
         coordinator_account.as_str(),
         &syn_id,
         1,
         &active_nonce,
-        payout_treasury.as_str(),
+        &alloc_hash,
         &order_hash,
     );
 
     // Call settle_batch
     let ctx = get_context(owner, NearToken::from_near(0), 110);
     testing_env!(ctx.build());
-    contract.settle_batch(syn_id.clone(), active_nonce, order_hash, enclave_sig);
+    contract.settle_batch(
+        syn_id.clone(),
+        active_nonce,
+        order_hash.clone(),
+        allocations.clone(),
+        enclave_sig,
+    );
 
     // Prior to callback, status is Settled and total_escrow is 0
     let syn_settling = contract.get_syndicate(syn_id.clone()).unwrap();
@@ -415,7 +460,13 @@ fn test_integration_settlement_failure_callback_rollback() {
     let ctx = get_context(self_account, NearToken::from_near(0), 115);
     testing_env_with_promise_results(ctx.build(), PromiseResult::Failed);
 
-    let rollback_ok = contract.on_settlement_payout(syn_id.clone(), NearToken::from_near(40));
+    let rollback_ok = contract.on_settlement_payout(
+        syn_id.clone(),
+        allocations,
+        NearToken::from_near(40),
+        alloc_hash,
+        order_hash,
+    );
     assert!(!rollback_ok);
 
     // Invariant verification: Syndicate is reverted to Active, funds restored
@@ -463,7 +514,7 @@ fn test_integration_hatch_out_failure_callback_rollback() {
         "hatchout-rollback",
         1,
         "",
-        "hatchout-rollback-treasury.near",
+        "",
         "",
     );
 
@@ -476,12 +527,14 @@ fn test_integration_hatch_out_failure_callback_rollback() {
         "mrenclave_code".to_string(),
         Some(20),
         None,
+        None,
     );
 
+    let p_hash = contract.get_policy_hash(syn_id.clone());
     let f1: AccountId = "flyer1.near".parse().unwrap();
     let ctx = get_context(f1.clone(), NearToken::from_near(30), 105);
     testing_env!(ctx.build());
-    contract.deposit(syn_id.clone());
+    contract.deposit(syn_id.clone(), p_hash);
 
     // Flyer executes hatch_out at block 125
     let ctx = get_context(f1.clone(), NearToken::from_near(0), 125);

@@ -10,8 +10,8 @@
   "high_open_gaps": 0,
   "external_blockers": 0,
   "live_evidence_current": true,
-  "total_claims": 13,
-  "verified_claims": 13,
+  "total_claims": 12,
+  "verified_claims": 12,
   "verification_summary": {
     "rust_smart_contract": "LIVE_DEMONSTRATED",
     "wasm_compilation": "TESTED",
@@ -24,7 +24,6 @@
     "resilience_failure_matrix_fmea": "TESTED",
     "http_sse_x402_mcp": "INTEGRATED",
     "dark_swarm_10_simulation": "SIMULATED",
-    "network_discovery_demo": "TESTED",
-    "tee_inference_attestation": "TESTED"
+    "network_discovery_demo": "TESTED"
   }
 }

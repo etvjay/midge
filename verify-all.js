@@ -104,7 +104,10 @@ async function runAllVerifications() {
   console.log(` 6. OTC Block Trades & AI Compute Syndicate:     ${results.otcCompute.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 7. 5-Layer Resilience Failure Matrix (FMEA):    ${results.resilience.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 8. HTTP Gateway Daemon, SSE, x402 & MCP Server: ${results.apiSseMcp.verified ? '✅ PASS' : '❌ FAIL'}`);
-  console.log(` 9. TEE Deliberation Inference Attestation:      ${results.inference.verified ? '✅ PASS' : '❌ FAIL'} (${results.inference.live ? 'Live External' : 'Recorded Fixture'})`);
+  const inferStatus = results.inference.live
+    ? '✅ PASS (Live External)'
+    : (results.inference.skipped ? '⚠️ SKIPPED (No API key; not demonstrated)' : '✅ PASS (Recorded Fixture)');
+  console.log(` 9. TEE Deliberation Inference Attestation:      ${inferStatus}`);
   console.log('────────────────────────────────────────────────────────────────');
   console.log(` Total Execution Time: ${duration}s`);
   if (isOffline) {

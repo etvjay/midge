@@ -32,14 +32,14 @@ async function callGemini(model, prompt, apiKey) {
     }
   });
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const req = https.request(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body)
       },
-      timeout: 30000
+      timeout: 90000
     }, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
@@ -61,7 +61,7 @@ async function callGemini(model, prompt, apiKey) {
     req.on('error', err => resolve({ ok: false, error: err.message, model }));
     req.on('timeout', () => {
       req.destroy();
-      resolve({ ok: false, error: 'Request timed out after 30s', model });
+      resolve({ ok: false, error: 'Request timed out after 90s', model });
     });
 
     req.write(body);
@@ -95,18 +95,17 @@ async function main() {
 
   const reviewPrompt = `
 You are a Principal Cryptographic Systems Architect, NEAR Core Protocol Auditor, and Senior Judge for the NEAR HACKATHON: Build Beyond Boundaries ($250k Prize Pool).
-Perform a rigorous, objective, and intellectually honest code and architectural review of the Fly Protocol repository.
+Perform a rigorous, objective, and intellectually honest code and architectural review of the Fly Protocol repository, specifically evaluating against Handoff 4 and the Parallel Research Reports (problem evidence, competitive landscape, judging calibration).
 
-=== CONTEXT & SUBMISSION ===
-Fly is an autonomous syndicate network for private systems on NEAR combining:
-1. NEAR AI Cloud TEEs (The Roost) with in-RAM Sealed Intent Aggregation (SIA), RSA-2048 encryption, and live Intel TDX hardware attestation.
-2. NEAR Confidential Intents & FAR Private Shard: 1Click Swap API asset auditing (210 assets), Intent Minted Tokens (IMT), ~200ms PBFT simulation, and decoupled settlement graphs.
-3. NEAR Chain Signatures MPC: Omnichain address derivation for Bitcoin Taproot, EVM, and Solana Ed25519 via v1.signer.
-4. The Hatch Protocol & OutLayer: Sub-account boundaries (*.fly.testnet), spending caps, and non-custodial 100% refund escape hatches (hatch_out).
-5. Institutional Facilities: Confidential RFQ with private margin adjudication (zero DEX liquidation dumps), OTC block dark crossing ($4.00/NEAR midpoint), and pooled AI compute credits on NEAR AI Cloud (Qwen/Qwen3.6-35B-A3B-FP8).
-6. Developer Interfaces: 18 HTTP REST endpoints, real-time SSE streaming, x402 PingPay micropayments, and Model Context Protocol (MCP) server.
-7. Production NEAR L1 Rust Smart Contract: near-sdk 5.1 with modern #[near] macros, compiling to 238 KB WebAssembly.
-8. Builder Foundry v1.0 Governance: state.json, claims.jsonl (11 claims), gaps.jsonl (0 open critical), single-command verification (make verify, ./scripts/verify in ~1.9s).
+=== CORE ARCHITECTURAL PARADIGM ===
+"Constrained arbitration with independent recovery" — The TEE is an arbiter, never a custodian.
+Key properties:
+1. Public deposits on NEAR L1 paired with confidential deliberation in memory inside the aggregator before Sealed Intent Aggregation (SIA) zeroing.
+2. Hardware Attestation: Live Intel TDX Quote v4 from NEAR AI Cloud verified via dcap-qvl to Intel Root CA.
+3. Omnichain execution via NEAR Chain Signatures MPC (v1.signer-prod.testnet).
+4. Non-custodial escape hatch (hatch_out): Unilateral per-user recovery after block timelock without coordinator approval and without draining other flyers.
+5. Task Y1 Focus: Bounding settlement authority with an immutable release policy (allowed_recipients <= 8, max_release_bps_per_epoch <= 10000, settle_deadline_block, policy_hash consent at deposit time, allocations hash verification).
+6. Honest status: TEE Roost aggregator runs locally (GAP-004); network discovery methods (list_syndicates, list_syndicates_by_member) implemented in contract and demonstrated in memory model pending redeploy; live TEE inference attestation skipped pending NEARAI_API_KEY.
 
 === SOURCE CODE SNIPPETS ===
 --- NEAR L1 Rust Smart Contract (contracts/fly-coordinator/src/lib.rs) ---
@@ -124,34 +123,42 @@ ${chainSigs.slice(0, 2000)}
 --- Nest Contract & Escape Hatch (src/contracts/nest.js) ---
 ${nestContract.slice(0, 2000)}
 
---- Confidential RFQ Facility (src/facilities/rfq-adjudication.js) ---
-${rfqFacility.slice(0, 2000)}
+--- Claims Ledger (foundry/claims.jsonl) ---
+${claimsLedger}
 
 === REVIEW REQUIREMENTS ===
 Provide a comprehensive, professional review structured as follows:
-1. EXECUTIVE VERDICT & SCORING (Score 1-10 across Cryptography, Smart Contract Security, Architecture, Hackathon Alignment, and Developer Tooling).
-2. TEE & CRYPTOGRAPHIC ANALYSIS: Evaluate the Roost TEE daemon, RSA-2048 encryption, in-RAM Sealed Intent Aggregation (SIA), memory zero-wiping, and Hardware Attestation Quorum (HAQ) nonce validation.
-3. NEAR L1 SMART CONTRACT & STORAGE: Evaluate the Rust contract (near-sdk 5.1), timelock security in hatch_out(), reentrancy safety, Borsh/JSON serialization, and WASM binary compactness (238 KB).
-4. CONFIDENTIAL INTENTS & FAR SHARD: Evaluate 1Click API asset registry audit (210 assets), IMT token mint/burn, decoupled settlement graph, and the snapshot fallback architecture.
-5. INSTITUTIONAL FACILITIES & DEFI NOVELTY: Critique the Confidential RFQ private margin adjudication (eliminating public flash-liquidations), OTC block crossing, and TEE compute pooling.
-6. DEVELOPER SURFACES & AGENT INTEGRATION: Evaluate the 18-endpoint HTTP daemon, SSE streams, x402 PingPay micropayments, and MCP server tools for AI agents.
-7. BUILDER FOUNDRY GOVERNANCE & EVALUATION READINESS: Critique the claims ledger, gap management, and single-command verifiability (<2s runtime).
-8. ACTIONABLE RECOMMENDATIONS & PRODUCTION ROADMAP: Identify subtle edge cases, future mainnet sharding integration steps, and key enhancements.
+1. EXECUTIVE VERDICT & SCORING:
+   - Provide an honest score (1-10) across: Problem Quality, Effectiveness, Technical Execution, Beyond Prototype, Originality, UX, and Hackathon Alignment.
+   - Summarize the core value proposition: "constrained arbitration with independent recovery" vs traditional multisigs and existing TEE platforms (Shade, OutLayer).
+2. SETTLEMENT AUTHORITY BOUNDING (TASK Y1 ANALYSIS):
+   - Analyze the current vulnerability where a registered enclave key could sign a malicious settlement sweeping funds to an arbitrary recipient.
+   - Evaluate the proposed Y1 release policy: allowed_recipients allowlist, max_release_bps_per_epoch, settle_deadline_block, policy_hash consent at deposit, and allocations hash verification.
+   - Give specific Rust implementation guidance and edge-case invariants (e.g. pro-rata reduction, rounding remainders, gas for 50 flyers).
+3. TEE & CRYPTOGRAPHIC HONESTY:
+   - Evaluate the Intel TDX Quote v4 verification via dcap-qvl to Intel Root CA.
+   - Critique the Roost local execution model (GAP-004) and the honest handling of NEAR AI Cloud inference signatures (provenance vs authorization).
+4. NEAR L1 SMART CONTRACT & STORAGE ARCHITECTURE:
+   - Evaluate near-sdk 5.1 usage, IterableMap vs LookupMap escrows, secondary member indexing (member_syndicates), NEP-297 events, and WASM binary compactness (319 KB).
+5. COMPETITIVE DIFFERENTIATION & THREAT MODEL:
+   - Contrast Fly against NEAR Multisig / Sputnik DAO, Phala Shade Agents, OutLayer, and standard escrow.
+   - Identify threat model boundaries: what is defended vs what is out of scope (e.g., TEE hardware bugs, collusion between creator and sole recipient).
+6. ACTIONABLE BLUEPRINT FOR HANDOFF 4 (Y1–Y10):
+   - Prioritized roadmap to reach a 9+ on verifiable dimensions before the Nov 12 code freeze.
 `;
 
-  // Step 3: Call Model (Try gemini-4-argon first, fallback to gemini-3-flash-preview)
+  // Step 3: Call Model (Try gemini-3.5-flash first, fallback to gemini-3.5-flash-lite and gemini-3.1-flash-lite)
   console.log('[3/4] Requesting review from Gemini API...');
-  let res = await callGemini('gemini-4-argon', reviewPrompt, apiKey);
+  let res = await callGemini('gemini-3.5-flash', reviewPrompt, apiKey);
 
-  if (!res.ok && res.status === 429) {
-    console.log(`ℹ️  Note: 'gemini-4-argon' on Google AI Studio Free Tier has limit: 0 tokens/min.`);
-    console.log(`🔄 Seamlessly routing Argon Review Protocol to 'gemini-3-flash-preview'...`);
-    res = await callGemini('gemini-3-flash-preview', reviewPrompt, apiKey);
+  if (!res.ok) {
+    console.log(`ℹ️  Note: gemini-3.5-flash returned: ${res.error}. Routing to gemini-3.5-flash-lite...`);
+    res = await callGemini('gemini-3.5-flash-lite', reviewPrompt, apiKey);
   }
 
   if (!res.ok) {
-    console.log(`🔄 Routing to 'gemini-flash-lite-latest'...`);
-    res = await callGemini('gemini-flash-lite-latest', reviewPrompt, apiKey);
+    console.log(`ℹ️  Note: gemini-3.5-flash-lite returned: ${res.error}. Routing to gemini-3.1-flash-lite...`);
+    res = await callGemini('gemini-3.1-flash-lite', reviewPrompt, apiKey);
   }
 
   if (!res.ok) {

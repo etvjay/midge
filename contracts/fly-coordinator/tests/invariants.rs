@@ -29,14 +29,14 @@ fn generate_enclave_keypair_and_sig(
     syndicate_id: &str,
     epoch: u64,
     nonce: &str,
-    payout_recipient: &str,
+    allocations_hash: &str,
     order_hash: &str,
 ) -> (String, String) {
     let signing_key = SigningKey::from_bytes(&[88u8; 32]);
     let verifying_key = signing_key.verifying_key();
     let message = format!(
         "{}:{}:{}:{}:{}:{}",
-        contract_id, syndicate_id, epoch, nonce, payout_recipient, order_hash
+        contract_id, syndicate_id, epoch, nonce, allocations_hash, order_hash
     );
     let signature = signing_key.sign(message.as_bytes());
     (
@@ -73,14 +73,17 @@ fn test_overshoot_cap_50_limit_enforced_on_callback() {
         "mrenclave_code".to_string(),
         Some(10),
         Some(payout),
+        None,
     );
+
+    let p_hash = contract.get_policy_hash(syn_id.clone());
 
     // 1. Fill syndicate with 50 distinct flyers
     for i in 0..50 {
         let flyer: AccountId = format!("flyer-{:02}.near", i).parse().unwrap();
         let ctx = get_context(flyer, NearToken::from_near(1), 101);
         testing_env!(ctx.build());
-        contract.deposit(syn_id.clone());
+        contract.deposit(syn_id.clone(), p_hash.clone());
     }
 
     let syn = contract.get_syndicate(syn_id.clone()).unwrap();
@@ -192,8 +195,10 @@ proptest! {
             "mrenclave_code".to_string(),
             Some(10), // 10 block timeout
             Some(payout),
+            None,
         );
 
+        let p_hash = contract.get_policy_hash(syn_id.clone());
         let mut block_height = 101u64;
         let flyers: Vec<AccountId> = (0..10).map(|i| format!("user-{:02}.near", i).parse().unwrap()).collect();
 
@@ -213,7 +218,7 @@ proptest! {
                     if syn.status == SyndicateStatus::Active && !would_exceed_spend && !would_exceed_cap {
                         let ctx = get_context(flyer.clone(), deposit_token, block_height);
                         testing_env!(ctx.build());
-                        contract.deposit(syn_id.clone());
+                        contract.deposit(syn_id.clone(), p_hash.clone());
                     }
                 }
                 Action::HatchOut { flyer_idx } => {
@@ -283,5 +288,63 @@ proptest! {
                 non_zero_count
             );
         }
+    }
+
+    #[test]
+    fn prop_pro_rata_deductions_exact_conservation(
+        balances in prop::collection::vec(1_000..10_000_000u128, 1..10),
+        payout_fraction in 1..100u32,
+    ) {
+        let total_escrow: u128 = balances.iter().sum();
+        let payout = total_escrow * (payout_fraction as u128) / 100;
+
+        let flyer_balances: Vec<(AccountId, u128)> = balances
+            .iter()
+            .enumerate()
+            .map(|(i, &b)| (format!("f{:02}.near", i).parse().unwrap(), b))
+            .collect();
+
+        let deductions = fly_coordinator::compute_pro_rata_deductions(&flyer_balances, payout, total_escrow);
+
+        // Invariant 1: Sum of deductions == total payout (exact dust conservation, zero drift)
+        let total_deducted: u128 = deductions.iter().map(|(_, d)| *d).sum();
+        prop_assert_eq!(total_deducted, payout, "Sum of deductions must equal payout exactly!");
+
+        // Invariant 2: No flyer is deducted more than their current balance
+        for (i, (_, deduction)) in deductions.iter().enumerate() {
+            prop_assert!(
+                *deduction <= balances[i],
+                "Deduction {} exceeds balance {}",
+                deduction,
+                balances[i]
+            );
+        }
+    }
+
+    #[test]
+    fn prop_release_policy_canonical_order_independence(
+        bps in 1..=10_000u16,
+        deadline in 100..10_000u64,
+    ) {
+        let r1: AccountId = "alpha.near".parse().unwrap();
+        let r2: AccountId = "beta.near".parse().unwrap();
+        let r3: AccountId = "gamma.near".parse().unwrap();
+
+        let p1 = fly_coordinator::ReleasePolicy {
+            allowed_recipients: vec![r1.clone(), r2.clone(), r3.clone()],
+            max_release_bps_per_epoch: bps,
+            settle_deadline_block: deadline,
+        };
+        let p2 = fly_coordinator::ReleasePolicy {
+            allowed_recipients: vec![r3, r1, r2],
+            max_release_bps_per_epoch: bps,
+            settle_deadline_block: deadline,
+        };
+
+        prop_assert_eq!(
+            p1.compute_hash(),
+            p2.compute_hash(),
+            "ReleasePolicy hash must be strictly order-independent!"
+        );
     }
 }

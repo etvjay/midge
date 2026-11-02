@@ -16,6 +16,138 @@ pub const DEFAULT_PAGE_LIMIT: u64 = 10;
 /// Maximum page limit to bound view call gas consumption.
 pub const MAX_PAGE_LIMIT: u64 = 50;
 
+/// Maximum number of allowed recipients in release policy to bound gas and loop size (API-012, CA-005).
+pub const MAX_POLICY_RECIPIENTS: usize = 8;
+
+/// Maximum number of distinct allocations per settlement batch.
+pub const MAX_ALLOCATIONS_PER_BATCH: usize = 8;
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct Allocation {
+    pub recipient: AccountId,
+    pub amount: NearToken,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone, PartialEq, Debug)]
+pub struct ReleasePolicy {
+    pub allowed_recipients: Vec<AccountId>, // 1..=MAX_POLICY_RECIPIENTS
+    pub max_release_bps_per_epoch: u16,     // 1..=10_000 (basis points, 10000 = 100%)
+    pub settle_deadline_block: u64,
+}
+
+impl ReleasePolicy {
+    pub fn validate(&self, current_block: u64) {
+        assert!(
+            !self.allowed_recipients.is_empty(),
+            "[Policy REJECT] allowed_recipients cannot be empty."
+        );
+        assert!(
+            self.allowed_recipients.len() <= MAX_POLICY_RECIPIENTS,
+            "[Policy REJECT] allowed_recipients count cannot exceed {}.",
+            MAX_POLICY_RECIPIENTS
+        );
+        assert!(
+            self.max_release_bps_per_epoch >= 1 && self.max_release_bps_per_epoch <= 10_000,
+            "[Policy REJECT] max_release_bps_per_epoch must be between 1 and 10000."
+        );
+        assert!(
+            self.settle_deadline_block > current_block,
+            "[Policy REJECT] settle_deadline_block must be in the future."
+        );
+    }
+
+    pub fn is_recipient_allowed(&self, recipient: &AccountId) -> bool {
+        self.allowed_recipients.contains(recipient)
+    }
+
+    pub fn calculate_max_payout(&self, total_escrow: NearToken) -> NearToken {
+        let max_yocto = (total_escrow
+            .as_yoctonear()
+            .saturating_mul(self.max_release_bps_per_epoch as u128))
+            / 10_000;
+        NearToken::from_yoctonear(max_yocto)
+    }
+
+    pub fn is_deadline_passed(&self, current_block: u64) -> bool {
+        current_block > self.settle_deadline_block
+    }
+
+    /// Computes canonical SHA-256 hash over sorted allowed_recipients, max_release_bps_per_epoch, and settle_deadline_block.
+    pub fn compute_hash(&self) -> String {
+        let mut sorted = self.allowed_recipients.clone();
+        sorted.sort();
+        sorted.dedup();
+        let canonical_str = format!(
+            "release_policy:v1:{}:{}:{}",
+            sorted
+                .iter()
+                .map(|a| a.as_str())
+                .collect::<Vec<_>>()
+                .join(","),
+            self.max_release_bps_per_epoch,
+            self.settle_deadline_block
+        );
+        hex::encode(env::sha256(canonical_str.as_bytes()))
+    }
+}
+
+/// Pure domain function calculating pro-rata deductions across flyers with exact remainder dust conservation (OO-008, CA-004).
+/// Returns a list of (flyer, deduction_yocto) such that sum(deductions) == total_payout_yocto.
+pub fn compute_pro_rata_deductions(
+    flyer_balances: &[(AccountId, u128)],
+    total_payout_yocto: u128,
+    total_escrow_yocto: u128,
+) -> Vec<(AccountId, u128)> {
+    if total_payout_yocto == 0 || total_escrow_yocto == 0 {
+        return flyer_balances.iter().map(|(a, _)| (a.clone(), 0)).collect();
+    }
+    if total_payout_yocto >= total_escrow_yocto {
+        // Full settlement: deduct entire balance from each flyer
+        return flyer_balances.to_vec();
+    }
+
+    let mut deductions = Vec::with_capacity(flyer_balances.len());
+    let mut sum_deducted = 0u128;
+    let mut max_balance_idx = 0;
+    let mut max_balance = 0u128;
+
+    for (idx, (account, balance)) in flyer_balances.iter().enumerate() {
+        if *balance > max_balance {
+            max_balance = *balance;
+            max_balance_idx = idx;
+        }
+        let share = (*balance).saturating_mul(total_payout_yocto) / total_escrow_yocto;
+        let clamped_share = share.min(*balance);
+        sum_deducted = sum_deducted.saturating_add(clamped_share);
+        deductions.push((account.clone(), clamped_share));
+    }
+
+    // Allocate remainder dust to the flyer with the largest balance (OO-008, CA-004)
+    if total_payout_yocto > sum_deducted {
+        let dust = total_payout_yocto - sum_deducted;
+        let (max_account, current_deduction) = &deductions[max_balance_idx];
+        let original_balance = flyer_balances[max_balance_idx].1;
+        let new_deduction = (current_deduction + dust).min(original_balance);
+        deductions[max_balance_idx] = (max_account.clone(), new_deduction);
+    }
+
+    deductions
+}
+
+/// Canonical SHA-256 hash of sorted allocations list.
+pub fn compute_allocations_hash(allocations: &[Allocation]) -> String {
+    let mut sorted = allocations.to_vec();
+    sorted.sort_by(|a, b| a.recipient.cmp(&b.recipient));
+    let alloc_str = sorted
+        .iter()
+        .map(|a| format!("{}:{}", a.recipient, a.amount.as_yoctonear()))
+        .collect::<Vec<_>>()
+        .join(",");
+    hex::encode(env::sha256(alloc_str.as_bytes()))
+}
+
 #[near(serializers = [borsh, json])]
 #[derive(Clone, PartialEq, Debug)]
 pub enum SyndicateType {
@@ -55,6 +187,9 @@ pub struct SyndicateRecord {
     pub settled_batches: Vec<String>,
     pub total_settled_payouts: NearToken,
     pub payout_recipient: AccountId,
+    pub release_policy: ReleasePolicy,
+    pub policy_hash: String,
+    pub is_settling: bool,
 }
 
 impl SyndicateRecord {
@@ -118,6 +253,7 @@ impl FlyCoordinator {
         expected_code_hash: String,
         timeout_blocks: Option<u64>,
         payout_recipient: Option<AccountId>,
+        release_policy: Option<ReleasePolicy>,
     ) -> String {
         // 1. Storage deposit guard
         let attached = env::attached_deposit();
@@ -169,6 +305,26 @@ impl FlyCoordinator {
         assert!(quorum >= 1, "[Hatch REJECT] quorum_threshold must be >= 1.");
         assert!(timeout >= 1, "[Hatch REJECT] timeout_blocks must be >= 1.");
 
+        // Release policy initialization & validation (Task Y1, API-013, API-014)
+        let policy = match release_policy {
+            Some(mut p) => {
+                p.allowed_recipients.sort();
+                p.allowed_recipients.dedup();
+                p.validate(created_at_block);
+                p
+            }
+            None => {
+                let default_recipient = payout_recipient.clone().unwrap_or_else(|| owner.clone());
+                ReleasePolicy {
+                    allowed_recipients: vec![default_recipient],
+                    max_release_bps_per_epoch: 10_000,
+                    settle_deadline_block: created_at_block + timeout * 10,
+                }
+            }
+        };
+        let policy_hash = policy.compute_hash();
+        let primary_recipient = policy.allowed_recipients[0].clone();
+
         // Safe NearToken arithmetic preventing u128 overflow
         let max_spend = match max_spend_near {
             Some(val) => {
@@ -187,8 +343,6 @@ impl FlyCoordinator {
             .iter()
             .map(|b| format!("{:02x}", b))
             .collect::<String>();
-
-        let recipient = payout_recipient.unwrap_or_else(|| owner.clone());
 
         let record = SyndicateRecord {
             id: syndicate_id.clone(),
@@ -211,7 +365,10 @@ impl FlyCoordinator {
             total_escrow: NearToken::from_yoctonear(0),
             settled_batches: Vec::new(),
             total_settled_payouts: NearToken::from_yoctonear(0),
-            payout_recipient: recipient,
+            payout_recipient: primary_recipient,
+            release_policy: policy,
+            policy_hash: policy_hash.clone(),
+            is_settling: false,
         };
 
         self.syndicates.insert(syndicate_id.clone(), record);
@@ -229,21 +386,23 @@ impl FlyCoordinator {
 
         // NEP-297 standard event
         env::log_str(&format!(
-            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_hatched\",\"data\":[{{\"syndicate_id\":\"{}\",\"owner\":\"{}\",\"syndicate_type\":\"{:?}\",\"quorum_threshold\":{},\"timeout_blocks\":{}}}]}}",
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_hatched\",\"data\":[{{\"syndicate_id\":\"{}\",\"owner\":\"{}\",\"syndicate_type\":\"{:?}\",\"quorum_threshold\":{},\"timeout_blocks\":{},\"policy_hash\":\"{}\"}}]}}",
             syndicate_id,
             owner,
             syn_type,
             quorum,
-            timeout
+            timeout,
+            policy_hash
         ));
 
         syndicate_id
     }
 
     /// deposit(): Locks NEAR into the syndicate escrow.
+    /// Enforces explicit depositor consent to the syndicate's immutable release policy (Task Y1).
     /// Enforces minimum deposit, cap on total distinct flyers, and OutLayer spend limits.
     #[payable]
-    pub fn deposit(&mut self, syndicate_id: String) {
+    pub fn deposit(&mut self, syndicate_id: String, policy_hash: Option<String>) {
         let caller = env::predecessor_account_id();
         let attached = env::attached_deposit();
 
@@ -263,6 +422,18 @@ impl FlyCoordinator {
             "[Deposit REJECT] Cannot deposit into inactive syndicate."
         );
 
+        // Explicit depositor consent check (Task Y1)
+        assert_eq!(
+            policy_hash.as_deref(),
+            Some(syn.policy_hash.as_str()),
+            "[Deposit REJECT] Policy hash mismatch: depositor did not consent to current release policy."
+        );
+
+        assert!(
+            !syn.is_settling,
+            "[Deposit REJECT] Settlement is currently in flight."
+        );
+
         let escrow_key = (syndicate_id.clone(), caller.clone());
         let current_balance = self
             .escrows
@@ -270,7 +441,9 @@ impl FlyCoordinator {
             .copied()
             .unwrap_or_else(|| NearToken::from_yoctonear(0));
 
-        let new_balance = current_balance.saturating_add(attached);
+        let new_balance = current_balance
+            .checked_add(attached)
+            .unwrap_or_else(|| env::panic_str("[Deposit REJECT] Escrow balance overflow."));
 
         assert!(
             new_balance.as_yoctonear() <= syn.max_spend_per_flyer.as_yoctonear(),
@@ -304,23 +477,24 @@ impl FlyCoordinator {
 
         // NEP-297 standard event (API-008: syndicate_deposited)
         env::log_str(&format!(
-            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_deposited\",\"data\":[{{\"syndicate_id\":\"{}\",\"flyer\":\"{}\",\"amount\":\"{}\",\"active_flyers\":{}}}]}}",
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_deposited\",\"data\":[{{\"syndicate_id\":\"{}\",\"flyer\":\"{}\",\"amount\":\"{}\",\"active_flyers\":{},\"policy_hash\":\"{}\"}}]}}",
             syn.id,
             caller,
             attached.as_yoctonear(),
-            syn.active_flyer_count
+            syn.active_flyer_count,
+            syn.policy_hash
         ));
     }
 
-    /// settle_batch(): Verifies HAQ attestation signature and executes settlement payout.
-    /// Enforces domain-separated message signing: (contract_id:syndicate_id:epoch:round_nonce:payout_recipient:order_hash).
-    /// For Flash syndicates: transfers pooled escrow to immutable payout recipient via Promise and clears state.
-    /// For DarkVault: resets epoch_start_block for the new epoch and rolls over escrow.
+    /// settle_batch(): Verifies HAQ attestation signature and executes bounded settlement payouts (Task Y1).
+    /// Enforces domain-separated message signing: (contract_id:syndicate_id:epoch:round_nonce:allocations_hash:order_hash).
+    /// Enforces whitelisted recipients, epoch bps release caps, deadline block, and pro-rata deductions.
     pub fn settle_batch(
         &mut self,
         syndicate_id: String,
         attestation_nonce: String,
         aggregate_order_hash: String,
+        allocations: Vec<Allocation>,
         enclave_signature: String,
     ) {
         let syn = self
@@ -331,22 +505,84 @@ impl FlyCoordinator {
         assert_eq!(
             syn.status,
             SyndicateStatus::Active,
-            "[HAQ REJECT] Syndicate is not active"
+            "[HAQ REJECT] Syndicate is not active."
         );
 
-        // 1. Verify nonce binding (prevents replay attacks)
+        // In-flight settlement guard (CA-001)
+        assert!(
+            !syn.is_settling,
+            "[Settle REJECT] Settlement is already in flight."
+        );
+
+        // 1. Enforce settle deadline
+        let current_block = env::block_height();
+        assert!(
+            !syn.release_policy.is_deadline_passed(current_block),
+            "[Settle REJECT] Settle deadline block height exceeded."
+        );
+
+        // 2. Validate nonce binding
         assert_eq!(
-            attestation_nonce, syn.round_nonce,
+            syn.round_nonce, attestation_nonce,
             "[HAQ REJECT] Nonce mismatch. Replay attack blocked."
         );
 
-        // 2. Verify Quorum threshold
+        // 3. Verify Quorum threshold
         assert!(
             syn.active_flyer_count >= syn.quorum_threshold,
             "[QUORUM REJECT] Active flyer count below threshold."
         );
 
-        // 3. Cryptographic Ed25519 Enclave Signature Verification with Strict Domain Separation
+        // 4. Validate allocations (API-011, API-012, CA-005)
+        assert!(
+            !allocations.is_empty(),
+            "[Settle REJECT] Allocations list cannot be empty."
+        );
+        assert!(
+            allocations.len() <= MAX_ALLOCATIONS_PER_BATCH,
+            "[Settle REJECT] Allocations count cannot exceed {}.",
+            MAX_ALLOCATIONS_PER_BATCH
+        );
+
+        let mut seen_recipients = Vec::new();
+        let mut total_payout_yocto: u128 = 0;
+
+        for alloc in &allocations {
+            assert!(
+                !seen_recipients.contains(&alloc.recipient),
+                "[Settle REJECT] Duplicate recipient in allocations."
+            );
+            seen_recipients.push(alloc.recipient.clone());
+
+            assert!(
+                syn.release_policy.is_recipient_allowed(&alloc.recipient),
+                "[Settle REJECT] Recipient {} is not in allowed_recipients whitelist.",
+                alloc.recipient
+            );
+            assert!(
+                alloc.amount.as_yoctonear() > 0,
+                "[Settle REJECT] Allocation amount must be positive."
+            );
+            total_payout_yocto = total_payout_yocto
+                .checked_add(alloc.amount.as_yoctonear())
+                .unwrap_or_else(|| env::panic_str("[Settle REJECT] Total payout overflow"));
+        }
+
+        assert!(
+            total_payout_yocto <= syn.total_escrow.as_yoctonear(),
+            "[Settle REJECT] Allocation sum exceeds total escrow."
+        );
+
+        let max_allowed = syn.release_policy.calculate_max_payout(syn.total_escrow);
+        assert!(
+            total_payout_yocto <= max_allowed.as_yoctonear(),
+            "[Settle REJECT] Allocation sum exceeds max_release_bps_per_epoch cap."
+        );
+
+        // 5. Canonical allocations hash
+        let allocations_hash = compute_allocations_hash(&allocations);
+
+        // 6. Cryptographic Ed25519 Enclave Signature Verification
         let sig_bytes = hex::decode(&enclave_signature)
             .unwrap_or_else(|_| env::panic_str("[HAQ REJECT] Invalid hex enclave signature"));
         assert_eq!(
@@ -367,14 +603,13 @@ impl FlyCoordinator {
         let mut pk_arr = [0u8; 32];
         pk_arr.copy_from_slice(&pk_bytes);
 
-        // Domain-separated signed message: (contract_id, syndicate_id, epoch, round_nonce, payout_recipient, order_hash)
         let message = format!(
             "{}:{}:{}:{}:{}:{}",
             env::current_account_id(),
             syn.id,
             syn.epoch,
             syn.round_nonce,
-            syn.payout_recipient,
+            allocations_hash,
             aggregate_order_hash
         );
         assert!(
@@ -382,55 +617,52 @@ impl FlyCoordinator {
             "[HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
         );
 
-        // 4. Record settled batch and execute financial payout
         syn.settled_batches.push(aggregate_order_hash.clone());
+        syn.total_escrow = syn
+            .total_escrow
+            .saturating_sub(NearToken::from_yoctonear(total_payout_yocto));
+        syn.total_settled_payouts = syn
+            .total_settled_payouts
+            .saturating_add(NearToken::from_yoctonear(total_payout_yocto));
+        syn.is_settling = true;
 
-        match syn.syndicate_type {
-            SyndicateType::Flash => {
-                let payout_target = syn.payout_recipient.clone();
-                let payout_amount = syn.total_escrow;
-
-                syn.total_settled_payouts = syn.total_settled_payouts.saturating_add(payout_amount);
-                syn.total_escrow = NearToken::from_yoctonear(0);
-                syn.status = SyndicateStatus::Settled;
-
-                // Transfer pooled funds to the immutable payout recipient with failure callback
-                if payout_amount.as_yoctonear() > 0 {
-                    let _ = Promise::new(payout_target).transfer(payout_amount).then(
-                        Self::ext(env::current_account_id())
-                            .with_static_gas(Gas::from_tgas(15))
-                            .on_settlement_payout(syn.id.clone(), payout_amount),
-                    );
-                }
-            }
-            SyndicateType::DarkVault => {
-                syn.epoch += 1;
-                syn.epoch_start_block = env::block_height(); // Reset deliberation window for next epoch
-                let next_seed = format!("{}:{}:{}", syn.id, syn.epoch, env::block_height());
-                syn.round_nonce = near_sdk::env::sha256(next_seed.as_bytes())
-                    .iter()
-                    .map(|b| format!("{:02x}", b))
-                    .collect::<String>();
-            }
+        if syn.total_escrow.as_yoctonear() == 0 {
+            syn.status = SyndicateStatus::Settled;
+        } else if syn.syndicate_type == SyndicateType::DarkVault {
+            syn.epoch += 1;
+            syn.epoch_start_block = env::block_height();
+            let next_seed = format!("{}:{}:{}", syn.id, syn.epoch, env::block_height());
+            syn.round_nonce = hex::encode(env::sha256(next_seed.as_bytes()));
         }
 
-        let settled_payout = syn.total_settled_payouts;
+        // 8. Multi-recipient Promise Dispatch (CA-002)
+        let mut transfer_promise: Option<Promise> = None;
+        for alloc in &allocations {
+            let p = Promise::new(alloc.recipient.clone()).transfer(alloc.amount);
+            transfer_promise = match transfer_promise {
+                Some(prev) => Some(prev.and(p)),
+                None => Some(p),
+            };
+        }
 
-        // NEP-297 standard event (API-006: includes payout_amount)
-        env::log_str(&format!(
-            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_settled\",\"data\":[{{\"syndicate_id\":\"{}\",\"epoch\":{},\"payout_recipient\":\"{}\",\"payout_amount\":\"{}\",\"order_hash\":\"{}\"}}]}}",
-            syn.id,
-            syn.epoch,
-            syn.payout_recipient,
-            settled_payout.as_yoctonear(),
-            aggregate_order_hash
-        ));
+        if let Some(promise) = transfer_promise {
+            let _ = promise.then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(Gas::from_tgas(25))
+                    .on_settlement_payout(
+                        syn.id.clone(),
+                        allocations,
+                        NearToken::from_yoctonear(total_payout_yocto),
+                        allocations_hash,
+                        aggregate_order_hash,
+                    ),
+            );
+        }
     }
 
     /// hatch_out(): Automated non-custodial escape hatch.
-    /// Unlocks 100% refund of the calling Flyer's individual escrow if block timeout has expired.
-    /// Blocked after settlement; does not abort syndicate prematurely.
-    /// In DarkVaults, timeout is measured from current epoch start block.
+    /// Unlocks 100% refund of caller's remaining escrow if timeout or deadline expired.
+    /// Blocked while settlement is in flight or if syndicate is fully settled.
     pub fn hatch_out(&mut self, syndicate_id: String) -> Promise {
         let caller = env::predecessor_account_id();
         let current_block = env::block_height();
@@ -440,20 +672,31 @@ impl FlyCoordinator {
             .get_mut(&syndicate_id)
             .unwrap_or_else(|| env::panic_str("Syndicate not found"));
 
-        // 1. Block refund if syndicate already successfully settled
         assert_ne!(
             syn.status,
             SyndicateStatus::Settled,
             "[Hatch-Out REJECT] Cannot refund already settled syndicate."
         );
 
-        // 2. Timelock verification: Deliberation window must have expired since epoch start
+        // In-flight settlement guard (CA-001)
+        assert!(
+            !syn.is_settling,
+            "[Hatch-Out REJECT] Settlement is currently in flight. Try again after resolution."
+        );
+
+        assert!(
+            syn.total_escrow.as_yoctonear() > 0,
+            "[Hatch-Out REJECT] No escrow balance to refund."
+        );
+
         let blocks_passed = current_block.saturating_sub(syn.epoch_start_block);
-        if blocks_passed < syn.timeout_blocks && syn.status == SyndicateStatus::Active {
+        let timeout_expired = blocks_passed >= syn.timeout_blocks;
+        let deadline_passed = syn.release_policy.is_deadline_passed(current_block);
+
+        if !timeout_expired && !deadline_passed && syn.status == SyndicateStatus::Active {
             env::panic_str("[Hatch-Out LOCKED] Deliberation window still active.");
         }
 
-        // 3. User balance verification: refund only caller's remaining escrow from LookupMap
         let escrow_key = (syndicate_id.clone(), caller.clone());
         let flyer_balance = self
             .escrows
@@ -466,23 +709,21 @@ impl FlyCoordinator {
             "[Hatch-Out REJECT] No escrow balance to refund for caller."
         );
 
-        // 4. Remove caller's entry from LookupMap to reclaim storage and prevent double refund attacks
         self.escrows.remove(&escrow_key);
         syn.total_escrow = syn.total_escrow.saturating_sub(flyer_balance);
         syn.active_flyer_count = syn.active_flyer_count.saturating_sub(1);
         syn.flyers.retain(|f| f != &caller);
 
-        // 5. Update syndicate status to AbortedRefunded if all escrow is cleared
         if syn.total_escrow.as_yoctonear() == 0 {
             syn.status = SyndicateStatus::AbortedRefunded;
         }
 
-        // NEP-297 standard event
         env::log_str(&format!(
-            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_hatched_out\",\"data\":[{{\"syndicate_id\":\"{}\",\"flyer\":\"{}\",\"refund_amount\":\"{}\"}}]}}",
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_hatched_out\",\"data\":[{{\"syndicate_id\":\"{}\",\"flyer\":\"{}\",\"refund_amount\":\"{}\",\"policy_hash\":\"{}\"}}]}}",
             syn.id,
             caller,
-            flyer_balance.as_yoctonear()
+            flyer_balance.as_yoctonear(),
+            syn.policy_hash
         ));
 
         Promise::new(caller.clone()).transfer(flyer_balance).then(
@@ -492,37 +733,125 @@ impl FlyCoordinator {
         )
     }
 
-    /// Callback for Flash settlement payout transfer failure handling.
+    /// Callback for settlement payout transfer handling with partial rollback (CA-002, CA-003).
     #[private]
-    pub fn on_settlement_payout(&mut self, syndicate_id: String, payout_amount: NearToken) -> bool {
+    pub fn on_settlement_payout(
+        &mut self,
+        syndicate_id: String,
+        allocations: Vec<Allocation>,
+        total_payout: NearToken,
+        allocations_hash: String,
+        order_hash: String,
+    ) -> bool {
         assert_eq!(
             env::current_account_id(),
             env::predecessor_account_id(),
             "Method is private"
         );
 
-        if !near_sdk::is_promise_success() {
-            if let Some(syn) = self.syndicates.get_mut(&syndicate_id) {
-                syn.status = SyndicateStatus::Active;
-                syn.total_escrow = syn.total_escrow.saturating_add(payout_amount);
-                syn.total_settled_payouts = syn.total_settled_payouts.saturating_sub(payout_amount);
+        let results_count = env::promise_results_count();
+        let mut failed_yocto: u128 = 0;
+
+        for i in 0..results_count {
+            #[allow(deprecated)]
+            match env::promise_result(i) {
+                near_sdk::PromiseResult::Successful(_) => {}
+                near_sdk::PromiseResult::Failed => {
+                    if let Some(alloc) = allocations.get(i as usize) {
+                        failed_yocto = failed_yocto.saturating_add(alloc.amount.as_yoctonear());
+                    }
+                }
             }
-            // Compensating NEP-297 event on settlement rollback (CA-001)
-            env::log_str(&format!(
-                "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_settlement_failed\",\"data\":[{{\"syndicate_id\":\"{}\",\"reverted_amount\":\"{}\"}}]}}",
-                syndicate_id,
-                payout_amount.as_yoctonear()
-            ));
-            return false;
         }
 
-        // On successful settlement transfer: reclaim storage for all flyers in Flash syndicate
+        let total_payout_yocto = total_payout.as_yoctonear();
+        let succeeded_yocto = total_payout_yocto.saturating_sub(failed_yocto);
+
         if let Some(syn) = self.syndicates.get_mut(&syndicate_id) {
-            for flyer in &syn.flyers {
-                self.escrows.remove(&(syn.id.clone(), flyer.clone()));
+            syn.is_settling = false;
+
+            if succeeded_yocto > 0 {
+                // Deduct flyer balances pro-rata for the succeeded payout portion (OO-008, CA-004)
+                let flyer_balances: Vec<(AccountId, u128)> = syn
+                    .flyers
+                    .iter()
+                    .map(|f| {
+                        let key = (syn.id.clone(), f.clone());
+                        let b = self
+                            .escrows
+                            .get(&key)
+                            .copied()
+                            .unwrap_or_else(|| NearToken::from_yoctonear(0))
+                            .as_yoctonear();
+                        (f.clone(), b)
+                    })
+                    .collect();
+
+                let deductions_base = syn
+                    .total_escrow
+                    .as_yoctonear()
+                    .saturating_add(total_payout_yocto);
+                let deductions = compute_pro_rata_deductions(
+                    &flyer_balances,
+                    succeeded_yocto,
+                    if deductions_base > 0 {
+                        deductions_base
+                    } else {
+                        1
+                    },
+                );
+
+                for (flyer, deduction) in deductions {
+                    let key = (syn.id.clone(), flyer.clone());
+                    let current = self
+                        .escrows
+                        .get(&key)
+                        .copied()
+                        .unwrap_or_else(|| NearToken::from_yoctonear(0))
+                        .as_yoctonear();
+                    let new_bal = current.saturating_sub(deduction);
+                    if new_bal == 0 && syn.status == SyndicateStatus::Settled {
+                        self.escrows.remove(&key);
+                    } else {
+                        self.escrows.insert(key, NearToken::from_yoctonear(new_bal));
+                    }
+                }
             }
-            syn.flyers.clear();
-            syn.active_flyer_count = 0;
+
+            if failed_yocto > 0 {
+                // Restore failed payout portion to syndicate total_escrow and revert Settled status
+                syn.total_escrow = syn
+                    .total_escrow
+                    .saturating_add(NearToken::from_yoctonear(failed_yocto));
+                syn.total_settled_payouts = syn
+                    .total_settled_payouts
+                    .saturating_sub(NearToken::from_yoctonear(failed_yocto));
+                syn.status = SyndicateStatus::Active;
+
+                env::log_str(&format!(
+                    "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_settlement_failed\",\"data\":[{{\"syndicate_id\":\"{}\",\"reverted_amount\":\"{}\"}}]}}",
+                    syndicate_id,
+                    failed_yocto
+                ));
+                return false;
+            } else {
+                // 100% Succeeded
+                if syn.status == SyndicateStatus::Settled {
+                    syn.flyers.clear();
+                    syn.active_flyer_count = 0;
+                }
+
+                // Authoritative event emission upon asynchronous success (CA-003)
+                env::log_str(&format!(
+                    "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_settled\",\"data\":[{{\"syndicate_id\":\"{}\",\"epoch\":{},\"allocations_hash\":\"{}\",\"total_payout\":\"{}\",\"order_hash\":\"{}\",\"policy_hash\":\"{}\"}}]}}",
+                    syn.id,
+                    syn.epoch,
+                    allocations_hash,
+                    total_payout.as_yoctonear(),
+                    order_hash,
+                    syn.policy_hash
+                ));
+            }
         }
 
         true
@@ -657,5 +986,19 @@ impl FlyCoordinator {
         limit: Option<u64>,
     ) -> Vec<SyndicateRecord> {
         self.list_syndicates_by_member(account_id, from_index, limit)
+    }
+
+    /// Returns the release policy of a syndicate (API-015).
+    pub fn get_release_policy(&self, syndicate_id: String) -> Option<ReleasePolicy> {
+        self.syndicates
+            .get(&syndicate_id)
+            .map(|s| s.release_policy.clone())
+    }
+
+    /// Returns the policy hash of a syndicate (API-015).
+    pub fn get_policy_hash(&self, syndicate_id: String) -> Option<String> {
+        self.syndicates
+            .get(&syndicate_id)
+            .map(|s| s.policy_hash.clone())
     }
 }

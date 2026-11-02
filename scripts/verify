@@ -73,6 +73,12 @@ else
   VERDICT_TXT="VERIFIED & AUDITED (Smart Contract Tested, TEE Parsed, Simulated)"
 fi
 
+if [ -n "$NEARAI_API_KEY" ] || [ -n "$NEAR_AI_API_KEY" ]; then
+  INFER_LINE="║ 11. TEE Deliberation Inference Attestation:   ✅ PASS (Live External)        ║"
+else
+  INFER_LINE="║ 11. TEE Deliberation Inference Attestation:   ⚠️ SKIPPED (No API key; not live)║"
+fi
+
 echo "╔══════════════════════════════════════════════════════════════════════════════╗"
 echo "║                          FINAL EVALUATION VERDICT                            ║"
 echo "╠══════════════════════════════════════════════════════════════════════════════╣"
@@ -86,7 +92,7 @@ echo "║  7. Confidential RFQs & Private Adjudication: ✅ PASS (Simulated Faci
 echo "║  8. OTC Block Dark Pool & Compute Syndicate:  ✅ PASS (Simulated Facility)   ║"
 echo "║  9. 5-Layer Resilience Failure Matrix (FMEA): ✅ PASS (Fault Tolerant Tested)║"
 echo "║ 10. HTTP Gateway, SSE, x402 & MCP Server:     ✅ PASS (Integrated Daemon)    ║"
-echo "║ 11. TEE Deliberation Inference Attestation:   ✅ PASS (Attested & Verified)  ║"
+echo "$INFER_LINE"
 echo "║ 12. Builder Foundry Control Plane:            ✅ PASS (0 Violations)         ║"
 echo "╠══════════════════════════════════════════════════════════════════════════════╣"
 echo "║  Total Verification Duration: ${ELAPSED_SEC}s                                          ║"

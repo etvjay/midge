@@ -1,7 +1,5 @@
 # Fly: Autonomous Syndicate Network for Private Systems on NEAR
 
-[![CI](https://github.com/fly-syndicate/fly-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/fly-syndicate/fly-protocol/actions/workflows/ci.yml)
-
 **NEAR HACKATHON: Build Beyond Boundaries (November 1–14, 2026)**  
 **Primary Track:** Privacy & Private AI  
 **Secondary Tracks:** AI Swarms, Agent Economy, Unstoppable DeFi, Security  
@@ -10,12 +8,12 @@
 
 ## 1. Core Thesis & What Fly Solves
 
-When autonomous AI agent swarms and human capital collectives coordinate on public blockchains, they face an intractable trilemma: **custody risk**, **alpha leakage**, and **liveness failure**. Existing privacy solutions either shield simple token transfers while leaving off-chain deliberation unverified, or force participants to surrender their private keys to an off-chain bot or enclave that can crash, trap funds, or be terminated by an operator. Conversely, public multi-sigs like SputnikDAO leak trades to mempool front-runners, expose participant weights, and stall in committee deadlock.
+When autonomous AI agent swarms and human capital collectives coordinate on public blockchains, they face an intractable trilemma: **custody risk**, **alpha leakage**, and **liveness failure**. Existing privacy approaches either shield simple token transfers while leaving off-chain coordination unverified, or force participants to surrender their private keys to an off-chain bot or enclave that can crash, trap funds, or be terminated by an operator. Conversely, public multi-sigs like SputnikDAO leak trades to mempool front-runners, expose participant weights, and stall in committee deadlock.
 
-**Fly's Architectural Breakthrough: The TEE is an Arbiter, Never a Custodian.**  
-Fly is an autonomous syndicate protocol on NEAR Protocol. Collectives of AI agents and human wallets pool capital into bounded sub-accounts (`hatch`) governed by OutLayer spend policies. Members submit asymmetric encrypted intents directly into hardware-isolated Trusted Execution Environments (**NEAR AI Cloud Intel TDX / NVIDIA CVM**). Deliberation, private pricing, and Sealed Intent Aggregation (SIA) execute exclusively inside enclave RAM before being wiped. 
+**Fly's Architectural Paradigm: Constrained Arbitration with Independent Recovery.**  
+Fly is an autonomous syndicate protocol on NEAR Protocol. Collectives of AI agents and human wallets pool capital into bounded sub-accounts (`hatch`) governed by OutLayer spend policies. **Deposits and depositor accounts are public on-chain.** Confidentiality protects individual member trading limits, strategy weights, and un-aggregated order parameters, which are encrypted to the Roost aggregator. The Roost runs locally (GAP-004) while validating hardware attestation from **NEAR AI Cloud (Intel TDX / NVIDIA CVM)** via `dcap-qvl` to Intel's Root CA. Deliberation and Sealed Intent Aggregation (SIA) execute in memory before individual inputs are zero-wiped.
 
-The enclave never holds custody; it merely acts as a cryptographic oracle whose sole power is signing an aggregate batch settlement order verified by the NEAR L1 coordinator contract (`c.fly-1793636729.testnet`) in just 5.81 TGas. Omnichain orders settle natively across Ethereum, Bitcoin Taproot, and Solana via **NEAR Chain Signatures MPC** (`v1.signer-prod.testnet`). Crucially, if an enclave stalls, crashes, or goes rogue, Fly's **Hatch Protocol** provides a 100% non-custodial, permissionless escape hatch (`hatch_out`): any individual depositor can reclaim their exact escrow balance after a block timelock without coordinator permission and without draining other flyers.
+The aggregator never holds custody; it merely produces a batch settlement order verified by the NEAR L1 coordinator contract (`c.fly-1793636729.testnet`) in 5.81 TGas. Omnichain orders settle natively across Ethereum, Bitcoin Taproot, and Solana via **NEAR Chain Signatures MPC** (`v1.signer-prod.testnet`). Crucially, if an enclave stalls, crashes, or goes rogue, Fly's **Hatch Protocol** provides a 100% non-custodial, permissionless escape hatch (`hatch_out`): any individual depositor can unilaterally reclaim their exact escrow balance after a block timelock without coordinator permission and without draining other flyers.
 
 ---
 
@@ -191,6 +189,9 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 ## 5. Network Topology & Discovery Architecture
 
+> [!NOTE]
+> Network discovery methods (`list_syndicates`, `list_syndicates_by_member`, NEP-297 events) are fully implemented and tested in the Rust smart contract (`contracts/fly-coordinator/src/lib.rs`) and demonstrated via `scripts/network-demo.js`. The currently deployed testnet coordinator (`c.fly-1793636729.testnet`) runs the baseline v1 WASM; full on-chain redeployment with testnet transaction proofs is scheduled in Task Y2.
+
 Fly is designed as an **Autonomous Syndicate Network**: a single NEAR L1 coordinator smart contract hosts multiple independent syndicates, each specialized in a financial or computational mission (e.g. signal research, algorithmic execution, AI compute).
 
 ```
@@ -248,7 +249,7 @@ For hackathon track justifications and submission assets, see:
 │   └── testnet-mpc.js            # Live NEAR Chain Signatures MPC threshold signing script
 ├── foundry/                      # Builder Foundry Control Plane (v1.0 Standard)
 │   ├── state.json                # Project status & verification git head
-│   ├── claims.jsonl              # 11 audited claims with evidence paths and states
+│   ├── claims.jsonl              # 12 audited claims with evidence paths and states
 │   ├── gaps.jsonl                # 7 recorded gaps with closure conditions and guards
 │   ├── assumptions.md            # Documented assumptions & resolutions
 │   └── contradictions.md         # Documented contradictions & mitigation strategies
@@ -282,6 +283,5 @@ For hackathon track justifications and submission assets, see:
         ├── SUBMISSION_ASSETS.md  # X post, project description, 5-track rationale
         ├── testnet-evidence.json # 8 live NEAR testnet transaction records
         ├── mpc-evidence.json     # Live Chain Signatures MPC transaction record
-        ├── inference-evidence.json # NEAR AI Cloud TEE inference response signature record
         └── EVIDENCE_LEDGER.md    # Evidence ledger with testnet explorer links
 ```
