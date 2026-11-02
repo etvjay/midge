@@ -26,10 +26,10 @@ Fly provides a zero-setup, deterministic verification harness requiring only sta
   # or: npm run verify
   ```
 * **See:**
-  - `[STEP 1/4]` 23 NEAR L1 Rust smart contract tests (19 unit + 4 integration) pass cleanly (`near-sdk 5.1`).
-  - `[STEP 2/4]` Release WebAssembly contract compiles cleanly to `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (271 KB).
+  - `[STEP 1/4]` 31 NEAR L1 Rust smart contract tests (25 unit + 6 integration) pass cleanly (`near-sdk 5.1`).
+  - `[STEP 2/4]` Release WebAssembly contract compiles cleanly to `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (277 KB).
   - `[STEP 3/4]` All 8 architectural verification layers execute in ~1.3s.
-  - `[STEP 4/4]` Builder Foundry Control Plane passes with 0 invariant violations across 11 claims and 6 gaps.
+  - `[STEP 4/4]` Builder Foundry Control Plane passes with 0 invariant violations across 11 claims and 7 gaps.
   - Total runtime: `<4.0s`. Final evaluation verdict: `VERIFIED & AUDITED (Smart Contract Tested, TEE Parsed, Simulated)`.
 
 ### Step 2: Verify Live TEE Remote Attestation
@@ -101,7 +101,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 | Component | Implementation File | Status | Nature | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **TESTED** | **REAL CODE** | Written in Rust (`near-sdk 5.1`). Compiles to 271 KB release WASM. 23 tests (19 unit + 4 integration) verifying Ed25519 domain-separated signatures, storage guards, ID validation, LookupMap per-user escape hatch refunds, Flash settlement Promise payouts with failure recovery callbacks, and DarkVault epoch rollover. |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **TESTED** | **REAL CODE** | Written in Rust (`near-sdk 5.1`). Compiles to 277 KB release WASM. 31 tests (25 unit + 6 integration) verifying Ed25519 domain-separated signatures, storage guards, ID validation, LookupMap per-user escape hatch refunds, Flash settlement Promise payouts with failure recovery callbacks, flyer storage reclamation, and DarkVault epoch rollover. |
 | **TEE Remote Attestation** | `verifications/01-hardware-attestation.js` | **VERIFIED** | **LIVE EXTERNAL** | Queries live NEAR AI Cloud (`cloud-api.near.ai`) with a fresh 32-byte nonce. Parses binary Intel TDX Quote v4 and verifies `REPORTDATA` nonce echo. (Full Intel SGX/TDX Root CA signature verification pending - GAP-006). |
 | **TEE Aggregator Runtime** | `src/enclave/roost.js` | **TESTED** | **LOCAL PROCESS** | Ingestion, RSA-2048 decryption, batch aggregation, and RAM wiping execute in local Node.js process (GAP-004). Remote TEE VM container deployment is planned for production. |
 | **1Click Asset Registry** | `verifications/02-confidential-intents.js` | **VERIFIED** | **LIVE EXTERNAL** | Audits 210 cross-chain assets from live 1Click Swap API with deterministic snapshot fallback for test resilience. |
@@ -116,21 +116,28 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 ## 4. Trust Model & Security Assumptions
 
-1. **Root of Trust at Hatch:**
-   - The enclave public key is supplied during `hatch()` by the syndicate creator.
+1. **Root of Trust at Hatch & Syndicate Rug Vector:**
+   - The enclave public key and `payout_recipient` are supplied during `hatch()` by the syndicate creator.
+   - Because the creator designates both the enclave signing key and the payout recipient, this is explicitly a **Trust-the-Creator / Verified-Roost model**: if an owner sets their own key and wallet, they control the funds.
+   - **Flyers MUST inspect and verify** both `payout_recipient` and `enclave_public_key` (cross-referencing with a published hardware attestation report) BEFORE depositing.
    - `expected_code_hash` is recorded on-chain as audited reference metadata. Full on-chain hardware attestation verification (checking Intel PCK certificate chains against Intel PCS root via an on-chain DCAP verifier) is deferred to future work (GAP-006).
-   - Flyers trust the syndicate creator or out-of-band attestation verification for the initial enclave public key binding.
 
 2. **Domain Separation & Replay Protection:**
-   - Every Ed25519 settlement batch signature binds `current_account_id:syndicate_id:epoch:round_nonce:aggregate_order_hash`.
-   - This ensures signatures cannot be replayed across different contracts, across syndicates, or across epochs.
+   - Every Ed25519 settlement batch signature binds the 6-tuple `current_account_id:syndicate_id:epoch:round_nonce:payout_recipient:aggregate_order_hash`.
+   - This ensures third-party front-runners cannot divert payouts to another account; any mismatch between the signed recipient and on-chain `payout_recipient` causes signature verification to fail immediately.
 
-3. **Non-Custodial Escape Valve Invariants:**
+3. **Non-Custodial Escape Valve Invariants & Callback Rollbacks:**
    - Escrows are stored in a dedicated contract-level `LookupMap<(syndicate_id, account_id), NearToken>`, preventing unbounded deserialization gas denial-of-service.
-   - If the TEE aggregator crashes or stalls beyond `timeout_blocks`, each depositor can execute `hatch_out()` to retrieve 100% of their deposited funds.
-   - Once a syndicate batch is settled (`settle_batch`), funds are dispatched via `Promise::new(payout_target).transfer(...)`, and `hatch_out` is strictly blocked to prevent double-spending.
+   - If the TEE aggregator crashes or stalls beyond `timeout_blocks`, depositors can execute `hatch_out()` to retrieve 100% of their deposited funds.
+   - Asynchronous transfer callbacks (`on_settlement_payout` and `on_hatch_out_payout`) revert syndicate status and restore escrow balances if the underlying `Promise` transfer fails.
+   - On successful Flash settlement, flyer escrow entries are removed from `LookupMap` and storage staking is reclaimed.
+   - On `hatch_out`, entries are removed upon exit; failed refund callbacks restore balances without double-counting flyers.
 
-4. **API and Commerce Security:**
+4. **Known Limitations & Sybil Griefing:**
+   - **Sybil Cap Griefing:** 50 distinct accounts depositing the minimum deposit (0.01 NEAR) can fill a syndicate's capacity until the timeout blocks elapse. The attacker's cost is capital lockup (they retrieve funds at timeout).
+   - **Storage Staking:** Storage staking for LookupMap entries is funded by the contract balance and initial hatch deposit; dynamic per-flyer storage staking is planned for future upgrades (GAP-007).
+
+5. **API and Commerce Security:**
    - CORS origin reflection is restricted to localhost/127.0.0.1 and explicit allowed origins; unknown origins receive no CORS access headers.
    - x402 micro-commerce requires cryptographic HMAC-SHA256 bearer proofs (`${receiptId}.${hmacSignature}`). Unsigned receipt IDs are rejected with HTTP 402.
 
@@ -203,9 +210,9 @@ To ensure complete transparency and intellectual honesty for human and automated
 ├── contracts/
 │   └── fly-coordinator/          # NEAR L1 coordinator smart contract (Rust / near-sdk 5.1)
 │       ├── Cargo.toml
-│       ├── src/lib.rs            # hatch(), deposit(), settle_batch(), hatch_out() + 19 unit tests
-│       ├── tests/                # integration_tests.rs (4 multi-agent lifecycle & safety tests)
-│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm (271 KB)
+│       ├── src/lib.rs            # hatch(), deposit(), settle_batch(), hatch_out() + 25 unit tests
+│       ├── tests/                # integration_tests.rs (6 multi-agent lifecycle & safety tests)
+│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm (277 KB)
 ├── src/
 │   ├── contracts/nest.js         # Nest coordinator contract state machine mirror
 │   ├── enclave/

@@ -44,6 +44,7 @@ pub struct SyndicateRecord {
     pub round_nonce: String,
     pub flyer_count: u32,
     pub active_flyer_count: u32,
+    pub flyers: Vec<AccountId>, // Bounded by MAX_FLYERS_PER_SYNDICATE (<=50)
     pub total_escrow: NearToken,
     pub settled_batches: Vec<String>,
     pub total_settled_payouts: NearToken,
@@ -169,6 +170,7 @@ impl FlyCoordinator {
             round_nonce,
             flyer_count: 0,
             active_flyer_count: 0,
+            flyers: Vec::new(),
             total_escrow: NearToken::from_yoctonear(0),
             settled_batches: Vec::new(),
             total_settled_payouts: NearToken::from_yoctonear(0),
@@ -224,6 +226,7 @@ impl FlyCoordinator {
                 "[Deposit REJECT] Maximum 50 flyers reached for this syndicate."
             );
             syn.active_flyer_count += 1;
+            syn.flyers.push(caller.clone());
         }
 
         self.escrows.insert(escrow_key, new_balance);
@@ -378,6 +381,7 @@ impl FlyCoordinator {
         self.escrows.remove(&escrow_key);
         syn.total_escrow = syn.total_escrow.saturating_sub(flyer_balance);
         syn.active_flyer_count = syn.active_flyer_count.saturating_sub(1);
+        syn.flyers.retain(|f| f != &caller);
 
         // 5. Update syndicate status to AbortedRefunded if all escrow is cleared
         if syn.total_escrow.as_yoctonear() == 0 {
@@ -400,6 +404,12 @@ impl FlyCoordinator {
         syndicate_id: String,
         payout_amount: NearToken,
     ) -> bool {
+        assert_eq!(
+            env::current_account_id(),
+            env::predecessor_account_id(),
+            "Method is private"
+        );
+
         if !near_sdk::is_promise_success() {
             if let Some(syn) = self.syndicates.get_mut(&syndicate_id) {
                 syn.status = SyndicateStatus::Active;
@@ -408,6 +418,16 @@ impl FlyCoordinator {
             }
             return false;
         }
+
+        // On successful settlement transfer: reclaim storage for all flyers in Flash syndicate
+        if let Some(syn) = self.syndicates.get_mut(&syndicate_id) {
+            for flyer in &syn.flyers {
+                self.escrows.remove(&(syn.id.clone(), flyer.clone()));
+            }
+            syn.flyers.clear();
+            syn.active_flyer_count = 0;
+        }
+
         true
     }
 
@@ -419,6 +439,12 @@ impl FlyCoordinator {
         flyer_id: AccountId,
         refund_amount: NearToken,
     ) -> bool {
+        assert_eq!(
+            env::current_account_id(),
+            env::predecessor_account_id(),
+            "Method is private"
+        );
+
         if !near_sdk::is_promise_success() {
             let escrow_key = (syndicate_id.clone(), flyer_id.clone());
             let current = self
@@ -426,11 +452,21 @@ impl FlyCoordinator {
                 .get(&escrow_key)
                 .copied()
                 .unwrap_or_else(|| NearToken::from_yoctonear(0));
+
+            // Only increment active_flyer_count and add to syn.flyers if current balance was 0
+            if current.as_yoctonear() == 0 {
+                if let Some(syn) = self.syndicates.get_mut(&syndicate_id) {
+                    syn.active_flyer_count = syn.active_flyer_count.saturating_add(1);
+                    if !syn.flyers.contains(&flyer_id) {
+                        syn.flyers.push(flyer_id.clone());
+                    }
+                }
+            }
+
             self.escrows.insert(escrow_key, current.saturating_add(refund_amount));
 
             if let Some(syn) = self.syndicates.get_mut(&syndicate_id) {
                 syn.total_escrow = syn.total_escrow.saturating_add(refund_amount);
-                syn.active_flyer_count = syn.active_flyer_count.saturating_add(1);
                 if syn.status == SyndicateStatus::AbortedRefunded {
                     syn.status = SyndicateStatus::Active;
                 }
@@ -457,8 +493,11 @@ impl FlyCoordinator {
 mod tests {
     use super::*;
     use ed25519_dalek::{Signer, SigningKey};
+    #[allow(deprecated)]
+    use near_sdk::test_utils::testing_env_with_promise_results;
     use near_sdk::test_utils::VMContextBuilder;
     use near_sdk::testing_env;
+    use near_sdk::PromiseResult;
 
     fn get_context(
         predecessor: AccountId,
@@ -1260,5 +1299,274 @@ mod tests {
         let syn_final = contract.get_syndicate(syn_id.clone()).unwrap();
         assert_eq!(syn_final.active_flyer_count, 2);
         assert_eq!(contract.get_escrow(syn_id, f1).as_near(), 2);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_on_settlement_payout_success_cleans_up_flyer_storage() {
+        let owner: AccountId = "alice.near".parse().unwrap();
+        let ctx = get_context(owner.clone(), NearToken::from_near(1), 100);
+        testing_env!(ctx.build());
+
+        let mut contract = FlyCoordinator::new();
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "settle-cb-succ", 1, "", "", "");
+
+        let syn_id = contract.hatch(
+            "settle-cb-succ".to_string(),
+            Some("FLASH".to_string()),
+            Some(2),
+            Some(50),
+            enclave_pk,
+            "hash".to_string(),
+            Some(30),
+            None,
+        );
+
+        let f1: AccountId = "flyer1.near".parse().unwrap();
+        let f2: AccountId = "flyer2.near".parse().unwrap();
+
+        let ctx = get_context(f1.clone(), NearToken::from_near(10), 105);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        let ctx = get_context(f2.clone(), NearToken::from_near(15), 106);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        let syn = contract.get_syndicate(syn_id.clone()).unwrap();
+        let active_nonce = syn.round_nonce.clone();
+        let (_, valid_sig) = make_enclave_key_and_signature(
+            "fly-coordinator.testnet",
+            &syn_id,
+            1,
+            &active_nonce,
+            &syn.payout_recipient.to_string(),
+            "order_hash",
+        );
+
+        // Execute settle_batch
+        let ctx = get_context(owner, NearToken::from_near(0), 110);
+        testing_env!(ctx.build());
+        contract.settle_batch(syn_id.clone(), active_nonce, "order_hash".to_string(), valid_sig);
+
+        // Simulate callback execution with successful transfer promise result
+        let self_account: AccountId = "fly-coordinator.testnet".parse().unwrap();
+        let ctx = get_context(self_account, NearToken::from_near(0), 111);
+        testing_env_with_promise_results(ctx.build(), PromiseResult::Successful(vec![]));
+
+        let success = contract.on_settlement_payout(syn_id.clone(), NearToken::from_near(25));
+        assert!(success);
+
+        // Storage cleanup: verify flyer escrow entries are removed and flyers list cleared
+        assert_eq!(contract.get_escrow(syn_id.clone(), f1).as_yoctonear(), 0);
+        assert_eq!(contract.get_escrow(syn_id.clone(), f2).as_yoctonear(), 0);
+        let syn_after = contract.get_syndicate(syn_id).unwrap();
+        assert_eq!(syn_after.active_flyer_count, 0);
+        assert!(syn_after.flyers.is_empty());
+        assert_eq!(syn_after.status, SyndicateStatus::Settled);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_on_settlement_payout_failure_reverts_state() {
+        let owner: AccountId = "alice.near".parse().unwrap();
+        let ctx = get_context(owner.clone(), NearToken::from_near(1), 100);
+        testing_env!(ctx.build());
+
+        let mut contract = FlyCoordinator::new();
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "settle-cb-fail", 1, "", "", "");
+
+        let syn_id = contract.hatch(
+            "settle-cb-fail".to_string(),
+            Some("FLASH".to_string()),
+            Some(1),
+            Some(50),
+            enclave_pk,
+            "hash".to_string(),
+            Some(30),
+            None,
+        );
+
+        let f1: AccountId = "flyer1.near".parse().unwrap();
+        let ctx = get_context(f1.clone(), NearToken::from_near(20), 105);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        let syn = contract.get_syndicate(syn_id.clone()).unwrap();
+        let active_nonce = syn.round_nonce.clone();
+        let (_, valid_sig) = make_enclave_key_and_signature(
+            "fly-coordinator.testnet",
+            &syn_id,
+            1,
+            &active_nonce,
+            &syn.payout_recipient.to_string(),
+            "order_hash",
+        );
+
+        // Execute settle_batch
+        let ctx = get_context(owner, NearToken::from_near(0), 110);
+        testing_env!(ctx.build());
+        contract.settle_batch(syn_id.clone(), active_nonce, "order_hash".to_string(), valid_sig);
+
+        // Simulate callback execution with failed transfer promise result
+        let self_account: AccountId = "fly-coordinator.testnet".parse().unwrap();
+        let ctx = get_context(self_account, NearToken::from_near(0), 111);
+        testing_env_with_promise_results(ctx.build(), PromiseResult::Failed);
+
+        let ok = contract.on_settlement_payout(syn_id.clone(), NearToken::from_near(20));
+        assert!(!ok);
+
+        // State reverted: status back to Active, escrow back to 20 NEAR, settled payouts 0
+        let syn_reverted = contract.get_syndicate(syn_id.clone()).unwrap();
+        assert_eq!(syn_reverted.status, SyndicateStatus::Active);
+        assert_eq!(syn_reverted.total_escrow.as_near(), 20);
+        assert_eq!(syn_reverted.total_settled_payouts.as_yoctonear(), 0);
+        // Individual escrow balance was preserved!
+        assert_eq!(contract.get_escrow(syn_id.clone(), f1.clone()).as_near(), 20);
+
+        // Now flyer can escape hatch out past timeout
+        let ctx = get_context(f1.clone(), NearToken::from_near(0), 150);
+        testing_env!(ctx.build());
+        let _ = contract.hatch_out(syn_id);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_on_hatch_out_payout_failure_restores_escrow_and_status() {
+        let owner: AccountId = "alice.near".parse().unwrap();
+        let ctx = get_context(owner, NearToken::from_near(1), 100);
+        testing_env!(ctx.build());
+
+        let mut contract = FlyCoordinator::new();
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "hatchout-cb-fail", 1, "", "", "");
+
+        let syn_id = contract.hatch(
+            "hatchout-cb-fail".to_string(),
+            Some("FLASH".to_string()),
+            Some(1),
+            Some(50),
+            enclave_pk,
+            "hash".to_string(),
+            Some(20),
+            None,
+        );
+
+        let f1: AccountId = "flyer1.near".parse().unwrap();
+        let ctx = get_context(f1.clone(), NearToken::from_near(10), 105);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        // Flyer hatches out at block 130 past timeout (20 blocks)
+        let ctx = get_context(f1.clone(), NearToken::from_near(0), 130);
+        testing_env!(ctx.build());
+        let _ = contract.hatch_out(syn_id.clone());
+
+        // Prior to callback, escrow is removed and status is AbortedRefunded
+        assert_eq!(contract.get_escrow(syn_id.clone(), f1.clone()).as_yoctonear(), 0);
+        let syn_during = contract.get_syndicate(syn_id.clone()).unwrap();
+        assert_eq!(syn_during.status, SyndicateStatus::AbortedRefunded);
+
+        // Simulate failed refund transfer callback
+        let self_account: AccountId = "fly-coordinator.testnet".parse().unwrap();
+        let ctx = get_context(self_account, NearToken::from_near(0), 131);
+        testing_env_with_promise_results(ctx.build(), PromiseResult::Failed);
+
+        let ok = contract.on_hatch_out_payout(syn_id.clone(), f1.clone(), NearToken::from_near(10));
+        assert!(!ok);
+
+        // Balance and status restored!
+        assert_eq!(contract.get_escrow(syn_id.clone(), f1).as_near(), 10);
+        let syn_restored = contract.get_syndicate(syn_id).unwrap();
+        assert_eq!(syn_restored.total_escrow.as_near(), 10);
+        assert_eq!(syn_restored.active_flyer_count, 1);
+        assert_eq!(syn_restored.status, SyndicateStatus::Active);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_on_hatch_out_payout_failure_with_redeposit_prevents_double_counting() {
+        let owner: AccountId = "alice.near".parse().unwrap();
+        let ctx = get_context(owner, NearToken::from_near(1), 100);
+        testing_env!(ctx.build());
+
+        let mut contract = FlyCoordinator::new();
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "double-count-swarm", 1, "", "", "");
+
+        let syn_id = contract.hatch(
+            "double-count-swarm".to_string(),
+            Some("FLASH".to_string()),
+            Some(1),
+            Some(50),
+            enclave_pk,
+            "hash".to_string(),
+            Some(20),
+            None,
+        );
+
+        let f1: AccountId = "flyer1.near".parse().unwrap();
+        let f2: AccountId = "flyer2.near".parse().unwrap();
+
+        // f2 keeps syndicate active
+        let ctx = get_context(f2, NearToken::from_near(5), 102);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        // f1 deposits 10 NEAR
+        let ctx = get_context(f1.clone(), NearToken::from_near(10), 105);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        // f1 hatches out at block 130
+        let ctx = get_context(f1.clone(), NearToken::from_near(0), 130);
+        testing_env!(ctx.build());
+        let _ = contract.hatch_out(syn_id.clone());
+
+        let syn_after_exit = contract.get_syndicate(syn_id.clone()).unwrap();
+        assert_eq!(syn_after_exit.active_flyer_count, 1);
+
+        // Before callback arrives, f1 redeposits 3 NEAR
+        let ctx = get_context(f1.clone(), NearToken::from_near(3), 132);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        let syn_after_redeposit = contract.get_syndicate(syn_id.clone()).unwrap();
+        assert_eq!(syn_after_redeposit.active_flyer_count, 2);
+
+        // Now the refund transfer fails and callback fires
+        let self_account: AccountId = "fly-coordinator.testnet".parse().unwrap();
+        let ctx = get_context(self_account, NearToken::from_near(0), 135);
+        testing_env_with_promise_results(ctx.build(), PromiseResult::Failed);
+
+        let ok = contract.on_hatch_out_payout(syn_id.clone(), f1.clone(), NearToken::from_near(10));
+        assert!(!ok);
+
+        // Balance is 10 + 3 = 13 NEAR
+        assert_eq!(contract.get_escrow(syn_id.clone(), f1).as_near(), 13);
+        // Crucial invariant: active_flyer_count MUST remain 2 (f1 was NOT counted twice!)
+        let syn_final = contract.get_syndicate(syn_id).unwrap();
+        assert_eq!(syn_final.active_flyer_count, 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "Method is private")]
+    fn test_on_settlement_payout_rejects_external_caller() {
+        let attacker: AccountId = "attacker.near".parse().unwrap();
+        let ctx = get_context(attacker, NearToken::from_near(0), 110);
+        testing_env!(ctx.build());
+
+        let mut contract = FlyCoordinator::new();
+        contract.on_settlement_payout("syn-1".to_string(), NearToken::from_near(10));
+    }
+
+    #[test]
+    #[should_panic(expected = "Method is private")]
+    fn test_on_hatch_out_payout_rejects_external_caller() {
+        let attacker: AccountId = "attacker.near".parse().unwrap();
+        let ctx = get_context(attacker, NearToken::from_near(0), 110);
+        testing_env!(ctx.build());
+
+        let mut contract = FlyCoordinator::new();
+        let f1: AccountId = "flyer1.near".parse().unwrap();
+        contract.on_hatch_out_payout("syn-1".to_string(), f1, NearToken::from_near(10));
     }
 }

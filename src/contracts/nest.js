@@ -182,6 +182,9 @@ export class FlyNestContract {
       syn.totalEscrow = 0;
       syn.status = 'SETTLED';
       receipt.lifecycle = 'FLASH_DISSOLVED_AND_PAID';
+      // Reclaim flyer escrow storage on successful Flash settlement
+      syn.escrow.clear();
+      syn.activeFlyerCount = 0;
     } else {
       // Persistent Dark Vault advances epoch and resets deliberation timer
       syn.settledBatches.push(receipt);
