@@ -6,18 +6,20 @@ import { EnclaveCrypto } from '../enclave/crypto.js';
  * and institutional treasuries integrating with Fly on NEAR.
  */
 export class FlyClient {
-  constructor({ baseUrl = 'http://localhost:3000', fetchFn = fetch } = {}) {
+  constructor({ baseUrl = 'http://localhost:3000', apiKey = null, fetchFn = fetch } = {}) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.apiKey = apiKey || null;
     this.fetch = fetchFn;
   }
 
-  async _request(method, path, body = null, headers = {}) {
+  async _request(method, path, body = null, customHeaders = {}) {
     const url = `${this.baseUrl}${path}`;
     const opts = {
       method,
       headers: {
         'Content-Type': 'application/json',
-        ...headers,
+        ...(this.apiKey ? { 'X-Fly-Api-Key': this.apiKey } : {}),
+        ...customHeaders,
       },
     };
     if (body) opts.body = JSON.stringify(body);
@@ -163,7 +165,11 @@ export class FlyClient {
   }
 
   async fetchProtectedResource(resourceId, paymentProof = null) {
-    const headers = paymentProof ? { Authorization: `X402-Proof ${paymentProof}` } : {};
+    const proofStr =
+      typeof paymentProof === 'object' && paymentProof !== null
+        ? (paymentProof.proof || `${paymentProof.receiptId}.${paymentProof.hmacSignature}`)
+        : paymentProof;
+    const headers = proofStr ? { Authorization: `X402-Proof ${proofStr}` } : {};
     return this._request('GET', `/v1/commerce/data/${resourceId}`, null, headers);
   }
 }

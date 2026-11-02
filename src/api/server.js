@@ -13,8 +13,11 @@ import { ConfidentialComputeSyndicate } from '../facilities/compute-syndicate.js
 import { ResilienceEngine } from '../resilience/failure-matrix.js';
 
 export class FlyApiDaemon {
-  constructor({ port = 0 } = {}) {
+  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null } = {}) {
     this.port = port;
+    this.host = host;
+    this.allowedOrigins = allowedOrigins;
+    this.apiKey = apiKey || process.env.FLY_API_KEY || null;
     this.nest = new FlyNestContract();
     this.roost = new RoostEnclave();
     this.farShard = new FarPrivateShardBridge();
@@ -36,15 +39,15 @@ export class FlyApiDaemon {
         try {
           await this.handleRequest(req, res);
         } catch (err) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: err.message }));
+          const code = err.statusCode || 500;
+          this.sendJson(res, code, { error: err.message }, req);
         }
       });
 
-      this.server.listen(this.port, () => {
+      this.server.listen(this.port, this.host, () => {
         const addr = this.server.address();
         this.actualPort = addr.port;
-        resolve({ port: this.actualPort });
+        resolve({ port: this.actualPort, host: this.host });
       });
     });
   }
@@ -59,27 +62,58 @@ export class FlyApiDaemon {
     });
   }
 
-  async parseBody(req) {
+  getCorsOrigin(req) {
+    const origin = req?.headers?.origin;
+    if (!origin) return null;
+    if (
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+      (Array.isArray(this.allowedOrigins) && this.allowedOrigins.includes(origin))
+    ) {
+      return origin;
+    }
+    return null;
+  }
+
+  async parseBody(req, limitBytes = 512 * 1024) {
     return new Promise((resolve, reject) => {
       let body = '';
-      req.on('data', (chunk) => (body += chunk));
+      let bytes = 0;
+      req.on('data', (chunk) => {
+        bytes += chunk.length;
+        if (bytes > limitBytes) {
+          const err = new Error('Payload Too Large: Maximum allowed body size is 512KB');
+          err.statusCode = 413;
+          req.destroy(err);
+          return reject(err);
+        }
+        body += chunk;
+      });
       req.on('end', () => {
         if (!body) return resolve({});
         try {
           resolve(JSON.parse(body));
         } catch (e) {
-          reject(new Error('Invalid JSON'));
+          const err = new Error('Invalid JSON payload');
+          err.statusCode = 400;
+          reject(err);
         }
       });
       req.on('error', reject);
     });
   }
 
-  sendJson(res, statusCode, data) {
-    res.writeHead(statusCode, {
+  sendJson(res, statusCode, data, req = null) {
+    const request = req || res.req;
+    const origin = this.getCorsOrigin(request);
+    const headers = {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    });
+    };
+    if (origin) {
+      headers['Access-Control-Allow-Origin'] = origin;
+      headers['Access-Control-Allow-Credentials'] = 'true';
+      headers['Vary'] = 'Origin';
+    }
+    res.writeHead(statusCode, headers);
     res.end(JSON.stringify(data));
   }
 
@@ -90,12 +124,32 @@ export class FlyApiDaemon {
 
     // CORS preflight
     if (method === 'OPTIONS') {
-      res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
+      const origin = this.getCorsOrigin(req);
+      const headers = {
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-402-Proof',
-      });
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-402-Proof, X-Fly-Api-Key',
+        'Access-Control-Max-Age': '86400',
+        Vary: 'Origin',
+      };
+      if (origin) {
+        headers['Access-Control-Allow-Origin'] = origin;
+        headers['Access-Control-Allow-Credentials'] = 'true';
+      }
+      res.writeHead(204, headers);
       return res.end();
+    }
+
+    // Optional API Key authentication enforcement when FLY_API_KEY is configured
+    if (this.apiKey && pathname !== '/health' && method !== 'OPTIONS') {
+      const authHeader = req.headers['authorization'];
+      const apiKeyHeader = req.headers['x-fly-api-key'];
+      const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      const providedKey = apiKeyHeader || bearerToken;
+      if (!providedKey || providedKey !== this.apiKey) {
+        const err = new Error('Unauthorized: Invalid or missing X-Fly-Api-Key');
+        err.statusCode = 401;
+        throw err;
+      }
     }
 
     // ==========================================
@@ -103,12 +157,18 @@ export class FlyApiDaemon {
     // ==========================================
     if (method === 'GET' && pathname.startsWith('/v1/stream/syndicate/')) {
       const synId = pathname.split('/')[4];
-      res.writeHead(200, {
+      const origin = this.getCorsOrigin(req);
+      const sseHeaders = {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-      });
+        Vary: 'Origin',
+      };
+      if (origin) {
+        sseHeaders['Access-Control-Allow-Origin'] = origin;
+        sseHeaders['Access-Control-Allow-Credentials'] = 'true';
+      }
+      res.writeHead(200, sseHeaders);
       res.write(`event: connected\ndata: ${JSON.stringify({ syndicateId: synId, connectedAt: Date.now() })}\n\n`);
 
       const listener = (eventData) => {
@@ -123,12 +183,18 @@ export class FlyApiDaemon {
 
     if (method === 'GET' && pathname.startsWith('/v1/stream/facilities/rfq/')) {
       const loanId = pathname.split('/')[5];
-      res.writeHead(200, {
+      const origin = this.getCorsOrigin(req);
+      const sseHeaders = {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-      });
+        Vary: 'Origin',
+      };
+      if (origin) {
+        sseHeaders['Access-Control-Allow-Origin'] = origin;
+        sseHeaders['Access-Control-Allow-Credentials'] = 'true';
+      }
+      res.writeHead(200, sseHeaders);
       res.write(`event: connected\ndata: ${JSON.stringify({ loanId, connectedAt: Date.now() })}\n\n`);
 
       const listener = (eventData) => {
@@ -146,6 +212,16 @@ export class FlyApiDaemon {
     // ==========================================
     if (method === 'POST' && pathname === '/v1/syndicates/hatch') {
       const body = await this.parseBody(req);
+      if (!body.id || typeof body.id !== 'string' || !/^[a-z0-9_-]{3,64}$/.test(body.id)) {
+        return this.sendJson(res, 400, {
+          error: 'Invalid syndicate ID: Must be 3-64 characters matching [a-z0-9_-].',
+        }, req);
+      }
+      if (body.quorumThreshold !== undefined && (typeof body.quorumThreshold !== 'number' || body.quorumThreshold < 1)) {
+        return this.sendJson(res, 400, {
+          error: 'quorumThreshold must be a positive integer >= 1.',
+        }, req);
+      }
       const syn = this.nest.hatch({
         syndicateId: body.id,
         syndicateType: body.type || 'FLASH',
@@ -395,18 +471,25 @@ export class FlyApiDaemon {
       const authHeader = req.headers['authorization'];
       const proof = authHeader?.startsWith('X402-Proof ') ? authHeader.split(' ')[1] : null;
 
-      // Check if settled receipt exists for this proof
-      const verified = this.x402.settledReceipts.find((r) => r.receiptId === proof);
+      // Cryptographically verify payment proof against settled invoices
+      const verified = this.x402.verifyPaymentProof(proof, resourceId);
 
       if (!verified) {
         // Issue HTTP 402 Payment Required with X-402 headers
-        res.writeHead(402, {
+        const origin = this.getCorsOrigin(req);
+        const respHeaders = {
           'Content-Type': 'application/json',
+          Vary: 'Origin',
           'X-402-Payment-Required': 'true',
           'X-402-Price-USDC': '2.50',
           'X-402-Invoice-Resource': resourceId,
           'X-402-Settlement-Method': 'PINGPAY_CONFIDENTIAL_MICROPAYMENT',
-        });
+        };
+        if (origin) {
+          respHeaders['Access-Control-Allow-Origin'] = origin;
+          respHeaders['Access-Control-Allow-Credentials'] = 'true';
+        }
+        res.writeHead(402, respHeaders);
         return res.end(
           JSON.stringify({
             statusCode: 402,
@@ -423,7 +506,8 @@ export class FlyApiDaemon {
         data: 'ALPHA_SIGNALS_CROSS_CHAIN_PROPRIETARY_SIGNAL_DATA',
         releasedTo: verified.buyerFlyerId,
         paymentProof: verified.receiptId,
-      });
+        verifiedAt: Date.now(),
+      }, req);
     }
 
     // 404 Not Found

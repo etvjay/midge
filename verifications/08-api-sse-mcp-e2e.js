@@ -123,8 +123,15 @@ export async function verifyApiSseMcpE2E() {
     });
     console.log(`  ✓ Step B (Settled):   ${settlement.receiptId} (${settlement.settledVia})`);
 
-    // Step C: Request with payment proof
-    const paidRes = await client.fetchProtectedResource('eth-volatility-alpha', settlement.receiptId);
+    // Step C1: Security Verification — Unsigned receipt ID MUST be rejected with HTTP 402
+    const unsignedRes = await client.fetchProtectedResource('eth-volatility-alpha', settlement.receiptId);
+    if (unsignedRes.status !== 402) {
+      throw new Error(`[SECURITY FAILURE] Unsigned receipt was accepted with status ${unsignedRes.status}!`);
+    }
+    console.log(`  ✓ Security Check:     Unsigned receipt rejected (HTTP 402, HMAC proof required)`);
+
+    // Step C2: Valid cryptographically signed bearer proof accepted with HTTP 200
+    const paidRes = await client.fetchProtectedResource('eth-volatility-alpha', settlement.proof);
     console.log(`  ✓ Step C (With Auth): HTTP ${paidRes.status} OK`);
     console.log(`    ↳ Alpha Payload:    ${paidRes.data.data} (Released to: ${paidRes.data.releasedTo})`);
 
@@ -144,7 +151,7 @@ export async function verifyApiSseMcpE2E() {
     // Clean up
     sseReq.destroy();
     await daemon.stop();
-    console.log('\n>>> [PASS] HTTP DAEMON, SSE, x402 & MCP SERVER 100% VERIFIED.\n');
+    console.log('\n>>> [PASS] HTTP DAEMON, SSE, x402 & MCP SERVER VERIFIED (Integrated Gateway).\n');
 
     return {
       verified: true,
