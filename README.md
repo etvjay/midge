@@ -93,7 +93,7 @@ Fly implements deterministic resilience across all failure modes:
 Run all verifications with zero external dependencies:
 
 ```bash
-# 1. Run Complete Master Verification Suite (7 Verifications, ~1.4s)
+# 1. Run Complete Master Verification Suite (8 Verifications, ~1.1s)
 npm test
 
 # 2. Live TEE Hardware Attestation (HAQ) against NEAR AI Cloud
@@ -117,10 +117,16 @@ npm run verify:otc
 # 8. 5-Layer Resilience Failure Matrix (FMEA)
 npm run verify:matrix
 
-# 9. NEAR L1 Rust Smart Contract Unit Tests (near-sdk 5.1)
+# 9. HTTP Gateway Daemon, Real-time SSE Streams, x402 Commerce & MCP Server
+npm run verify:api
+
+# 10. NEAR L1 Rust Smart Contract Unit Tests (near-sdk 5.1)
 npm run verify:rust
 
-# 10. Run Full 10-Flyer Dark Swarm Simulation with End-to-End Encryption
+# 11. Compile Release WebAssembly Contract (238 KB)
+npm run build:wasm
+
+# 12. Run Full 10-Flyer Dark Swarm Simulation with End-to-End Encryption
 npm run demo:syndicate
 ```
 

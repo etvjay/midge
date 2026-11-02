@@ -18,7 +18,7 @@ This repository implements Fly, an autonomous syndicate protocol combining:
 ## Verification & Test Commands
 Run deterministic verification suite:
 ```bash
-npm test                 # Run all 7 master verifications (~1.4s)
+npm test                 # Run all 8 master verifications (~1.1s)
 npm run verify:tee       # Live TEE Hardware Attestation (HAQ)
 npm run verify:intents   # 1Click Confidential Intents Liquidity & Pricing
 npm run verify:hatch     # Hatch Factory, OutLayer Limits & Escape Hatch FMEA
@@ -26,7 +26,9 @@ npm run verify:vault     # Dark Vault Multi-Epoch, Pods, FAR Shard & Omnichain M
 npm run verify:rfq       # Confidential RFQ, Sealed Quotes & Private Adjudication
 npm run verify:otc       # OTC Block Trades & Confidential AI Compute Syndicate
 npm run verify:matrix    # 5-Layer Resilience Failure Matrix (FMEA)
+npm run verify:api       # HTTP Gateway Daemon, SSE Streams, x402 & MCP Server
 npm run verify:rust      # Production NEAR L1 Smart Contract Tests (Rust / near-sdk 5.1)
+npm run build:wasm       # Compile Production WebAssembly Smart Contract (238 KB)
 npm run demo:syndicate   # Full 10-Flyer Dark Swarm Simulation with E2E Encryption
 ```
 
