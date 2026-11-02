@@ -94,11 +94,16 @@ async function runAllVerifications() {
     results.inference.verified;
 
   console.log('\n════════════════════════════════════════════════════════════════');
-  console.log('                 FINAL VERIFICATION SUMMARY                     ');
+  if (isOffline) {
+    console.log('                 FINAL VERIFICATION SUMMARY (OFFLINE)           ');
+    console.log('                 OFFLINE: 3 checks used recorded fixtures       ');
+  } else {
+    console.log('                 FINAL VERIFICATION SUMMARY                     ');
+  }
   console.log('════════════════════════════════════════════════════════════════');
-  console.log(` 1. Live TEE Hardware Attestation (HAQ):         ${results.tee.verified ? '✅ PASS' : '❌ FAIL'}`);
-  console.log(` 2. 1Click Confidential Intents Liquidity:       ${results.intents.verified ? '✅ PASS' : '❌ FAIL'}`);
-  console.log(` 3. Hatch Factory & Non-Custodial Escape:        ${results.hatch.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 1. Live TEE Hardware Attestation (HAQ):         ${results.tee.verified ? (isOffline ? '✅ PASS [OFFLINE FIXTURE]' : '✅ PASS') : '❌ FAIL'}`);
+  console.log(` 2. 1Click Confidential Intents Liquidity:       ${results.intents.verified ? (isOffline ? '✅ PASS [OFFLINE FIXTURE]' : '✅ PASS') : '❌ FAIL'}`);
+  console.log(` 3. Hatch Factory & Non-Custodial Escape:        ${results.hatch.verified ? (isOffline ? '✅ PASS [OFFLINE FIXTURE]' : '✅ PASS') : '❌ FAIL'}`);
   console.log(` 4. Dark Vault, Pods, FAR Shard & Omnichain MPC:   ${results.darkVault.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 5. Confidential RFQ & Private Adjudication:     ${results.rfq.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 6. OTC Block Trades & AI Compute Syndicate:     ${results.otcCompute.verified ? '✅ PASS' : '❌ FAIL'}`);
@@ -106,12 +111,12 @@ async function runAllVerifications() {
   console.log(` 8. HTTP Gateway Daemon, SSE, x402 & MCP Server: ${results.apiSseMcp.verified ? '✅ PASS' : '❌ FAIL'}`);
   const inferStatus = results.inference.live
     ? '✅ PASS (Live External)'
-    : (results.inference.skipped ? '⚠️ SKIPPED (No API key; not demonstrated)' : '✅ PASS (Recorded Fixture)');
+    : (results.inference.skipped ? '⚠️ SKIPPED (No API key; not demonstrated)' : (isOffline ? '✅ PASS [OFFLINE FIXTURE]' : '✅ PASS (Recorded Fixture)'));
   console.log(` 9. TEE Deliberation Inference Attestation:      ${inferStatus}`);
   console.log('────────────────────────────────────────────────────────────────');
   console.log(` Total Execution Time: ${duration}s`);
   if (isOffline) {
-    console.log(` Verdict: ${allPassed ? 'ALL 9 VERIFICATIONS PASSED [OFFLINE FIXTURES MODE]' : 'CHECKS FAILED'}`);
+    console.log(` Verdict: ${allPassed ? 'ALL 9 VERIFICATIONS PASSED [OFFLINE FIXTURES MODE: 3 checks used fixtures]' : 'CHECKS FAILED'}`);
   } else {
     console.log(` Verdict: ${allPassed ? 'ALL 9 ARCHITECTURAL VERIFICATIONS PASSED (Contract & TEE Bound, Facilities Simulated)' : 'CHECKS FAILED'}`);
   }

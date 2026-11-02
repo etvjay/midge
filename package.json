@@ -28,6 +28,8 @@
     "verify:mpc": "node scripts/testnet-mpc.js",
     "verify:inference": "node scripts/verify-inference.js",
     "build:wasm": "cd contracts/fly-coordinator && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",
+    "baseline": "node scripts/baseline.js",
+    "security:review": "node scripts/security-review.js",
     "check:foundry": "node scripts/check-foundry.js",
     "review:argon": "node scripts/argon-review.js"
   },

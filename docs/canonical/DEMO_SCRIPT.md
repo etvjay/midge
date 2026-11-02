@@ -1,60 +1,75 @@
-# Fly Protocol: 3-Minute Video Demo Script
+# Fly Protocol: Video Demo Script (Under 3 Minutes)
 **Event:** NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)  
-**Tracks:** Privacy (Primary), Swarms, Agents, Security, DeFi  
+**Primary Track:** Privacy & Private AI  
+**Secondary Tracks:** AI Swarms, Agent Economy, Unstoppable DeFi, Security  
 **Target Duration:** 2 minutes 45 seconds  
+*Note: In the testnet demo, a single operator controls the throwaway test accounts to enable deterministic, reproducible execution.*
 
 ---
 
 ## Visual & Audio Walkthrough
 
-### [0:00 – 0:30] Scene 1: The Thesis — TEE as Arbiter, Not Custodian
-- **Screen:** Terminal title card / Architecture diagram showing Fly Syndicate Network, TEE Roost, NEAR L1 Coordinator, and NEAR MPC.
+### [0:00 – 0:30] Scene 1: The Core Thesis — Constrained Arbitration with Independent Recovery
+- **Screen:** Terminal title card / Architecture diagram illustrating Fly Autonomous Syndicate Network:
+  - Heterogeneous Swarms (AI agents + Human Wallets)
+  - Intel TDX TEE Roost (NEAR AI Cloud)
+  - NEAR L1 FlyCoordinator contract (`c.fly-1793636729.testnet`)
+  - NEAR Chain Signatures MPC (`v1.signer-prod.testnet`)
 - **Narrator Audio:**
-  > "Decentralized AI swarms and collective capital face a fundamental paradox: either you give your private keys and custody to an off-chain bot or enclave that can crash and trap your funds, or you use public multisigs that reveal your trades and stall in committee.
+  > "Decentralized AI agent swarms and pooled capital face a harsh dilemma: either you surrender your keys to an autonomous off-chain bot or enclave that can crash, trap funds, or be terminated by an operator, or you rely on transparent multisigs that leak trading alpha to mempool front-runners and stall in committee deadlock.
   >
-  > Welcome to **Fly**: an autonomous syndicate network for private systems on NEAR.
-  > Fly's core breakthrough: **The TEE is an arbiter, never a custodian**. AI agents and human wallets pool capital into bounded sub-accounts, deliberate inside hardware-isolated enclaves, settle omnichain orders via NEAR Chain Signatures, and retain a 100% non-custodial, permissionless escape hatch."
+  > Welcome to **Fly**: an autonomous syndicate network on NEAR Protocol.
+  >
+  > Fly's core breakthrough is **constrained arbitration with independent recovery**:
+  > Deposits and balances are public on NEAR L1. Coordination, order weights, and internal allocations remain confidential inside hardware-attested Intel TDX enclaves. The enclave is never a custodian—it can only propose settlements strictly bounded by immutable release policies. And if an enclave crashes or goes rogue, every depositor can unilaterally reclaim 100% of their escrow directly on-chain."
 
 ---
 
-### [0:30 – 1:15] Scene 2: Live Testnet Execution & Hardware Attestation
-- **Screen:** Split view: Terminal running `./scripts/verify` and NEARBlocks Explorer on testnet contract `c.fly-1793636729.testnet`.
+### [0:30 – 1:15] Scene 2: Live Testnet Execution & Bounded Authority
+- **Screen:** Terminal running `npm run demo` side-by-side with NearBlocks Explorer for `c.fly-1793636729.testnet`.
 - **Narrator Audio:**
-  > "Everything you are seeing is live on NEAR Testnet and verifiable with a single command.
+  > "Here is the entire system executing live on NEAR Testnet, driven entirely through AI agent Model Context Protocol (MCP) tools.
   >
-  > First, hardware attestation: Fly connects directly to NEAR AI Cloud's Intel TDX enclaves. Notice verification step 1: we parse the raw Intel TDX Quote version 4 and run DCAP-QVL verification all the way to Intel's SGX Root CA. TCB status is UpToDate with zero security advisories. If a single byte of the enclave quote is tampered with, it fails closed immediately.
+  > First, an agent discovers active syndicates using `fly_list_syndicates`.
+  > Next, it hatches a syndicate with an immutable `ReleasePolicy`: allowlisted payout recipients, a 10,000 basis-point per-epoch release cap, and a strict block deadline.
   >
-  > Second, live contract settlement: Three independent flyers deposit escrow into syndicate `syn-flash-1793637420`. The enclave verifies consensus and signs the batch settlement. The L1 Rust contract verifies the Ed25519 signature, domain-separated by contract ID, epoch, and nonce. Settlement completes in just 5.81 TGas on NEAR L1."
+  > Autonomous flyers deposit escrow, explicitly signing their consent to this policy hash on-chain.
+  >
+  > Now, watch our security defense in action:
+  > Suppose the enclave is compromised and attempts to steal funds by signing a settlement to an unauthorized recipient, `thief.near`. The L1 contract verifies the policy at settlement time and **panics on-chain**, completely rejecting the transfer with zero drain. Even if the enclave is compromised, it cannot steal user capital."
 
 ---
 
-### [1:15 – 1:55] Scene 3: Sealed Intent Aggregation & Omnichain MPC
-- **Screen:** Terminal running `npm run verify:mpc`, showing live `v1.signer-prod.testnet` transaction and derived BTC/ETH/SOL addresses.
+### [1:15 – 1:55] Scene 3: Valid Settlement & Omnichain Chain Signatures
+- **Screen:** Terminal showing Step 5 batch settlement transaction and `npm run verify:mpc` calling `v1.signer-prod.testnet`.
 - **Narrator Audio:**
-  > "How do flyers coordinate confidentially?
+  > "When legitimate consensus is reached inside the Intel TDX Roost, the enclave signs the canonical 6-tuple message binding the contract ID, syndicate ID, epoch, round nonce, and allocations hash.
   >
-  > Flyers submit asymmetric RSA-encrypted intents directly to the Roost enclave. Orders are decrypted exclusively inside enclave RAM. The Roost aggregates the trade into a single batch, signs the proof, and instantly zeroes individual inputs from memory—preventing MEV, front-running, and surveillance.
+  > Settlement executes in just 5.92 TGas on NEAR L1, applying pro-rata balance deductions with exact dust conservation.
   >
-  > Then, we execute cross-chain using NEAR Chain Signatures. Here is our live transaction calling `v1.signer-prod.testnet`. From a single syndicate identity, we deterministically derive an EVM address, a Bitcoin Taproot address, and a Solana address, recovering the threshold signature byte-for-byte."
+  > For cross-chain execution, Fly integrates NEAR Chain Signatures. From our syndicate identity, we deterministically derive Bitcoin Taproot, EVM, and Solana addresses, and execute a live threshold signature verified byte-for-byte on-chain on `v1.signer-prod.testnet`."
 
 ---
 
-### [1:55 – 2:35] Scene 4: Failure Mode & Non-Custodial Escape Hatch (`hatch_out`)
-- **Screen:** Terminal showing `syn-escape-1793637435` and NEARBlocks explorer showing the `hatch_out` transaction `DR3VmCytXwPM1pk7pvN9GLQnStRWdvEH9eBAZTc7vFgk`.
+### [1:55 – 2:35] Scene 4: Stalled Enclave Escape Hatch (`hatch_out`)
+- **Screen:** Terminal running Step 6 showing `fly_hatch_out` and NearBlocks explorer showing transaction `BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`.
 - **Narrator Audio:**
-  > "Now, what happens when things go wrong? Suppose the AI enclave crashes, the network partitions, or the coordinator goes rogue?
+  > "Now, what happens when things fail? Suppose the TEE crashes, network connectivity is severed, or the operator disappears forever?
   >
-  > In every other system, user funds are locked. In Fly, user safety is guaranteed by invariant.
-  > Here, we simulate a stalled enclave on syndicate `syn-escape-1793637435`. The 2-block timelock expires. Flyer 2 calls `hatch_out`.
+  > In traditional systems, user funds are locked indefinitely.
+  > In Fly, safety is guaranteed by an immutable on-chain invariant.
   >
-  > Notice on NEARBlocks: the contract immediately repatriates Flyer 2's exact escrow balance directly to their wallet. No coordinator permission required, no multi-sig vote, and no risk of draining other members' escrows. Once all escrows are repatriated, the syndicate cleanly transitions to `AbortedRefunded`."
+  > When the block timelock expires without a valid settlement, any individual depositor calls `hatch_out`.
+  > No operator approval required. No enclave signature. No multisig quorum.
+  >
+  > The L1 smart contract repatriates 100% of the flyer's deposited balance in 5.10 TGas, without touching or diluting any other member's escrow. Autonomous recovery is truly independent."
 
 ---
 
 ### [2:35 – 2:45] Scene 5: Verifiability & Outro
-- **Screen:** Terminal showing `./scripts/verify` passing with all 36 Rust tests and 9 architectural verification layers in <25 seconds. GitHub repository link.
+- **Screen:** Terminal showing `./scripts/verify` passing cleanly with 44 Rust tests, DCAP Root CA attestation, and 0 foundry violations.
 - **Narrator Audio:**
-  > "Fly includes a complete Model Context Protocol (MCP) server for Claude Code and Codex, 36 Rust unit, integration, and fuzz invariant tests, and an automated Builder Foundry control plane with zero governance drift.
+  > "Fly features 44 Rust smart contract unit, integration, and fuzz invariant tests, 10 agent MCP tools, a measured economic baseline simulation, and an automated Builder Foundry control plane.
   >
-  > Run `./scripts/verify` to verify the entire system in under 25 seconds with zero external keys.
+  > Run `./scripts/verify` to verify the entire system yourself in under 20 seconds.
   > Built for the NEAR Hackathon: Build Beyond Boundaries."
