@@ -33,6 +33,20 @@ jobs:
         with:
           workspaces: contracts/fly-coordinator
 
+      - name: Cache dcap-qvl binary
+        uses: actions/cache@v4
+        id: cache-dcap
+        with:
+          path: ~/.cargo/bin/dcap-qvl
+          key: ${{ runner.os }}-dcap-qvl-0.7.0
+
+      - name: Install dcap-qvl-cli
+        if: steps.cache-dcap.outputs.cache-hit != 'true'
+        run: cargo install dcap-qvl-cli --version 0.7.0
+
+      - name: Add Cargo bin to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Install NPM Dependencies
         run: npm ci
 

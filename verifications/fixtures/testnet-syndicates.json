@@ -1,0 +1,51 @@
+{
+  "contractId": "c.fly-1793636729.testnet",
+  "flashSyndicate": {
+    "id": "syn-flash-1793637420",
+    "owner": "c.fly-1793636729.testnet",
+    "syndicate_type": "Flash",
+    "sub_account": "syn-flash-1793637420.c.fly-1793636729.testnet",
+    "quorum_threshold": 3,
+    "max_spend_per_flyer": "1000000000000000000000000",
+    "enclave_public_key": "49cba0bec973e4dd992a99d7dc3f78483406267b94407425e2d266f6c27392ec",
+    "expected_code_hash": "4ca78c9afde132368a646292d128c7404b75e453a4c4fc9f12961a94ec392115",
+    "timeout_blocks": 50,
+    "created_at_block": 275924638,
+    "epoch_start_block": 275924638,
+    "status": "Settled",
+    "epoch": 1,
+    "round_nonce": "da3b192c649574ebdf5c349484fc26534678d9e051ab34931a95d1895d0695fb",
+    "flyer_count": 0,
+    "active_flyer_count": 0,
+    "flyers": [],
+    "total_escrow": "0",
+    "settled_batches": [
+      "65ee4dcc685b7f821176c6949e3768baae75860df83b1cbf00c63c9a2b2e56b3"
+    ],
+    "total_settled_payouts": "60000000000000000000000",
+    "payout_recipient": "f1.fly-1793636729.testnet"
+  },
+  "escapeSyndicate": {
+    "id": "syn-escape-1793637435",
+    "owner": "c.fly-1793636729.testnet",
+    "syndicate_type": "Flash",
+    "sub_account": "syn-escape-1793637435.c.fly-1793636729.testnet",
+    "quorum_threshold": 1,
+    "max_spend_per_flyer": "1000000000000000000000000",
+    "enclave_public_key": "49cba0bec973e4dd992a99d7dc3f78483406267b94407425e2d266f6c27392ec",
+    "expected_code_hash": "dad8c3ac46f4b176dce0881964c879f9e4a749ac368f703767d8649a52fa5d32",
+    "timeout_blocks": 2,
+    "created_at_block": 275924663,
+    "epoch_start_block": 275924663,
+    "status": "AbortedRefunded",
+    "epoch": 1,
+    "round_nonce": "940ad4f3051bd566ecdeab9c5b0f3ab9528a77e27ada262bc47329ee7ecad6b5",
+    "flyer_count": 0,
+    "active_flyer_count": 0,
+    "flyers": [],
+    "total_escrow": "0",
+    "settled_batches": [],
+    "total_settled_payouts": "0",
+    "payout_recipient": "c.fly-1793636729.testnet"
+  }
+}

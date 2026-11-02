@@ -247,4 +247,37 @@ export class FlyNestContract {
       timestamp: Date.now(),
     };
   }
+
+  /**
+   * Returns total count of hatched syndicates.
+   */
+  getSyndicateCount() {
+    return this.syndicates.size;
+  }
+
+  /**
+   * Returns a paginated list of syndicates.
+   * Default limit: 10, Maximum limit: 50.
+   */
+  listSyndicates(fromIndex = 0, limit = 10) {
+    const start = Math.max(0, parseInt(fromIndex, 10) || 0);
+    const pageLimit = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+    const all = Array.from(this.syndicates.values());
+    return all.slice(start, start + pageLimit);
+  }
+
+  /**
+   * Returns syndicates where account is owner or participating flyer.
+   */
+  getSyndicatesByMember(accountId, fromIndex = 0, limit = 10) {
+    const start = Math.max(0, parseInt(fromIndex, 10) || 0);
+    const pageLimit = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+    const filtered = Array.from(this.syndicates.values()).filter(syn => {
+      if (syn.owner === accountId) return true;
+      if (syn.escrow && syn.escrow.has(accountId)) return true;
+      if (syn.flyers && syn.flyers.includes(accountId)) return true;
+      return false;
+    });
+    return filtered.slice(start, start + pageLimit);
+  }
 }

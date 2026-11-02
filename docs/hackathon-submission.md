@@ -24,11 +24,11 @@ Fly bridges three breakthrough NEAR primitives into one unified architecture:
 2. NEAR Confidential Intents & FAR Private Shard: Zero-MEV order routing where public deposits lock in Treasury and mint Intent Minted Tokens (IMT) on NEAR's private shard (~200ms PBFT finality), cryptographically breaking graph-analysis linkages between depositors and clean payout recipients.
 3. NEAR Chain Signatures (MPC): Omnichain threshold execution, enabling a private NEAR syndicate to derive and control native accounts across Bitcoin (Taproot), Ethereum/Arbitrum (EVM), and Solana (Ed25519) via v1.signer without third-party bridges.
 
-Fly features a production NEAR L1 coordinator smart contract in Rust (near-sdk 5.1), OutLayer-governed sub-account boundaries (*.fly.testnet), x402 agent micro-commerce via PingPay, institutional dark facilities (Confidential RFQs, Private Repo, and OTC Block Trades), and a 5-layer FMEA resilience engine with a non-custodial escape hatch (hatch_out) guaranteeing 100% refund upon timeout.
+Fly features a deployed NEAR L1 coordinator smart contract in Rust (near-sdk 5.1), OutLayer-governed sub-account boundaries, x402 agent micro-commerce, institutional dark facilities (Confidential RFQs and OTC Block Trades), and a 5-layer FMEA resilience engine with a non-custodial escape hatch (hatch_out) guaranteeing 100% individual refund upon timeout.
 
-Includes an MCP (Model Context Protocol) server compatible with nearai/near-mcp, allowing autonomous agents to hatch syndicates, deliberate privately, and trade cross-chain with zero front-running.
+Includes an MCP (Model Context Protocol) server compatible with nearai/near-mcp, allowing autonomous agents to hatch syndicates, deliberate privately, and trade cross-chain.
 ```
-*(Character count: 1,842 / 2,000 — Compliant)*
+*(Character count: 1,812 / 2,000 — Compliant)*
 
 ---
 
@@ -41,15 +41,15 @@ Includes an MCP (Model Context Protocol) server compatible with nearai/near-mcp,
 
 ### Exact Build & Verification Commands
 ```bash
-# 1. Run Complete Master Verification Suite (All 7 Layers in ~1.0s)
-npm test
+# 1. Run Complete Canonical Verification Suite (<20s)
+./scripts/verify
 
-# 2. Run NEAR L1 Smart Contract Rust Unit Tests (0.12s)
+# 2. Run NEAR L1 Smart Contract Rust Unit & Invariant Tests
 npm run verify:rust
 
-# 3. Build Production WebAssembly Binary for NEAR L1
+# 3. Build WebAssembly Binary for NEAR L1
 npm run build:wasm
-# Output: contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm (238 KB)
+# Output: contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm (277 KB)
 
 # 4. Run Full 10-Flyer Dark Swarm Simulation with End-to-End Encryption
 npm run demo:syndicate
@@ -69,7 +69,7 @@ npm run demo:syndicate
 > 🌐 Chain Signatures MPC (BTC, ETH, SOL)  
 > ⚡ OutLayer Agent Sub-accounts + 100% Non-Custodial Escape Hatch  
 > 
-> Watch 10 autonomous agents deliberate in shielded memory and execute cross-chain with zero MEV leakage:  
+> Watch 10 autonomous agents deliberate in shielded memory and execute cross-chain with broken transaction graph linkages:  
 > [Demo Video / Repo Link] #NEARHackathon #NEAR #AI #Privacy
 
 ---

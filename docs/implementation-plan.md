@@ -14,7 +14,7 @@ flowchart TD
     FEAT003["FEAT-003: Nest Coordinator & Hatch Factory"]
     FEAT004["FEAT-004: Escape Hatch & FMEA Rollback"]
     FEAT005["FEAT-005: OutLayer Policy & Sub-Accounts"]
-    FEAT006["FEAT-006: Interactive War Room Dashboard"]
+    FEAT006["FEAT-006: CLI & Daemon Status Visualizer"]
 
     FEAT001 --> FEAT003
     FEAT002 --> FEAT003
@@ -58,8 +58,8 @@ flowchart TD
 * **Done When:** Over-budget deposit attempts throw an immediate policy violation error.
 * **Verification:** Tested in `verifications/03-hatch-escape-hatch.js` $\to$ **PASS (Blocked 500 USDC deposit)**.
 
-### FEAT-006: Interactive War Room Visualizer
-* **Goal:** Deliver an interactive visual dashboard for human judges displaying the active Roost, Enclave Attestation badge, and Decoupled Intent graph.
-* **Deliverable:** Web dashboard in `frontend/` or standalone demo viewer.
+### FEAT-006: CLI & Daemon Status Visualizer
+* **Goal:** Deliver an interactive visual status console displaying the active Roost, Enclave Attestation status, and live syndicate rounds.
+* **Deliverable:** Live daemon status output and standalone runner.
 * **Done When:** Live view renders hardware attestation status and active syndicate rounds.
-* **Verification:** `npm run dev` or standalone browser demo.
+* **Verification:** `./scripts/verify` or `npm run demo:syndicate`.

@@ -55,19 +55,19 @@ flowchart TD
 ├──────────────────────────────┼────────────────────────────┼────────────────────────────┤
 │ 1. Nest Coordinator Contract │ NEAR Smart Contract (Rust) │ State machine, escrow      │
 │                              │ deployed to NEAR Testnet   │ ledger, HAQ proof gate,    │
-│                              │ (`fly-coordinator.testnet`)│ and hatch_out() timelock.  │
+│                              │ (`c.fly-1793636729.testnet`)│ and hatch_out() timelock.  │
 ├──────────────────────────────┼────────────────────────────┼────────────────────────────┤
-│ 2. Roost Enclave Daemon      │ Node.js / Rust running in  │ Ingests encrypted intents, │
-│                              │ AMD SEV-SNP / Intel TDX on │ executes SIA aggregation,  │
+│ 2. Roost Enclave Daemon      │ Node.js / Rust querying    │ Ingests encrypted intents, │
+│                              │ Intel TDX / NVIDIA CVM on  │ executes SIA aggregation,  │
 │                              │ NEAR AI Cloud              │ generates fresh HAQ proof. │
 ├──────────────────────────────┼────────────────────────────┼────────────────────────────┤
 │ 3. 1Click Intent Adapter     │ TypeScript / OpenAPI 3.0   │ Connects to 1Click API,    │
 │                              │ (`chaindefuser.com/v0`)    │ queries live cross-chain   │
 │                              │                            │ assets, routes via FAR.    │
 ├──────────────────────────────┼────────────────────────────┼────────────────────────────┤
-│ 4. Fly War Room UI           │ Next.js 15, React 19,      │ Visual dashboard showing   │
-│                              │ Tailwind CSS, Lucide icons │ live TEE attestation badge,│
-│                              │                            │ room state, & intent graph.│
+│ 4. Fly API, SSE & MCP Gateway│ Node.js Daemon, SSE, MCP   │ Agent interface exposing   │
+│                              │ JSON-RPC 2.0 (`stdio`)     │ 6 tools for LLMs, streaming│
+│                              │                            │ real-time syndicate events.│
 └──────────────────────────────┴────────────────────────────┴────────────────────────────┘
 ```
 

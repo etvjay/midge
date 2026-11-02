@@ -6,6 +6,7 @@ import { verifyConfidentialRfqAndAdjudication } from './verifications/05-confide
 import { verifyOtcAndComputeFacilities } from './verifications/06-otc-and-compute-facilities.js';
 import { verifyResilienceFailureMatrix } from './verifications/07-resilience-failure-matrix.js';
 import { verifyApiSseMcpE2E } from './verifications/08-api-sse-mcp-e2e.js';
+import { verifyInferenceAttestation } from './scripts/verify-inference.js';
 
 async function runAllVerifications() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
@@ -72,7 +73,15 @@ async function runAllVerifications() {
     results.apiSseMcp = { verified: false, error: err.message };
   }
 
+  try {
+    results.inference = await verifyInferenceAttestation();
+  } catch (err) {
+    console.error('❌ Inference Attestation Check Failed:', err.message);
+    results.inference = { verified: false, error: err.message };
+  }
+
   const duration = ((Date.now() - startTotal) / 1000).toFixed(2);
+  const isOffline = process.env.FLY_OFFLINE === '1';
   const allPassed =
     results.tee.verified &&
     results.intents.verified &&
@@ -81,7 +90,8 @@ async function runAllVerifications() {
     results.rfq.verified &&
     results.otcCompute.verified &&
     results.resilience.verified &&
-    results.apiSseMcp.verified;
+    results.apiSseMcp.verified &&
+    results.inference.verified;
 
   console.log('\n════════════════════════════════════════════════════════════════');
   console.log('                 FINAL VERIFICATION SUMMARY                     ');
@@ -94,9 +104,14 @@ async function runAllVerifications() {
   console.log(` 6. OTC Block Trades & AI Compute Syndicate:     ${results.otcCompute.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 7. 5-Layer Resilience Failure Matrix (FMEA):    ${results.resilience.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 8. HTTP Gateway Daemon, SSE, x402 & MCP Server: ${results.apiSseMcp.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 9. TEE Deliberation Inference Attestation:      ${results.inference.verified ? '✅ PASS' : '❌ FAIL'} (${results.inference.live ? 'Live External' : 'Recorded Fixture'})`);
   console.log('────────────────────────────────────────────────────────────────');
   console.log(` Total Execution Time: ${duration}s`);
-  console.log(` Verdict: ${allPassed ? 'ALL 8 ARCHITECTURAL VERIFICATIONS PASSED (Contract & TEE Bound, Facilities Simulated)' : 'CHECKS FAILED'}`);
+  if (isOffline) {
+    console.log(` Verdict: ${allPassed ? 'ALL 9 VERIFICATIONS PASSED [OFFLINE FIXTURES MODE]' : 'CHECKS FAILED'}`);
+  } else {
+    console.log(` Verdict: ${allPassed ? 'ALL 9 ARCHITECTURAL VERIFICATIONS PASSED (Contract & TEE Bound, Facilities Simulated)' : 'CHECKS FAILED'}`);
+  }
   console.log('════════════════════════════════════════════════════════════════\n');
 
   if (!allPassed) {

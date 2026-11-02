@@ -60,9 +60,9 @@
 
 ---
 
-### ADR-0007: Production NEAR L1 Smart Contract in Rust using `near-sdk` 5.1
+### ADR-0007: NEAR L1 Smart Contract in Rust using `near-sdk` 5.1
 * **Status:** ACCEPTED
 * **Context:** The on-chain coordinator requires high execution speed, minimal gas footprint, and zero security vulnerabilities.
-* **Decision:** Implement `contracts/fly-coordinator` in Rust using `near-sdk` 5.1 with modern `#[near(serializers = [borsh, json])]` macros. Compile to `wasm32-unknown-unknown` release binary (238 KB).
+* **Decision:** Implement `contracts/fly-coordinator` in Rust using `near-sdk` 5.1 with modern `#[near(serializers = [borsh, json])]` macros. Compile to `wasm32-unknown-unknown` release binary (277 KB).
 * **Alternatives Rejected:** JavaScript/TypeScript smart contracts (larger binary size, higher gas consumption); legacy `near-sdk` 4 macros (deprecated serialization).
-* **Consequences:** Production-grade smart contract with sub-cent gas fees and instant execution.
+* **Consequences:** Smart contract with sub-cent gas fees and instant execution deployed on NEAR testnet.

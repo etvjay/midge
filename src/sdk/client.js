@@ -50,6 +50,16 @@ export class FlyClient {
     return res.data;
   }
 
+  async listSyndicates({ fromIndex = 0, limit = 10 } = {}) {
+    const res = await this._request('GET', `/v1/syndicates?fromIndex=${fromIndex}&limit=${limit}`);
+    return res.data;
+  }
+
+  async getSyndicatesByMember(accountId, { fromIndex = 0, limit = 10 } = {}) {
+    const res = await this._request('GET', `/v1/syndicates/member/${accountId}?fromIndex=${fromIndex}&limit=${limit}`);
+    return res.data;
+  }
+
   async deposit(syndicateId, flyerId, amountNear) {
     const res = await this._request('POST', `/v1/syndicates/${syndicateId}/deposit`, {
       flyerId,

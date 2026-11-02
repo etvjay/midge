@@ -1,12 +1,11 @@
+#![allow(deprecated)]
+
 use ed25519_dalek::{Signer, SigningKey};
 use fly_coordinator::{FlyCoordinator, SyndicateStatus};
-#[allow(deprecated)]
 use near_sdk::test_utils::testing_env_with_promise_results;
 use near_sdk::test_utils::VMContextBuilder;
 use near_sdk::testing_env;
 use near_sdk::{AccountId, NearToken, PromiseResult};
-
-#[allow(deprecated)]
 
 fn get_context(
     predecessor: AccountId,
@@ -416,7 +415,7 @@ fn test_below_quorum_fails() {
         &syn_id,
         1,
         &active_nonce,
-        &syn.payout_recipient.to_string(),
+        syn.payout_recipient.as_ref(),
         "order_hash",
     );
 
@@ -458,7 +457,7 @@ fn test_wrong_nonce_fails() {
         &syn_id,
         1,
         "wrong_nonce_value",
-        &syn.payout_recipient.to_string(),
+        syn.payout_recipient.as_ref(),
         "order_hash",
     );
 
@@ -543,7 +542,7 @@ fn test_deposit_to_non_active_fails() {
         &syn_id,
         1,
         &active_nonce,
-        &syn.payout_recipient.to_string(),
+        syn.payout_recipient.as_ref(),
         "order_hash",
     );
 
@@ -622,7 +621,7 @@ fn test_dark_vault_epoch_rollover_resets_escape_hatch_timer() {
         &syn_id,
         1,
         &nonce_epoch1,
-        &syn.payout_recipient.to_string(),
+        syn.payout_recipient.as_ref(),
         "batch_01",
     );
 
@@ -782,7 +781,7 @@ fn test_hatch_out_after_settled_fails() {
         &syn_id,
         1,
         &active_nonce,
-        &syn.payout_recipient.to_string(),
+        syn.payout_recipient.as_ref(),
         "order_hash",
     );
 
@@ -943,7 +942,7 @@ fn test_on_settlement_payout_success_cleans_up_flyer_storage() {
         &syn_id,
         1,
         &active_nonce,
-        &syn.payout_recipient.to_string(),
+        syn.payout_recipient.as_ref(),
         "order_hash",
     );
 
@@ -1008,7 +1007,7 @@ fn test_on_settlement_payout_failure_reverts_state() {
         &syn_id,
         1,
         &active_nonce,
-        &syn.payout_recipient.to_string(),
+        syn.payout_recipient.as_ref(),
         "order_hash",
     );
 
@@ -1204,4 +1203,242 @@ fn test_on_hatch_out_payout_rejects_external_caller() {
     let mut contract = FlyCoordinator::new();
     let f1: AccountId = "flyer1.near".parse().unwrap();
     contract.on_hatch_out_payout("syn-1".to_string(), f1, NearToken::from_near(10));
+}
+
+#[test]
+fn test_syndicate_discovery_and_pagination() {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    let ctx = get_context(owner.clone(), NearToken::from_near(1), 100);
+    testing_env!(ctx.build());
+
+    let mut contract = FlyCoordinator::new();
+    assert_eq!(contract.get_syndicate_count(), 0);
+    assert_eq!(contract.list_syndicates(None, None).len(), 0);
+
+    let (enclave_pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", "syn", 1, "", "payout.near", "");
+
+    // Hatch 5 syndicates: syn-00 to syn-04
+    for i in 0..5 {
+        contract.hatch(
+            format!("syn-{:02}", i),
+            Some("FLASH".to_string()),
+            Some(2),
+            Some(50),
+            enclave_pk.clone(),
+            "code_hash".to_string(),
+            Some(30),
+            Some("payout.near".parse().unwrap()),
+        );
+    }
+
+    assert_eq!(contract.get_syndicate_count(), 5);
+
+    // List with default limit (returns all 5)
+    let all = contract.list_syndicates(None, None);
+    assert_eq!(all.len(), 5);
+
+    // Paginate: from 0, limit 2
+    let page1 = contract.list_syndicates(Some(0), Some(2));
+    assert_eq!(page1.len(), 2);
+    assert_eq!(page1[0].id, "syn-00");
+    assert_eq!(page1[1].id, "syn-01");
+
+    // Paginate: from 2, limit 2
+    let page2 = contract.list_syndicates(Some(2), Some(2));
+    assert_eq!(page2.len(), 2);
+    assert_eq!(page2[0].id, "syn-02");
+    assert_eq!(page2[1].id, "syn-03");
+
+    // Paginate: from 4, limit 2 (returns 1 item: syn-04)
+    let page3 = contract.list_syndicates(Some(4), Some(2));
+    assert_eq!(page3.len(), 1);
+    assert_eq!(page3[0].id, "syn-04");
+
+    // Offset beyond count returns empty
+    let page_empty = contract.list_syndicates(Some(10), Some(5));
+    assert_eq!(page_empty.len(), 0);
+
+    // Enforce max limit cap (request 100, capped at 50)
+    let capped = contract.list_syndicates(Some(0), Some(100));
+    assert_eq!(capped.len(), 5);
+}
+
+#[test]
+fn test_get_syndicates_by_member() {
+    let alice: AccountId = "alice.near".parse().unwrap();
+    let bob: AccountId = "bob.near".parse().unwrap();
+    let charlie: AccountId = "charlie.near".parse().unwrap();
+
+    let ctx = get_context(alice.clone(), NearToken::from_near(1), 100);
+    testing_env!(ctx.build());
+
+    let mut contract = FlyCoordinator::new();
+    let (enclave_pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", "syn", 1, "", "payout.near", "");
+
+    // Alice hatches syn-research
+    contract.hatch(
+        "syn-research".to_string(),
+        Some("FLASH".to_string()),
+        Some(2),
+        Some(50),
+        enclave_pk.clone(),
+        "code_hash".to_string(),
+        Some(30),
+        None,
+    );
+
+    // Bob hatches syn-trading
+    let ctx = get_context(bob.clone(), NearToken::from_near(1), 101);
+    testing_env!(ctx.build());
+    contract.hatch(
+        "syn-trading".to_string(),
+        Some("FLASH".to_string()),
+        Some(2),
+        Some(50),
+        enclave_pk.clone(),
+        "code_hash".to_string(),
+        Some(30),
+        None,
+    );
+
+    // Charlie deposits in syn-research and syn-trading
+    let ctx = get_context(charlie.clone(), NearToken::from_near(5), 102);
+    testing_env!(ctx.build());
+    contract.deposit("syn-research".to_string());
+    contract.deposit("syn-trading".to_string());
+
+    // Check member lookups
+    // Alice is owner of syn-research
+    let alice_syns = contract.get_syndicates_by_member(alice.clone(), None, None);
+    assert_eq!(alice_syns.len(), 1);
+    assert_eq!(alice_syns[0].id, "syn-research");
+
+    // Bob is owner of syn-trading
+    let bob_syns = contract.get_syndicates_by_member(bob.clone(), None, None);
+    assert_eq!(bob_syns.len(), 1);
+    assert_eq!(bob_syns[0].id, "syn-trading");
+
+    // Charlie is flyer in BOTH syn-research and syn-trading
+    let charlie_syns = contract.get_syndicates_by_member(charlie.clone(), None, None);
+    assert_eq!(charlie_syns.len(), 2);
+    let ids: Vec<String> = charlie_syns.iter().map(|s| s.id.clone()).collect();
+    assert!(ids.contains(&"syn-research".to_string()));
+    assert!(ids.contains(&"syn-trading".to_string()));
+
+    // Dave is in none
+    let dave: AccountId = "dave.near".parse().unwrap();
+    let dave_syns = contract.get_syndicates_by_member(dave, None, None);
+    assert_eq!(dave_syns.len(), 0);
+}
+
+#[test]
+fn test_nep297_events_emission() {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    let ctx = get_context(owner.clone(), NearToken::from_near(1), 100);
+    testing_env!(ctx.build());
+
+    let mut contract = FlyCoordinator::new();
+    let (enclave_pk, _) = make_enclave_key_and_signature(
+        "fly-coordinator.testnet",
+        "syn-event",
+        1,
+        "",
+        "payout.near",
+        "",
+    );
+
+    contract.hatch(
+        "syn-event".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        enclave_pk,
+        "code_hash".to_string(),
+        Some(30),
+        Some("payout.near".parse().unwrap()),
+    );
+
+    let logs = near_sdk::test_utils::get_logs();
+    assert!(logs
+        .iter()
+        .any(|l| l.contains("EVENT_JSON") && l.contains("syndicate_hatched")));
+
+    // Deposit emits syndicate_deposited event (API-008)
+    let f1: AccountId = "f1.near".parse().unwrap();
+    let ctx = get_context(f1, NearToken::from_near(5), 105);
+    testing_env!(ctx.build());
+    contract.deposit("syn-event".to_string());
+
+    let logs = near_sdk::test_utils::get_logs();
+    assert!(logs
+        .iter()
+        .any(|l| l.contains("EVENT_JSON") && l.contains("syndicate_deposited")));
+
+    // Settle emits syndicate_settled event with payout_amount (API-006)
+    let syn = contract.get_syndicate("syn-event".to_string()).unwrap();
+    let order_hash = "order_alpha_test".to_string();
+    let (_, sig) = make_enclave_key_and_signature(
+        "fly-coordinator.testnet",
+        "syn-event",
+        1,
+        &syn.round_nonce,
+        "payout.near",
+        &order_hash,
+    );
+    let ctx = get_context(owner.clone(), NearToken::from_near(0), 110);
+    testing_env!(ctx.build());
+    contract.settle_batch("syn-event".to_string(), syn.round_nonce, order_hash, sig);
+    let logs = near_sdk::test_utils::get_logs();
+    assert!(logs.iter().any(|l| l.contains("EVENT_JSON")
+        && l.contains("syndicate_settled")
+        && l.contains("payout_amount")));
+
+    // Validate strict JSON parsing of all emitted NEP-297 events (API-010 / CA-004)
+    for log in &logs {
+        if let Some(json_str) = log.strip_prefix("EVENT_JSON:") {
+            let v: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(json_str)
+                .expect("Emitted event log must be valid JSON");
+            assert_eq!(v["standard"], "fly");
+            assert_eq!(v["version"], "1.0.0");
+            assert!(v["event"].is_string());
+            assert!(v["data"].is_array());
+        }
+    }
+
+    // Hatch second syndicate for hatch_out event test
+    let (enclave_pk2, _) = make_enclave_key_and_signature(
+        "fly-coordinator.testnet",
+        "syn-event-exit",
+        1,
+        "",
+        "payout.near",
+        "",
+    );
+    let ctx = get_context(owner, NearToken::from_near(1), 120);
+    testing_env!(ctx.build());
+    contract.hatch(
+        "syn-event-exit".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        enclave_pk2,
+        "code_hash".to_string(),
+        Some(20),
+        None,
+    );
+    let f2: AccountId = "f2.near".parse().unwrap();
+    let ctx = get_context(f2.clone(), NearToken::from_near(5), 125);
+    testing_env!(ctx.build());
+    contract.deposit("syn-event-exit".to_string());
+
+    // Exit at block 150 (> timeout of 20 blocks)
+    let ctx = get_context(f2, NearToken::from_near(0), 150);
+    testing_env!(ctx.build());
+    let _ = contract.hatch_out("syn-event-exit".to_string());
+    let logs = near_sdk::test_utils::get_logs();
+    assert!(logs
+        .iter()
+        .any(|l| l.contains("EVENT_JSON") && l.contains("syndicate_hatched_out")));
 }

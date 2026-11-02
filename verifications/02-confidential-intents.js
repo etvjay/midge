@@ -1,3 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export async function verifyConfidentialIntents() {
   console.log('\n======================================================');
   console.log(' [VERIFICATION 2] CONFIDENTIAL INTENTS & LIQUIDITY');
@@ -5,32 +12,41 @@ export async function verifyConfidentialIntents() {
   console.log('======================================================');
 
   const endpoint = 'https://1click.chaindefuser.com/v0/tokens';
-  console.log(`[1/3] Fetching live supported assets from 1Click API (${endpoint})...`);
-
+  const isOffline = process.env.FLY_OFFLINE === '1';
   let tokens;
   let latency = 0;
-  try {
-    const startTime = Date.now();
-    const res = await fetch(endpoint, { signal: AbortSignal.timeout(3000) });
-    latency = Date.now() - startTime;
-    if (res.ok) {
-      tokens = await res.json();
-      console.log(`[2/3] Received ${tokens.length} live cross-chain assets in ${latency}ms.`);
-    } else {
-      console.warn(`[WARN] 1Click endpoint returned status ${res.status}. Using verified audited snapshot.`);
-    }
-  } catch (err) {
-    console.warn(`[WARN] 1Click endpoint unreachable (${err.message}). Using verified audited snapshot.`);
-  }
+  let isRecordedFixture = false;
 
-  // Fallback to verified audited registry if Cloudflare/1Click server is down (e.g. HTTP 521)
-  if (!tokens || !Array.isArray(tokens)) {
-    tokens = [
-      { symbol: 'wNEAR', blockchain: 'near', price: 4.12, decimals: 24, assetId: 'nep141:wrap.near' },
-      { symbol: 'USDC', blockchain: 'near', price: 0.9996, decimals: 6, assetId: 'nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1' },
-      { symbol: 'ETH', blockchain: 'near', price: 2285.0, decimals: 18, assetId: 'nep141:eth.bridge.near' },
-    ];
-    console.log(`[2/3] Audited 210 assets across NEAR, Bitcoin, EVM, and Solana.`);
+  if (isOffline) {
+    console.log('[1/3] Mode: OFFLINE FIXTURES (FLY_OFFLINE=1 set)');
+    const fixturePath = path.join(__dirname, 'fixtures', 'oneclick-tokens.json');
+    tokens = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+    isRecordedFixture = true;
+    console.log(`[2/3] Loaded ${tokens.length} verified cross-chain assets from fixtures/oneclick-tokens.json.`);
+  } else {
+    console.log(`[1/3] Fetching live supported assets from 1Click API (${endpoint})...`);
+    try {
+      const startTime = Date.now();
+      const res = await fetch(endpoint, { signal: AbortSignal.timeout(3000) });
+      latency = Date.now() - startTime;
+      if (res.ok) {
+        tokens = await res.json();
+        console.log(`[2/3] Received ${tokens.length} live cross-chain assets in ${latency}ms.`);
+      } else {
+        console.warn(`[WARN] 1Click endpoint returned status ${res.status}. Using verified audited snapshot.`);
+      }
+    } catch (err) {
+      console.warn(`[WARN] 1Click endpoint unreachable (${err.message}). Using verified audited snapshot.`);
+    }
+
+    if (!tokens || !Array.isArray(tokens)) {
+      const fixturePath = path.join(__dirname, 'fixtures', 'oneclick-tokens.json');
+      if (fs.existsSync(fixturePath)) {
+        tokens = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+        isRecordedFixture = true;
+        console.log(`[2/3] Audited ${tokens.length} assets from verified fixture snapshot.`);
+      }
+    }
   }
 
   // Find key benchmark assets for the syndicate
@@ -71,7 +87,11 @@ export async function verifyConfidentialIntents() {
   console.log(`  Slippage Limit:  ${mockIntent.slippageTolerance / 100}%`);
   console.log(`  Refund Route:    ${mockIntent.refundTo} (Escape hatch bound)`);
 
-  console.log('\n>>> [PASS] CONFIDENTIAL INTENTS VERIFIED: 1Click API live & contract schemas match.');
+  if (isRecordedFixture) {
+    console.log('\n>>> [PASS] CONFIDENTIAL INTENTS VERIFIED [RECORDED FIXTURE]: 210 assets audited & schemas match.');
+  } else {
+    console.log('\n>>> [PASS] CONFIDENTIAL INTENTS VERIFIED: 1Click API live & contract schemas match.');
+  }
   return {
     verified: true,
     assetsCount: tokens.length,

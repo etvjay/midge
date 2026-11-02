@@ -59,17 +59,17 @@ flowchart LR
   5. Nest validates the enclave code hash and nonce, confirming quorum.
   6. Nest dispatches the aggregate swap via Confidential Intents (`1Click API`), minting IMT tokens on the FAR Private Shard.
   7. Swap settles on FAR; unlinked receipts are issued to Flyer destination wallets.
-* **Postconditions:** Syndicate round marked `SETTLED`; assets acquired and distributed with zero MEV leakage.
+* **Postconditions:** Syndicate round marked `SETTLED`; assets acquired and distributed via shielded batch settlement.
 
 ### UC-004: Emergency Refund via Escape Hatch (`hatch_out`)
 * **Primary Actor:** Flyer (Depositor).
-* **Preconditions:** Syndicate is in `ACTIVE` state; current NEAR block height exceeds `createdAtBlock + timeoutBlocks`.
+* **Preconditions:** Syndicate is in `ACTIVE` state; current NEAR block height exceeds `epochStartBlock + timeoutBlocks`.
 * **Main Success Scenario:**
   1. Flyer determines that Roost has failed to settle the round before block timeout.
   2. Flyer calls `hatch_out(syndicateId)`.
-  3. Nest verifies that `currentBlock >= createdAtBlock + timeoutBlocks`.
+  3. Nest verifies that `currentBlock >= epochStartBlock + timeoutBlocks`.
   4. Nest reads Flyer’s unspent escrow balance.
-  5. Nest marks syndicate status to `ABORTED_REFUNDED` and transfers 100% of escrow back to Flyer.
+  5. Nest transfers 100% of escrow back to Flyer, decrementing active flyer count, and marks syndicate status to `ABORTED_REFUNDED` once all escrows are repatriated.
 * **Alternative Scenario (Premature Call):**
   - If Flyer calls before timeout expires, Nest contract reverts with `Hatch-Out Locked: Round still in deliberation`.
 * **Postconditions:** Flyer capital restored with non-custodial guarantee.
@@ -95,7 +95,7 @@ flowchart LR
   4. Under collateral price shifts, Roost privately monitors margin without emitting public alerts.
   5. If warning threshold breached, Roost sends private cure request to borrower.
   6. If liquidation threshold hit, Roost conducts an orderly private auction on FAR Private Shard without public DEX liquidation cascades.
-* **Postconditions:** Borrowing facility settled privately with zero MEV predatory liquidation.
+* **Postconditions:** Borrowing facility settled privately with confidential health monitoring.
 
 ### UC-007: OTC Block Trade Dark Matching
 * **Primary Actor:** High-Volume Institutional Flyers (Buyer & Seller).

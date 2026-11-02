@@ -59,9 +59,9 @@ Fly is deployed and live on NEAR Testnet at coordinator account:
   ./scripts/verify
   ```
 * **See:**
-  - `[STEP 1/4]` 33 NEAR L1 Rust smart contract tests (25 unit, 6 integration, 2 proptest property-based fuzzing tests across 10,000+ transitions) pass cleanly with Clippy and Fmt (`near-sdk 5.1`).
-  - `[STEP 2/4]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (277 KB).
-  - `[STEP 3/4]` 8 architectural verification layers execute in ~8s, validating live Intel TDX DCAP verification, deployed testnet contract states, and API controls.
+  - `[STEP 1/4]` 36 NEAR L1 Rust smart contract tests (28 unit, 6 integration, 2 proptest property-based fuzzing tests across 10,000+ transitions) pass cleanly with Clippy and Fmt (`near-sdk 5.1`).
+  - `[STEP 2/4]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (319 KB).
+  - `[STEP 3/4]` 9 architectural verification layers execute in ~8s, validating live Intel TDX DCAP verification, deployed testnet contract states, TEE inference attestation, and API controls.
   - `[STEP 4/4]` Builder Foundry Control Plane passes with 0 invariant violations across 11 claims and 7 gaps.
 
 ---
@@ -119,8 +119,23 @@ Fly is deployed and live on NEAR Testnet at coordinator account:
   - Boots `FlyApiDaemon` on ephemeral port.
   - Verifies Server-Sent Events (SSE) streaming at `/v1/stream/syndicate/{id}`.
   - Executes x402 micro-commerce flow: initial HTTP 402, payment invoice generation, HMAC bearer proof verification, and protected resource release.
-  - Audits Model Context Protocol (MCP) server: 6 tools exposed to LLM agents (`fly_hatch_syndicate`, `fly_deposit_escrow`, `fly_submit_sealed_intent`, etc.).
+  - Audits Model Context Protocol (MCP) server: 8 tools exposed to LLM agents (`fly_hatch_syndicate`, `fly_deposit_escrow`, `fly_submit_sealed_intent`, `fly_list_syndicates`, `fly_get_my_syndicates`, etc.).
   - Verifies Security Controls: public `/health`, protected `/v1/roost/session-key` returning HTTP 401 without `X-Fly-Api-Key` and HTTP 200 with it, and payload limit guard (>512KB rejected with HTTP 413).
+
+---
+
+### Step 6: Run Autonomous Syndicate Network Demo
+* **Do:**
+  ```bash
+  npm run demo:network
+  # or: node scripts/network-demo.js
+  ```
+* **See:**
+  - Demonstrates multi-syndicate network topology: 3 specialized autonomous syndicates (`syn-research-alpha`, `syn-trading-beta`, `syn-compute-gamma`) hosted within the single coordinator contract.
+  - Cross-syndicate agent membership: `agent-cross.near` concurrently participates as a depositor in Alpha (Research) and Beta (Trading).
+  - On-chain registry discovery: queries `list_syndicates(from, limit)` and `get_syndicates_by_member(account_id)` via secondary index.
+  - Inter-syndicate value exchange: Beta purchases proprietary volatility alpha from Alpha using the x402 payment scheme.
+  - Concurrent execution lifecycles: Beta achieves quorum and settles batch payout, while stalled Gamma safely executes non-custodial `hatch_out` refunds with 0 stuck escrow.
 
 ---
 
@@ -130,13 +145,15 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 | Component | Implementation File | Status | Nature | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet`. Written in Rust (`near-sdk 5.1`). Compiles to 277 KB release WASM. 33 tests (25 unit, 6 integration, 2 proptest invariant fuzzers). Real on-chain settlements (5.81 TGas) and escape hatch refunds (4.92 TGas). |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet`. Written in Rust (`near-sdk 5.1`). Compiles to 319 KB release WASM. 36 tests (28 unit, 6 integration, 2 proptest invariant fuzzers). Real on-chain settlements (5.81 TGas) and escape hatch refunds (4.92 TGas). |
 | **TEE Remote Attestation** | `verifications/01-hardware-attestation.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & DCAP-QVL** | Queries live NEAR AI Cloud (`cloud-api.near.ai/v1/attestation/report`) with fresh nonces. Parses binary Intel TDX Quote v4. Verified via `dcap-qvl` to Intel SGX Root CA with TCB `UpToDate`, 0 advisories, and tamper rejection. (GAP-006 CLOSED). |
 | **Chain Signatures MPC** | `scripts/testnet-mpc.js`, `src/multichain/chain-signatures.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & MPC SIGNED** | Executed live threshold signing on `v1.signer-prod.testnet` (tx: `6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk`). Derived BTC Taproot, EVM, and Solana addresses. Cryptographically verified ECDSA recovery. (GAP-005 CLOSED). |
+| **TEE Inference Attestation** | `scripts/verify-inference.js` | **VERIFIED** | **LIVE EXTERNAL / FIXTURE** | Validates official NEAR AI Cloud inference response signatures (`<MODEL>:<req_hash>:<resp_hash>`) via EIP-191 signer recovery against hardware-attested enclave keys. Tamper-rejected on flipped bytes. |
 | **1Click Asset Registry** | `verifications/02-confidential-intents.js` | **VERIFIED** | **LIVE EXTERNAL** | Audits 210 cross-chain assets from live 1Click Swap API with deterministic snapshot fallback for test resilience. |
 | **The Hatch & OutLayer** | `src/contracts/nest.js`, `src/policies/outlayer.js` | **TESTED** | **LOCAL & ON-CHAIN AUDITED** | OutLayer policy guard enforces deposit limits. Escape hatch logic verified both in local state machine and on deployed testnet contract. |
-| **API Daemon & SSE** | `src/api/server.js` | **INTEGRATED** | **REAL SERVER** | 18 HTTP REST endpoints bound to `127.0.0.1`, `X-Fly-Api-Key` enforcement, origin-restricted CORS, 512KB body size limits, real-time SSE streams, and HMAC-verified x402 payment proofs. |
-| **Model Context Protocol** | `src/mcp/server.js`, `bin/fly-mcp.js` | **INTEGRATED** | **REAL TOOLING** | 6 syndicate tools exposed over stdio JSON-RPC 2.0 compatible with Claude Code, Codex, and Claude Desktop. |
+| **Syndicate Network & Discovery** | `scripts/network-demo.js` | **DEMONSTRATED** | **REAL SCRIPT & DISCOVERY** | Demonstrates 3 specialized syndicates in one coordinator contract, cross-syndicate member discovery (`list_syndicates`, `get_syndicates_by_member`), x402 inter-syndicate commerce, and escape hatch exit. |
+| **API Daemon & SSE** | `src/api/server.js` | **INTEGRATED** | **REAL SERVER** | 20 HTTP REST endpoints bound to `127.0.0.1`, `X-Fly-Api-Key` enforcement, origin-restricted CORS, 512KB body size limits, real-time SSE streams, and HMAC-verified x402 payment proofs. |
+| **Model Context Protocol** | `src/mcp/server.js`, `bin/fly-mcp.js` | **INTEGRATED** | **REAL TOOLING** | 8 syndicate tools exposed over stdio JSON-RPC 2.0 compatible with Claude Code, Codex, and Claude Desktop. |
 | **TEE Aggregator Runtime** | `src/enclave/roost.js` | **TESTED** | **LOCAL PROCESS** | Ingestion, RSA-2048 decryption, batch aggregation, and RAM wiping execute in local Node.js process (GAP-004). Remote TEE VM container deployment is planned for production. |
 | **FAR Private Shard** | `src/settlement/far-shard.js` | **TESTED** | **LOCAL SIMULATION** | Evaluated as an in-process PBFT 200ms cryptographic state machine with IMT tokens and decoupled graphs (GAP-002) pending native L1 private sharding validator nodes. |
 | **Confidential RFQ & OTC** | `src/facilities/rfq-adjudication.js`, `otc-block-trade.js` | **TESTED** | **LOCAL SIMULATION** | In-memory Zero-MEV borrow matching and midpoint crossing dark pool simulations. |
@@ -172,7 +189,40 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 ---
 
-## 5. Architectural Comparison
+## 5. Network Topology & Discovery Architecture
+
+Fly is designed as an **Autonomous Syndicate Network**: a single NEAR L1 coordinator smart contract hosts multiple independent syndicates, each specialized in a financial or computational mission (e.g. signal research, algorithmic execution, AI compute).
+
+```
+                      ┌─────────────────────────────────────────┐
+                      │   NEAR L1 Coordinator Smart Contract    │
+                      │       (c.fly-1793636729.testnet)        │
+                      └────┬─────────────────┬────────────────┬─┘
+                           │                 │                │
+            ┌──────────────▼─────┐    ┌──────▼──────┐   ┌─────▼──────────────┐
+            │ Research Syndicate │    │ Execution   │   │ Compute Syndicate  │
+            │ syn-research-alpha │    │ syn-trading │   │ syn-compute-gamma  │
+            └─────────┬──────────┘    └──────▲──────┘   └────────────────────┘
+                      │                      │
+                      └───────[ x402 ]───────┘
+                     Micropayment Commerce
+```
+
+1. **On-Chain Discovery & Pagination:**
+   - **`list_syndicates(from_index, limit)`**: Allows autonomous agents and indexers to discover active syndicates with bounded gas (default page size: 10, max cap: 50).
+   - **`list_syndicates_by_member(account_id, from_index, limit)`**: Dedicated secondary index (`member_syndicates: LookupMap<AccountId, Vec<String>>`) enabling instant O(1) membership lookup for agents participating across multiple syndicates.
+   - **`get_syndicate_count()`**: Fast O(1) count for pagination boundaries.
+
+2. **Cross-Syndicate Value Exchange (x402 Micropayments):**
+   - Syndicates interact through HTTP 402 agent commerce: e.g. Trading Syndicate Beta purchases proprietary volatility alpha signals from Research Syndicate Alpha, authenticated via HMAC bearer receipts and settled peer-to-peer.
+
+3. **NEP-297 Standard Event Stream:**
+   - The coordinator emits standard `EVENT_JSON:{"standard":"fly","version":"1.0.0","event":"..."}` logs on `syndicate_hatched`, `syndicate_deposited`, `syndicate_settled`, and `syndicate_hatched_out`.
+   - Compensating failure events (`syndicate_settlement_failed`, `syndicate_hatch_out_failed`) ensure off-chain indexers and agent daemons remain perfectly synchronized if asynchronous payout transfers fail.
+
+---
+
+## 6. Architectural Comparison
 
 For an exhaustive architectural comparison contrasting Fly with **NEAR Business (Multisig)**, **Phala Shade Agents**, and **Plain On-Chain Escrow**, see:  
 📖 **[`docs/canonical/COMPARISON.md`](docs/canonical/COMPARISON.md)**
@@ -185,13 +235,15 @@ For hackathon track justifications and submission assets, see:
 
 ---
 
-## 6. Repository Architecture & File Index
+## 7. Repository Architecture & File Index
 
 ```
 ├── Makefile                      # Targets: make verify, make test, make wasm, make demo, make check
 ├── scripts/
 │   ├── verify                    # Canonical judge verification script (<20.0s runtime)
 │   ├── check-foundry.js          # Builder Foundry v1.0 governance control plane auditor
+│   ├── network-demo.js           # Multi-syndicate network discovery & x402 commerce demo
+│   ├── verify-inference.js       # NEAR AI Cloud TEE inference response signature verification
 │   ├── testnet-e2e.js            # Live NEAR testnet E2E settlement & escape hatch runner
 │   └── testnet-mpc.js            # Live NEAR Chain Signatures MPC threshold signing script
 ├── foundry/                      # Builder Foundry Control Plane (v1.0 Standard)
@@ -203,12 +255,12 @@ For hackathon track justifications and submission assets, see:
 ├── contracts/
 │   └── fly-coordinator/          # NEAR L1 coordinator smart contract (Rust / near-sdk 5.1)
 │       ├── Cargo.toml
-│       ├── src/lib.rs            # hatch(), deposit(), settle_batch(), hatch_out() (494 lines)
+│       ├── src/lib.rs            # hatch(), deposit(), settle_batch(), hatch_out(), list_syndicates()
 │       ├── tests/
-│       │   ├── unit_tests.rs     # 25 comprehensive unit tests
+│       │   ├── unit_tests.rs     # 28 comprehensive unit tests
 │       │   ├── integration_tests.rs # 6 multi-agent lifecycle & safety tests
 │       │   └── invariants.rs     # 2 proptest property-based fuzzing invariant suites
-│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm (277 KB)
+│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm (319 KB)
 ├── src/
 │   ├── contracts/nest.js         # Nest coordinator contract state machine mirror
 │   ├── enclave/
@@ -217,11 +269,12 @@ For hackathon track justifications and submission assets, see:
 │   ├── multichain/
 │   │   └── chain-signatures.js   # NEAR Chain Signatures MPC (EVM, Bitcoin Taproot, Solana)
 │   ├── api/
-│   │   └── server.js             # 18 REST endpoints, SSE streams, X-Fly-Api-Key, 512KB limit
+│   │   └── server.js             # 20 REST endpoints, SSE streams, X-Fly-Api-Key, 512KB limit
 │   ├── mcp/
-│   │   └── server.js             # Standalone MCP server (6 tools for AI agent swarms)
+│   │   └── server.js             # Standalone MCP server (8 tools for AI agent swarms)
 │   └── facilities/               # RFQ, OTC dark pool, and compute credit syndicate modules
-├── verifications/                # 8 standalone architectural verification scripts
+├── verifications/                # 9 standalone architectural verification scripts
+│   └── fixtures/                 # Recorded fixtures for offline deterministic verification
 └── docs/                         # Canonical SDLC Documentation
     └── canonical/
         ├── COMPARISON.md         # Comparative analysis vs multisigs, shade agents, escrow
@@ -229,5 +282,6 @@ For hackathon track justifications and submission assets, see:
         ├── SUBMISSION_ASSETS.md  # X post, project description, 5-track rationale
         ├── testnet-evidence.json # 8 live NEAR testnet transaction records
         ├── mpc-evidence.json     # Live Chain Signatures MPC transaction record
+        ├── inference-evidence.json # NEAR AI Cloud TEE inference response signature record
         └── EVIDENCE_LEDGER.md    # Evidence ledger with testnet explorer links
 ```

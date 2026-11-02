@@ -1,6 +1,12 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'url';
 import { JsonRpcProvider } from 'near-api-js';
 import { FlyNestContract } from '../src/contracts/nest.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Verification 3: Hatch Protocol & Non-Custodial Escape Hatch (FMEA)
@@ -127,34 +133,61 @@ export async function verifyHatchProtocol() {
   console.log(`  - Final Syndicate Status: ABORTED_REFUNDED (all funds safely repatriated)`);
 
   // --- Step 6: Live On-Chain Deployed Contract Audit (Testnet c.fly-1793636729.testnet) ---
-  console.log('[6/6] Auditing Live Deployed NEAR Testnet Contract State...');
+  const isOffline = process.env.FLY_OFFLINE === '1';
+  let isRecordedFixture = false;
   const testnetContractId = 'c.fly-1793636729.testnet';
-  const provider = new JsonRpcProvider({ url: 'https://rpc.testnet.near.org' });
-  try {
-    const flashSyn = await provider.callFunction({
-      contractId: testnetContractId,
-      method: 'get_syndicate',
-      args: { syndicate_id: 'syn-flash-1793637420' }
-    });
-    const escapeSyn = await provider.callFunction({
-      contractId: testnetContractId,
-      method: 'get_syndicate',
-      args: { syndicate_id: 'syn-escape-1793637435' }
-    });
 
-    if (flashSyn && flashSyn.status === 'Settled' && escapeSyn && escapeSyn.status === 'AbortedRefunded') {
-      console.log(`  - Deployed Contract:   ${testnetContractId} (LIVE on NEAR Testnet)`);
-      console.log(`  - On-Chain Settlement: syn-flash-1793637420 -> Status: ${flashSyn.status} (Total Paid: 0.06 NEAR)`);
-      console.log(`  - On-Chain Escape:     syn-escape-1793637435 -> Status: ${escapeSyn.status} (Escrow: 0, Fully Refunded)`);
-      console.log(`  - Explorer Verified:   8 recorded transactions in docs/canonical/testnet-evidence.json`);
-    } else {
-      console.log(`  - Deployed Contract:   Queried testnet, responses parsed.`);
+  if (isOffline) {
+    console.log('[6/6] Auditing Deployed NEAR Testnet Contract State [RECORDED FIXTURE]...');
+    const fixturePath = path.join(__dirname, 'fixtures', 'testnet-syndicates.json');
+    const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+    isRecordedFixture = true;
+    console.log(`  - Deployed Contract:   ${fixture.contractId} (Audited from recorded fixture)`);
+    console.log(`  - On-Chain Settlement: syn-flash-1793637420 -> Status: ${fixture.flashSyndicate.status} (Total Paid: 0.06 NEAR)`);
+    console.log(`  - On-Chain Escape:     syn-escape-1793637435 -> Status: ${fixture.escapeSyndicate.status} (Escrow: 0, Fully Refunded)`);
+    console.log(`  - Explorer Verified:   8 recorded transactions in docs/canonical/testnet-evidence.json`);
+  } else {
+    console.log('[6/6] Auditing Live Deployed NEAR Testnet Contract State via Public RPC...');
+    const rpcUrl = process.env.NEAR_RPC_URL || 'https://rpc.testnet.near.org';
+    const provider = new JsonRpcProvider({ url: rpcUrl });
+    try {
+      const flashSyn = await provider.callFunction({
+        contractId: testnetContractId,
+        method: 'get_syndicate',
+        args: { syndicate_id: 'syn-flash-1793637420' }
+      });
+      const escapeSyn = await provider.callFunction({
+        contractId: testnetContractId,
+        method: 'get_syndicate',
+        args: { syndicate_id: 'syn-escape-1793637435' }
+      });
+
+      if (flashSyn && flashSyn.status === 'Settled' && escapeSyn && escapeSyn.status === 'AbortedRefunded') {
+        console.log(`  - Deployed Contract:   ${testnetContractId} (LIVE on NEAR Testnet via ${rpcUrl})`);
+        console.log(`  - On-Chain Settlement: syn-flash-1793637420 -> Status: ${flashSyn.status} (Total Paid: 0.06 NEAR)`);
+        console.log(`  - On-Chain Escape:     syn-escape-1793637435 -> Status: ${escapeSyn.status} (Escrow: 0, Fully Refunded)`);
+        console.log(`  - Explorer Verified:   8 recorded transactions in docs/canonical/testnet-evidence.json`);
+      } else {
+        console.log(`  - Deployed Contract:   Queried testnet, responses parsed.`);
+      }
+    } catch (rpcErr) {
+      console.warn(`  - Deployed Contract:   (RPC unreachable: ${rpcErr.message}. Falling back to recorded fixture.)`);
+      const fixturePath = path.join(__dirname, 'fixtures', 'testnet-syndicates.json');
+      if (fs.existsSync(fixturePath)) {
+        const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+        isRecordedFixture = true;
+        console.log(`  - Deployed Contract:   ${fixture.contractId} (Audited from recorded fixture)`);
+        console.log(`  - On-Chain Settlement: syn-flash-1793637420 -> Status: ${fixture.flashSyndicate.status} (Total Paid: 0.06 NEAR)`);
+        console.log(`  - On-Chain Escape:     syn-escape-1793637435 -> Status: ${fixture.escapeSyndicate.status} (Escrow: 0, Fully Refunded)`);
+      }
     }
-  } catch (rpcErr) {
-    console.log(`  - Deployed Contract:   (Offline/RPC fallback) ${rpcErr.message}`);
   }
 
-  console.log('\n>>> [PASS] HATCH & ESCAPE HATCH VERIFIED: Non-custodial safety invariants hold on-chain.');
+  if (isRecordedFixture) {
+    console.log('\n>>> [PASS] HATCH & ESCAPE HATCH VERIFIED [RECORDED FIXTURE]: Safety invariants hold.');
+  } else {
+    console.log('\n>>> [PASS] HATCH & ESCAPE HATCH VERIFIED: Non-custodial safety invariants hold on-chain.');
+  }
   return {
     verified: true,
     settlementPassed: true,

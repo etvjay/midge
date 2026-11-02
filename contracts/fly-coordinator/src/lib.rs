@@ -10,6 +10,12 @@ pub const MIN_DEPOSIT_YOCTO: u128 = 10_000_000_000_000_000_000_000;
 /// Maximum number of distinct flyers per syndicate to bound gas consumption.
 pub const MAX_FLYERS_PER_SYNDICATE: u32 = 50;
 
+/// Default page limit for paginated queries.
+pub const DEFAULT_PAGE_LIMIT: u64 = 10;
+
+/// Maximum page limit to bound view call gas consumption.
+pub const MAX_PAGE_LIMIT: u64 = 50;
+
 #[near(serializers = [borsh, json])]
 #[derive(Clone, PartialEq, Debug)]
 pub enum SyndicateType {
@@ -51,6 +57,30 @@ pub struct SyndicateRecord {
     pub payout_recipient: AccountId,
 }
 
+impl SyndicateRecord {
+    /// Returns true if the account is either the creator/owner or an active flyer in this syndicate.
+    pub fn has_member(&self, account_id: &AccountId) -> bool {
+        self.owner == *account_id || self.flyers.contains(account_id)
+    }
+}
+
+fn sanitize_pagination(
+    from_index: Option<u64>,
+    limit: Option<u64>,
+    total_count: u64,
+) -> (usize, usize) {
+    let from_idx = from_index.unwrap_or(0);
+    if from_idx >= total_count {
+        return (total_count as usize, 0);
+    }
+    let start = match usize::try_from(from_idx) {
+        Ok(s) => s,
+        Err(_) => return (total_count as usize, 0),
+    };
+    let page_limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT).min(MAX_PAGE_LIMIT) as usize;
+    (start, page_limit)
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct FlyCoordinator {
@@ -58,6 +88,8 @@ pub struct FlyCoordinator {
     // Dedicated LookupMap to prevent unbounded state deserialization in SyndicateRecord
     // Key: (syndicate_id, flyer_account_id) -> NearToken
     pub escrows: LookupMap<(String, AccountId), NearToken>,
+    // Secondary index: account_id -> list of syndicate IDs where account is creator or flyer
+    pub member_syndicates: LookupMap<AccountId, Vec<String>>,
 }
 
 #[near]
@@ -68,6 +100,7 @@ impl FlyCoordinator {
         Self {
             syndicates: IterableMap::new(b"s"),
             escrows: LookupMap::new(b"e"),
+            member_syndicates: LookupMap::new(b"m"),
         }
     }
 
@@ -159,8 +192,8 @@ impl FlyCoordinator {
 
         let record = SyndicateRecord {
             id: syndicate_id.clone(),
-            owner,
-            syndicate_type: syn_type,
+            owner: owner.clone(),
+            syndicate_type: syn_type.clone(),
             sub_account,
             quorum_threshold: quorum,
             max_spend_per_flyer: max_spend,
@@ -182,6 +215,28 @@ impl FlyCoordinator {
         };
 
         self.syndicates.insert(syndicate_id.clone(), record);
+
+        // Update secondary member index for creator (API-001)
+        let mut owner_syns = self
+            .member_syndicates
+            .get(&owner)
+            .cloned()
+            .unwrap_or_default();
+        if !owner_syns.contains(&syndicate_id) {
+            owner_syns.push(syndicate_id.clone());
+            self.member_syndicates.insert(owner.clone(), owner_syns);
+        }
+
+        // NEP-297 standard event
+        env::log_str(&format!(
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_hatched\",\"data\":[{{\"syndicate_id\":\"{}\",\"owner\":\"{}\",\"syndicate_type\":\"{:?}\",\"quorum_threshold\":{},\"timeout_blocks\":{}}}]}}",
+            syndicate_id,
+            owner,
+            syn_type,
+            quorum,
+            timeout
+        ));
+
         syndicate_id
     }
 
@@ -231,10 +286,30 @@ impl FlyCoordinator {
             );
             syn.active_flyer_count += 1;
             syn.flyers.push(caller.clone());
+
+            // Update secondary member index for flyer (API-001)
+            let mut caller_syns = self
+                .member_syndicates
+                .get(&caller)
+                .cloned()
+                .unwrap_or_default();
+            if !caller_syns.contains(&syndicate_id) {
+                caller_syns.push(syndicate_id.clone());
+                self.member_syndicates.insert(caller.clone(), caller_syns);
+            }
         }
 
         self.escrows.insert(escrow_key, new_balance);
         syn.total_escrow = syn.total_escrow.saturating_add(attached);
+
+        // NEP-297 standard event (API-008: syndicate_deposited)
+        env::log_str(&format!(
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_deposited\",\"data\":[{{\"syndicate_id\":\"{}\",\"flyer\":\"{}\",\"amount\":\"{}\",\"active_flyers\":{}}}]}}",
+            syn.id,
+            caller,
+            attached.as_yoctonear(),
+            syn.active_flyer_count
+        ));
     }
 
     /// settle_batch(): Verifies HAQ attestation signature and executes settlement payout.
@@ -308,7 +383,7 @@ impl FlyCoordinator {
         );
 
         // 4. Record settled batch and execute financial payout
-        syn.settled_batches.push(aggregate_order_hash);
+        syn.settled_batches.push(aggregate_order_hash.clone());
 
         match syn.syndicate_type {
             SyndicateType::Flash => {
@@ -338,6 +413,18 @@ impl FlyCoordinator {
                     .collect::<String>();
             }
         }
+
+        let settled_payout = syn.total_settled_payouts;
+
+        // NEP-297 standard event (API-006: includes payout_amount)
+        env::log_str(&format!(
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_settled\",\"data\":[{{\"syndicate_id\":\"{}\",\"epoch\":{},\"payout_recipient\":\"{}\",\"payout_amount\":\"{}\",\"order_hash\":\"{}\"}}]}}",
+            syn.id,
+            syn.epoch,
+            syn.payout_recipient,
+            settled_payout.as_yoctonear(),
+            aggregate_order_hash
+        ));
     }
 
     /// hatch_out(): Automated non-custodial escape hatch.
@@ -390,6 +477,14 @@ impl FlyCoordinator {
             syn.status = SyndicateStatus::AbortedRefunded;
         }
 
+        // NEP-297 standard event
+        env::log_str(&format!(
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_hatched_out\",\"data\":[{{\"syndicate_id\":\"{}\",\"flyer\":\"{}\",\"refund_amount\":\"{}\"}}]}}",
+            syn.id,
+            caller,
+            flyer_balance.as_yoctonear()
+        ));
+
         Promise::new(caller.clone()).transfer(flyer_balance).then(
             Self::ext(env::current_account_id())
                 .with_static_gas(Gas::from_tgas(15))
@@ -412,6 +507,12 @@ impl FlyCoordinator {
                 syn.total_escrow = syn.total_escrow.saturating_add(payout_amount);
                 syn.total_settled_payouts = syn.total_settled_payouts.saturating_sub(payout_amount);
             }
+            // Compensating NEP-297 event on settlement rollback (CA-001)
+            env::log_str(&format!(
+                "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_settlement_failed\",\"data\":[{{\"syndicate_id\":\"{}\",\"reverted_amount\":\"{}\"}}]}}",
+                syndicate_id,
+                payout_amount.as_yoctonear()
+            ));
             return false;
         }
 
@@ -473,6 +574,13 @@ impl FlyCoordinator {
                     syn.status = SyndicateStatus::Active;
                 }
             }
+            // Compensating NEP-297 event on escape hatch rollback (CA-001)
+            env::log_str(&format!(
+                "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_hatch_out_failed\",\"data\":[{{\"syndicate_id\":\"{}\",\"flyer\":\"{}\",\"reverted_amount\":\"{}\"}}]}}",
+                syndicate_id,
+                flyer_id,
+                refund_amount.as_yoctonear()
+            ));
             return false;
         }
         true
@@ -488,5 +596,66 @@ impl FlyCoordinator {
 
     pub fn get_syndicate(&self, syndicate_id: String) -> Option<SyndicateRecord> {
         self.syndicates.get(&syndicate_id).cloned()
+    }
+
+    /// Returns the total count of hatched syndicates.
+    pub fn get_syndicate_count(&self) -> u64 {
+        self.syndicates.len() as u64
+    }
+
+    /// Returns a paginated list of syndicates.
+    /// Default limit: 10, Maximum limit: 50.
+    pub fn list_syndicates(
+        &self,
+        from_index: Option<u64>,
+        limit: Option<u64>,
+    ) -> Vec<SyndicateRecord> {
+        let total = self.syndicates.len() as u64;
+        let (start, page_limit) = sanitize_pagination(from_index, limit, total);
+        if page_limit == 0 {
+            return Vec::new();
+        }
+        self.syndicates
+            .values()
+            .skip(start)
+            .take(page_limit)
+            .cloned()
+            .collect()
+    }
+
+    /// Returns a paginated list of syndicates where the account is creator or flyer.
+    /// Uses dedicated secondary index to guarantee bounded storage reads (API-001).
+    pub fn list_syndicates_by_member(
+        &self,
+        account_id: AccountId,
+        from_index: Option<u64>,
+        limit: Option<u64>,
+    ) -> Vec<SyndicateRecord> {
+        let member_syn_ids = self
+            .member_syndicates
+            .get(&account_id)
+            .cloned()
+            .unwrap_or_default();
+        let total = member_syn_ids.len() as u64;
+        let (start, page_limit) = sanitize_pagination(from_index, limit, total);
+        if page_limit == 0 {
+            return Vec::new();
+        }
+        member_syn_ids
+            .iter()
+            .skip(start)
+            .take(page_limit)
+            .filter_map(|id| self.syndicates.get(id).cloned())
+            .collect()
+    }
+
+    /// Alias for list_syndicates_by_member (API-007).
+    pub fn get_syndicates_by_member(
+        &self,
+        account_id: AccountId,
+        from_index: Option<u64>,
+        limit: Option<u64>,
+    ) -> Vec<SyndicateRecord> {
+        self.list_syndicates_by_member(account_id, from_index, limit)
     }
 }

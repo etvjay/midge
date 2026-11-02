@@ -261,6 +261,46 @@ export class FlyApiDaemon {
       });
     }
 
+    // List all syndicates (paginated)
+    if (method === 'GET' && (pathname === '/v1/syndicates' || pathname === '/v1/syndicates/')) {
+      const fromIndex = parsedUrl.query.fromIndex || 0;
+      const limit = parsedUrl.query.limit || 10;
+      const list = this.nest.listSyndicates(fromIndex, limit);
+      return this.sendJson(res, 200, {
+        total: this.nest.getSyndicateCount(),
+        syndicates: list.map((syn) => ({
+          id: syn.id,
+          type: syn.type,
+          subAccount: syn.subAccount,
+          status: syn.status,
+          epoch: syn.epoch,
+          totalEscrow: syn.totalEscrow,
+          quorumThreshold: syn.quorumThreshold,
+          activeFlyers: Array.from(syn.escrow ? syn.escrow.keys() : []),
+          roundNonce: syn.roundNonce,
+        })),
+      }, req);
+    }
+
+    // List syndicates by member account
+    if (method === 'GET' && pathname.startsWith('/v1/syndicates/member/')) {
+      const memberId = pathname.replace('/v1/syndicates/member/', '');
+      const fromIndex = parsedUrl.query.fromIndex || 0;
+      const limit = parsedUrl.query.limit || 10;
+      const list = this.nest.getSyndicatesByMember(memberId, fromIndex, limit);
+      return this.sendJson(res, 200, {
+        member: memberId,
+        syndicates: list.map((syn) => ({
+          id: syn.id,
+          type: syn.type,
+          subAccount: syn.subAccount,
+          status: syn.status,
+          epoch: syn.epoch,
+          totalEscrow: syn.totalEscrow,
+        })),
+      }, req);
+    }
+
     if (method === 'GET' && pathname.startsWith('/v1/syndicates/') && !pathname.includes('/pods') && !pathname.includes('/deposit')) {
       const synId = pathname.split('/')[3];
       const syn = this.nest.syndicates.get(synId);

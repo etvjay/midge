@@ -1,0 +1,16 @@
+{
+  "completionId": "chatcmpl-fly-roost-deliberation-testnet",
+  "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+  "signingAlgo": "ecdsa",
+  "signingAddress": "0x2eb600dbdaa1cf83f8b170dcf1ee4a155f744a11",
+  "requestBody": "{\"model\":\"Qwen/Qwen3.6-35B-A3B-FP8\",\"messages\":[{\"role\":\"system\",\"content\":\"You are the Fly Roost confidential deliberation arbiter.\"},{\"role\":\"user\",\"content\":\"Deliberate aggregate batch: 3 orders, total 0.06 NEAR, target: USDC\"}]}",
+  "responseBody": "{\"id\":\"chatcmpl-fly-roost-deliberation-testnet\",\"object\":\"chat.completion\",\"model\":\"Qwen/Qwen3.6-35B-A3B-FP8\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"CONFIDENTIAL_BATCH_APPROVED:pair=NEAR/USDC:execution=TWAP_300:aggregate_limit=0.06\"},\"finish_reason\":\"stop\"}]}",
+  "requestHash": "1730b465e6f3ff3a33c13d5c337d64ba86bd26b0f9700cbdc58da16511f0c667",
+  "responseHash": "eccae8365892cc718da344ccc5e0d775270c3cf17773b81f8221e15635ad1c56",
+  "signedText": "Qwen/Qwen3.6-35B-A3B-FP8:1730b465e6f3ff3a33c13d5c337d64ba86bd26b0f9700cbdc58da16511f0c667:eccae8365892cc718da344ccc5e0d775270c3cf17773b81f8221e15635ad1c56",
+  "signature": "0x0bef4ef26317c60748980d35800a98063acfdf9fcff9ef2aa4fcf2a390cf7141674cc3fc377d2932e141fb36baca24ff82cd59190d8578b0dab92c1bdf6ce2411c",
+  "verified": true,
+  "recordedAt": "2026-11-02T17:20:00Z",
+  "attestationSignerMatch": true,
+  "resultHash": "678c71fff5fec8805f4a4765ac6b07c659616bb65ecd87bd76a1dea2bf529912"
+}

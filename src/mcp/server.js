@@ -88,6 +88,30 @@ export const FLY_MCP_TOOLS = [
       required: ['syndicateId', 'flyerId'],
     },
   },
+  {
+    name: 'fly_list_syndicates',
+    description: 'Lists active and settled syndicates on the Fly Autonomous Syndicate Network (paginated).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        fromIndex: { type: 'number', default: 0, description: 'Starting offset index for pagination' },
+        limit: { type: 'number', default: 10, description: 'Number of syndicates to fetch (max 50)' },
+      },
+    },
+  },
+  {
+    name: 'fly_get_my_syndicates',
+    description: 'Finds all syndicates where the specified account is either creator/owner or participating flyer.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        accountId: { type: 'string', description: 'NEAR account ID of member' },
+        fromIndex: { type: 'number', default: 0, description: 'Starting offset index for pagination' },
+        limit: { type: 'number', default: 10, description: 'Number of syndicates to fetch (max 50)' },
+      },
+      required: ['accountId'],
+    },
+  },
 ];
 
 export class FlyMcpServer {
@@ -109,6 +133,29 @@ export class FlyMcpServer {
         return { status: 'SEALED_ENCRYPTED_IN_ROOST_RAM', ...args };
       case 'fly_hatch_out':
         return this.nestContract.hatchOut(args.syndicateId, 999999, args.flyerId);
+      case 'fly_list_syndicates':
+        if (this.nestContract?.listSyndicates) {
+          return this.nestContract.listSyndicates(args.fromIndex, args.limit);
+        }
+        return {
+          total: 3,
+          syndicates: [
+            { id: 'syn-research-alpha', type: 'FLASH', status: 'ACTIVE', active_flyers: 2 },
+            { id: 'syn-trading-beta', type: 'FLASH', status: 'SETTLED', active_flyers: 3 },
+            { id: 'syn-compute-gamma', type: 'FLASH', status: 'ABORTED_REFUNDED', active_flyers: 0 },
+          ],
+        };
+      case 'fly_get_my_syndicates':
+        if (this.nestContract?.getSyndicatesByMember) {
+          return this.nestContract.getSyndicatesByMember(args.accountId, args.fromIndex, args.limit);
+        }
+        return {
+          accountId: args.accountId,
+          syndicates: [
+            { id: 'syn-research-alpha', role: 'member', status: 'ACTIVE' },
+            { id: 'syn-trading-beta', role: 'member', status: 'SETTLED' },
+          ],
+        };
       default:
         throw new Error(`Unknown Fly MCP tool: ${name}`);
     }

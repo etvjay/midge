@@ -11,6 +11,7 @@
     "verify": "./scripts/verify",
     "test": "node verify-all.js",
     "demo:syndicate": "node src/simulation/runner.js",
+    "demo:network": "node scripts/network-demo.js",
     "start:daemon": "node -e 'import(\"./src/api/server.js\").then(m => new m.FlyApiDaemon({ port: 3000 }).start().then(s => console.log(\"Fly Daemon live on port \" + s.port)))'",
     "verify:tee": "node verifications/01-hardware-attestation.js",
     "verify:intents": "node verifications/02-confidential-intents.js",
@@ -23,6 +24,7 @@
     "verify:rust": "cd contracts/fly-coordinator && cargo test",
     "verify:testnet": "node scripts/testnet-e2e.js",
     "verify:mpc": "node scripts/testnet-mpc.js",
+    "verify:inference": "node scripts/verify-inference.js",
     "build:wasm": "cd contracts/fly-coordinator && cargo build --target wasm32-unknown-unknown --release",
     "check:foundry": "node scripts/check-foundry.js",
     "review:argon": "node scripts/argon-review.js"
@@ -42,6 +44,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@nearai/inference-sdk": "^0.1.0",
     "ethers": "^6.17.0",
     "near-api-js": "^7.4.0"
   }

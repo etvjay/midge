@@ -3,15 +3,15 @@
   "version": 1,
   "current_phase": "08",
   "status": "TESTED",
-  "head": "696a138c6727b780e6690d1df7fc4e81829f0ce0",
-  "last_verified_head": "696a138c6727b780e6690d1df7fc4e81829f0ce0",
-  "last_verified_at": "2026-11-02T17:05:00Z",
+  "head": "91d2852b374efb188c6235373e95242a5cfeeaa9",
+  "last_verified_head": "91d2852b374efb188c6235373e95242a5cfeeaa9",
+  "last_verified_at": "2026-11-02T17:45:00Z",
   "critical_open_gaps": 0,
   "high_open_gaps": 0,
   "external_blockers": 0,
   "live_evidence_current": true,
-  "total_claims": 11,
-  "verified_claims": 11,
+  "total_claims": 13,
+  "verified_claims": 13,
   "verification_summary": {
     "rust_smart_contract": "LIVE_DEMONSTRATED",
     "wasm_compilation": "TESTED",
@@ -23,6 +23,8 @@
     "otc_and_compute_syndicate": "SIMULATED",
     "resilience_failure_matrix_fmea": "TESTED",
     "http_sse_x402_mcp": "INTEGRATED",
-    "dark_swarm_10_simulation": "SIMULATED"
+    "dark_swarm_10_simulation": "SIMULATED",
+    "network_discovery_demo": "TESTED",
+    "tee_inference_attestation": "TESTED"
   }
 }

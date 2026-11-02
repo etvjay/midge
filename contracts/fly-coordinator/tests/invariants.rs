@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use ed25519_dalek::{Signer, SigningKey};
 use fly_coordinator::{FlyCoordinator, SyndicateStatus};
 #[allow(deprecated)]

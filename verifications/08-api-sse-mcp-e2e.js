@@ -148,6 +148,12 @@ export async function verifyApiSseMcpE2E() {
     });
     console.log(`  ✓ MCP Tool Executed:  fly_hatch_syndicate -> ${mcpHatchResult.id} (${mcpHatchResult.subAccount})`);
 
+    const mcpListResult = await mcpServer.executeTool('fly_list_syndicates', { limit: 5 });
+    console.log(`  ✓ MCP Tool Executed:  fly_list_syndicates -> ${mcpListResult.length} syndicates discovered`);
+
+    const mcpMyResult = await mcpServer.executeTool('fly_get_my_syndicates', { accountId: 'agent.near' });
+    console.log(`  ✓ MCP Tool Executed:  fly_get_my_syndicates -> ${mcpMyResult.length} member syndicates found`);
+
     // Clean up first daemon
     sseReq.destroy();
     await daemon.stop();
