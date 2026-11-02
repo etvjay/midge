@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "description": "Fly: A Syndicate Network for Private Systems on NEAR Protocol",
   "type": "module",
+  "main": "src/index.js",
   "scripts": {
     "test": "node verify-all.js",
+    "demo:syndicate": "node src/simulation/runner.js",
     "verify:tee": "node verifications/01-hardware-attestation.js",
     "verify:intents": "node verifications/02-confidential-intents.js",
     "verify:hatch": "node verifications/03-hatch-escape-hatch.js"
