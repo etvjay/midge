@@ -3,3 +3,4 @@ target/
 contracts/**/target/
 .env
 .DS_Store
+HANDOFF.md
