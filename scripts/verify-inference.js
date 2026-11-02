@@ -109,18 +109,60 @@ export async function verifyInferenceAttestation({ offline = false } = {}) {
 
     const reqHash = crypto.createHash('sha256').update(requestPayload).digest('hex');
     const respHash = crypto.createHash('sha256').update(responseText).digest('hex');
-    const expectedSignedText = `${model}:${reqHash}:${respHash}`;
 
-    if (sigData.text && sigData.text !== expectedSignedText) {
+    // The signature kind decides what was signed and which attested TEE key must have signed it.
+    //   provider_tee -> `<model>:<req_hash>:<resp_hash>`, signed by the model TEE key
+    //   gateway      -> `<req_hash>:<resp_hash>`,         signed by the gateway TEE key
+    const signatureKind = sigData.signature_kind;
+    let expectedSignedText;
+    let expectedSigner;
+    let signerLabel;
+    if (signatureKind === 'provider_tee') {
+      expectedSignedText = `${model}:${reqHash}:${respHash}`;
+      expectedSigner = modelSigner;
+      signerLabel = 'model TEE';
+    } else if (signatureKind === 'gateway') {
+      expectedSignedText = `${reqHash}:${respHash}`;
+      expectedSigner = gatewaySigner;
+      signerLabel = 'gateway TEE';
+    } else {
+      throw new Error(`[INFERENCE FAIL] Unsupported or missing signature_kind: ${JSON.stringify(signatureKind)} (fail closed)`);
+    }
+    if (sigData.signing_algo && sigData.signing_algo !== 'ecdsa') {
+      throw new Error(`[INFERENCE FAIL] Unsupported signing_algo '${sigData.signing_algo}' (only ecdsa is implemented)`);
+    }
+    if (!expectedSigner) {
+      throw new Error(`[INFERENCE FAIL] Attestation report has no ${signerLabel} signing address to compare against`);
+    }
+    console.log(`  ✓ Signature kind:       ${signatureKind} (expects ${signerLabel} key ${expectedSigner})`);
+
+    if (sigData.text !== expectedSignedText) {
       throw new Error(`[INFERENCE FAIL] Signed text mismatch: expected '${expectedSignedText}', got '${sigData.text}'`);
     }
 
     const recoveredSigner = ethers.verifyMessage(expectedSignedText, sigData.signature).toLowerCase();
-    const matchesSigner = (recoveredSigner === gatewaySigner || recoveredSigner === modelSigner);
-    if (!matchesSigner) {
-      throw new Error(`[INFERENCE FAIL] Recovered signer ${recoveredSigner} does not match attestation signers (${gatewaySigner} / ${modelSigner})`);
+    if (recoveredSigner !== expectedSigner) {
+      throw new Error(`[INFERENCE FAIL] Recovered signer ${recoveredSigner} does not match the attested ${signerLabel} key ${expectedSigner}`);
     }
-    console.log(`  ✓ Signature Recovered:  ${recoveredSigner} (Matches TEE Attestation Signer)`);
+    if (sigData.signing_address && sigData.signing_address.toLowerCase() !== recoveredSigner) {
+      throw new Error(`[INFERENCE FAIL] Endpoint signing_address ${sigData.signing_address} differs from recovered signer ${recoveredSigner}`);
+    }
+    console.log(`  ✓ Signature Recovered:  ${recoveredSigner} (matches attested ${signerLabel} key)`);
+
+    // Tamper check on the live evidence: changing the last character of the signed text must not
+    // recover the attested signer. If it does, the verification logic is broken and we fail closed.
+    const lastChar = expectedSignedText.slice(-1);
+    const tamperedText = expectedSignedText.slice(0, -1) + (lastChar === '0' ? '1' : '0');
+    let tamperedSigner = null;
+    try {
+      tamperedSigner = ethers.verifyMessage(tamperedText, sigData.signature).toLowerCase();
+    } catch {
+      tamperedSigner = null;
+    }
+    if (tamperedSigner === expectedSigner) {
+      throw new Error('[INFERENCE FAIL] Tampered response hash still recovers the attested signer');
+    }
+    console.log(`  ✓ Tamper check:         altered hash rejected (recovered ${tamperedSigner ?? 'no valid signer'})`);
 
     const evidence = {
       model,
@@ -128,8 +170,11 @@ export async function verifyInferenceAttestation({ offline = false } = {}) {
       requestHash: reqHash,
       responseHash: respHash,
       signedText: expectedSignedText,
+      signatureKind,
+      signingAlgo: 'ecdsa',
       signingAddress: recoveredSigner,
       signature: sigData.signature,
+      tamperRejected: true,
       verified: true,
       timestamp: new Date().toISOString()
     };

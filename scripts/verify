@@ -54,7 +54,10 @@ echo ""
 echo "================================================================================"
 echo " [STEP 3/5] 8-Layer Architectural & Cryptographic Verification Suite"
 echo "================================================================================"
-node verify-all.js
+VERIFY_ALL_LOG="$(mktemp)"
+set -o pipefail
+node verify-all.js | tee "$VERIFY_ALL_LOG"
+set +o pipefail
 echo ""
 
 # STEP 4: Independent Testnet On-Chain Cryptographic Verification (Requires Network)
@@ -80,11 +83,15 @@ else
   VERDICT_TXT="VERIFIED & AUDITED (Smart Contract Tested, TEE Parsed, On-Chain Verified)"
 fi
 
-if [ -n "$NEARAI_API_KEY" ] || [ -n "$NEAR_AI_API_KEY" ]; then
+# Derive the inference line from what verify-all.js actually reported, never from env vars alone.
+if grep -q "LIVE INFERENCE VERIFIED" "$VERIFY_ALL_LOG"; then
   INFER_LINE="║ 11. TEE Deliberation Inference Attestation:   ✅ PASS (Live External)        ║"
-else
+elif grep -q "\[SKIP\] INFERENCE ATTESTATION" "$VERIFY_ALL_LOG"; then
   INFER_LINE="║ 11. TEE Deliberation Inference Attestation:   ⚠️ SKIPPED (No API key; not live)║"
+else
+  INFER_LINE="║ 11. TEE Deliberation Inference Attestation:   ❓ UNKNOWN (see step 3 output)   ║"
 fi
+rm -f "$VERIFY_ALL_LOG"
 
 echo "╔══════════════════════════════════════════════════════════════════════════════╗"
 echo "║                          FINAL EVALUATION VERDICT                            ║"
