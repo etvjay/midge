@@ -12,9 +12,11 @@ export class FlyNestContract {
 
   /**
    * hatch(): The programmatic syndicate factory.
+   * Supports both 'FLASH' (ephemeral single-round) and 'DARK_VAULT' (persistent multi-epoch).
    */
   hatch({
     syndicateId,
+    syndicateType = 'FLASH', // 'FLASH' (ephemeral) or 'DARK_VAULT' (persistent)
     quorumThreshold = 3,
     maxSpendPerFlyer = 100,
     expectedCodeHash,
@@ -27,6 +29,7 @@ export class FlyNestContract {
 
     const syndicate = {
       id: syndicateId,
+      type: syndicateType, // 'FLASH' or 'DARK_VAULT'
       subAccount: `${syndicateId}.fly.testnet`,
       quorumThreshold,
       policyGuard: new OutLayerPolicyGuard({ maxSpendPerFlyer }),
@@ -34,9 +37,11 @@ export class FlyNestContract {
       timeoutBlocks,
       createdAtBlock: currentBlock,
       status: 'ACTIVE',
+      epoch: 1,
       escrow: new Map(), // flyerId -> amount
       totalEscrow: 0,
       roundNonce: crypto.randomBytes(32).toString('hex'),
+      settledBatches: [],
     };
 
     this.syndicates.set(syndicateId, syndicate);
@@ -91,12 +96,30 @@ export class FlyNestContract {
       throw new Error(`[QUORUM REJECT] Active flyers (${activeFlyers.length}) below threshold (${syn.quorumThreshold}).`);
     }
 
-    syn.status = 'SETTLED';
-    return {
-      status: 'SETTLED',
+    const receipt = {
       clearedAmount: syn.totalEscrow,
       aggregateOrder,
       verifiedEnclave: enclaveCodeHash,
+      settledAt: Date.now(),
+    };
+
+    if (syn.type === 'FLASH') {
+      // Ephemeral Flash Syndicate dissolves after single batch
+      syn.status = 'SETTLED';
+      receipt.lifecycle = 'FLASH_DISSOLVED';
+    } else {
+      // Persistent Dark Vault continues into next epoch
+      syn.settledBatches.push(receipt);
+      syn.epoch += 1;
+      syn.roundNonce = crypto.randomBytes(32).toString('hex'); // Fresh nonce for next epoch
+      receipt.lifecycle = `DARK_VAULT_EPOCH_${syn.epoch}`;
+      receipt.nextEpochNonce = syn.roundNonce;
+    }
+
+    return {
+      status: syn.status,
+      syndicateType: syn.type,
+      ...receipt,
     };
   }
 
