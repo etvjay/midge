@@ -5,7 +5,7 @@ import { FlyNestContract } from '../src/contracts/nest.js';
 import { RoostEnclave } from '../src/enclave/roost.js';
 
 /**
- * Fly Model Context Protocol (MCP) Server:
+ * Midge Model Context Protocol (MCP) Server:
  * Provides stdio JSON-RPC transport for LLM coding agents (Claude Code, Cursor, Codex).
  */
 const nest = new FlyNestContract();
@@ -71,6 +71,6 @@ rl.on('line', async (line) => {
         return sendResponse(id, null, { code: -32601, message: `Method not found: ${method}` });
     }
   } catch (err) {
-    process.stderr.write(`[fly-mcp] Error: ${err.message}\n`);
+    process.stderr.write(`[midge-mcp] Error: ${err.message}\n`);
   }
 });

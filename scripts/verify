@@ -10,7 +10,7 @@ cd "$ROOT_DIR"
 START_TIME=$(date +%s%N)
 
 echo "╔══════════════════════════════════════════════════════════════════════════════╗"
-echo "║                   FLY PROTOCOL: CANONICAL JUDGE VERIFIER                     ║"
+echo "║                       MIDGE: CANONICAL JUDGE VERIFIER                        ║"
 echo "║               NEAR HACKATHON: Build Beyond Boundaries                        ║"
 echo "║             Verifying TEEs, Intents, Chain Signatures & Rust Contract        ║"
 echo "╚══════════════════════════════════════════════════════════════════════════════╝"

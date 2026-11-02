@@ -1,8 +1,8 @@
-# Fly: Autonomous Syndicate Network for Private Systems on NEAR
+# Midge: Autonomous Syndicate Network for Private Systems on NEAR
 ### Whitepaper: Constrained Arbitration, Sovereign Escrow, and Confidential Capital Coordination
 
 **Protocol Version:** 1.0.0  
-**Authors:** Fly Protocol Engineering Core  
+**Authors:** Midge Engineering Core  
 **Publication Date:** November 2026  
 **Reference Implementations:**  
 - NEAR L1 Coordinator: [`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet)  
@@ -15,11 +15,11 @@
 
 Coordinating capital on public blockchains has historically required choosing between two unacceptable extremes: complete public exposure or complete custodial surrender. On transparent ledgers, collective actors—whether autonomous AI agent swarms, investment syndicates, corporate treasuries, or decentralized autonomous organizations (DAOs)—leak strategic intentions, trading alpha, salary compensation, and cap-table distributions to public observers and predatory front-running bots. Conversely, traditional off-chain privacy solutions force participants to surrender private keys or full custody to external bots, server operators, or hardware enclaves. If that off-chain component crashes, goes rogue, or is decommissioned by its host, deposited capital is frozen indefinitely.
 
-Fly resolves this fundamental trilemma through a novel architectural paradigm: **constrained arbitration with independent recovery**. Fly is an autonomous syndicate network on NEAR Protocol. It separates coordination authority from custody authority. 
+Midge resolves this fundamental trilemma through a novel architectural paradigm: **constrained arbitration with independent recovery**. Midge is an autonomous syndicate network on NEAR Protocol. It separates coordination authority from custody authority. 
 
-Participants (heterogeneous swarms of autonomous AI agents and human wallets) deposit capital into public on-chain smart contract escrows on NEAR L1. Multi-party deliberation, secret-ballot voting, order aggregation, and credit negotiations execute inside hardware-isolated Intel TDX trusted execution environments (TEEs) on NEAR AI Cloud, verified via DCAP-QVL to Intel's Root CA. The enclave acts strictly as an **arbiter, never a custodian**: it holds zero withdrawal keys and can only propose batch settlements bounded by immutable, creator-defined on-chain release policies (whitelisted recipients, per-epoch release caps, and block deadlines) to which depositors explicitly consented. Crucially, if an enclave or operator stalls, crashes, or disappears, Fly’s sovereign escape hatch (`hatch_out`) allows any individual participant to unilaterally reclaim 100% of their unspent escrow directly from NEAR L1 consensus without requiring operator permission or draining other members.
+Participants (heterogeneous swarms of autonomous AI agents and human wallets) deposit capital into public on-chain smart contract escrows on NEAR L1. Multi-party deliberation, secret-ballot voting, order aggregation, and credit negotiations execute inside hardware-isolated Intel TDX trusted execution environments (TEEs) on NEAR AI Cloud, verified via DCAP-QVL to Intel's Root CA. The enclave acts strictly as an **arbiter, never a custodian**: it holds zero withdrawal keys and can only propose batch settlements bounded by immutable, creator-defined on-chain release policies (whitelisted recipients, per-epoch release caps, and block deadlines) to which depositors explicitly consented. Crucially, if an enclave or operator stalls, crashes, or disappears, Midge’s sovereign escape hatch (`hatch_out`) allows any individual participant to unilaterally reclaim 100% of their unspent escrow directly from NEAR L1 consensus without requiring operator permission or draining other members.
 
-Fly serves as the general-purpose, programmable coordination substrate for institutional private credit and repo facilities, dark OTC block crossing, confidential corporate payroll, private angel syndicates, and human-agent operational budgeting.
+Midge serves as the general-purpose, programmable coordination substrate for institutional private credit and repo facilities, dark OTC block crossing, confidential corporate payroll, private angel syndicates, and human-agent operational budgeting.
 
 ---
 
@@ -36,7 +36,7 @@ Public blockchains are unmatched at enforcing deterministic custody and absolute
                                    /\
                                   /  \
                                  /    \
-                                /  ★   \   <-- FLY PROTOCOL
+                                /  ★   \   <-- MIDGE
                                /  FLY   \      (Solves all 3 via Constrained
                               /          \      Arbitration & Independent Recovery)
                              /____________\
@@ -57,8 +57,8 @@ Existing attempts to introduce privacy into decentralized finance introduce cata
 * **Unconstrained Enclave Settlement:** Deploying an agent inside a Trusted Execution Environment (TEE) does not eliminate custody risk if the smart contract accepts any arbitrary payout signed by the TEE. If the enclave code is flawed, the operator key is compromised, or the hardware is vulnerable (e.g., Intel SA-01099, TDXploit), the attacker signs an on-chain transfer draining 100% of the pool.
 * **Operator Lock-In and Absence of Independent Exit:** Many confidential systems (such as OutLayer or permissioned private shards) provide withdrawal paths during normal operations, but their recovery mechanisms depend on the TEE deriving ephemeral keys or require operator cooperation. If the infrastructure provider experiences an outage, depositors cannot unilaterally extract their funds.
 
-### 1.3 The Fly Solution: Constrained Arbitration with Independent Recovery
-Fly breaks this trilemma by unbundling **coordination** from **custody**:
+### 1.3 The Midge Solution: Constrained Arbitration with Independent Recovery
+Midge breaks this trilemma by unbundling **coordination** from **custody**:
 * **Where the money lives:** Capital stays on NEAR L1 in an auditable, immutable smart contract escrow (`FlyCoordinator`).
 * **Where the thinking happens:** Negotiations, voting, order weights, and credit covenants happen in confidential TEE memory (Intel TDX on NEAR AI Cloud).
 * **Why the thinker cannot steal:** The TEE has zero discretionary withdrawal authority. It can only propose settlements strictly bounded by on-chain `ReleasePolicy` constraints (whitelisted recipients, maximum basis points per epoch, and hard block deadlines).
@@ -68,7 +68,7 @@ Fly breaks this trilemma by unbundling **coordination** from **custody**:
 
 ## 2. Core Protocol Architecture (The Substrate)
 
-Fly is not a single trading bot or lending tool. It is an autonomous network protocol on NEAR Protocol. A single deployed L1 coordinator smart contract hosts multiple, independent, heterogeneous syndicates.
+Midge is not a single trading bot or lending tool. It is an autonomous network protocol on NEAR Protocol. A single deployed L1 coordinator smart contract hosts multiple, independent, heterogeneous syndicates.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -163,7 +163,7 @@ The L1 contract verifies the Ed25519 signature in **5.92 TGas** (teragas), execu
 ### 2.4 The Sovereign Escape Hatch (`hatch_out`)
 In traditional centralized or multi-sig architectures, if an off-chain coordinator crashes, an operator disappears, or keyholders deadlock, capital is frozen indefinitely.
 
-Fly implements an absolute failure boundary:
+Midge implements an absolute failure boundary:
 ```
 Current Block Height >= last_interaction_block + timeout_blocks
 ```
@@ -175,9 +175,9 @@ Once this condition is met:
 5. The entire escape transaction executes in **5.10 TGas**.
 
 ### 2.5 Omnichain Sovereignty via NEAR Chain Signatures
-Fly syndicates are not locked to NEAR Protocol. Through native integration with NEAR Chain Signatures MPC (`v1.signer-prod.testnet`), a Fly syndicate sub-account controls sovereign derived addresses across multiple chains without cross-chain token wrapping or third-party custodial bridges.
+Midge syndicates are not locked to NEAR Protocol. Through native integration with NEAR Chain Signatures MPC (`v1.signer-prod.testnet`), a Midge syndicate sub-account controls sovereign derived addresses across multiple chains without cross-chain token wrapping or third-party custodial bridges.
 
-From a single syndicate identity (e.g., `dark-vault.fly-coordinator.testnet`), Fly deterministically derives:
+From a single syndicate identity (e.g., `dark-vault.fly-coordinator.testnet`), Midge deterministically derives:
 * **Bitcoin Taproot (BIP-341/350 bech32m):** Native P2TR addresses.
 * **Ethereum / EVM (EIP-55):** Native secp256k1 addresses.
 * **Solana:** Native Ed25519 public keys.
@@ -186,12 +186,12 @@ When an aggregate syndicate action requires execution on an external chain, the 
 
 ---
 
-## 3. Institutional Facilities Running on Fly (Use Cases)
+## 3. Institutional Facilities Running on Midge (Use Cases)
 
-Because Fly is a multi-syndicate substrate, builders, funds, and autonomous agents instantiate diverse, application-specific facilities on top of the protocol.
+Because Midge is a multi-syndicate substrate, builders, funds, and autonomous agents instantiate diverse, application-specific facilities on top of the protocol.
 
 ```
-                                  FLY PROTOCOL
+                                  MIDGE
                           (Base Coordination Substrate)
                                        │
      ┌──────────────────┬──────────────┴─────┬──────────────────┐
@@ -205,7 +205,7 @@ Repo & Credit      Block Pools          Payroll / DAOs     Syndicates
 ### 3.1 Facility A: Institutional Private Credit and Repo (The Canton Analogue)
 In traditional capital markets, institutional repo platforms like Broadridge's distributed ledger network process between **$300 billion and $400 billion in daily U.S. Treasury repo transactions** across the Canton Network. Canton uses Daml contracts to provide sub-transaction privacy, ensuring that bilateral credit mandates, facility limits, and margin health remain private between counterparties.
 
-Fly delivers this exact capability natively on NEAR, combining private RFQs, collateralized repo pacts, and atomic execution without requiring a closed banking intranet:
+Midge delivers this exact capability natively on NEAR, combining private RFQs, collateralized repo pacts, and atomic execution without requiring a closed banking intranet:
 
 #### 1. Bilateral Mandate Origination (`hatch`)
 An institutional borrower (e.g., a treasury desk) and an institutional lender spawn a dedicated syndicate with an immutable `ReleasePolicy`:
@@ -225,28 +225,28 @@ The Roost submits the consensus authorization to `settle_batch`. In a single NEA
 
 #### 4. Confidential Margin Monitoring (Zero Liquidation Cascades)
 In public DeFi lending protocols (such as Aave or Compound), loans approaching liquidation thresholds broadcast their health to external liquidator bots, triggering aggressive front-running and cascade selling that depresses collateral values.
-* In Fly, the Roost TEE privately monitors the facility's health against confidential price oracles.
+* In Midge, the Roost TEE privately monitors the facility's health against confidential price oracles.
 * If margin degrades, private cure requests are delivered directly to the borrower.
 * If default is unavoidable, the collateral is liquidated orderly via an in-memory OTC dark cross or private shard intent, preventing market panic.
 
 #### 5. Sovereign Repayment and Default Resolution
-Upon loan maturity, the borrower transfers principal plus accrued interest, atomically unlocking the collateral. If the lender fails to cooperate or the TEE stalls, Fly's native `hatch_out` timelock allows the rightful owner to extract their unspent balance unilaterally after the agreed block height.
+Upon loan maturity, the borrower transfers principal plus accrued interest, atomically unlocking the collateral. If the lender fails to cooperate or the TEE stalls, Midge's native `hatch_out` timelock allows the rightful owner to extract their unspent balance unilaterally after the agreed block height.
 
 ### 3.2 Facility B: Private OTC Block Trading (Dark Matching)
 Institutional funds frequently execute multi-million dollar block trades that would suffer severe market impact if routed through public order books.
-1. **Sealed Submission:** Counterparties deposit assets into their respective Fly escrows and submit sealed limit parameters into the Roost TEE.
+1. **Sealed Submission:** Counterparties deposit assets into their respective Midge escrows and submit sealed limit parameters into the Roost TEE.
 2. **Mid-Market Crossing:** The TEE queries reference pricing from live cross-chain registries (such as the 1Click API), verifies that price bounds overlap, and crosses the trade at the volume-weighted mid-market price inside enclave RAM.
 3. **Atomic Clearing:** The TEE dispatches the batch settlement proof to NEAR L1, swapping assets simultaneously across both escrows. The trade executes with zero front-running, zero sandwich exploitation, and zero pre-trade market impact.
 
 ### 3.3 Facility C: Confidential Payroll and Contributor Compensation
 Autonomous AI agent organizations and decentralized enterprises face an accounting dilemma: they must operate on-chain, but publishing salary sheets and contractor rates to public block explorers damages employee retention and competitive positioning.
-1. The organization deposits its monthly payroll allocation into a Fly Syndicate.
+1. The organization deposits its monthly payroll allocation into a Midge Syndicate.
 2. Contributor performance metrics, hourly logs, and compensation algorithms are processed confidentially inside the Roost TEE.
 3. The coordinator contract executes an aggregate batch settlement. Public observers see only that the organization disbursed funds; individual contractor allocations remain shielded inside enclave memory.
 
 ### 3.4 Facility D: Stealth Angel Syndicates and Early-Stage Seeding
 Angel collectives, venture syndicates, and AI investment swarms frequently want to co-invest in early-stage rounds without publishing individual check sizes or revealing backer identities to competitors.
-1. LPs deposit capital into an ephemeral Fly Syndicate.
+1. LPs deposit capital into an ephemeral Midge Syndicate.
 2. Sizing, pro-rata rights, and voting thresholds are resolved privately in-enclave.
 3. Once the investment round passes threshold approval, the syndicate triggers NEAR Chain Signatures MPC. The collective investment is signed and dispatched natively to the founder's wallet on Bitcoin, Ethereum, or Solana from a single unified threshold address.
 
@@ -259,13 +259,13 @@ As autonomous AI agents manage increasing operational workloads, human principal
 
 ## 4. Empirical Evaluation and Benchmark Simulation
 
-To evaluate the economic performance of Fly's confidential batch aggregation against transparent public mempools, we constructed a reproducible Monte Carlo simulation (`scripts/baseline.js`).
+To evaluate the economic performance of Midge's confidential batch aggregation against transparent public mempools, we constructed a reproducible Monte Carlo simulation (`scripts/baseline.js`).
 
 ### 4.1 Simulation Modeling & Parameters
 * **Market Model:** Constant Product Market Maker (CPMM) AMM pool ($x \cdot y = k$) initialized with 100,000 wNEAR and 396,000 USDC (reference price $3.96/wNEAR derived from live 1Click API data).
 * **Swarm Setup:** 8 autonomous agents executing buy orders totaling ~$60,000 in volume.
 * **Adversary Model:** A standard predatory MEV sandwich searcher operating in a sequential public mempool with visibility into pending transactions.
-* **Fly Model:** Sealed Intent Aggregation inside an enclave, calculating uniform clearing prices and settling in a single batch.
+* **Midge Model:** Sealed Intent Aggregation inside an enclave, calculating uniform clearing prices and settling in a single batch.
 * **Statistical Rigor:** $N = 100$ independent Monte Carlo iterations, fixed pseudo-random seed (`0x464c59`), evaluated with 95% Student's $t$-distribution confidence intervals.
 
 ### 4.2 Benchmark Results
@@ -273,7 +273,7 @@ To evaluate the economic performance of Fly's confidential batch aggregation aga
 ```
                    Monte Carlo Economic Simulation (N = 100 Runs)
 ┌──────────────────────────────────────┬────────────────────────┬─────────────────────────┐
-│ Metric                               │ Public Mempool (MEV)   │ Fly Sealed-Intent Batch │
+│ Metric                               │ Public Mempool (MEV)   │ Midge Sealed-Intent Batch │
 ├──────────────────────────────────────┼────────────────────────┼─────────────────────────┤
 │ Realized Slippage                    │ 16.67% ± 0.37%         │ 15.60% ± 0.37%          │
 │ Adversary MEV Extraction             │ $519.44 ± $16.00       │ $0.00 ± $0.00           │
@@ -283,8 +283,8 @@ To evaluate the economic performance of Fly's confidential batch aggregation aga
 
 ```mermaid
 xychart-beta
-    title "Average Execution Slippage: Transparent Mempool vs. Fly Sealed Batch"
-    x-axis ["Transparent Mempool + MEV", "Fly Sealed-Intent Batch"]
+    title "Average Execution Slippage: Transparent Mempool vs. Midge Sealed Batch"
+    x-axis ["Transparent Mempool + MEV", "Midge Sealed-Intent Batch"]
     y-axis "Realized Slippage (%)" 0 --> 20
     bar [16.67, 15.60]
 ```
@@ -298,7 +298,7 @@ xychart-beta
 
 ## 5. Security Architecture, Threat Model, and Invariants
 
-Fly is engineered under the assumption that any single off-chain component—including the coordinator, the TEE host, or the enclave software—can become compromised or unavailable.
+Midge is engineered under the assumption that any single off-chain component—including the coordinator, the TEE host, or the enclave software—can become compromised or unavailable.
 
 ### 5.1 Formal Mathematical Invariants
 
@@ -320,15 +320,15 @@ The security guards were subjected to live attack attempts on NEAR Testnet at co
 3. **Replay Attack:** A previously settled batch signature was re-submitted with a stale nonce. The contract rejected the replay immediately ([Tx: `FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg`](https://testnet.nearblocks.io/txns/FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg)).
 
 ### 5.3 Explicit Residual Risks (Intellectual Honesty)
-Fly does not claim absolute cryptographic invulnerability. The threat model explicitly identifies unmitigated residual risks:
-* **Hardware-Level Microarchitectural Flaws:** Vulnerabilities such as Intel SA-01099, TDXploit (USENIX Security 2025 single-stepping attacks), and physical interposer memory snooping (Battering RAM / TEE.fail) remain out of scope for software mitigation. Fly addresses this by minimizing the window of exposure: individual inputs are zero-wiped from RAM immediately upon aggregation.
+Midge does not claim absolute cryptographic invulnerability. The threat model explicitly identifies unmitigated residual risks:
+* **Hardware-Level Microarchitectural Flaws:** Vulnerabilities such as Intel SA-01099, TDXploit (USENIX Security 2025 single-stepping attacks), and physical interposer memory snooping (Battering RAM / TEE.fail) remain out of scope for software mitigation. Midge addresses this by minimizing the window of exposure: individual inputs are zero-wiped from RAM immediately upon aggregation.
 * **Public Deposit Graphs:** While internal deliberations and intent splits are shielded, initial funding deposits and final refunds occur on public NEAR L1. Observers can identify which accounts funded a syndicate and the aggregate timing of distributions.
 
 ---
 
 ## 6. Developer Interfaces: MCP and Agent Tooling
 
-To ensure autonomous agents (such as Claude Code, OpenAI agents, and Codex) can operate Fly without human intervention, the repository includes a native **Model Context Protocol (MCP)** server (`src/mcp/server.js`) exposing 10 structured tools over stdio JSON-RPC 2.0:
+To ensure autonomous agents (such as Claude Code, OpenAI agents, and Codex) can operate Midge without human intervention, the repository includes a native **Model Context Protocol (MCP)** server (`src/mcp/server.js`) exposing 10 structured tools over stdio JSON-RPC 2.0:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -339,11 +339,11 @@ To ensure autonomous agents (such as Claude Code, OpenAI agents, and Codex) can 
 ┌─────────────────────────────────────────────────────────────┐
 │                      FLY MCP SERVER                         │
 │                                                             │
-│  1. fly_list_syndicates        6. fly_submit_sealed_intent  │
-│  2. fly_get_my_syndicates      7. fly_get_roost_quote       │
-│  3. fly_hatch_syndicate        8. fly_execute_rfq_borrow    │
-│  4. fly_deposit                9. fly_execute_otc_block     │
-│  5. fly_settle                10. fly_hatch_out             │
+│  1. midge_list_syndicates        6. midge_submit_sealed_intent  │
+│  2. midge_get_my_syndicates      7. midge_get_roost_quote       │
+│  3. midge_hatch_syndicate        8. midge_execute_rfq_borrow    │
+│  4. midge_deposit                9. midge_execute_otc_block     │
+│  5. midge_settle                10. midge_hatch_out             │
 └──────────────────────────────┬──────────────────────────────┘
                                │
             ┌──────────────────┴──────────────────┐
@@ -363,7 +363,7 @@ Agents operate in dual modes:
 
 | Project | Coordination Privacy | Custody / Settlement Model | Failure & Recovery Mechanism |
 | :--- | :--- | :--- | :--- |
-| **Fly Protocol** | **Hardware-Shielded TEE (Intel TDX)**; raw inputs zero-wiped | **L1 Bounded Escrow**; enclave holds zero keys; release policy allowlists | **Unilateral Sovereign Exit (`hatch_out`)**; zero operator dependency |
+| **Midge** | **Hardware-Shielded TEE (Intel TDX)**; raw inputs zero-wiped | **L1 Bounded Escrow**; enclave holds zero keys; release policy allowlists | **Unilateral Sovereign Exit (`hatch_out`)**; zero operator dependency |
 | **Canton Network** | **Daml Sub-Transaction Privacy**; bilateral visibility | Private distributed ledger; CIP-56 token allocations | Consortium consensus; relies on private validator network |
 | **Phala Shade Agents** | **TEE Enclave (SGX/TDX)**; private agent state | Agent controls external wallet; contract guardrails | Framework-level; lacks built-in per-depositor timeout refunds |
 | **OutLayer** | **TEE Enclave**; ephemeral key generation | Payment checks and application vaults | 1–30 day customer recovery window; explicitly not end-user protection |
@@ -377,9 +377,9 @@ Agents operate in dual modes:
 
 As artificial intelligence agents transition from generating text to autonomously allocating real-world capital, the infrastructure supporting them must evolve. Autonomous collectives cannot survive on transparent chains where every move is front-run, nor can they survive in custodial enclaves where a server crash holds their treasury hostage.
 
-Fly establishes the standard for **constrained arbitration with independent recovery**. By combining public NEAR L1 escrow, hardware-attested Intel TDX confidential deliberation, immutable release policies, and an unconditional escape hatch, Fly makes multi-agent and human capital coordination mathematically secure. 
+Midge establishes the standard for **constrained arbitration with independent recovery**. By combining public NEAR L1 escrow, hardware-attested Intel TDX confidential deliberation, immutable release policies, and an unconditional escape hatch, Midge makes multi-agent and human capital coordination mathematically secure. 
 
-From institutional repo and private debt facilities to OTC dark pools and stealth angel syndicates, Fly provides the sovereign operating system for the next generation of private capital coordination.
+From institutional repo and private debt facilities to OTC dark pools and stealth angel syndicates, Midge provides the sovereign operating system for the next generation of private capital coordination.
 
 ---
 

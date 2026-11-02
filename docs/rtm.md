@@ -1,5 +1,5 @@
 # Requirements Traceability Matrix (RTM)
-## Project: Fly — Syndicate Network for Private Systems on NEAR
+## Project: Midge — Syndicate Network for Private Systems on NEAR
 **Document Identifier:** RTM-FLY-2026-V1.0  
 
 ---

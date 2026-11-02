@@ -125,7 +125,7 @@ function loadEnv() {
 
 async function main() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║    FLY PROTOCOL: LIVE NEAR CHAIN SIGNATURES MPC VERIFIER       ║');
+  console.log('║         MIDGE: LIVE NEAR CHAIN SIGNATURES MPC VERIFIER         ║');
   console.log('║       Target: v1.signer-prod.testnet (Omnichain Threshold)      ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 

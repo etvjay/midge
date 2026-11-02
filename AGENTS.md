@@ -1,7 +1,7 @@
-# Fly: Autonomous Syndicate Network for Private Systems on NEAR
+# Midge: Autonomous Syndicate Network for Private Systems on NEAR
 
 ## Architecture & SDLC Governance
-This repository implements Fly, an autonomous syndicate protocol combining:
+This repository implements Midge, an autonomous syndicate protocol combining:
 1. **NEAR AI Cloud TEEs:** Hardware-isolated enclaves (AMD SEV-SNP/Intel TDX) for confidential multi-agent deliberation.
 2. **Confidential Intents & FAR Shard:** Shielded cross-chain intent settlement via 1Click Swap API with IMT tokens.
 3. **NEAR Chain Signatures:** Omnichain threshold MPC execution across Bitcoin, Ethereum, and Solana.

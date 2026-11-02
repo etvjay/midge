@@ -1,5 +1,5 @@
 # Use Case Specifications
-## Project: Fly — Syndicate Network for Private Systems on NEAR
+## Project: Midge — Syndicate Network for Private Systems on NEAR
 **Document Identifier:** UC-FLY-2026-V1.0  
 
 ---

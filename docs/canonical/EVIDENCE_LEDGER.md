@@ -1,4 +1,4 @@
-# Fly Protocol — Canonical Evidence Ledger
+# Midge — Canonical Evidence Ledger
 
 **Version:** 1.1.0  
 **Governance Standard:** Builder Foundry v1.0 & Repository Starter Virtuous Cycle  
@@ -9,7 +9,7 @@
 
 ## 1. Live On-Chain Testnet Evidence (Real L1 Transactions)
 
-Fly coordinator smart contract is deployed to NEAR Testnet and verified end-to-end with real transactions, measured gas, Ed25519 enclave signatures, and non-custodial refunds.
+Midge coordinator smart contract is deployed to NEAR Testnet and verified end-to-end with real transactions, measured gas, Ed25519 enclave signatures, and non-custodial refunds.
 
 ### Contract Deployment & Identity
 * **Coordinator Contract Account:** `c.fly-1793636729.testnet`
@@ -39,7 +39,7 @@ Fly coordinator smart contract is deployed to NEAR Testnet and verified end-to-e
 
 ## 2. Live NEAR Chain Signatures MPC Evidence
 
-Fly queries live threshold MPC nodes on NEAR Testnet (`v1.signer-prod.testnet`), derives omnichain accounts for Bitcoin, Ethereum, and Solana, and cryptographically verifies returned ECDSA signatures.
+Midge queries live threshold MPC nodes on NEAR Testnet (`v1.signer-prod.testnet`), derives omnichain accounts for Bitcoin, Ethereum, and Solana, and cryptographically verifies returned ECDSA signatures.
 
 * **Target MPC Contract:** `v1.signer-prod.testnet`
 * **Root Public Key:** `secp256k1:4NfTiv3UsGahebgTaHyD9vF8KYKMBnfd6kh94mK6xv8fGBiJB8TBtFMP5WWXz6B89Ac1fbpzPwAvoyQebemHFwx3`
@@ -86,8 +86,8 @@ Fly queries live threshold MPC nodes on NEAR Testnet (`v1.signer-prod.testnet`),
 | **CLM-RFQ-01** | Confidential RFQ borrow facility executes sealed quote matching and private margin adjudication without public liquidation dumps | `SIMULATED` | `npm run verify:rfq` | `verifications/05-confidential-rfq-adjudication.js` |
 | **CLM-OTC-01** | Institutional dark pool crosses complementary block trades at midpoint reference prices with zero slippage, and pools AI compute budgets | `SIMULATED` | `npm run verify:otc` | `verifications/06-otc-and-compute-facilities.js` |
 | **CLM-FMEA-01** | 5-layer resilience failure matrix handles Enclave crashes, Agent dropouts, Solver slippages, MPC timeouts, and Rogue agents | `TESTED` | `npm run verify:matrix` | `verifications/07-resilience-failure-matrix.js` |
-| **CLM-API-01** | Fly API daemon exposes 18 REST endpoints, real-time SSE event streaming, and x402 PingPay micropayment challenge middleware | `INTEGRATED` | `npm run verify:api` | `verifications/08-api-sse-mcp-e2e.js` |
-| **CLM-MCP-01** | Model Context Protocol (MCP) server exposes 6 syndicate tools compatible with `nearai/near-mcp` | `INTEGRATED` | `npm run verify:api` | `src/mcp/server.js`, `bin/fly-mcp.js` |
+| **CLM-API-01** | Midge API daemon exposes 18 REST endpoints, real-time SSE event streaming, and x402 PingPay micropayment challenge middleware | `INTEGRATED` | `npm run verify:api` | `verifications/08-api-sse-mcp-e2e.js` |
+| **CLM-MCP-01** | Model Context Protocol (MCP) server exposes 6 syndicate tools compatible with `nearai/near-mcp` | `INTEGRATED` | `npm run verify:api` | `src/mcp/server.js`, `bin/midge-mcp.js` |
 | **CLM-RUST-01** | NEAR L1 smart contract in Rust (near-sdk 5.1) compiles to release WebAssembly (319 KB), passes 36 tests (28 unit, 6 integration, 2 proptest fuzzing), passes Clippy & Rustfmt, and is deployed on NEAR testnet | `LIVE_DEMONSTRATED` | `npm run verify:rust && npm run verify:testnet` | `contracts/fly-coordinator/src/lib.rs`, `contracts/fly-coordinator/tests/` |
 | **CLM-SWARM-01** | 10-Flyer Dark Swarm simulation performs RSA-2048 encryption, in-RAM aggregation, zero-memory wipes, and decoupled pro-rata payouts | `SIMULATED` | `npm run demo:syndicate` | `src/simulation/runner.js` |
 

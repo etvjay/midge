@@ -1,4 +1,4 @@
-# Fly Protocol: Hackathon Submission Assets & Pack
+# Midge: Hackathon Submission Assets & Pack
 **NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)**
 
 ---
@@ -8,13 +8,13 @@
 
 ### Draft Text:
 ```text
-Excited to unveil Fly: the Autonomous Syndicate Network for Private Systems on @NEARProtocol! 🚀
+Excited to unveil Midge: the Autonomous Syndicate Network for Private Systems on @NEARProtocol! 🚀
 
 Built at the NEAR HACKATHON: Build Beyond Boundaries (@NEARHorizon).
 
 AI agent collectives and capital pools face a dilemma: trust an off-chain bot with your keys, or leak your private trading alpha to public mempools.
 
-Fly solves this with Constrained Arbitration & Independent Recovery:
+Midge solves this with Constrained Arbitration & Independent Recovery:
 🔒 Intel TDX Hardware Attestation via NEAR AI Cloud (DCAP-QVL verified to Intel Root CA)
 ⚡ Sealed Intent Aggregation (SIA) in memory with zero-memory wipes (MEV eliminated)
 🛡️ Bounded Settlement Authority: Enclaves can only settle to allowlisted recipients under strict caps
@@ -32,17 +32,17 @@ Watch the 2.5-minute demo 👇
 ## 2. Project Description / Idea Text (Character Count: 1,948 / 2,000 max)
 
 ```text
-Fly is an autonomous syndicate protocol combining hardware-attested confidential computing, cross-chain intent settlement, and omnichain threshold cryptography on NEAR Protocol.
+Midge is an autonomous syndicate protocol combining hardware-attested confidential computing, cross-chain intent settlement, and omnichain threshold cryptography on NEAR Protocol.
 
 Decentralized swarms and capital pooling face a fundamental trilemma between custody, privacy, and liveness: giving private keys to autonomous off-chain agents creates catastrophic custody risk if the node fails; public multi-sigs leak order strategies and trading weights to MEV front-runners; and traditional smart contract escrows freeze capital permanently if external oracles become unresponsive.
 
-Fly resolves this with a core architectural paradigm: constrained arbitration with independent recovery.
+Midge resolves this with a core architectural paradigm: constrained arbitration with independent recovery.
 
 Participants (heterogeneous swarms of AI agents and human wallets) pool capital into bounded sub-accounts on NEAR L1. Deposits and balances are public on-chain, while individual order parameters, strategy weights, and trade bounds are encrypted to an Intel TDX hardware enclave (verified to Intel's Root CA via DCAP-QVL). Deliberation and Sealed Intent Aggregation (SIA) execute in memory before individual inputs are zero-wiped.
 
 Crucially, the enclave holds zero custody. It can only propose settlements strictly bounded by an immutable ReleasePolicy (allowlisted recipients, per-epoch release caps, and block deadlines) to which depositors explicitly consented. Even if an enclave key is compromised, settlements to unauthorized recipients are rejected on-chain.
 
-On NEAR L1, the fly-coordinator contract executes batch settlements in 5.92 TGas. Omnichain transactions settle natively across Bitcoin Taproot, Ethereum, and Solana via NEAR Chain Signatures MPC (v1.signer-prod.testnet). If an enclave or operator stalls, Fly's Hatch Protocol activates a non-custodial escape hatch (hatch_out), allowing any individual depositor to unilaterally repatriate 100% of their escrow balance after a block timelock without operator assistance.
+On NEAR L1, the fly-coordinator contract executes batch settlements in 5.92 TGas. Omnichain transactions settle natively across Bitcoin Taproot, Ethereum, and Solana via NEAR Chain Signatures MPC (v1.signer-prod.testnet). If an enclave or operator stalls, Midge's Hatch Protocol activates a non-custodial escape hatch (hatch_out), allowing any individual depositor to unilaterally repatriate 100% of their escrow balance after a block timelock without operator assistance.
 ```
 
 ---
@@ -65,7 +65,7 @@ Before submitting via `POST https://nearhackathon.com/api/applications`:
 - [ ] Ensure `.env` and all private key files remain strictly gitignored.
 - [ ] Run secret scanner: `git log -p | grep -E "ed25519:|secp256k1:|PRIVATE_KEY"` confirms zero committed credentials.
 - [ ] Confirm project metadata:
-  - **Project Name:** Fly Protocol
+  - **Project Name:** Midge
   - **Tracks:** `privacy` (primary), `swarms`, `agents`, `security`, `defi`
   - **Lead Name & Email:** [Confirmed by User]
   - **Team Size:** `1` (or user specified)

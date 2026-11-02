@@ -23,7 +23,7 @@ function signMessage(privateKeySeed, messageString) {
 }
 
 /**
- * Fly Autonomous Syndicate Network Demonstration
+ * Midge Autonomous Syndicate Network Demonstration
  * Shows:
  * 1. Multi-syndicate hosting in one coordinator contract instance.
  * 2. On-chain syndicate discovery (list_syndicates, get_syndicates_by_member, get_syndicate_count).
@@ -34,7 +34,7 @@ function signMessage(privateKeySeed, messageString) {
 
 async function runNetworkDemo() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║       FLY PROTOCOL: AUTONOMOUS SYNDICATE NETWORK DEMO          ║');
+  console.log('║            MIDGE: AUTONOMOUS SYNDICATE NETWORK DEMO            ║');
   console.log('║    NEAR HACKATHON: Multi-Syndicate Discovery, x402 & Exits     ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
@@ -151,8 +151,8 @@ async function runNetworkDemo() {
   }
 
   // MCP tool discovery validation
-  const mcpDiscovered = await mcp.executeTool('fly_list_syndicates', { limit: 10 });
-  console.log(`  ✓ MCP Tool (fly_list_syndicates) returned ${mcpDiscovered.length} discoverable syndicates`);
+  const mcpDiscovered = await mcp.executeTool('midge_list_syndicates', { limit: 10 });
+  console.log(`  ✓ MCP Tool (midge_list_syndicates) returned ${mcpDiscovered.length} discoverable syndicates`);
 
   // -------------------------------------------------------------------------
   // STEP 4: Inter-Syndicate Value Exchange (x402 Agent Commerce)

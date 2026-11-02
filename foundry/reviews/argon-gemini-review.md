@@ -1,15 +1,15 @@
-# Fly Protocol — Independent Argon Architectural & Security Review
+# Midge — Independent Argon Architectural & Security Review
 **Model Evaluator:** gemini-3.5-flash-lite (via Google Gemini API)  
 **Evaluation Date:** 2026-11-02T18:27:54.714Z  
-**Target Repository:** Fly (NEAR HACKATHON: Build Beyond Boundaries)  
+**Target Repository:** Midge (NEAR HACKATHON: Build Beyond Boundaries)  
 **Governance Standard:** Builder Foundry v1.0  
 
 ---
 
-# AUDIT REPORT & ARCHITECTURAL REVIEW: FLY PROTOCOL
+# AUDIT REPORT & ARCHITECTURAL REVIEW: MIDGE
 **To:** NEAR Hackathon Judging Panel & Core Contributors  
 **From:** Principal Cryptographic Systems Architect & NEAR Core Protocol Auditor  
-**Subject:** Rigorous Code and Architectural Review of Fly Protocol (Handoff 4 / Parallel Research Reports)  
+**Subject:** Rigorous Code and Architectural Review of Midge (Handoff 4 / Parallel Research Reports)  
 **Date:** November 2026  
 **Status:** PUBLISHED (Final)  
 
@@ -17,7 +17,7 @@
 
 ## 1. Executive Verdict & Scoring
 
-Fly Protocol presents a structurally sound, highly ambitious architectural synthesis of confidential computing (Intel TDX / AMD SEV-SNP), intent-based cross-chain routing (NEAR Chain Signatures MPC), and non-custodial decentralized escrow on NEAR L1. 
+Midge presents a structurally sound, highly ambitious architectural synthesis of confidential computing (Intel TDX / AMD SEV-SNP), intent-based cross-chain routing (NEAR Chain Signatures MPC), and non-custodial decentralized escrow on NEAR L1. 
 
 Under the core paradigm—**"Constrained arbitration with independent recovery"** (where the TEE acts strictly as an ephemeral arbiter rather than a passive custodian)—the system successfully bridges the gap between trust-minimized multi-party pooling and high-performance dark order matching.
 
@@ -137,7 +137,7 @@ The Rust smart contract (`contracts/fly-coordinator/src/lib.rs`) adheres rigorou
 
 ### Competitive Landscape Matrix
 
-| Feature / Protocol | Fly Protocol | NEAR Multisig / SputnikDAO | Phala Shade Agents | OutLayer |
+| Feature / Protocol | Midge | NEAR Multisig / SputnikDAO | Phala Shade Agents | OutLayer |
 | :--- | :--- | :--- | :--- | :--- |
 | **Execution Environment** | Ephemeral TEE (Intel TDX / AMD SEV-SNP) | Public L1 EVM/WASM | Phala TEE Workers | Delegated Rollup / TEE |
 | **Cross-Chain Capability** | Native NEAR Chain Signatures MPC | Limited / Bridge-dependent | Bridge-dependent | Restricted to native chains |

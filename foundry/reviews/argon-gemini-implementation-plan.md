@@ -1,4 +1,4 @@
-This is the **Argon Review Engine** technical specification and implementation for the Fly Protocol on NEAR (`near-sdk` 5.1).
+This is the **Argon Review Engine** technical specification and implementation for the Midge on NEAR (`near-sdk` 5.1).
 
 The following implementation addresses the critical gas griefing vulnerabilities, the settlement payout logic, and the cryptographic domain separation requirements.
 

@@ -1,4 +1,4 @@
-# Fly Protocol: Threat Model & Security Architecture
+# Midge: Threat Model & Security Architecture
 
 **Document Version:** 1.0.0  
 **Date:** November 2026  
@@ -9,7 +9,7 @@
 
 ## 1. Executive Security Paradigm
 
-Fly Protocol operates under the cryptographic paradigm of **Constrained Arbitration with Independent Recovery**.
+Midge operates under the cryptographic paradigm of **Constrained Arbitration with Independent Recovery**.
 
 The system explicitly rejects the naive assumption that Trusted Execution Environments (TEEs) are "trustless magic boxes" or infallible custodians. Instead, hardware enclaves (Intel TDX / AMD SEV-SNP on NEAR AI Cloud) are treated as **ephemeral, bounded arbiters**:
 - **Enclave deliberates in memory:** Private orders and sealed bids are decrypted only within hardware-shielded memory.
@@ -49,7 +49,7 @@ The system explicitly rejects the naive assumption that Trusted Execution Enviro
 > [!IMPORTANT]
 > **Public-Chain Privacy Reality:**
 > Deposits and withdrawals are ordinary NEAR transactions. Observers can inspect depositor account IDs, transaction hashes, amounts, and timing on public explorers (NearBlocks).
-> Fly guarantees **confidentiality of deliberation inputs and sealed intent parameters**, not zero-knowledge graph obfuscation of funding accounts.
+> Midge guarantees **confidentiality of deliberation inputs and sealed intent parameters**, not zero-knowledge graph obfuscation of funding accounts.
 
 ---
 
@@ -95,13 +95,13 @@ The system explicitly rejects the naive assumption that Trusted Execution Enviro
 
 ---
 
-## 5. Residual Risks & What Fly Does NOT Claim
+## 5. Residual Risks & What Midge Does NOT Claim
 
 In accordance with rigorous intellectual honesty:
 
 1. **Hardware Side-Channels (Physical & Hypervisor Access):**
    - Disclosures such as Intel SA-01099 (CVE-2024-27457), TDXploit (USENIX Security 2025 cache single-stepping), and physical interposer tapping (Wiretap/Battering RAM) demonstrate that physical operators with dedicated hardware labs can observe microarchitectural signals.
-   - *Fly Stance:* We do not claim cryptographic invulnerability to state-level physical hardware attacks. Our defense is economic bounding: even a compromised hardware enclave cannot transfer funds outside the depositor-consented `ReleasePolicy`.
+   - *Midge Stance:* We do not claim cryptographic invulnerability to state-level physical hardware attacks. Our defense is economic bounding: even a compromised hardware enclave cannot transfer funds outside the depositor-consented `ReleasePolicy`.
 2. **Off-Chain Collusion in Whitelist Design:**
    - If a creator specifies an allowlist where all recipients are creator-controlled shills, and depositors blindly consent to that policy hash, the enclave could legally settle funds to those accounts.
    - *Mitigation:* The `FlyClient` SDK and MCP tools automatically surface the plain-text policy and recipient list for user and agent review before deposit.

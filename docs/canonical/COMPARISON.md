@@ -1,4 +1,4 @@
-# Exhaustive Architectural Comparison: Fly Protocol vs. Decentralized Coordination & Privacy Landscape
+# Exhaustive Architectural Comparison: Midge vs. Decentralized Coordination & Privacy Landscape
 
 **Research Context & Evidence Base:** `docs/research/parallel-competitive-landscape.json` and `docs/research/parallel-problem-evidence.json`.
 
@@ -17,7 +17,7 @@ Under this standard:
 - A vault redemption queued behind an off-chain manager approval window is **not** independent.
 - A TEE recovery mechanism that depends on the enclave re-deriving an ephemeral key or unsealing state is **not** independent.
 
-Fly Protocol focuses its architectural guarantee specifically on this boundary: **constrained arbitration with independent recovery**.
+Midge focuses its architectural guarantee specifically on this boundary: **constrained arbitration with independent recovery**.
 
 ---
 
@@ -25,7 +25,7 @@ Fly Protocol focuses its architectural guarantee specifically on this boundary: 
 
 | Project / System | Primary Mechanism | Confidentiality Scope | Unilateral Per-User Exit if TEE/Operator Fails? | On-Chain Hardware Attestation? | Cross-Chain Execution Model |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Fly Protocol (NEAR)** | Constrained arbitration + public-escrow independent exit | Off-chain deliberation & intent weights in TEE RAM; zeroed on aggregation | **Yes, 100% Unilateral (`hatch_out`):** Any depositor reclaims exact escrow after block timelock without operator or enclave action | **Live DCAP-QVL Verified:** Intel TDX Quote v4 verified to Intel Root CA with TCB UpToDate | NEAR Chain Signatures MPC (`v1.signer-prod.testnet`) across BTC, EVM, Solana |
+| **Midge (NEAR)** | Constrained arbitration + public-escrow independent exit | Off-chain deliberation & intent weights in TEE RAM; zeroed on aggregation | **Yes, 100% Unilateral (`hatch_out`):** Any depositor reclaims exact escrow after block timelock without operator or enclave action | **Live DCAP-QVL Verified:** Intel TDX Quote v4 verified to Intel Root CA with TCB UpToDate | NEAR Chain Signatures MPC (`v1.signer-prod.testnet`) across BTC, EVM, Solana |
 | **Shade Agents (Phala / NEAR)** | Verifiable agent framework + contract guardrails | Private model weights, API keys, and internal agent state | **App-specific:** No general per-depositor timeout refund in framework crate | **Yes (Framework Capability):** `shade-attestation` crate verifies TEE quotes in NEAR contracts | Chain Signatures MPC across target blockchains |
 | **OutLayer (NEAR / Web3)** | TEE application execution + payment checks + vaults | Ephemeral keys & off-chain function execution in enclave | **Customer-recovery only (1–30d window):** Docs explicitly state this is *not* an end-user protection mechanism; payment reclaim requires TEE key re-derivation | **Yes (Vault/MPC Path):** DAO contract verifies attestation before master key release | Integrates with NEAR Intents and relayers |
 | **NEAR Confidential Intents** | Two-chain architecture (NEAR + FAR private shard) | Private token balances, order amounts, and trade matching on FAR | **Not established for FAR/bridge outage:** Solver `recover` intents address execution failure, not permissionless exit from a stopped private chain | **Not established:** Operates via permissioned validator set and PoA bridge | Bridged execution between NEAR L1 and FAR private shard |
@@ -47,7 +47,7 @@ OutLayer provides execution infrastructure for Web3 applications and agents usin
 2. **Application Vaults:** OutLayer provides a **1–30 day customer unilateral-exit window** where the customer who deployed the vault can reclaim the master key. Crucially, OutLayer's official documentation explicitly warns:
    > *"This recovery mechanism is designed for application owners, not as an end-user protection mechanism."*
 
-**Fly's Differentiation:** Fly shifts the recovery right from the application owner to the **individual end-user/agent depositor**. If a Fly coordinator stalls, every individual flyer can invoke `hatch_out()` directly on NEAR L1 to repatriate their exact escrow balance, completely independent of the operator, creator, or TEE.
+**Midge's Differentiation:** Midge shifts the recovery right from the application owner to the **individual end-user/agent depositor**. If a Midge coordinator stalls, every individual flyer can invoke `hatch_out()` directly on NEAR L1 to repatriate their exact escrow balance, completely independent of the operator, creator, or TEE.
 
 ### 3.2. Shade Agents & NEAR AI Cloud: Overlap and Separation
 Phala's Shade Agents framework combines TEE verification in NEAR contracts with Chain Signatures. This represents important prior art:
@@ -60,7 +60,7 @@ Similarly, **NEAR AI Cloud** provides confidential inference APIs with Intel TDX
 - Third-party models (OpenAI, Anthropic) proxied through the gateway do not inherit upstream TEE hardware guarantees.
 - A valid response signature proves only that *an attested model generated the text*; it does not prove the caller was authorized to settle pooled funds.
 
-**Fly's Approach:** Fly treats NEAR AI Cloud inference as an optional provenance receipt, **never as settlement authorization**. Authorization remains strictly governed by the registered enclave key and bounded by the immutable `ReleasePolicy` on NEAR L1.
+**Midge's Approach:** Midge treats NEAR AI Cloud inference as an optional provenance receipt, **never as settlement authorization**. Authorization remains strictly governed by the registered enclave key and bounded by the immutable `ReleasePolicy` on NEAR L1.
 
 ### 3.3. NEAR Confidential Intents & FAR Shard
 NEAR's Confidential Intents architecture provides private swap execution using a two-chain architecture:
@@ -68,7 +68,7 @@ NEAR's Confidential Intents architecture provides private swap execution using a
 - A small set of permissioned validators process private state transitions, connected to NEAR L1 via a Proof-of-Authority (PoA) bridge.
 - If the FAR shard validators stall or the bridge encounters an outage, individual users have no direct L1 smart contract mechanism to permissionlessly extract their bridged balances.
 
-**Fly's Approach:** Fly keeps capital **directly in the NEAR L1 coordinator escrow contract**. Deliberation and order aggregation happen confidentially inside TEE memory, but the underlying capital never leaves the primary blockchain ledger. If the off-chain deliberation stops, the L1 escape hatch remains immediately operational.
+**Midge's Approach:** Midge keeps capital **directly in the NEAR L1 coordinator escrow contract**. Deliberation and order aggregation happen confidentially inside TEE memory, but the underlying capital never leaves the primary blockchain ledger. If the off-chain deliberation stops, the L1 escape hatch remains immediately operational.
 
 ### 3.4. Managed Pools (Enzyme) vs. Collective Governance (Safe / SputnikDAO)
 - **Enzyme Finance:** Provides audited EVM investment vaults. While Enzyme Blue provides direct redemption functions, Onyx uses an asynchronous redemption queue where withdrawals can be throttled or delayed based on portfolio liquidity and manager actions. It does not address multi-agent autonomous negotiation or cross-chain MPC settlement.
@@ -87,5 +87,5 @@ NEAR's Confidential Intents architecture provides private swap execution using a
 | **Autonomous Syndicate Swarms** | Syndicate.io investment clubs, DAOs | **Moderate at composition level** | Enabling heterogeneous AI agents and humans to pool capital with private strategy weights and public safety guarantees |
 
 ### Summary Verdict:
-Fly does not claim to invent a new cryptographic primitive. Its defensible innovation is an **enforceable failure boundary**:
+Midge does not claim to invent a new cryptographic primitive. Its defensible innovation is an **enforceable failure boundary**:
 > *"Private syndicate coordination and shared execution facilities, with contract-limited settlement and depositor exits that do not depend on the coordinator remaining alive."*

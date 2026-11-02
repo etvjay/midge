@@ -3,7 +3,7 @@
 /**
  * scripts/argon-review.js
  * 
- * Performs an independent Argon Review of the Fly Protocol repository
+ * Performs an independent Argon Review of the Midge repository
  * using the Google Gemini API key from environment (process.env.GEMINI_API_KEY).
  */
 
@@ -95,7 +95,7 @@ async function main() {
 
   const reviewPrompt = `
 You are a Principal Cryptographic Systems Architect, NEAR Core Protocol Auditor, and Senior Judge for the NEAR HACKATHON: Build Beyond Boundaries ($250k Prize Pool).
-Perform a rigorous, objective, and intellectually honest code and architectural review of the Fly Protocol repository, specifically evaluating against Handoff 4 and the Parallel Research Reports (problem evidence, competitive landscape, judging calibration).
+Perform a rigorous, objective, and intellectually honest code and architectural review of the Midge repository, specifically evaluating against Handoff 4 and the Parallel Research Reports (problem evidence, competitive landscape, judging calibration).
 
 === CORE ARCHITECTURAL PARADIGM ===
 "Constrained arbitration with independent recovery" — The TEE is an arbiter, never a custodian.
@@ -141,7 +141,7 @@ Provide a comprehensive, professional review structured as follows:
 4. NEAR L1 SMART CONTRACT & STORAGE ARCHITECTURE:
    - Evaluate near-sdk 5.1 usage, IterableMap vs LookupMap escrows, secondary member indexing (member_syndicates), NEP-297 events, and WASM binary compactness (319 KB).
 5. COMPETITIVE DIFFERENTIATION & THREAT MODEL:
-   - Contrast Fly against NEAR Multisig / Sputnik DAO, Phala Shade Agents, OutLayer, and standard escrow.
+   - Contrast Midge against NEAR Multisig / Sputnik DAO, Phala Shade Agents, OutLayer, and standard escrow.
    - Identify threat model boundaries: what is defended vs what is out of scope (e.g., TEE hardware bugs, collusion between creator and sole recipient).
 6. ACTIONABLE BLUEPRINT FOR HANDOFF 4 (Y1–Y10):
    - Prioritized roadmap to reach a 9+ on verifiable dimensions before the Nov 12 code freeze.
@@ -170,10 +170,10 @@ Provide a comprehensive, professional review structured as follows:
 
   // Step 4: Save & Output
   console.log('[4/4] Writing review to canonical documentation...');
-  const reviewContent = `# Fly Protocol — Independent Argon Architectural & Security Review
+  const reviewContent = `# Midge — Independent Argon Architectural & Security Review
 **Model Evaluator:** ${res.model} (via Google Gemini API)  
 **Evaluation Date:** ${new Date().toISOString()}  
-**Target Repository:** Fly (NEAR HACKATHON: Build Beyond Boundaries)  
+**Target Repository:** Midge (NEAR HACKATHON: Build Beyond Boundaries)  
 **Governance Standard:** Builder Foundry v1.0  
 
 ---

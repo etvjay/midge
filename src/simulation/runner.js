@@ -5,7 +5,7 @@ import { OneClickIntentAdapter } from '../intents/oneclick.js';
 
 export async function runDarkSwarmSimulation() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║       FLY PROTOCOL: 10-FLYER DARK SWARM SIMULATION            ║');
+  console.log('║             MIDGE: 10-FLYER DARK SWARM SIMULATION             ║');
   console.log('║       Asymmetric Encryption → TEE HAQ → FAR Shard Settlement  ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 

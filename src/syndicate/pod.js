@@ -1,5 +1,5 @@
 /**
- * Pod: A tactical execution sub-swarm within a Fly Syndicate.
+ * Pod: A tactical execution sub-swarm within a Midge Syndicate.
  * Analogous to hedge fund "pod shops" (Citadel, Millennium) and container pods.
  */
 export class SyndicatePod {

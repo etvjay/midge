@@ -8,7 +8,7 @@
  * Compares:
  * (a) Public Sequential Execution: Orders visible in public mempool, subjected to
  *     front-running / sandwich extraction by MEV searchers on a CPMM pool.
- * (b) Sealed-Intent Deliberation & Batch Execution (Fly Protocol): Orders encrypted
+ * (b) Sealed-Intent Deliberation & Batch Execution (Midge): Orders encrypted
  *     in Roost enclave RAM, cleared at uniform price with zero pre-trade information leakage.
  * 
  * Grounded in:
@@ -153,11 +153,11 @@ function runSimulation({
     sequentialSearcherProfitSamples.push(totalSearcherProfitUsdc);
 
     // =========================================================================
-    // SCENARIO B: Sealed-Intent Deliberation & Batch Execution (Fly Roost TEE)
+    // SCENARIO B: Sealed-Intent Deliberation & Batch Execution (Midge Roost TEE)
     // =========================================================================
     const sealedPool = new ConstantProductPool(initialNearReserve, initialUsdcReserve);
 
-    // In Fly, orders are encrypted in Roost RAM. Searchers see 0 pending transactions.
+    // In Midge, orders are encrypted in Roost RAM. Searchers see 0 pending transactions.
     // Roost aggregates all orders and executes a single clearing batch swap:
     const totalBatchNearReceived = sealedPool.swapBForA(totalOrderVolumeUsdc);
 
@@ -199,7 +199,7 @@ function runSimulation({
 
 function main() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║       FLY PROTOCOL: MEASURED ECONOMIC BASELINE SIMULATION      ║');
+  console.log('║          MIDGE: MEASURED ECONOMIC BASELINE SIMULATION          ║');
   console.log('║  Sealed-Intent Uniform Batch vs. Public Sequential Mempool     ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
@@ -222,7 +222,7 @@ function main() {
   console.log('════════════════════════════════════════════════════════════════════════════════');
   console.log(' EXECUTION MODE COMPARISON TABLE (Mean ± 95% Confidence Interval)');
   console.log('════════════════════════════════════════════════════════════════════════════════');
-  console.log(' Metric                     │ (A) Public Sequential   │ (B) Fly Sealed Batch  │ Improvement');
+  console.log(' Metric                     │ (A) Public Sequential   │ (B) Midge Sealed Batch  │ Improvement');
   console.log('────────────────────────────┼─────────────────────────┼───────────────────────┼─────────────');
   console.log(
     ` Realized Slippage (%)      │ ${seqSlip.mean.toFixed(2)}% ± ${seqSlip.marginOfError.toFixed(2)}%          │ ${batSlip.mean.toFixed(2)}% ± ${batSlip.marginOfError.toFixed(2)}%        │ -${(seqSlip.mean - batSlip.mean).toFixed(2)}% (Lower)`

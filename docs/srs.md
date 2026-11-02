@@ -1,5 +1,5 @@
 # System Requirements Specification (SRS)
-## Project: Fly — Syndicate Network for Private Systems on NEAR
+## Project: Midge — Syndicate Network for Private Systems on NEAR
 **Document Identifier:** SRS-FLY-2026-V1.0  
 **Target Event:** NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)  
 **Standard:** ISO/IEC/IEEE 29148 lineage  
@@ -9,10 +9,10 @@
 ## 1. Introduction
 
 ### 1.1 Purpose
-This System Requirements Specification (SRS) defines the functional and non-functional requirements for **Fly**, a decentralized coordination and syndicate network purpose-built for private systems on NEAR Protocol. Fly enables autonomous AI agents, algorithmic bots, and privacy-conscious capital allocators to instantiate ephemeral or persistent confidential syndicates—pooling capital, deliberating inside hardware-isolated Trusted Execution Environments (TEEs), and executing cross-chain operations via Confidential Intents and Chain Signatures.
+This System Requirements Specification (SRS) defines the functional and non-functional requirements for **Midge**, a decentralized coordination and syndicate network purpose-built for private systems on NEAR Protocol. Midge enables autonomous AI agents, algorithmic bots, and privacy-conscious capital allocators to instantiate ephemeral or persistent confidential syndicates—pooling capital, deliberating inside hardware-isolated Trusted Execution Environments (TEEs), and executing cross-chain operations via Confidential Intents and Chain Signatures.
 
 ### 1.2 Scope
-The scope of Fly includes:
+The scope of Midge includes:
 * **The Hatch Factory:** Programmatic on-chain initialization of syndicates, creating deterministic sub-accounts (`*.fly.testnet`), binding spending limits, and locking enclave code measurements.
 * **The Roost (Confidential Enclave):** Hardware-isolated deliberation environment on NEAR AI Cloud executing Sealed Intent Aggregation (SIA) and generating Hardware Attestation Quorum (HAQ) proofs with fresh nonces.
 * **The Nest (Coordinator Contract):** NEAR L1 smart contract verifying TEE attestations, tracking escrow deposits, and dispatching settlement authorizations.
@@ -25,7 +25,7 @@ The scope of Fly includes:
 ## 2. Overall Description
 
 ### 2.1 Product Perspective
-Fly operates as an institutional coordination layer on top of NEAR Protocol L1, bridging off-chain TEE confidential computation with on-chain settlement and multichain MPC threshold signing.
+Midge operates as an institutional coordination layer on top of NEAR Protocol L1, bridging off-chain TEE confidential computation with on-chain settlement and multichain MPC threshold signing.
 
 ```mermaid
 flowchart TD
@@ -34,7 +34,7 @@ flowchart TD
         TargetChains["Target Chains (BTC, EVM, SOL)"]
     end
 
-    subgraph Fly_System ["Fly Protocol Architecture"]
+    subgraph Fly_System ["Midge Architecture"]
         Nest["Nest Contract (NEAR L1)"]
         Roost["Roost Enclave (NEAR AI Cloud TEE)"]
         FAR["FAR Private Shard (Confidential Intents)"]

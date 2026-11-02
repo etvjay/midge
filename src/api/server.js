@@ -149,7 +149,7 @@ export class FlyApiDaemon {
       const origin = this.getCorsOrigin(req);
       const headers = {
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-402-Proof, X-Fly-Api-Key',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-402-Proof, X-Midge-Api-Key',
         'Access-Control-Max-Age': '86400',
         Vary: 'Origin',
       };
@@ -164,11 +164,11 @@ export class FlyApiDaemon {
     // Optional API Key authentication enforcement when FLY_API_KEY is configured
     if (this.apiKey && pathname !== '/health' && pathname !== '/v1/health' && method !== 'OPTIONS') {
       const authHeader = req.headers['authorization'];
-      const apiKeyHeader = req.headers['x-fly-api-key'];
+      const apiKeyHeader = req.headers['x-midge-api-key'];
       const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
       const providedKey = apiKeyHeader || bearerToken;
       if (!providedKey || providedKey !== this.apiKey) {
-        const err = new Error('Unauthorized: Invalid or missing X-Fly-Api-Key');
+        const err = new Error('Unauthorized: Invalid or missing X-Midge-Api-Key');
         err.statusCode = 401;
         throw err;
       }

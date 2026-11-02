@@ -28,13 +28,13 @@ class SyndicateListResult extends Array {
 }
 
 /**
- * Fly Model Context Protocol (MCP) Tool Specifications:
+ * Midge Model Context Protocol (MCP) Tool Specifications:
  * Fully compatible with NEAR AI's official MCP ecosystem (nearai/near-mcp)
  * and anthropic/cursor tool-calling standards.
  */
 export const FLY_MCP_TOOLS = [
   {
-    name: 'fly_hatch_syndicate',
+    name: 'midge_hatch_syndicate',
     description: 'Instantiates a new confidential Flash Syndicate or persistent Dark Vault on NEAR L1 with bounded release policy.',
     inputSchema: {
       type: 'object',
@@ -64,7 +64,7 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_deposit',
+    name: 'midge_deposit',
     description: 'Deposits escrow collateral into a syndicate on NEAR L1 with cryptographic release policy hash consent.',
     inputSchema: {
       type: 'object',
@@ -78,7 +78,7 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_settle',
+    name: 'midge_settle',
     description: 'Executes bounded batch settlement allocating syndicate escrow to allowlisted recipients under verified enclave signature.',
     inputSchema: {
       type: 'object',
@@ -101,7 +101,7 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_hatch_out',
+    name: 'midge_hatch_out',
     description: 'Non-custodial sovereign escape valve unlocking 100% individual refund of escrow without coordinator approval.',
     inputSchema: {
       type: 'object',
@@ -113,8 +113,8 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_list_syndicates',
-    description: 'Lists active and settled syndicates on the Fly Autonomous Syndicate Network (paginated).',
+    name: 'midge_list_syndicates',
+    description: 'Lists active and settled syndicates on the Midge Autonomous Syndicate Network (paginated).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -124,7 +124,7 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_get_my_syndicates',
+    name: 'midge_get_my_syndicates',
     description: 'Finds all syndicates where the specified account is either creator/owner or participating flyer.',
     inputSchema: {
       type: 'object',
@@ -137,7 +137,7 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_submit_sealed_intent',
+    name: 'midge_submit_sealed_intent',
     description: 'Asymmetrically encrypts order parameters and submits into the Roost TEE in-RAM queue.',
     inputSchema: {
       type: 'object',
@@ -152,7 +152,7 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_verify_haq_attestation',
+    name: 'midge_verify_haq_attestation',
     description: 'Verifies the live Intel TDX hardware attestation report and code measurement from NEAR AI Cloud.',
     inputSchema: {
       type: 'object',
@@ -164,7 +164,7 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_create_confidential_rfq',
+    name: 'midge_create_confidential_rfq',
     description: 'Creates a private institutional borrowing facility with in-enclave sealed quote matching.',
     inputSchema: {
       type: 'object',
@@ -180,7 +180,7 @@ export const FLY_MCP_TOOLS = [
     },
   },
   {
-    name: 'fly_match_otc_block',
+    name: 'midge_match_otc_block',
     description: 'Crosses complementary high-volume institutional block orders at midpoint reference price.',
     inputSchema: {
       type: 'object',
@@ -249,7 +249,7 @@ export class FlyMcpServer {
     const isChain = this.mode === 'chain' && this.chainClient;
 
     switch (name) {
-      case 'fly_hatch_syndicate': {
+      case 'midge_hatch_syndicate': {
         if (isChain && this.chainClient.isConfiguredForWrites()) {
           const policy = {
             allowed_recipients: args.allowedRecipients || [this.chainClient.accountId],
@@ -286,7 +286,7 @@ export class FlyMcpServer {
         });
       }
 
-      case 'fly_deposit': {
+      case 'midge_deposit': {
         if (isChain && this.chainClient.isConfiguredForWrites()) {
           const res = await this.chainClient.deposit({
             syndicateId: args.syndicateId,
@@ -308,7 +308,7 @@ export class FlyMcpServer {
         });
       }
 
-      case 'fly_settle': {
+      case 'midge_settle': {
         if (isChain && this.chainClient.isConfiguredForWrites()) {
           const res = await this.chainClient.settleBatch({
             syndicateId: args.syndicateId,
@@ -334,7 +334,7 @@ export class FlyMcpServer {
         });
       }
 
-      case 'fly_hatch_out': {
+      case 'midge_hatch_out': {
         if (isChain && this.chainClient.isConfiguredForWrites()) {
           const res = await this.chainClient.hatchOut({
             syndicateId: args.syndicateId,
@@ -352,7 +352,7 @@ export class FlyMcpServer {
         });
       }
 
-      case 'fly_list_syndicates': {
+      case 'midge_list_syndicates': {
         if (isChain) {
           const list = await this.chainClient.listSyndicates({
             fromIndex: args.fromIndex || 0,
@@ -371,7 +371,7 @@ export class FlyMcpServer {
         ]);
       }
 
-      case 'fly_get_my_syndicates': {
+      case 'midge_get_my_syndicates': {
         if (isChain) {
           const list = await this.chainClient.listSyndicatesByMember(args.accountId, {
             fromIndex: args.fromIndex || 0,
@@ -389,7 +389,7 @@ export class FlyMcpServer {
         ]);
       }
 
-      case 'fly_submit_sealed_intent':
+      case 'midge_submit_sealed_intent':
         return this.formatOutput({
           status: 'SEALED_ENCRYPTED_IN_ROOST_RAM',
           syndicateId: args.syndicateId,
@@ -398,7 +398,7 @@ export class FlyMcpServer {
           pair: args.pair || 'USDC/NEAR',
         });
 
-      case 'fly_verify_haq_attestation':
+      case 'midge_verify_haq_attestation':
         return this.formatOutput({
           status: 'HAQ_ATTESTATION_VALID',
           nonce: args.nonce,
@@ -406,14 +406,14 @@ export class FlyMcpServer {
           tcbStatus: 'UpToDate',
         });
 
-      case 'fly_create_confidential_rfq':
+      case 'midge_create_confidential_rfq':
         return this.formatOutput({
           status: 'RFQ_CREATED',
           borrowerId: args.borrowerId,
           requestedAmountUsdc: args.requestedAmountUsdc,
         });
 
-      case 'fly_match_otc_block':
+      case 'midge_match_otc_block':
         return this.formatOutput({
           status: 'OTC_BLOCK_CROSSED',
           buyOrderId: args.buyOrderId,
@@ -422,7 +422,7 @@ export class FlyMcpServer {
         });
 
       default:
-        throw new Error(`Unknown Fly MCP tool: ${name}`);
+        throw new Error(`Unknown Midge MCP tool: ${name}`);
     }
   }
 }

@@ -67,7 +67,7 @@ async function callGemini(prompt, apiKey) {
 
 async function main() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║       FLY PROTOCOL: INDEPENDENT SMART CONTRACT SECURITY REVIEW ║');
+  console.log('║       MIDGE: INDEPENDENT SMART CONTRACT SECURITY REVIEW        ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
   const contractSource = fs.readFileSync(path.join(rootDir, 'contracts/fly-coordinator/src/lib.rs'), 'utf8');
@@ -106,7 +106,7 @@ Label clearly that this is an Independent Security Review, not an endorsement or
 
   if (!reportText) {
     console.log('Generating structured local independent security review from canonical AST & threat invariants...');
-    reportText = `# Fly Protocol — Independent Smart Contract Security Review
+    reportText = `# Midge — Independent Smart Contract Security Review
 
 **Review Date:** 2026-11-02  
 **Target:** \`contracts/fly-coordinator/src/lib.rs\` (\`near-sdk\` 5.1, WASM SHA-256 \`ece45a939ac5cfcf...\`)  

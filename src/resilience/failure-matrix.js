@@ -6,7 +6,7 @@ import { ChainSignaturesMPC } from '../multichain/chain-signatures.js';
 
 /**
  * Multi-Tier Failure Matrix & Resilience Engine:
- * Implements deterministic remedies for all 5 layers of failure in Fly:
+ * Implements deterministic remedies for all 5 layers of failure in Midge:
  * 1. Enclave / TEE Failure
  * 2. Flyer / Agent Failure
  * 3. Solver / Market Execution Failure

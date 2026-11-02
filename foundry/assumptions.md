@@ -1,4 +1,4 @@
-# Fly Protocol — Architectural Assumptions Register
+# Midge — Architectural Assumptions Register
 
 **Version:** 1.0.0  
 **Scope:** NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)  

@@ -1,4 +1,4 @@
-# Fly Protocol: Video Demo Script (Under 3 Minutes)
+# Midge: Video Demo Script (Under 3 Minutes)
 **Event:** NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)  
 **Primary Track:** Privacy & Private AI  
 **Secondary Tracks:** AI Swarms, Agent Economy, Unstoppable DeFi, Security  
@@ -10,7 +10,7 @@
 ## Visual & Audio Walkthrough
 
 ### [0:00 – 0:30] Scene 1: The Core Thesis — Constrained Arbitration with Independent Recovery
-- **Screen:** Terminal title card / Architecture diagram illustrating Fly Autonomous Syndicate Network:
+- **Screen:** Terminal title card / Architecture diagram illustrating Midge Autonomous Syndicate Network:
   - Heterogeneous Swarms (AI agents + Human Wallets)
   - Intel TDX TEE Roost (NEAR AI Cloud)
   - NEAR L1 FlyCoordinator contract (`c.fly-1793636729.testnet`)
@@ -18,9 +18,9 @@
 - **Narrator Audio:**
   > "Decentralized AI agent swarms and pooled capital face a harsh dilemma: either you surrender your keys to an autonomous off-chain bot or enclave that can crash, trap funds, or be terminated by an operator, or you rely on transparent multisigs that leak trading alpha to mempool front-runners and stall in committee deadlock.
   >
-  > Welcome to **Fly**: an autonomous syndicate network on NEAR Protocol.
+  > Welcome to **Midge**: an autonomous syndicate network on NEAR Protocol.
   >
-  > Fly's core breakthrough is **constrained arbitration with independent recovery**:
+  > Midge's core breakthrough is **constrained arbitration with independent recovery**:
   > Deposits and balances are public on NEAR L1. Coordination, order weights, and internal allocations remain confidential inside hardware-attested Intel TDX enclaves. The enclave is never a custodian—it can only propose settlements strictly bounded by immutable release policies. And if an enclave crashes or goes rogue, every depositor can unilaterally reclaim 100% of their escrow directly on-chain."
 
 ---
@@ -30,7 +30,7 @@
 - **Narrator Audio:**
   > "Here is the entire system executing live on NEAR Testnet, driven entirely through AI agent Model Context Protocol (MCP) tools.
   >
-  > First, an agent discovers active syndicates using `fly_list_syndicates`.
+  > First, an agent discovers active syndicates using `midge_list_syndicates`.
   > Next, it hatches a syndicate with an immutable `ReleasePolicy`: allowlisted payout recipients, a 10,000 basis-point per-epoch release cap, and a strict block deadline.
   >
   > Autonomous flyers deposit escrow, explicitly signing their consent to this policy hash on-chain.
@@ -47,17 +47,17 @@
   >
   > Settlement executes in just 5.92 TGas on NEAR L1, applying pro-rata balance deductions with exact dust conservation.
   >
-  > For cross-chain execution, Fly integrates NEAR Chain Signatures. From our syndicate identity, we deterministically derive Bitcoin Taproot, EVM, and Solana addresses, and execute a live threshold signature verified byte-for-byte on-chain on `v1.signer-prod.testnet`."
+  > For cross-chain execution, Midge integrates NEAR Chain Signatures. From our syndicate identity, we deterministically derive Bitcoin Taproot, EVM, and Solana addresses, and execute a live threshold signature verified byte-for-byte on-chain on `v1.signer-prod.testnet`."
 
 ---
 
 ### [1:55 – 2:35] Scene 4: Stalled Enclave Escape Hatch (`hatch_out`)
-- **Screen:** Terminal running Step 6 showing `fly_hatch_out` and NearBlocks explorer showing transaction `BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`.
+- **Screen:** Terminal running Step 6 showing `midge_hatch_out` and NearBlocks explorer showing transaction `BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`.
 - **Narrator Audio:**
   > "Now, what happens when things fail? Suppose the TEE crashes, network connectivity is severed, or the operator disappears forever?
   >
   > In traditional systems, user funds are locked indefinitely.
-  > In Fly, safety is guaranteed by an immutable on-chain invariant.
+  > In Midge, safety is guaranteed by an immutable on-chain invariant.
   >
   > When the block timelock expires without a valid settlement, any individual depositor calls `hatch_out`.
   > No operator approval required. No enclave signature. No multisig quorum.
@@ -69,7 +69,7 @@
 ### [2:35 – 2:45] Scene 5: Verifiability & Outro
 - **Screen:** Terminal showing `./scripts/verify` passing cleanly with 44 Rust tests, DCAP Root CA attestation, and 0 foundry violations.
 - **Narrator Audio:**
-  > "Fly features 44 Rust smart contract unit, integration, and fuzz invariant tests, 10 agent MCP tools, a measured economic baseline simulation, and an automated Builder Foundry control plane.
+  > "Midge features 44 Rust smart contract unit, integration, and fuzz invariant tests, 10 agent MCP tools, a measured economic baseline simulation, and an automated Builder Foundry control plane.
   >
   > Run `./scripts/verify` to verify the entire system yourself in under 20 seconds.
   > Built for the NEAR Hackathon: Build Beyond Boundaries."

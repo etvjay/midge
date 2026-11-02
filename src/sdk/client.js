@@ -1,9 +1,9 @@
 import { EnclaveCrypto } from '../enclave/crypto.js';
 
 /**
- * Fly Developer SDK Client (@fly-network/sdk):
+ * Midge Developer SDK Client (@midge/sdk):
  * The unified client library for autonomous AI agents, algorithmic bots,
- * and institutional treasuries integrating with Fly on NEAR.
+ * and institutional treasuries integrating with Midge on NEAR.
  */
 export class FlyClient {
   constructor({ baseUrl = 'http://localhost:3000', apiKey = null, fetchFn = fetch } = {}) {
@@ -18,7 +18,7 @@ export class FlyClient {
       method,
       headers: {
         'Content-Type': 'application/json',
-        ...(this.apiKey ? { 'X-Fly-Api-Key': this.apiKey } : {}),
+        ...(this.apiKey ? { 'X-Midge-Api-Key': this.apiKey } : {}),
         ...customHeaders,
       },
     };

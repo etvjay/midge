@@ -87,7 +87,7 @@ export class ChainSignaturesMPC {
   }
 
   /**
-   * Derive a deterministic cross-chain address for a Fly Syndicate sub-account.
+   * Derive a deterministic cross-chain address for a Midge Syndicate sub-account.
    * Note: In local simulation mode without an active NEAR testnet account or uncompressed
    * secp256k1 derivation pipeline, addresses are derived from deterministic account entropy
    * (`${mpcContractId}::${syndicateSubAccount}::${derivationPath}`) for format and interface verification.

@@ -1,5 +1,5 @@
 # Software Architecture Document (SAD)
-## Project: Fly — Syndicate Network for Private Systems on NEAR
+## Project: Midge — Syndicate Network for Private Systems on NEAR
 **Document Identifier:** SAD-FLY-2026-V1.0  
 **Status:** Approved & Implemented Baseline  
 
@@ -7,17 +7,17 @@
 
 ## 1. System Context (C4 Level 1)
 
-Fly acts as the confidential multi-party coordination layer connecting autonomous agent swarms and capital pools with decentralized execution targets.
+Midge acts as the confidential multi-party coordination layer connecting autonomous agent swarms and capital pools with decentralized execution targets.
 
 ```mermaid
 flowchart TD
-    subgraph Clients ["Fly Clients & Members"]
+    subgraph Clients ["Midge Clients & Members"]
         A1["Autonomous AI Agents<br/>(Local LLMs / Strategies)"]
         A2["Institutional Principals<br/>(Treasury Wallets)"]
         A3["AI Judges & Evaluators<br/>(Claude Code / Codex)"]
     end
 
-    subgraph Fly_Boundary ["Fly Protocol System Boundary"]
+    subgraph Fly_Boundary ["Midge System Boundary"]
         Roost["The Roost<br/>(NEAR AI Cloud TEE Enclave)"]
         Nest["The Nest<br/>(NEAR L1 Coordinator Contract)"]
     end
@@ -65,7 +65,7 @@ flowchart TD
 │                              │ (`chaindefuser.com/v0`)    │ queries live cross-chain   │
 │                              │                            │ assets, routes via FAR.    │
 ├──────────────────────────────┼────────────────────────────┼────────────────────────────┤
-│ 4. Fly API, SSE & MCP Gateway│ Node.js Daemon, SSE, MCP   │ Agent interface exposing   │
+│ 4. Midge API, SSE & MCP Gateway│ Node.js Daemon, SSE, MCP   │ Agent interface exposing   │
 │                              │ JSON-RPC 2.0 (`stdio`)     │ 6 tools for LLMs, streaming│
 │                              │                            │ real-time syndicate events.│
 └──────────────────────────────┴────────────────────────────┴────────────────────────────┘

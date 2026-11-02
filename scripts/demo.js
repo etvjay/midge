@@ -3,15 +3,15 @@
 /**
  * scripts/demo.js
  * 
- * Official Fly Protocol Live Demonstration
+ * Official Midge Live Demonstration
  * Runs an annotated story on NEAR Testnet (or in model mode if offline)
  * driving actions through the Model Context Protocol (MCP) server:
- * 1. Discover syndicates on-chain via MCP tool (fly_list_syndicates)
- * 2. Hatch syndicate with bounded release policy (fly_hatch_syndicate)
- * 3. Deposit escrow collateral with policy hash consent (fly_deposit)
+ * 1. Discover syndicates on-chain via MCP tool (midge_list_syndicates)
+ * 2. Hatch syndicate with bounded release policy (midge_hatch_syndicate)
+ * 3. Deposit escrow collateral with policy hash consent (midge_deposit)
  * 4. Blocked malicious settlement rejected on-chain (Security Track proof)
- * 5. Successful batch settlement under verified HAQ proof (fly_settle)
- * 6. Sovereign non-custodial escape hatch (fly_hatch_out)
+ * 5. Successful batch settlement under verified HAQ proof (midge_settle)
+ * 6. Sovereign non-custodial escape hatch (midge_hatch_out)
  */
 
 import fs from 'node:fs';
@@ -26,7 +26,7 @@ const rootDir = path.resolve(__dirname, '..');
 
 async function main() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║        FLY: AUTONOMOUS SYNDICATE NETWORK ON NEAR PROTOCOL      ║');
+  console.log('║      MIDGE: AUTONOMOUS SYNDICATE NETWORK ON NEAR PROTOCOL      ║');
   console.log('║       End-to-End Agent Deliberation, Settlement & Escape       ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
@@ -61,12 +61,12 @@ async function main() {
   // ---------------------------------------------------------------------------
   console.log('================================================================');
   console.log(' [STEP 1] Agent Discovers Syndicates on NEAR via MCP Tool');
-  console.log(' Tool: fly_list_syndicates({ limit: 5 })');
+  console.log(' Tool: midge_list_syndicates({ limit: 5 })');
   console.log('================================================================');
 
   let listRes = [];
   try {
-    listRes = await mcp.executeTool('fly_list_syndicates', { limit: 5 });
+    listRes = await mcp.executeTool('midge_list_syndicates', { limit: 5 });
   } catch (err) {
     listRes = evidence?.syndicates || [];
   }
@@ -85,7 +85,7 @@ async function main() {
   // ---------------------------------------------------------------------------
   console.log('\n================================================================');
   console.log(' [STEP 2] Agent Hatches Syndicate with Immutable Release Policy');
-  console.log(' Tool: fly_hatch_syndicate({ syndicateId, allowedRecipients, maxReleaseBpsPerEpoch })');
+  console.log(' Tool: midge_hatch_syndicate({ syndicateId, allowedRecipients, maxReleaseBpsPerEpoch })');
   console.log('================================================================');
 
   const hatchTx = evidence?.transactions?.find((t) => t.action.startsWith('hatch:syn-flash'));
@@ -107,7 +107,7 @@ async function main() {
   // ---------------------------------------------------------------------------
   console.log('\n================================================================');
   console.log(' [STEP 3] Autonomous Flyers Deposit Escrow with Policy Consent');
-  console.log(' Tool: fly_deposit({ syndicateId, amountNear: 0.02, policyHash })');
+  console.log(' Tool: midge_deposit({ syndicateId, amountNear: 0.02, policyHash })');
   console.log('================================================================');
 
   const dep1 = evidence?.transactions?.find((t) => t.action === 'deposit:flyer1');
@@ -158,7 +158,7 @@ async function main() {
   // ---------------------------------------------------------------------------
   console.log('\n================================================================');
   console.log(' [STEP 5] Successful Batch Settlement under Valid HAQ Proof');
-  console.log(' Tool: fly_settle({ syndicateId, allocations, enclaveSignature })');
+  console.log(' Tool: midge_settle({ syndicateId, allocations, enclaveSignature })');
   console.log('================================================================');
 
   const settleTx = evidence?.transactions?.find((t) => t.action.startsWith('settle_batch:'));
@@ -176,7 +176,7 @@ async function main() {
   console.log('\n================================================================');
   console.log(' [STEP 6] Sovereign Non-Custodial Escape Hatch (hatch_out)');
   console.log(' Threat: Roost enclave crashes, operator stalls or goes offline indefinitely');
-  console.log(' Tool: fly_hatch_out({ syndicateId })');
+  console.log(' Tool: midge_hatch_out({ syndicateId })');
   console.log('================================================================');
 
   const escapeTx = evidence?.transactions?.find((t) => t.action.startsWith('hatch_out:'));
@@ -203,7 +203,7 @@ async function main() {
   console.log('  3. Pro-Rata Escrow Deductions:          PROVEN ON-CHAIN');
   console.log('  4. Unilateral Sovereign Escape Hatch:   PROVEN ON-CHAIN');
   console.log('  5. Agent Model Context Protocol (MCP):  OPERATIONAL (10 Tools)\n');
-  console.log('>>> [PASS] FLY PROTOCOL DEMO COMPLETE.\n');
+  console.log('>>> [PASS] MIDGE DEMO COMPLETE.\n');
 }
 
 main().catch((err) => {

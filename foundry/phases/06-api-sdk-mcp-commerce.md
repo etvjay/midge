@@ -18,7 +18,7 @@ Enables external LLM agents, automated scripts, and quant trading desks to seaml
 - `FlyApiDaemon` in `src/api/server.js`.
 - SSE route handler in `src/api/server.js`.
 - x402 middleware and invoice manager in `src/commerce/x402.js`.
-- MCP server in `src/mcp/server.js` and standalone executable in `bin/fly-mcp.js`.
+- MCP server in `src/mcp/server.js` and standalone executable in `bin/midge-mcp.js`.
 - Unified client library in `src/sdk/client.js`.
 
 ## Invariants
@@ -31,7 +31,7 @@ Enables external LLM agents, automated scripts, and quant trading desks to seaml
 - `src/commerce/x402.js`
 - `src/sdk/client.js`
 - `src/mcp/server.js`
-- `bin/fly-mcp.js`
+- `bin/midge-mcp.js`
 - `verifications/08-api-sse-mcp-e2e.js`
 
 ## Required verification

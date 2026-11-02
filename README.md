@@ -1,13 +1,15 @@
-# Fly: Autonomous Syndicate Network on NEAR Protocol
+# Midge: A Private Syndicate Network for Private Systems on NEAR
 **Constrained Arbitration with Independent Recovery for Agent Swarms & Capital Collectives**
 
 **NEAR HACKATHON: Build Beyond Boundaries (November 1–14, 2026)**  
 **Primary Track:** Privacy & Private AI  
 **Secondary Tracks:** AI Swarms, Agent Economy, Unstoppable DeFi, Security  
 
+> **Naming:** Midge was previously called "Fly". Internal identifiers keep the old codename on purpose (the `fly-coordinator` crate, `FlyNestContract`, `FLY_*` environment variables, and the deployed testnet account `c.fly-1793636729.testnet`), so the on-chain evidence and the reproducible-build hash in this README stay valid. Midge is an independent hackathon prototype with **no token**, and is **not affiliated with Fly.trade or Fly.io**.
+
 ---
 
-## 1. Core Thesis & What Fly Solves
+## 1. Core Thesis & What Midge Solves
 
 When autonomous AI agent swarms and human capital collectives coordinate financial actions on public blockchains, they face an intractable trilemma: **custody risk**, **alpha leakage**, and **liveness failure**. 
 
@@ -24,7 +26,7 @@ Existing Web3 paradigms fail autonomous swarms:
 - **Public Multisigs (SputnikDAO / Safe):** Require slow committee voting, leak execution parameters to mempool front-runners, and deadlock if keys are lost.
 - **Custodial TEE Platforms (OutLayer / Shade):** Shade provides single-worker agents without pooled depositor accounting. OutLayer provides a 1–30 day customer recovery window, but explicitly notes this is *not* an end-user protection mechanism.
 
-**Fly solves this by unbundling coordination from custody:**
+**Midge solves this by unbundling coordination from custody:**
 1. **Public Escrow on NEAR L1:** Deposits, depositor accounts, and available escrow balances are public on NEAR L1 (`contracts/fly-coordinator`).
 2. **Confidential Coordination in TEE:** Individual order parameters, strategy weights, and reservation bounds are encrypted directly to an Intel TDX hardware enclave (verified via `dcap-qvl` to Intel's Root CA). Deliberation and Sealed Intent Aggregation (SIA) execute in memory before individual inputs are zero-wiped.
 3. **Constrained Settlement Authority:** The TEE is **never a custodian**. It cannot hold withdrawal keys or direct arbitrary payouts. It can only propose settlements strictly conforming to an immutable `ReleasePolicy` (allowlisted recipient accounts, max per-epoch release caps, and deadlines) to which depositors explicitly consented upon depositing.
@@ -34,9 +36,9 @@ Existing Web3 paradigms fail autonomous swarms:
 
 ## 2. Measured Economic Baseline Simulation
 
-To quantify the economic benefit of confidential sealed-intent aggregation over transparent mempools, Fly includes a fully reproducible Monte Carlo simulation (`scripts/baseline.js`) evaluating an 8-agent swarm executing swaps against a Constant Product Market Maker (CPMM) AMM pool ($x \cdot y = k$, $396,000 USDC / 100,000 wNEAR, reference price $3.96/wNEAR derived from the live 1Click API registry):
+To quantify the economic benefit of confidential sealed-intent aggregation over transparent mempools, Midge includes a fully reproducible Monte Carlo simulation (`scripts/baseline.js`) evaluating an 8-agent swarm executing swaps against a Constant Product Market Maker (CPMM) AMM pool ($x \cdot y = k$, $396,000 USDC / 100,000 wNEAR, reference price $3.96/wNEAR derived from the live 1Click API registry):
 
-| Metric | Public Sequential Execution (Mempool + MEV Bot) | Fly Sealed-Intent Batch (Uniform Clearing) | Delta / Economic Benefit |
+| Metric | Public Sequential Execution (Mempool + MEV Bot) | Midge Sealed-Intent Batch (Uniform Clearing) | Delta / Economic Benefit |
 | :--- | :--- | :--- | :--- |
 | **Realized Slippage** | 16.67% ± 0.37% (95% CI: [16.30%, 17.05%]) | 15.60% ± 0.37% (95% CI: [15.23%, 15.97%]) | **-1.07% Lower Slippage** |
 | **Adversary MEV Profit** | $519.44 ± $16.00 (95% CI: [$503.44, $535.43]) | **$0.00 ± $0.00** | **100% MEV Eliminated** |
@@ -49,7 +51,7 @@ Run command: `npm run baseline` (or `node scripts/baseline.js`). Output recorded
 
 ## 3. Judge & Evaluator Reproduction Guide ("Do X, See Y")
 
-Fly provides a zero-setup, deterministic verification harness requiring standard Node.js (v18+) and Cargo/Rust (1.80+). All verifications can be inspected with a single canonical command:
+Midge provides a zero-setup, deterministic verification harness requiring standard Node.js (v18+) and Cargo/Rust (1.80+). All verifications can be inspected with a single canonical command:
 
 ```bash
 ./scripts/verify
@@ -68,18 +70,18 @@ Fly provides a zero-setup, deterministic verification harness requiring standard
   # or: node scripts/demo.js
   ```
 * **See:**
-  - An autonomous agent discovers syndicates via Model Context Protocol (MCP) tool `fly_list_syndicates`.
+  - An autonomous agent discovers syndicates via Model Context Protocol (MCP) tool `midge_list_syndicates`.
   - Hatches a syndicate with bounded `ReleasePolicy` (allowlisted recipient, 10,000 BPS cap, block deadline).
   - Autonomous flyers deposit escrow with cryptographic policy consent.
   - **Security Proof A:** Enclave signature attempting to route funds to an unauthorized address (`thief.near`) is **rejected on-chain** with failure receipt ([`ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh`](https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh)).
   - **Security Proof B:** Enclave signature attempting to exceed the per-epoch release cap is **rejected on-chain** ([`pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW`](https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW)).
   - **Valid Settlement:** Deliberation inside Intel TDX Roost settles batch payout in 5.92 TGas ([`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF)).
-  - **Sovereign Escape Hatch:** Stalled enclave exits unilaterally via `fly_hatch_out`, refunding 100% of escrow in 5.10 TGas ([`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB)).
+  - **Sovereign Escape Hatch:** Stalled enclave exits unilaterally via `midge_hatch_out`, refunding 100% of escrow in 5.10 TGas ([`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB)).
 
 ---
 
 ### Step 1: Inspect Live NEAR Testnet Deployment & Transactions
-Fly is deployed and live on NEAR Testnet at coordinator account:  
+Midge is deployed and live on NEAR Testnet at coordinator account:  
 👉 **[`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet)**
 
 #### Reproducible WASM Build & Cryptographic Verification
@@ -184,8 +186,8 @@ Fly is deployed and live on NEAR Testnet at coordinator account:
   - Boots `FlyApiDaemon` on ephemeral port.
   - Verifies Server-Sent Events (SSE) streaming at `/v1/stream/syndicate/{id}`.
   - Executes x402 micro-commerce flow: initial HTTP 402, payment invoice generation, HMAC bearer proof verification, and protected resource release.
-  - Audits Model Context Protocol (MCP) server: 10 tools exposed to LLM agents (`fly_hatch_syndicate`, `fly_deposit`, `fly_settle`, `fly_hatch_out`, `fly_list_syndicates`, `fly_get_my_syndicates`, `fly_submit_sealed_intent`, `fly_get_roost_quote`, `fly_execute_rfq_borrow`, `fly_execute_otc_block`).
-  - Verifies Security Controls: public `/health`, protected `/v1/roost/session-key` returning HTTP 401 without `X-Fly-Api-Key` and HTTP 200 with it, and payload limit guard (>512KB rejected with HTTP 413).
+  - Audits Model Context Protocol (MCP) server: 10 tools exposed to LLM agents (`midge_hatch_syndicate`, `midge_deposit`, `midge_settle`, `midge_hatch_out`, `midge_list_syndicates`, `midge_get_my_syndicates`, `midge_submit_sealed_intent`, `midge_get_roost_quote`, `midge_execute_rfq_borrow`, `midge_execute_otc_block`).
+  - Verifies Security Controls: public `/health`, protected `/v1/roost/session-key` returning HTTP 401 without `X-Midge-Api-Key` and HTTP 200 with it, and payload limit guard (>512KB rejected with HTTP 413).
 
 ---
 
@@ -217,8 +219,8 @@ To ensure complete transparency and intellectual honesty for human and automated
 | **1Click Asset Registry** | `verifications/02-confidential-intents.js` | **VERIFIED** | **LIVE EXTERNAL** | Audits 210 cross-chain assets from live 1Click Swap API with deterministic snapshot fallback for test resilience. |
 | **The Hatch & OutLayer** | `src/contracts/nest.js`, `src/policies/outlayer.js` | **TESTED** | **LOCAL & ON-CHAIN AUDITED** | OutLayer policy guard enforces deposit limits. Escape hatch logic verified both in local state machine and on deployed testnet contract. |
 | **Syndicate Network & Discovery** | `scripts/network-demo.js` | **DEMONSTRATED** | **REAL SCRIPT & DISCOVERY** | Demonstrates 3 specialized syndicates in one coordinator contract, cross-syndicate member discovery (`list_syndicates`, `get_syndicates_by_member`), x402 inter-syndicate commerce, and escape hatch exit. |
-| **API Daemon & SSE** | `src/api/server.js` | **INTEGRATED** | **REAL SERVER** | 20 HTTP REST endpoints bound to `127.0.0.1`, `X-Fly-Api-Key` enforcement, origin-restricted CORS, 512KB body size limits, real-time SSE streams, and HMAC-verified x402 payment proofs. |
-| **Model Context Protocol** | `src/mcp/server.js`, `bin/fly-mcp.js` | **INTEGRATED** | **REAL TOOLING** | 10 syndicate tools exposed over stdio JSON-RPC 2.0 with dual `chain` and `model` mode support, compatible with Claude Code, Codex, and Claude Desktop. |
+| **API Daemon & SSE** | `src/api/server.js` | **INTEGRATED** | **REAL SERVER** | 20 HTTP REST endpoints bound to `127.0.0.1`, `X-Midge-Api-Key` enforcement, origin-restricted CORS, 512KB body size limits, real-time SSE streams, and HMAC-verified x402 payment proofs. |
+| **Model Context Protocol** | `src/mcp/server.js`, `bin/midge-mcp.js` | **INTEGRATED** | **REAL TOOLING** | 10 syndicate tools exposed over stdio JSON-RPC 2.0 with dual `chain` and `model` mode support, compatible with Claude Code, Codex, and Claude Desktop. |
 | **TEE Aggregator Runtime** | `src/enclave/roost.js` | **TESTED** | **LOCAL PROCESS** | Ingestion, RSA-2048 decryption, batch aggregation, and RAM wiping execute in local Node.js process (GAP-004). Remote TEE VM container deployment is planned for production. |
 | **FAR Private Shard** | `src/settlement/far-shard.js` | **TESTED** | **LOCAL SIMULATION** | Evaluated as an in-process PBFT 200ms cryptographic state machine with IMT tokens and decoupled graphs (GAP-002) pending native L1 private sharding validator nodes. |
 | **Confidential RFQ & OTC** | `src/facilities/rfq-adjudication.js`, `otc-block-trade.js` | **TESTED** | **LOCAL SIMULATION** | In-memory Zero-MEV borrow matching and midpoint crossing dark pool simulations. |
@@ -230,7 +232,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 1. **Root of Trust at Hatch (Trust-the-Creator Model):**
    - The enclave public key and `payout_recipient` are defined by the syndicate creator upon calling `hatch()`.
    - **Important:** If an owner sets their own wallet as `payout_recipient` and their own keypair as `enclave_public_key`, they can sign a settlement payout to themselves.
-   - Therefore, Fly operates on a **Trust-the-Creator / Verified-Roost model**: Flyers MUST inspect the syndicate's `payout_recipient` and `enclave_public_key` (cross-checking the hardware attestation report) BEFORE depositing escrow.
+   - Therefore, Midge operates on a **Trust-the-Creator / Verified-Roost model**: Flyers MUST inspect the syndicate's `payout_recipient` and `enclave_public_key` (cross-checking the hardware attestation report) BEFORE depositing escrow.
    - `expected_code_hash` is permanently recorded on-chain as audited reference metadata.
 
 2. **Public Deposits vs. Confidential Deliberation:**
@@ -259,7 +261,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 > [!NOTE]
 > Network discovery methods (`list_syndicates`, `list_syndicates_by_member`, NEP-297 events) are deployed and live on NEAR Testnet at `c.fly-1793636729.testnet`. Autonomous agents discover active syndicates and their own memberships directly through RPC view calls with bounded gas.
 
-Fly is designed as an **Autonomous Syndicate Network**: a single NEAR L1 coordinator smart contract hosts multiple independent syndicates, each specialized in a financial or computational mission (e.g. signal research, algorithmic execution, AI compute).
+Midge is designed as an **Autonomous Syndicate Network**: a single NEAR L1 coordinator smart contract hosts multiple independent syndicates, each specialized in a financial or computational mission (e.g. signal research, algorithmic execution, AI compute).
 
 ```
                       ┌─────────────────────────────────────────┐
@@ -292,7 +294,7 @@ Fly is designed as an **Autonomous Syndicate Network**: a single NEAR L1 coordin
 
 ## 6. Architectural Comparison
 
-For an exhaustive architectural comparison contrasting Fly with 10 industry systems (**Shade Agents**, **OutLayer**, **NEAR Confidential Intents**, **Enzyme Finance**, **Safe**, **Railgun**, **Aztec**, **Secret Network**, **Oasis Sapphire**, and **Flashbots SUAVE/BuilderNet**), see:  
+For an exhaustive architectural comparison contrasting Midge with 10 industry systems (**Shade Agents**, **OutLayer**, **NEAR Confidential Intents**, **Enzyme Finance**, **Safe**, **Railgun**, **Aztec**, **Secret Network**, **Oasis Sapphire**, and **Flashbots SUAVE/BuilderNet**), see:  
 📖 **[`docs/canonical/COMPARISON.md`](docs/canonical/COMPARISON.md)**
 
 For reusable independent-exit escrow contract architecture, see:  
@@ -346,11 +348,11 @@ For hackathon track justifications and submission assets, see:
 │   ├── multichain/
 │   │   └── chain-signatures.js   # NEAR Chain Signatures MPC (EVM, Bitcoin Taproot, Solana)
 │   ├── api/
-│   │   └── server.js             # 20 REST endpoints, SSE streams, X-Fly-Api-Key, 512KB limit
+│   │   └── server.js             # 20 REST endpoints, SSE streams, X-Midge-Api-Key, 512KB limit
 │   ├── mcp/
 │   │   └── server.js             # Standalone MCP server (10 tools for AI agent swarms)
 │   ├── sdk/
-│   │   └── client.js             # Fly TypeScript/JavaScript SDK client
+│   │   └── client.js             # Midge TypeScript/JavaScript SDK client
 │   └── facilities/               # RFQ, OTC dark pool, and compute credit syndicate modules
 ├── verifications/                # 9 standalone architectural verification scripts
 │   └── fixtures/                 # Recorded fixtures for offline deterministic verification

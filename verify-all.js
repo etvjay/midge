@@ -10,7 +10,7 @@ import { verifyInferenceAttestation } from './scripts/verify-inference.js';
 
 async function runAllVerifications() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║       FLY PROTOCOL: COMPLETE MASTER VERIFICATION SUITE         ║');
+  console.log('║           MIDGE: COMPLETE MASTER VERIFICATION SUITE            ║');
   console.log('║    NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)          ║');
   console.log('╚════════════════════════════════════════════════════════════════╝');
 

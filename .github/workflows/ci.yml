@@ -1,4 +1,4 @@
-name: Fly Protocol Verification CI
+name: Midge Verification CI
 
 on:
   push:

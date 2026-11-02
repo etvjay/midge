@@ -9,7 +9,7 @@ const rootDir = path.resolve(__dirname, '..');
 
 async function main() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║       FLY PROTOCOL: INDEPENDENT ON-CHAIN RPC VERIFIER          ║');
+  console.log('║            MIDGE: INDEPENDENT ON-CHAIN RPC VERIFIER            ║');
   console.log('║       Cryptographic State & Proofs on NEAR Testnet             ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 

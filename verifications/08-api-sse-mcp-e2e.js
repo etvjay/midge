@@ -142,38 +142,38 @@ export async function verifyApiSseMcpE2E() {
     const tools = mcpServer.listTools();
     console.log(`  ✓ MCP Tools Listed:   ${tools.tools.length} Tools Available for LLM Agents`);
 
-    const mcpHatchResult = await mcpServer.executeTool('fly_hatch_syndicate', {
+    const mcpHatchResult = await mcpServer.executeTool('midge_hatch_syndicate', {
       syndicateId: 'mcp-agent-syndicate',
       expectedCodeHash: 'valid-mrenclave-hash',
     });
-    console.log(`  ✓ MCP Tool Executed:  fly_hatch_syndicate -> ${mcpHatchResult.id} (${mcpHatchResult.subAccount}) [Mode: ${mcpHatchResult.mode}]`);
+    console.log(`  ✓ MCP Tool Executed:  midge_hatch_syndicate -> ${mcpHatchResult.id} (${mcpHatchResult.subAccount}) [Mode: ${mcpHatchResult.mode}]`);
     if (mcpHatchResult.mode !== 'model' || !mcpHatchResult.notice) {
       throw new Error(`Expected model mode notice in MCP output`);
     }
 
-    const mcpDepositResult = await mcpServer.executeTool('fly_deposit', {
+    const mcpDepositResult = await mcpServer.executeTool('midge_deposit', {
       syndicateId: 'mcp-agent-syndicate',
       amountNear: 0.05,
       flyerId: 'agent.near',
     });
-    console.log(`  ✓ MCP Tool Executed:  fly_deposit -> ${mcpDepositResult.amount} NEAR deposited [Mode: ${mcpDepositResult.mode}]`);
+    console.log(`  ✓ MCP Tool Executed:  midge_deposit -> ${mcpDepositResult.amount} NEAR deposited [Mode: ${mcpDepositResult.mode}]`);
 
-    const mcpSettleResult = await mcpServer.executeTool('fly_settle', {
+    const mcpSettleResult = await mcpServer.executeTool('midge_settle', {
       syndicateId: 'mcp-agent-syndicate',
       allocations: [['recipient.near', '0.04']],
     });
-    console.log(`  ✓ MCP Tool Executed:  fly_settle -> ${mcpSettleResult.status} [Mode: ${mcpSettleResult.mode}]`);
+    console.log(`  ✓ MCP Tool Executed:  midge_settle -> ${mcpSettleResult.status} [Mode: ${mcpSettleResult.mode}]`);
 
-    const mcpListResult = await mcpServer.executeTool('fly_list_syndicates', { limit: 5 });
-    console.log(`  ✓ MCP Tool Executed:  fly_list_syndicates -> ${mcpListResult.length} syndicates discovered [Mode: ${mcpListResult.mode}]`);
+    const mcpListResult = await mcpServer.executeTool('midge_list_syndicates', { limit: 5 });
+    console.log(`  ✓ MCP Tool Executed:  midge_list_syndicates -> ${mcpListResult.length} syndicates discovered [Mode: ${mcpListResult.mode}]`);
 
-    const mcpMyResult = await mcpServer.executeTool('fly_get_my_syndicates', { accountId: 'agent.near' });
-    console.log(`  ✓ MCP Tool Executed:  fly_get_my_syndicates -> ${mcpMyResult.length} member syndicates found [Mode: ${mcpMyResult.mode}]`);
+    const mcpMyResult = await mcpServer.executeTool('midge_get_my_syndicates', { accountId: 'agent.near' });
+    console.log(`  ✓ MCP Tool Executed:  midge_get_my_syndicates -> ${mcpMyResult.length} member syndicates found [Mode: ${mcpMyResult.mode}]`);
 
     // Verify Chain Mode MCP server tool execution (live queries via FlyChainClient)
     const chainMcpServer = new FlyMcpServer({ mode: 'chain' });
-    const chainListResult = await chainMcpServer.executeTool('fly_list_syndicates', { limit: 3 });
-    console.log(`  ✓ Chain MCP Executed: fly_list_syndicates -> ${chainListResult.length} on-chain syndicates [Mode: ${chainMcpServer.mode}]`);
+    const chainListResult = await chainMcpServer.executeTool('midge_list_syndicates', { limit: 3 });
+    console.log(`  ✓ Chain MCP Executed: midge_list_syndicates -> ${chainListResult.length} on-chain syndicates [Mode: ${chainMcpServer.mode}]`);
 
     // Clean up first daemon
     sseReq.destroy();
@@ -200,14 +200,14 @@ export async function verifyApiSseMcpE2E() {
       }
       console.log('  ✓ API Key Enforcement: Protected route returns HTTP 401 Unauthorized');
 
-      // 8c. Protected route succeeds with X-Fly-Api-Key
+      // 8c. Protected route succeeds with X-Midge-Api-Key
       const authRes = await fetch(`${secBaseUrl}/v1/roost/session-key`, {
-        headers: { 'X-Fly-Api-Key': 'fly-sec-test-token-789' },
+        headers: { 'X-Midge-Api-Key': 'fly-sec-test-token-789' },
       });
       if (authRes.status !== 200) {
         throw new Error(`Expected /v1/roost/session-key 200 with key, got ${authRes.status}`);
       }
-      console.log('  ✓ Auth Verification:  Protected route returns HTTP 200 with X-Fly-Api-Key');
+      console.log('  ✓ Auth Verification:  Protected route returns HTTP 200 with X-Midge-Api-Key');
 
       // 8d. Body size limit (>512KB rejected with 413)
       const oversizedPayload = JSON.stringify({ data: 'x'.repeat(600 * 1024) });
@@ -215,7 +215,7 @@ export async function verifyApiSseMcpE2E() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Fly-Api-Key': 'fly-sec-test-token-789',
+          'X-Midge-Api-Key': 'fly-sec-test-token-789',
         },
         body: oversizedPayload,
       });

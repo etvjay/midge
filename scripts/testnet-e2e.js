@@ -92,7 +92,7 @@ function computePolicyHash(policy) {
 
 async function main() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║       FLY PROTOCOL: LIVE TESTNET END-TO-END DEPLOYMENT         ║');
+  console.log('║           MIDGE: LIVE TESTNET END-TO-END DEPLOYMENT            ║');
   console.log('║       NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)       ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 

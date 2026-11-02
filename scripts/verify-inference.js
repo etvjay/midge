@@ -70,7 +70,7 @@ export async function verifyInferenceAttestation({ offline = false } = {}) {
     const requestPayload = JSON.stringify({
       model: model,
       messages: [
-        { role: 'system', content: 'You are the Fly Roost confidential deliberation arbiter.' },
+        { role: 'system', content: 'You are the Midge Roost confidential deliberation arbiter.' },
         { role: 'user', content: 'Deliberate collective syndicate order batch: 3 flyers, pro-rata TWAP 300s.' }
       ],
       stream: false
