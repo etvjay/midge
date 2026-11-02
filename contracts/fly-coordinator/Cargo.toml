@@ -12,3 +12,4 @@ hex = "0.4"
 
 [dev-dependencies]
 ed25519-dalek = { version = "2.1", default-features = false, features = ["fast"] }
+proptest = "1.5"

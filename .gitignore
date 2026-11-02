@@ -2,5 +2,7 @@ node_modules/
 target/
 contracts/**/target/
 .env
+.*keys*.json
 .DS_Store
 HANDOFF.md
+HANDOFF-9PLUS.md

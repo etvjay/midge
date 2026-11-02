@@ -31,7 +31,10 @@ fn generate_enclave_keypair_and_sig(
 ) -> (String, String) {
     let signing_key = SigningKey::from_bytes(&[77u8; 32]);
     let verifying_key = signing_key.verifying_key();
-    let message = format!("{}:{}:{}:{}:{}:{}", contract_id, syndicate_id, epoch, nonce, payout_recipient, order_hash);
+    let message = format!(
+        "{}:{}:{}:{}:{}:{}",
+        contract_id, syndicate_id, epoch, nonce, payout_recipient, order_hash
+    );
     let signature = signing_key.sign(message.as_bytes());
     (
         hex::encode(verifying_key.to_bytes()),
@@ -70,7 +73,9 @@ fn test_integration_full_syndicate_lifecycle_with_payout() {
         Some(payout_treasury.clone()),
     );
 
-    let syn = contract.get_syndicate(syn_id.clone()).expect("Syndicate must exist");
+    let syn = contract
+        .get_syndicate(syn_id.clone())
+        .expect("Syndicate must exist");
     assert_eq!(syn.payout_recipient, payout_treasury);
     assert_eq!(syn.quorum_threshold, 3);
     assert_eq!(syn.status, SyndicateStatus::Active);
@@ -82,12 +87,19 @@ fn test_integration_full_syndicate_lifecycle_with_payout() {
         "agent-03.near".parse().unwrap(),
     ];
 
-    let deposits = [NearToken::from_near(10), NearToken::from_near(20), NearToken::from_near(30)];
+    let deposits = [
+        NearToken::from_near(10),
+        NearToken::from_near(20),
+        NearToken::from_near(30),
+    ];
     for (i, flyer) in flyers.iter().enumerate() {
         let ctx = get_context(flyer.clone(), deposits[i], 110 + i as u64);
         testing_env!(ctx.build());
         contract.deposit(syn_id.clone());
-        assert_eq!(contract.get_escrow(syn_id.clone(), flyer.clone()), deposits[i]);
+        assert_eq!(
+            contract.get_escrow(syn_id.clone(), flyer.clone()),
+            deposits[i]
+        );
     }
 
     let syn_funded = contract.get_syndicate(syn_id.clone()).unwrap();
@@ -109,12 +121,7 @@ fn test_integration_full_syndicate_lifecycle_with_payout() {
     // 4. Settle batch
     let ctx = get_context(owner, NearToken::from_near(0), 130);
     testing_env!(ctx.build());
-    contract.settle_batch(
-        syn_id.clone(),
-        active_nonce,
-        order_hash,
-        enclave_sig,
-    );
+    contract.settle_batch(syn_id.clone(), active_nonce, order_hash, enclave_sig);
 
     let syn_settled = contract.get_syndicate(syn_id.clone()).unwrap();
     assert_eq!(syn_settled.status, SyndicateStatus::Settled);
@@ -128,7 +135,10 @@ fn test_integration_full_syndicate_lifecycle_with_payout() {
         let mut c = contract;
         let _ = c.hatch_out(syn_id);
     }));
-    assert!(res.is_err(), "hatch_out must be strictly blocked after settlement");
+    assert!(
+        res.is_err(),
+        "hatch_out must be strictly blocked after settlement"
+    );
 }
 
 #[test]
@@ -189,7 +199,10 @@ fn test_integration_theft_frontrun_fails() {
         let mut c = contract;
         c.settle_batch(syn_id, active_nonce, order_hash, attacker_sig);
     }));
-    assert!(res.is_err(), "Frontrun with altered payout recipient must fail");
+    assert!(
+        res.is_err(),
+        "Frontrun with altered payout recipient must fail"
+    );
 }
 
 #[test]
@@ -242,7 +255,10 @@ fn test_integration_escape_hatch_and_storage_reclamation() {
     // Verify storage cleanup: f1 escrow is removed and balance is 0
     assert_eq!(contract.get_escrow(syn_id.clone(), f1).as_yoctonear(), 0);
     // f2 escrow is still intact
-    assert_eq!(contract.get_escrow(syn_id.clone(), f2.clone()).as_near(), 25);
+    assert_eq!(
+        contract.get_escrow(syn_id.clone(), f2.clone()).as_near(),
+        25
+    );
 
     let syn_mid = contract.get_syndicate(syn_id.clone()).unwrap();
     assert_eq!(syn_mid.active_flyer_count, 1);
@@ -409,8 +425,14 @@ fn test_integration_settlement_failure_callback_rollback() {
     assert_eq!(syn_reverted.total_settled_payouts.as_yoctonear(), 0);
 
     // Flyers retain full individual escrow balances
-    assert_eq!(contract.get_escrow(syn_id.clone(), f1.clone()).as_near(), 15);
-    assert_eq!(contract.get_escrow(syn_id.clone(), f2.clone()).as_near(), 25);
+    assert_eq!(
+        contract.get_escrow(syn_id.clone(), f1.clone()).as_near(),
+        15
+    );
+    assert_eq!(
+        contract.get_escrow(syn_id.clone(), f2.clone()).as_near(),
+        25
+    );
 
     // After timeout (block 140 > 100 + 30), both flyers can successfully escape hatch out
     let ctx = get_context(f1.clone(), NearToken::from_near(0), 140);
@@ -466,7 +488,12 @@ fn test_integration_hatch_out_failure_callback_rollback() {
     testing_env!(ctx.build());
     let _ = contract.hatch_out(syn_id.clone());
 
-    assert_eq!(contract.get_escrow(syn_id.clone(), f1.clone()).as_yoctonear(), 0);
+    assert_eq!(
+        contract
+            .get_escrow(syn_id.clone(), f1.clone())
+            .as_yoctonear(),
+        0
+    );
     let syn_after_exit = contract.get_syndicate(syn_id.clone()).unwrap();
     assert_eq!(syn_after_exit.status, SyndicateStatus::AbortedRefunded);
 

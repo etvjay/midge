@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-11-02T16:37:27.823Z",
+  "network": "testnet",
+  "coordinatorContract": "c.fly-1793636729.testnet",
+  "masterAccount": "fly-1793636729.testnet",
+  "flyers": [
+    "f1.fly-1793636729.testnet",
+    "f2.fly-1793636729.testnet",
+    "f3.fly-1793636729.testnet"
+  ],
+  "transactions": [
+    {
+      "action": "hatch:syn-flash-1793637420",
+      "txHash": "AEZ7Ar5LXQekRUp5RdpYYRAPrGAKGqXA4iVriXPPrhL5",
+      "explorer": "https://testnet.nearblocks.io/txns/AEZ7Ar5LXQekRUp5RdpYYRAPrGAKGqXA4iVriXPPrhL5"
+    },
+    {
+      "action": "deposit:flyer1",
+      "txHash": "97sBa13ErjwjL3hJQWWQjHhyNJqJGT4uHZ4JwqLBiqpa",
+      "explorer": "https://testnet.nearblocks.io/txns/97sBa13ErjwjL3hJQWWQjHhyNJqJGT4uHZ4JwqLBiqpa"
+    },
+    {
+      "action": "deposit:flyer2",
+      "txHash": "VshLnMCWvyhXApZyeV35kTLxH5FC3iXAF5XF6Qk42ek",
+      "explorer": "https://testnet.nearblocks.io/txns/VshLnMCWvyhXApZyeV35kTLxH5FC3iXAF5XF6Qk42ek"
+    },
+    {
+      "action": "deposit:flyer3",
+      "txHash": "J9iVhzc7QUvoFBHfsJ7KSat7LbfMtwXaicTntXyF5PdQ",
+      "explorer": "https://testnet.nearblocks.io/txns/J9iVhzc7QUvoFBHfsJ7KSat7LbfMtwXaicTntXyF5PdQ"
+    },
+    {
+      "action": "settle_batch:syn-flash-1793637420",
+      "txHash": "12vpDrnpZudg8egtdMXvt27sDfQjk9sZTg3SzJREadUh",
+      "gasBurntTGas": "5.81",
+      "explorer": "https://testnet.nearblocks.io/txns/12vpDrnpZudg8egtdMXvt27sDfQjk9sZTg3SzJREadUh"
+    },
+    {
+      "action": "hatch:syn-escape-1793637435",
+      "txHash": "HWZEtG8neAgvseohv63ba4B2FcXW36vvPPmMZyLAyQJu",
+      "explorer": "https://testnet.nearblocks.io/txns/HWZEtG8neAgvseohv63ba4B2FcXW36vvPPmMZyLAyQJu"
+    },
+    {
+      "action": "deposit:flyer2:escape",
+      "txHash": "DU9ULPqj3rDcht5wQ53nrobq5EdLdJCENhq8tn2nyQNk",
+      "explorer": "https://testnet.nearblocks.io/txns/DU9ULPqj3rDcht5wQ53nrobq5EdLdJCENhq8tn2nyQNk"
+    },
+    {
+      "action": "hatch_out:syn-escape-1793637435",
+      "txHash": "DR3VmCytXwPM1pk7pvN9GLQnStRWdvEH9eBAZTc7vFgk",
+      "gasBurntTGas": "4.92",
+      "explorer": "https://testnet.nearblocks.io/txns/DR3VmCytXwPM1pk7pvN9GLQnStRWdvEH9eBAZTc7vFgk"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+name: Fly Protocol Verification CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Complete Canonical Verification Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts/fly-coordinator
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Rust Linting (Clippy)
+        run: cd contracts/fly-coordinator && cargo clippy -- -D warnings
+
+      - name: Rust Formatting Check
+        run: cd contracts/fly-coordinator && cargo fmt --check
+
+      - name: JavaScript Syntax Check
+        run: |
+          for f in $(find src verifications scripts -name "*.js"); do
+            node --check "$f"
+          done
+
+      - name: Run Master Canonical Verification Suite
+        run: ./scripts/verify

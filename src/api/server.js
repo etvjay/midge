@@ -78,17 +78,21 @@ export class FlyApiDaemon {
     return new Promise((resolve, reject) => {
       let body = '';
       let bytes = 0;
+      let exceeded = false;
       req.on('data', (chunk) => {
+        if (exceeded) return;
         bytes += chunk.length;
         if (bytes > limitBytes) {
+          exceeded = true;
+          req.pause();
           const err = new Error('Payload Too Large: Maximum allowed body size is 512KB');
           err.statusCode = 413;
-          req.destroy(err);
           return reject(err);
         }
         body += chunk;
       });
       req.on('end', () => {
+        if (exceeded) return;
         if (!body) return resolve({});
         try {
           resolve(JSON.parse(body));
@@ -140,7 +144,7 @@ export class FlyApiDaemon {
     }
 
     // Optional API Key authentication enforcement when FLY_API_KEY is configured
-    if (this.apiKey && pathname !== '/health' && method !== 'OPTIONS') {
+    if (this.apiKey && pathname !== '/health' && pathname !== '/v1/health' && method !== 'OPTIONS') {
       const authHeader = req.headers['authorization'];
       const apiKeyHeader = req.headers['x-fly-api-key'];
       const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -150,6 +154,17 @@ export class FlyApiDaemon {
         err.statusCode = 401;
         throw err;
       }
+    }
+
+    // Health check endpoint
+    if (method === 'GET' && (pathname === '/health' || pathname === '/v1/health')) {
+      return this.sendJson(res, 200, {
+        status: 'OK',
+        uptime: process.uptime(),
+        network: 'testnet',
+        coordinatorContract: 'c.fly-1793636729.testnet',
+        timestamp: Date.now(),
+      }, req);
     }
 
     // ==========================================

@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-11-02T16:41:54.393Z",
+  "network": "testnet",
+  "mpcContract": "v1.signer-prod.testnet",
+  "callerAccount": "fly-1793636729.testnet",
+  "derivationPath": "fly/dark-vault/epoch-1",
+  "rootPublicKey": "secp256k1:4NfTiv3UsGahebgTaHyD9vF8KYKMBnfd6kh94mK6xv8fGBiJB8TBtFMP5WWXz6B89Ac1fbpzPwAvoyQebemHFwx3",
+  "derivedPublicKey": "secp256k1:5Fg74nHqwNjw3PYPwJDPtv8LkCdaj4MbgYCU1mZxtAFWxQh2WEdUyyLX8oHc3c2mT4o1cZs5moVqC8BoZcwidQaS",
+  "uncompressedPublicKey": "0x04d4b8f484af535c049ac77d8eac357255ad1cf16dc8bc6700dd0c43523589b48e5fd1e8b544785b6ea3e5ea62a0ac80eb717faa4095fe8b402962bcbbfd71db7f",
+  "omnichainAddresses": {
+    "evm": "0x0309Dbc3e7F5C40Bb957723Cebb4BE5329BB22c0",
+    "bitcoinTaproot": "tb1p6ju0fp902dwqfxk80k82cdtj2kk3eutdez7xwqxap3p4ydvfkj8qyldyzl",
+    "solana": "FKP1RDHJnkxGNx8umRSNzp1k15UM9P2W6dFZDFEGATz5"
+  },
+  "transaction": {
+    "txHash": "6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk",
+    "explorer": "https://testnet.nearblocks.io/txns/6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk",
+    "gasBurntTGas": "0.32"
+  },
+  "signature": {
+    "scheme": "Secp256k1",
+    "payloadDigest": "0x1620b8a813511e6aaa359d460508290bc36a1ef99dea2889730c8e52f0e95e96",
+    "r": "0x335973991352411832d6ad7f09ef5596f4c669ff9e5fb7ba7d477b2043985fb7",
+    "s": "0x5a4dbb47517e6cc0f29882d0c599da0700f3e72c919971f35b8b390ae125b019",
+    "v": 28,
+    "recoveryId": 1,
+    "verifiedAgainstDerivedKey": true
+  }
+}

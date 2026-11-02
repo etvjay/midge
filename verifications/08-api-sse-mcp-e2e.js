@@ -136,7 +136,7 @@ export async function verifyApiSseMcpE2E() {
     console.log(`    ↳ Alpha Payload:    ${paidRes.data.data} (Released to: ${paidRes.data.releasedTo})`);
 
     // 7. Test Model Context Protocol (MCP) Server
-    console.log('[7/7] Testing Model Context Protocol (MCP) Server Integration...');
+    console.log('[7/8] Testing Model Context Protocol (MCP) Server Integration...');
     const nestMcp = new FlyNestContract();
     const mcpServer = new FlyMcpServer({ nestContract: nestMcp });
     const tools = mcpServer.listTools();
@@ -148,9 +148,58 @@ export async function verifyApiSseMcpE2E() {
     });
     console.log(`  ✓ MCP Tool Executed:  fly_hatch_syndicate -> ${mcpHatchResult.id} (${mcpHatchResult.subAccount})`);
 
-    // Clean up
+    // Clean up first daemon
     sseReq.destroy();
     await daemon.stop();
+
+    // 8. Test Security Controls: API Key Enforcement, CORS & Body Limits
+    console.log('[8/8] Testing Security Controls: API Key, Body Limits & CORS...');
+    const secureDaemon = new FlyApiDaemon({ port: 0, apiKey: 'fly-sec-test-token-789' });
+    const secAddress = await secureDaemon.start();
+    const secBaseUrl = `http://127.0.0.1:${secAddress.port}`;
+
+    try {
+      // 8a. Health endpoint is public without API key
+      const healthRes = await fetch(`${secBaseUrl}/health`);
+      if (healthRes.status !== 200) {
+        throw new Error(`Expected /health 200, got ${healthRes.status}`);
+      }
+      console.log('  ✓ Public Route Check: /health returns HTTP 200 without API key');
+
+      // 8b. Protected route fails with 401 without API key
+      const unauthRes = await fetch(`${secBaseUrl}/v1/roost/session-key`);
+      if (unauthRes.status !== 401) {
+        throw new Error(`Expected /v1/roost/session-key 401 without key, got ${unauthRes.status}`);
+      }
+      console.log('  ✓ API Key Enforcement: Protected route returns HTTP 401 Unauthorized');
+
+      // 8c. Protected route succeeds with X-Fly-Api-Key
+      const authRes = await fetch(`${secBaseUrl}/v1/roost/session-key`, {
+        headers: { 'X-Fly-Api-Key': 'fly-sec-test-token-789' },
+      });
+      if (authRes.status !== 200) {
+        throw new Error(`Expected /v1/roost/session-key 200 with key, got ${authRes.status}`);
+      }
+      console.log('  ✓ Auth Verification:  Protected route returns HTTP 200 with X-Fly-Api-Key');
+
+      // 8d. Body size limit (>512KB rejected with 413)
+      const oversizedPayload = JSON.stringify({ data: 'x'.repeat(600 * 1024) });
+      const sizeRes = await fetch(`${secBaseUrl}/v1/syndicates/hatch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Fly-Api-Key': 'fly-sec-test-token-789',
+        },
+        body: oversizedPayload,
+      });
+      if (sizeRes.status !== 413) {
+        throw new Error(`Expected 413 Payload Too Large, got ${sizeRes.status}`);
+      }
+      console.log('  ✓ Body Limit Guard:   Payload >512KB rejected with HTTP 413');
+    } finally {
+      await secureDaemon.stop();
+    }
+
     console.log('\n>>> [PASS] HTTP DAEMON, SSE, x402 & MCP SERVER VERIFIED (Integrated Gateway).\n');
 
     return {

@@ -21,6 +21,8 @@
     "verify:matrix": "node verifications/07-resilience-failure-matrix.js",
     "verify:api": "node verifications/08-api-sse-mcp-e2e.js",
     "verify:rust": "cd contracts/fly-coordinator && cargo test",
+    "verify:testnet": "node scripts/testnet-e2e.js",
+    "verify:mpc": "node scripts/testnet-mpc.js",
     "build:wasm": "cd contracts/fly-coordinator && cargo build --target wasm32-unknown-unknown --release",
     "check:foundry": "node scripts/check-foundry.js",
     "review:argon": "node scripts/argon-review.js"
@@ -38,5 +40,9 @@
     "mcp",
     "x402"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.17.0",
+    "near-api-js": "^7.4.0"
+  }
 }
