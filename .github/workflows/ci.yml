@@ -7,6 +7,9 @@ on:
     branches: [ master, main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: Complete Canonical Verification Suite
@@ -62,5 +65,10 @@ jobs:
             node --check "$f"
           done
 
+      # NEARAI_API_KEY enables the live NEAR AI Cloud inference-signature check.
+      # Without the secret (or on fork PRs, where GitHub withholds secrets) that
+      # check is reported as SKIPPED, never as passed.
       - name: Run Master Canonical Verification Suite
+        env:
+          NEARAI_API_KEY: ${{ secrets.NEARAI_API_KEY }}
         run: ./scripts/verify
