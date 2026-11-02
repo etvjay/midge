@@ -1,7 +1,7 @@
 # Fly Protocol — Canonical Current State
 
 **Repository Version:** 1.0.0  
-**Git Head:** `0b35a6e7ee46d558547bcdf5bb5627308d188379`  
+**Git Head:** `809f8ffc98cd8c7958ab831dba85dc96f3137263`  
 **Governance Standard:** Builder Foundry v1.0  
 **Hackathon Target:** NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)  
 **Overall Status:** `TESTED_AND_INTEGRATED`  
@@ -12,7 +12,7 @@
 
 Fly is an autonomous syndicate network purpose-built for private systems on NEAR Protocol. It enables autonomous AI agents, quant funds, and privacy collectives to pool capital, deliberate in hardware-attested enclaves, and execute cross-chain operations as a unified front without leaking member identities, proprietary trading models, prompt weights, or internal equity splits to public mempools.
 
-All 8 architectural verification layers, the NEAR L1 Rust smart contract (23 tests: 19 unit + 4 integration with domain-separated Ed25519 signature verification, LookupMap escrow storage, and Flash Promise settlement payouts with failure recovery callbacks), release WebAssembly binary (271 KB), and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
+All 8 architectural verification layers, the NEAR L1 Rust smart contract (31 tests: 25 unit + 6 integration with domain-separated Ed25519 signature verification, LookupMap escrow storage, Flash Promise settlement payouts with failure recovery callbacks, and flyer storage reclamation), release WebAssembly binary (277 KB), and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
 
 ---
 
@@ -35,9 +35,9 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (23 tes
 | **x402 Agent Commerce** | `src/commerce/x402.js` | **INTEGRATED** | `npm run verify:api` | HTTP 402 challenge, PingPay confidential micropayment HMAC bearer verification, token-gated alpha |
 | **MCP Server** | `src/mcp/server.js`, `bin/fly-mcp.js` | **INTEGRATED (stdio)** | `npm run verify:api` | 6 tools exposed via stdio JSON-RPC 2.0 compatible with `nearai/near-mcp` |
 | **FlyClient SDK** | `src/sdk/client.js` | **TESTED** | `npm run verify:api` | Unified JavaScript/TypeScript client library |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 23 Rust tests (19 unit + 4 integration) in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, and refund safety |
-| **Release WASM Binary** | `contracts/fly-coordinator/target` | **TESTED** | `npm run build:wasm` | 271 KB compiled WebAssembly binary (`wasm32-unknown-unknown`) |
-| **Foundry Control Plane** | `foundry/` | **INTEGRATED** | `npm run check:foundry` | `state.json`, `claims.jsonl` (11 claims), `gaps.jsonl` (6 gaps, 1 high deferred), 8 phase specs |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 31 Rust tests (25 unit + 6 integration) in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, storage reclamation, and refund safety |
+| **Release WASM Binary** | `contracts/fly-coordinator/target` | **TESTED** | `npm run build:wasm` | 277 KB compiled WebAssembly binary (`wasm32-unknown-unknown`) |
+| **Foundry Control Plane** | `foundry/` | **INTEGRATED** | `npm run check:foundry` | `state.json`, `claims.jsonl` (11 claims), `gaps.jsonl` (7 gaps, 1 high deferred), 8 phase specs |
 
 ---
 
@@ -54,3 +54,6 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (23 tes
    - *Current State:* Live TEE remote attestation report is queried and verified from NEAR AI Cloud; internal intent aggregation runs as a local memory-wiped process.
 5. **Intel DCAP-QVL Verification (GAP-006):**
    - *Current State:* Intel TDX report presence, model signer key, and cryptographic session nonce binding are verified; full byte-level DCAP SGX root CA chain verification is planned.
+6. **Sybil Syndicate Capacity & Storage Staking (GAP-007):**
+   - *Current State:* Fixed 50-flyer capacity cap with 0.01 NEAR minimum deposit to bound contract memory and gas costs. Storage deposit is statically allocated at hatch time.
+   - *Roadmap:* Dynamic per-flyer storage deposit refundable upon hatch_out or settlement.
