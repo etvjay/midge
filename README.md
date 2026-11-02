@@ -28,7 +28,7 @@ Fly provides a zero-setup, deterministic verification harness requiring standard
 # or: make verify
 # or: npm run verify
 ```
-*Total verification runtime: **<20.0s** (Deterministic, 33 Rust tests, DCAP Root CA bound, zero external keys needed).*
+*Total verification runtime: **<25.0s** (Deterministic, 36 Rust tests, DCAP Root CA bound, zero external keys needed).*
 
 ---
 

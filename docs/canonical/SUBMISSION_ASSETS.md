@@ -20,7 +20,7 @@ Fly solves this by turning TEEs into arbiters, NOT custodians:
 🌐 Omnichain Threshold Execution across BTC, ETH & SOL via NEAR Chain Signatures MPC
 🛡️ Non-Custodial Escape Hatch (`hatch_out`): Any user exits unilaterally after timelock
 
-Live on NEAR Testnet (c.fly-1793636729.testnet) with 33 Rust tests, property fuzzing & automated MCP tooling!
+Live on NEAR Testnet (c.fly-1793636729.testnet) with 36 Rust tests, property fuzzing & automated MCP tooling!
 
 Watch the 2-minute demo 👇
 #NEAR #NEARProtocol #AI #Privacy #Crypto #BuildBeyondBoundaries
@@ -51,7 +51,7 @@ On NEAR L1, the fly-coordinator contract (deployed at c.fly-1793636729.testnet) 
 | **Privacy** | **Primary** | Hardware-isolated Intel TDX remote attestation from NEAR AI Cloud verified via `dcap-qvl` to Intel SGX Root CA with zero advisories; Sealed Intent Aggregation decrypts in RAM and zeroes inputs upon batching. Public on-chain deposits paired with confidential strategy and intent execution. |
 | **Swarms** | Secondary | Dark Swarm coordination: collectives of autonomous AI agents and human wallets instantiate ephemeral syndicates, pool liquidity, and coordinate decisions across multi-agent pods (simulated). |
 | **Agents** | Secondary | Native Model Context Protocol (MCP) server integration (`FlyMcpServer`) allowing Claude Code, Codex, and OpenAI-compatible agents to hatch syndicates, deposit escrow, and stream real-time SSE events over stdio JSON-RPC 2.0. |
-| **Security** | Secondary | Non-custodial Hatch Protocol FMEA: automated escape hatch (`hatch_out`) prevents hostage capital; property-based fuzzing (33 tests over 10,000+ state transitions) supports escrow balance invariants; live DCAP tamper rejection verified. |
+| **Security** | Secondary | Non-custodial Hatch Protocol FMEA: automated escape hatch (`hatch_out`) prevents hostage capital; property-based fuzzing (36 tests over 10,000+ state transitions) supports escrow balance invariants; live DCAP tamper rejection verified. |
 | **DeFi** | Secondary | Native 1Click Swap API integration auditing 210 assets, Confidential RFQs with automated LTV/APR health adjudication (simulated), and omnichain settlement to BTC/ETH/SOL via live NEAR Chain Signatures MPC. |
 
 ---

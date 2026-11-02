@@ -52,9 +52,9 @@
 ---
 
 ### [2:35 – 2:45] Scene 5: Verifiability & Outro
-- **Screen:** Terminal showing `./scripts/verify` passing with all 33 Rust tests and 8 architectural layers in <15 seconds. GitHub repository link.
+- **Screen:** Terminal showing `./scripts/verify` passing with all 36 Rust tests and 9 architectural verification layers in <25 seconds. GitHub repository link.
 - **Narrator Audio:**
-  > "Fly includes a complete Model Context Protocol (MCP) server for Claude Code and Codex, 33 Rust unit, integration, and fuzz invariant tests, and an automated Builder Foundry control plane with zero governance drift.
+  > "Fly includes a complete Model Context Protocol (MCP) server for Claude Code and Codex, 36 Rust unit, integration, and fuzz invariant tests, and an automated Builder Foundry control plane with zero governance drift.
   >
-  > Run `./scripts/verify` to verify the entire system in under 15 seconds with zero external keys.
+  > Run `./scripts/verify` to verify the entire system in under 25 seconds with zero external keys.
   > Built for the NEAR Hackathon: Build Beyond Boundaries."
