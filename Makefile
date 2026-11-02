@@ -30,7 +30,7 @@ wasm:
 	@npm run build:wasm
 
 demo:
-	@npm run demo:syndicate
+	@npm run demo
 
 review:
 	@node scripts/argon-review.js

@@ -10,7 +10,11 @@ import { RoostEnclave } from '../src/enclave/roost.js';
  */
 const nest = new FlyNestContract();
 const roost = new RoostEnclave();
-const mcp = new FlyMcpServer({ nestContract: nest, roostEnclave: roost });
+const mcp = new FlyMcpServer({
+  mode: process.env.FLY_MODE || 'chain',
+  nestContract: nest,
+  roostEnclave: roost,
+});
 
 const rl = readline.createInterface({
   input: process.stdin,

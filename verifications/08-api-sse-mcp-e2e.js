@@ -138,7 +138,7 @@ export async function verifyApiSseMcpE2E() {
     // 7. Test Model Context Protocol (MCP) Server
     console.log('[7/8] Testing Model Context Protocol (MCP) Server Integration...');
     const nestMcp = new FlyNestContract();
-    const mcpServer = new FlyMcpServer({ nestContract: nestMcp });
+    const mcpServer = new FlyMcpServer({ mode: 'model', nestContract: nestMcp });
     const tools = mcpServer.listTools();
     console.log(`  ✓ MCP Tools Listed:   ${tools.tools.length} Tools Available for LLM Agents`);
 
@@ -146,13 +146,34 @@ export async function verifyApiSseMcpE2E() {
       syndicateId: 'mcp-agent-syndicate',
       expectedCodeHash: 'valid-mrenclave-hash',
     });
-    console.log(`  ✓ MCP Tool Executed:  fly_hatch_syndicate -> ${mcpHatchResult.id} (${mcpHatchResult.subAccount})`);
+    console.log(`  ✓ MCP Tool Executed:  fly_hatch_syndicate -> ${mcpHatchResult.id} (${mcpHatchResult.subAccount}) [Mode: ${mcpHatchResult.mode}]`);
+    if (mcpHatchResult.mode !== 'model' || !mcpHatchResult.notice) {
+      throw new Error(`Expected model mode notice in MCP output`);
+    }
+
+    const mcpDepositResult = await mcpServer.executeTool('fly_deposit', {
+      syndicateId: 'mcp-agent-syndicate',
+      amountNear: 0.05,
+      flyerId: 'agent.near',
+    });
+    console.log(`  ✓ MCP Tool Executed:  fly_deposit -> ${mcpDepositResult.amount} NEAR deposited [Mode: ${mcpDepositResult.mode}]`);
+
+    const mcpSettleResult = await mcpServer.executeTool('fly_settle', {
+      syndicateId: 'mcp-agent-syndicate',
+      allocations: [['recipient.near', '0.04']],
+    });
+    console.log(`  ✓ MCP Tool Executed:  fly_settle -> ${mcpSettleResult.status} [Mode: ${mcpSettleResult.mode}]`);
 
     const mcpListResult = await mcpServer.executeTool('fly_list_syndicates', { limit: 5 });
-    console.log(`  ✓ MCP Tool Executed:  fly_list_syndicates -> ${mcpListResult.length} syndicates discovered`);
+    console.log(`  ✓ MCP Tool Executed:  fly_list_syndicates -> ${mcpListResult.length} syndicates discovered [Mode: ${mcpListResult.mode}]`);
 
     const mcpMyResult = await mcpServer.executeTool('fly_get_my_syndicates', { accountId: 'agent.near' });
-    console.log(`  ✓ MCP Tool Executed:  fly_get_my_syndicates -> ${mcpMyResult.length} member syndicates found`);
+    console.log(`  ✓ MCP Tool Executed:  fly_get_my_syndicates -> ${mcpMyResult.length} member syndicates found [Mode: ${mcpMyResult.mode}]`);
+
+    // Verify Chain Mode MCP server tool execution (live queries via FlyChainClient)
+    const chainMcpServer = new FlyMcpServer({ mode: 'chain' });
+    const chainListResult = await chainMcpServer.executeTool('fly_list_syndicates', { limit: 3 });
+    console.log(`  ✓ Chain MCP Executed: fly_list_syndicates -> ${chainListResult.length} on-chain syndicates [Mode: ${chainMcpServer.mode}]`);
 
     // Clean up first daemon
     sseReq.destroy();

@@ -10,6 +10,7 @@
   "scripts": {
     "verify": "./scripts/verify",
     "test": "node verify-all.js",
+    "demo": "node scripts/demo.js",
     "demo:syndicate": "node src/simulation/runner.js",
     "demo:network": "node scripts/network-demo.js",
     "start:daemon": "node -e 'import(\"./src/api/server.js\").then(m => new m.FlyApiDaemon({ port: 3000 }).start().then(s => console.log(\"Fly Daemon live on port \" + s.port)))'",

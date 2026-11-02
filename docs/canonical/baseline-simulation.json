@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "seed": 4607065,
+    "numRuns": 100,
+    "agentsPerEpoch": 8,
+    "initialPool": {
+      "wNearReserve": 100000,
+      "usdcReserve": 396000,
+      "referencePrice": 3.96
+    }
+  },
+  "sequential": {
+    "slippagePct": {
+      "mean": 16.674039749077416,
+      "stdDev": 1.9059530286536595,
+      "marginOfError": 0.3735667936161172,
+      "ciLow": 16.3004729554613,
+      "ciHigh": 17.047606542693533
+    },
+    "adversaryProfitUsdc": {
+      "mean": 519.4380285069701,
+      "stdDev": 81.61142082849868,
+      "marginOfError": 15.99583848238574,
+      "ciLow": 503.44219002458436,
+      "ciHigh": 535.4338669893558
+    }
+  },
+  "sealedBatch": {
+    "slippagePct": {
+      "mean": 15.601157013783208,
+      "stdDev": 1.8894322955735738,
+      "marginOfError": 0.37032872993242044,
+      "ciLow": 15.230828283850787,
+      "ciHigh": 15.971485743715629
+    },
+    "adversaryProfitUsdc": {
+      "mean": 0,
+      "stdDev": 0,
+      "marginOfError": 0,
+      "ciLow": 0,
+      "ciHigh": 0
+    }
+  },
+  "savingsUsdc": {
+    "mean": 481.08756409153085,
+    "stdDev": 51.342744158116666,
+    "marginOfError": 10.063177854990865,
+    "ciLow": 471.02438623654,
+    "ciHigh": 491.1507419465217
+  }
+}

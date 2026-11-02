@@ -33,9 +33,11 @@ export class FlyClient {
   }
 
   // --- 1. Syndicate Lifecycle ---
-  async hatchSyndicate({ id, type = 'FLASH', quorumThreshold = 3, maxSpendNear = 100, expectedCodeHash, timeoutBlocks = 50 }) {
+  async hatchSyndicate({ id, syndicateId, type = 'FLASH', quorumThreshold = 3, maxSpendNear = 100, expectedCodeHash, timeoutBlocks = 50 }) {
+    const sId = syndicateId || id;
     const res = await this._request('POST', '/v1/syndicates/hatch', {
-      id,
+      id: sId,
+      syndicateId: sId,
       type,
       quorumThreshold,
       maxSpendNear,
@@ -60,10 +62,29 @@ export class FlyClient {
     return res.data;
   }
 
-  async deposit(syndicateId, flyerId, amountNear) {
+  async deposit(syndicateId, flyerId, amountNear, policyHash = null) {
     const res = await this._request('POST', `/v1/syndicates/${syndicateId}/deposit`, {
       flyerId,
       amountNear,
+      policyHash,
+    });
+    return res.data;
+  }
+
+  async settleBatch(syndicateId, { allocations = [], orderHash = null, epoch = 1, nonce = 1, enclaveSignature = null } = {}) {
+    const res = await this._request('POST', `/v1/syndicates/${syndicateId}/settle`, {
+      allocations,
+      orderHash,
+      epoch,
+      nonce,
+      enclaveSignature,
+    });
+    return res.data;
+  }
+
+  async hatchOut(syndicateId, flyerId = null) {
+    const res = await this._request('POST', `/v1/syndicates/${syndicateId}/hatch-out`, {
+      flyerId,
     });
     return res.data;
   }
@@ -154,7 +175,7 @@ export class FlyClient {
   }
 
   // --- 7. Emergency Escape Hatch ---
-  async hatchOut(syndicateId, flyerId, currentBlock = 2000) {
+  async emergencyHatchOut(syndicateId, flyerId, currentBlock = 2000) {
     const res = await this._request('POST', '/v1/emergency/hatch-out', {
       syndicateId,
       flyerId,

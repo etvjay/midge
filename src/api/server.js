@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { EventEmitter } from 'node:events';
 import { FlyNestContract } from '../contracts/nest.js';
+import { FlyChainClient } from '../chain/client.js';
 import { RoostEnclave } from '../enclave/roost.js';
 import { EnclaveCrypto } from '../enclave/crypto.js';
 import { SyndicatePod } from '../syndicate/pod.js';
@@ -13,12 +14,21 @@ import { ConfidentialComputeSyndicate } from '../facilities/compute-syndicate.js
 import { ResilienceEngine } from '../resilience/failure-matrix.js';
 
 export class FlyApiDaemon {
-  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null } = {}) {
+  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null } = {}) {
     this.port = port;
     this.host = host;
     this.allowedOrigins = allowedOrigins;
     this.apiKey = apiKey || process.env.FLY_API_KEY || null;
+    this.mode = mode || process.env.FLY_MODE || 'chain';
     this.nest = new FlyNestContract();
+    this.chainClient = null;
+    if (this.mode === 'chain') {
+      try {
+        this.chainClient = new FlyChainClient();
+      } catch (e) {
+        this.mode = 'model';
+      }
+    }
     this.roost = new RoostEnclave();
     this.farShard = new FarPrivateShardBridge();
     this.mpc = new ChainSignaturesMPC({ networkId: 'testnet' });
@@ -118,7 +128,15 @@ export class FlyApiDaemon {
       headers['Vary'] = 'Origin';
     }
     res.writeHead(statusCode, headers);
-    res.end(JSON.stringify(data));
+    let payload = data;
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      payload = {
+        mode: this.mode,
+        ...(this.mode === 'model' ? { notice: '[MODEL MODE, no chain]' } : {}),
+        ...data,
+      };
+    }
+    res.end(JSON.stringify(payload));
   }
 
   async handleRequest(req, res) {
@@ -263,8 +281,19 @@ export class FlyApiDaemon {
 
     // List all syndicates (paginated)
     if (method === 'GET' && (pathname === '/v1/syndicates' || pathname === '/v1/syndicates/')) {
-      const fromIndex = parsedUrl.query.fromIndex || 0;
-      const limit = parsedUrl.query.limit || 10;
+      const fromIndex = parseInt(url.searchParams.get('fromIndex') || '0', 10);
+      const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+      if (this.mode === 'chain' && this.chainClient) {
+        try {
+          const list = await this.chainClient.listSyndicates({ fromIndex, limit });
+          return this.sendJson(res, 200, {
+            total: list.length,
+            syndicates: list,
+          }, req);
+        } catch (e) {
+          // fallback to model if rpc unavailable
+        }
+      }
       const list = this.nest.listSyndicates(fromIndex, limit);
       return this.sendJson(res, 200, {
         total: this.nest.getSyndicateCount(),
@@ -285,8 +314,19 @@ export class FlyApiDaemon {
     // List syndicates by member account
     if (method === 'GET' && pathname.startsWith('/v1/syndicates/member/')) {
       const memberId = pathname.replace('/v1/syndicates/member/', '');
-      const fromIndex = parsedUrl.query.fromIndex || 0;
-      const limit = parsedUrl.query.limit || 10;
+      const fromIndex = parseInt(url.searchParams.get('fromIndex') || '0', 10);
+      const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+      if (this.mode === 'chain' && this.chainClient) {
+        try {
+          const list = await this.chainClient.listSyndicatesByMember(memberId, { fromIndex, limit });
+          return this.sendJson(res, 200, {
+            member: memberId,
+            syndicates: list,
+          }, req);
+        } catch (e) {
+          // fallback to model if rpc unavailable
+        }
+      }
       const list = this.nest.getSyndicatesByMember(memberId, fromIndex, limit);
       return this.sendJson(res, 200, {
         member: memberId,
@@ -330,6 +370,47 @@ export class FlyApiDaemon {
       });
 
       return this.sendJson(res, 200, receipt);
+    }
+
+    if (method === 'POST' && pathname.match(/^\/v1\/syndicates\/[^\/]+\/settle$/)) {
+      const synId = pathname.split('/')[3];
+      const body = await this.parseBody(req);
+      if (this.mode === 'chain' && this.chainClient?.isConfiguredForWrites()) {
+        try {
+          const result = await this.chainClient.settleBatch({
+            syndicateId: synId,
+            allocations: body.allocations || [],
+            orderHash: body.orderHash,
+            epoch: body.epoch,
+            nonce: body.nonce,
+            enclaveSignature: body.enclaveSignature,
+          });
+          return this.sendJson(res, 200, result);
+        } catch (err) {
+          return this.sendJson(res, 400, { error: err.message }, req);
+        }
+      }
+      return this.sendJson(res, 200, {
+        status: 'SETTLED_MODEL',
+        syndicateId: synId,
+        allocations: body.allocations,
+      });
+    }
+
+    if (method === 'POST' && pathname.match(/^\/v1\/syndicates\/[^\/]+\/hatch-out$/)) {
+      const synId = pathname.split('/')[3];
+      const body = await this.parseBody(req);
+      if (this.mode === 'chain' && this.chainClient?.isConfiguredForWrites()) {
+        try {
+          const result = await this.chainClient.hatchOut({ syndicateId: synId });
+          return this.sendJson(res, 200, result);
+        } catch (err) {
+          return this.sendJson(res, 400, { error: err.message }, req);
+        }
+      }
+      const flyer = body.flyerId || 'flyer.testnet';
+      const result = this.nest.hatchOut(synId, 999999, flyer);
+      return this.sendJson(res, 200, result);
     }
 
     // Pods inside Dark Vaults
