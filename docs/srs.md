@@ -92,6 +92,17 @@ flowchart TD
 * **FR-014 (Hatch-Out Escape Valve):** If the Roost stalls, crashes, or fails HAQ verification before the block timeout, any participating Flyer shall be permitted to call `hatch_out()` to claim a 100% refund of deposited escrow without coordinator approval.
 * **FR-015 (Pre-Timeout Lockout):** The Nest contract shall reject any `hatch_out()` request submitted prior to the expiration of the timelock while the round is marked `ACTIVE`.
 
+### 3.6 Persistent Treasuries & Multichain Extensions
+* **FR-016 (Dark Vault Lifecycles):** The Nest contract shall support long-lived syndicates (`DARK_VAULT`) that persist across sequential epochs, maintaining rolling compute budgets and specialized sub-swarms (Pods).
+* **FR-017 (Omnichain Threshold Identity):** The system shall derive native Bitcoin Taproot, EVM, and Solana addresses from the syndicate account via NEAR Chain Signatures MPC (`v1.signer`).
+* **FR-018 (x402 Agent Micro-Commerce):** Flyers within deliberation shall be capable of exchanging proprietary data or oracle signals via HTTP 402 payment challenges settled instantly via PingPay micro-channels.
+
+### 3.7 Institutional Dark Facilities
+* **FR-019 (Confidential RFQs & Private Credit):** The Roost shall ingest sealed borrowing RFQs and lender quotes, matching optimal terms without leaking collateral or debt thresholds to public mempools, and executing private margin adjudication.
+* **FR-020 (OTC Block Trade Dark Crossing):** The Roost shall match crossing high-volume orders at mid-market prices, settling atomically on the FAR Private Shard with zero price impact.
+* **FR-021 (Confidential AI Compute Pooling):** Flyers shall be capable of pooling compute credits to execute sealed inferences on hardware-attested NEAR AI Cloud models (`Qwen/Qwen3.6-35B-A3B-FP8`) without prompt exposure.
+* **FR-022 (5-Layer Resilience Engine):** The protocol shall enforce deterministic resolution remedies across enclave failure, agent dropout, market execution failure, cross-chain MPC delay, and behavioral breaches.
+
 ---
 
 ## 4. Non-Functional Requirements

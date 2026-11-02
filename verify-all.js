@@ -1,10 +1,14 @@
 import { verifyHardwareAttestation } from './verifications/01-hardware-attestation.js';
 import { verifyConfidentialIntents } from './verifications/02-confidential-intents.js';
 import { verifyHatchProtocol } from './verifications/03-hatch-escape-hatch.js';
+import { verifyDarkVaultAndEcosystem } from './verifications/04-dark-vault-epochs.js';
+import { verifyConfidentialRfqAndAdjudication } from './verifications/05-confidential-rfq-adjudication.js';
+import { verifyOtcAndComputeFacilities } from './verifications/06-otc-and-compute-facilities.js';
+import { verifyResilienceFailureMatrix } from './verifications/07-resilience-failure-matrix.js';
 
 async function runAllVerifications() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
-  console.log('║       FLY PROTOCOL: CORE VERIFICATION SUITE (PHASE 1)         ║');
+  console.log('║       FLY PROTOCOL: COMPLETE MASTER VERIFICATION SUITE         ║');
   console.log('║       NEAR L1 Hackathon: Build Beyond Boundaries (Nov 2026)    ║');
   console.log('╚════════════════════════════════════════════════════════════════╝');
 
@@ -32,18 +36,57 @@ async function runAllVerifications() {
     results.hatch = { verified: false, error: err.message };
   }
 
+  try {
+    results.darkVault = await verifyDarkVaultAndEcosystem();
+  } catch (err) {
+    console.error('❌ Dark Vault / Pods Check Failed:', err.message);
+    results.darkVault = { verified: false, error: err.message };
+  }
+
+  try {
+    results.rfq = await verifyConfidentialRfqAndAdjudication();
+  } catch (err) {
+    console.error('❌ Confidential RFQ & Adjudication Failed:', err.message);
+    results.rfq = { verified: false, error: err.message };
+  }
+
+  try {
+    results.otcCompute = await verifyOtcAndComputeFacilities();
+  } catch (err) {
+    console.error('❌ OTC Block Trades & Compute Syndicate Failed:', err.message);
+    results.otcCompute = { verified: false, error: err.message };
+  }
+
+  try {
+    results.resilience = await verifyResilienceFailureMatrix();
+  } catch (err) {
+    console.error('❌ Resilience Failure Matrix Failed:', err.message);
+    results.resilience = { verified: false, error: err.message };
+  }
+
   const duration = ((Date.now() - startTotal) / 1000).toFixed(2);
-  const allPassed = results.tee.verified && results.intents.verified && results.hatch.verified;
+  const allPassed =
+    results.tee.verified &&
+    results.intents.verified &&
+    results.hatch.verified &&
+    results.darkVault.verified &&
+    results.rfq.verified &&
+    results.otcCompute.verified &&
+    results.resilience.verified;
 
   console.log('\n════════════════════════════════════════════════════════════════');
   console.log('                 FINAL VERIFICATION SUMMARY                     ');
   console.log('════════════════════════════════════════════════════════════════');
-  console.log(` 1. Live TEE Hardware Attestation (HAQ):     ${results.tee.verified ? '✅ PASS' : '❌ FAIL'}`);
-  console.log(` 2. 1Click Confidential Intents Liquidity:   ${results.intents.verified ? '✅ PASS' : '❌ FAIL'}`);
-  console.log(` 3. Hatch Factory & Non-Custodial Escape:    ${results.hatch.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 1. Live TEE Hardware Attestation (HAQ):         ${results.tee.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 2. 1Click Confidential Intents Liquidity:       ${results.intents.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 3. Hatch Factory & Non-Custodial Escape:        ${results.hatch.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 4. Dark Vault, Pods, FAR Shard & Omnichain MPC:   ${results.darkVault.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 5. Confidential RFQ & Private Adjudication:     ${results.rfq.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 6. OTC Block Trades & AI Compute Syndicate:     ${results.otcCompute.verified ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(` 7. 5-Layer Resilience Failure Matrix (FMEA):    ${results.resilience.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log('────────────────────────────────────────────────────────────────');
   console.log(` Total Execution Time: ${duration}s`);
-  console.log(` Verdict: ${allPassed ? 'ALL VERIFICATIONS PASSED (READY FOR PHASE 2)' : 'CHECKS FAILED'}`);
+  console.log(` Verdict: ${allPassed ? 'ALL 7 ARCHITECTURAL VERIFICATIONS PASSED (100% COMPLETE)' : 'CHECKS FAILED'}`);
   console.log('════════════════════════════════════════════════════════════════\n');
 
   if (!allPassed) {

@@ -9,16 +9,23 @@
     "demo:syndicate": "node src/simulation/runner.js",
     "verify:tee": "node verifications/01-hardware-attestation.js",
     "verify:intents": "node verifications/02-confidential-intents.js",
-    "verify:hatch": "node verifications/03-hatch-escape-hatch.js"
+    "verify:hatch": "node verifications/03-hatch-escape-hatch.js",
+    "verify:vault": "node verifications/04-dark-vault-epochs.js",
+    "verify:rfq": "node verifications/05-confidential-rfq-adjudication.js",
+    "verify:otc": "node verifications/06-otc-and-compute-facilities.js",
+    "verify:matrix": "node verifications/07-resilience-failure-matrix.js",
+    "verify:rust": "cd contracts/fly-coordinator && cargo test"
   },
   "keywords": [
     "near",
     "privacy",
     "tee",
     "syndicate",
+    "pod",
     "agents",
     "confidential-intents",
-    "chain-signatures"
+    "chain-signatures",
+    "rfq"
   ],
   "license": "MIT"
 }

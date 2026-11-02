@@ -1,5 +1,14 @@
 export { FlyNestContract } from './contracts/nest.js';
 export { RoostEnclave } from './enclave/roost.js';
+export { EnclaveCrypto } from './enclave/crypto.js';
+export { SyndicatePod } from './syndicate/pod.js';
+export { FarPrivateShardBridge } from './settlement/far-shard.js';
+export { ChainSignaturesMPC } from './multichain/chain-signatures.js';
+export { X402CommerceEngine } from './commerce/x402.js';
+export { ConfidentialRfqFacility } from './facilities/rfq-adjudication.js';
+export { OtcBlockTradeFacility } from './facilities/otc-block-trade.js';
+export { ConfidentialComputeSyndicate } from './facilities/compute-syndicate.js';
+export { ResilienceEngine } from './resilience/failure-matrix.js';
 export { OneClickIntentAdapter } from './intents/oneclick.js';
 export { OutLayerPolicyGuard } from './policies/outlayer.js';
 export { runDarkSwarmSimulation } from './simulation/runner.js';

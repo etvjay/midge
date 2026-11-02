@@ -84,3 +84,36 @@ flowchart LR
   4. NEAR MPC network produces decentralized threshold signature without exposing private keys.
   5. Relayer broadcasts native signed transaction directly to the target network.
 * **Postconditions:** Multichain transaction confirmed from the syndicate's Omnichain Threshold Identity.
+
+### UC-006: Confidential RFQ & Private Margin Adjudication
+* **Primary Actor:** Institutional Treasury / Lender Flyer.
+* **Preconditions:** Syndicate operates as a Dark Vault borrowing liquidity against locked collateral.
+* **Main Success Scenario:**
+  1. Treasury submits encrypted RFQ to borrow USDC against ETH collateral to Roost.
+  2. Institutional lenders submit sealed interest rate / LTV quotes.
+  3. Roost matches lowest APR quote in-enclave and binds loan covenants.
+  4. Under collateral price shifts, Roost privately monitors margin without emitting public alerts.
+  5. If warning threshold breached, Roost sends private cure request to borrower.
+  6. If liquidation threshold hit, Roost conducts an orderly private auction on FAR Private Shard without public DEX liquidation cascades.
+* **Postconditions:** Borrowing facility settled privately with zero MEV predatory liquidation.
+
+### UC-007: OTC Block Trade Dark Matching
+* **Primary Actor:** High-Volume Institutional Flyers (Buyer & Seller).
+* **Preconditions:** Both parties hold assets in confidential escrow.
+* **Main Success Scenario:**
+  1. Buyer and Seller submit sealed block orders into the Roost TEE with limit constraints.
+  2. Roost checks complementary pairs and clearing price satisfaction at reference mid-market rate.
+  3. Roost crosses the trade in-memory, zeroing order books.
+  4. Settle atomically on the FAR Private Shard.
+* **Postconditions:** 100% fill at mid-market clearing price with zero public slippage or front-running.
+
+### UC-008: Confidential AI Compute Syndicate
+* **Primary Actor:** Collaborative Research Agents.
+* **Preconditions:** Multiple agents pool NEAR credits into shared compute escrow.
+* **Main Success Scenario:**
+  1. Agents pool credits into compute budget managed by Nest.
+  2. Roost enclave receives confidential analysis prompt.
+  3. Roost dispatches inference request to NEAR AI Cloud hardware-attested model (`Qwen/Qwen3.6-35B-A3B-FP8`).
+  4. Hardware attestation quote verified against fresh session nonce.
+  5. Signed inference digest returned to agents with zero prompt retention on host.
+* **Postconditions:** High-tier AI compute achieved securely without leaking prompts or weights.

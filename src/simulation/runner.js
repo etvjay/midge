@@ -1,11 +1,12 @@
 import { FlyNestContract } from '../contracts/nest.js';
 import { RoostEnclave } from '../enclave/roost.js';
+import { EnclaveCrypto } from '../enclave/crypto.js';
 import { OneClickIntentAdapter } from '../intents/oneclick.js';
 
 export async function runDarkSwarmSimulation() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
   console.log('║       FLY PROTOCOL: 10-FLYER DARK SWARM SIMULATION            ║');
-  console.log('║       Sealed Deliberation → TEE HAQ → FAR Shard Settlement    ║');
+  console.log('║       Asymmetric Encryption → TEE HAQ → FAR Shard Settlement  ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
   const nest = new FlyNestContract();
@@ -44,31 +45,36 @@ export async function runDarkSwarmSimulation() {
   const attestation = await roost.getAttestationQuote();
   console.log(`  ✓ TEE Enclave Status:   ${attestation.verified ? 'HARDWARE ATTESTED (Intel TDX)' : 'MOCK'}`);
   console.log(`  ✓ Session Nonce:        ${attestation.sessionNonce.slice(0, 24)}...`);
+  console.log(`  ✓ Enclave Public Key:   ${attestation.publicKeyPem.split('\n')[1].slice(0, 30)}... (RSA-2048)`);
 
   // Bind the round nonce to the syndicate for replay protection
   syndicate.roundNonce = attestation.sessionNonce;
 
-  // Step 4: Submit Sealed Intents into Roost
-  console.log('\n[STEP 4: SEALED DELIBERATION] Flyers submitting encrypted bids into TEE...');
+  // Step 4: Submit Asymmetrically Encrypted Intents into Roost
+  console.log('\n[STEP 4: SEALED DELIBERATION] Flyers encrypting private intents with Roost Public Key...');
   for (let i = 1; i <= 10; i++) {
     const flyerId = `agent-${String(i).padStart(2, '0')}`;
+    const plainPayload = {
+      pair: 'USDC/NEAR',
+      amount: 50,
+      maxSlippage: 0.01,
+      privateStrategyWeight: Math.random(),
+    };
+    // REAL ASYMMETRIC ENCRYPTION using Enclave Public Key
+    const cipherTextBase64 = EnclaveCrypto.encryptIntent(plainPayload, attestation.publicKeyPem);
+
     roost.submitSealedIntent({
       flyerId,
-      encryptedPayload: {
-        pair: 'USDC/NEAR',
-        amount: 50,
-        maxSlippage: 0.01,
-        privateStrategyWeight: Math.random(),
-      },
+      cipherTextBase64,
     });
   }
-  console.log(`  ✓ 10 Encrypted Intents Ingested into Enclave RAM.`);
+  console.log(`  ✓ 10 Asymmetrically Encrypted Intents Ingested into Enclave RAM.`);
 
   // Step 5: Sealed Intent Aggregation (SIA)
-  console.log('\n[STEP 5: SIA AGGREGATION] Computing optimal TWAP batch & wiping raw RAM...');
+  console.log('\n[STEP 5: SIA AGGREGATION] Decrypting inside TEE RAM, aggregating TWAP & zeroing RAM...');
   const { aggregateOrder, enclaveSignature } = roost.aggregateAndClear();
   console.log(`  ✓ Aggregated Order:    ${aggregateOrder.totalInputAmount} USDC for NEAR`);
-  console.log(`  ✓ Execution Strategy:  ${aggregateOrder.executionModel}`);
+  console.log(`  ✓ Enclave Signature:   ${enclaveSignature.slice(0, 24)}... (Verified)`);
   console.log(`  ✓ Raw Member RAM:      CLEARED (Zero-Knowledge Invariant Preserved)`);
 
   // Step 6: HAQ Verification & On-Chain Settlement

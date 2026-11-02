@@ -1,17 +1,20 @@
 import crypto from 'node:crypto';
+import { EnclaveCrypto } from './crypto.js';
 
 /**
  * The Roost: Runs inside an AMD SEV-SNP / Intel TDX enclave on NEAR AI Cloud.
- * Ingests encrypted member intents, aggregates them into a collective TWAP order,
- * and clears private member parameters from memory.
+ * Ingests asymmetric encrypted member intents, decrypts inside TEE RAM,
+ * aggregates them into a collective TWAP/RFQ order, and zeroes raw inputs.
  */
 export class RoostEnclave {
   constructor({ model = 'Qwen/Qwen3.6-35B-A3B-FP8', cloudApiUrl = 'https://cloud-api.near.ai/v1' } = {}) {
     this.model = model;
     this.cloudApiUrl = cloudApiUrl;
-    this.sessionKeypair = crypto.generateKeyPairSync('ed25519');
+    const { publicKey, privateKey } = EnclaveCrypto.generateEnclaveKeypair();
+    this.publicKeyPem = publicKey;
+    this.privateKeyPem = privateKey;
     this.sessionNonce = crypto.randomBytes(32).toString('hex');
-    this.sealedIntents = [];
+    this.sealedEncryptedIntents = [];
   }
 
   /**
@@ -26,7 +29,7 @@ export class RoostEnclave {
     const report = await res.json();
     return {
       sessionNonce: this.sessionNonce,
-      publicKey: this.sessionKeypair.publicKey.export({ type: 'spki', format: 'pem' }),
+      publicKeyPem: this.publicKeyPem,
       gatewayAttestation: report.gateway_attestation,
       modelAttestations: report.model_attestations,
       verified: !!report.gateway_attestation?.intel_quote,
@@ -34,33 +37,48 @@ export class RoostEnclave {
   }
 
   /**
-   * Submit an encrypted intent into the enclave.
+   * Submit an asymmetrically encrypted intent into the enclave.
    */
-  submitSealedIntent({ flyerId, encryptedPayload }) {
-    this.sealedIntents.push({
+  submitSealedIntent({ flyerId, cipherTextBase64 }) {
+    this.sealedEncryptedIntents.push({
       flyerId,
-      payload: encryptedPayload,
+      cipherText: cipherTextBase64,
       receivedAt: Date.now(),
     });
-    return { status: 'RECEIVED_IN_ENCLAVE', count: this.sealedIntents.length };
+    return {
+      status: 'ENCRYPTED_IN_ENCLAVE_RAM',
+      count: this.sealedEncryptedIntents.length,
+      bytes: cipherTextBase64.length,
+    };
   }
 
   /**
    * Sealed Intent Aggregation (SIA):
-   * Aggregates member orders into a collective TWAP curve,
-   * then wipes individual member intents from enclave RAM.
+   * Decrypts member orders strictly in RAM, aggregates into a collective market order,
+   * signs the consensus proof, and instantly zeroes member inputs from memory.
    */
   aggregateAndClear() {
-    if (this.sealedIntents.length === 0) {
+    if (this.sealedEncryptedIntents.length === 0) {
       throw new Error('Cannot aggregate empty sealed intent queue');
     }
 
-    const totalAllocated = this.sealedIntents.reduce((sum, item) => sum + (item.payload.amount || 0), 0);
-    const participantCount = this.sealedIntents.length;
+    // 1. Decrypt each intent strictly inside the TEE memory boundary
+    const decryptedIntents = this.sealedEncryptedIntents.map((item) => {
+      const payload = EnclaveCrypto.decryptIntent(item.cipherText, this.privateKeyPem);
+      return {
+        flyerId: item.flyerId,
+        amount: payload.amount || 0,
+        maxSlippage: payload.maxSlippage || 0.01,
+        pair: payload.pair || 'USDC/NEAR',
+      };
+    });
 
-    // Construct the single unified market intent
+    const totalAllocated = decryptedIntents.reduce((sum, item) => sum + item.amount, 0);
+    const participantCount = decryptedIntents.length;
+
+    // 2. Compute aggregate market batch
     const aggregateOrder = {
-      pair: 'USDC/NEAR',
+      pair: decryptedIntents[0]?.pair || 'USDC/NEAR',
       totalInputAmount: totalAllocated,
       flyerCount: participantCount,
       executionModel: 'TWAP_AGGREGATED_BATCH',
@@ -68,13 +86,18 @@ export class RoostEnclave {
       timestamp: Date.now(),
     };
 
-    // Zero-memory invariant: clear raw individual intents from memory
-    this.sealedIntents = [];
+    // 3. Cryptographically sign the batch with the enclave's session key
+    const enclaveSignature = EnclaveCrypto.signBatch(aggregateOrder, this.privateKeyPem);
+
+    // 4. Zero-Memory Invariant: WIPE raw individual intents and decrypted parameters
+    this.sealedEncryptedIntents = [];
+    decryptedIntents.length = 0;
 
     return {
       aggregateOrder,
       nonce: this.sessionNonce,
-      enclaveSignature: crypto.sign(null, Buffer.from(JSON.stringify(aggregateOrder)), this.sessionKeypair.privateKey).toString('hex'),
+      enclavePublicKey: this.publicKeyPem,
+      enclaveSignature,
     };
   }
 }
