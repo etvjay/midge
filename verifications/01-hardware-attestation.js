@@ -1,5 +1,23 @@
 import crypto from 'node:crypto';
 
+/**
+ * Verification 1: Live TEE Hardware Attestation (HAQ)
+ * Target: NEAR AI Cloud (AMD SEV-SNP / Intel TDX / NVIDIA GPU)
+ * 
+ * Parses live hardware attestation with cryptographic nonce binding:
+ * 1. Generates a fresh 32-byte cryptographic nonce to defeat replay attacks.
+ * 2. Queries NEAR AI Cloud attestation endpoint for target model.
+ * 3. Parses Intel TDX Quote v4 binary structure at byte offsets:
+ *    - Header: Quote Version (4), Attestation Key Type (2: ECDSA-256), TEE Type (0x81: TDX)
+ *    - TD Report: MRTD (offset 184..232), RTMRs (offsets 376..568)
+ *    - REPORTDATA (offset 568..632, 64 bytes):
+ *      * Bytes 0..19: Enclave signing address (20 bytes)
+ *      * Bytes 20..31: Zero padding (12 bytes)
+ *      * Bytes 32..63: Cryptographic nonce binding (32 bytes)
+ * 4. Checks Model Enclave attestation with NVIDIA GPU payload presence and nonce echo.
+ * 5. Fails closed: Rejects immediately if any check or nonce binding fails.
+ * Note: Full Intel SGX/TDX Root CA signature verification is pending (tracked in GAP-006).
+ */
 export async function verifyHardwareAttestation() {
   console.log('\n======================================================');
   console.log(' [VERIFICATION 1] LIVE TEE HARDWARE ATTESTATION (HAQ)');
@@ -8,12 +26,12 @@ export async function verifyHardwareAttestation() {
 
   // 1. Generate a cryptographically secure 32-byte nonce (replay protection)
   const sessionNonce = crypto.randomBytes(32).toString('hex');
-  console.log(`[1/4] Generated Fresh Nonce: ${sessionNonce.slice(0, 16)}... (32 bytes)`);
+  console.log(`[1/5] Generated Fresh Nonce: ${sessionNonce.slice(0, 16)}... (32 bytes)`);
 
   const model = 'Qwen/Qwen3.6-35B-A3B-FP8';
   const url = `https://cloud-api.near.ai/v1/attestation/report?model=${encodeURIComponent(model)}&signing_algo=ecdsa&nonce=${sessionNonce}`;
 
-  console.log(`[2/4] Querying Attestation Report from NEAR AI Cloud...`);
+  console.log(`[2/5] Querying Attestation Report from NEAR AI Cloud...`);
   const startTime = Date.now();
   const res = await fetch(url);
   const latency = Date.now() - startTime;
@@ -23,35 +41,88 @@ export async function verifyHardwareAttestation() {
   }
 
   const report = await res.json();
-  console.log(`[3/4] Received Report in ${latency}ms`);
+  console.log(`[3/5] Received Report in ${latency}ms`);
 
-  // 2. Validate structural integrity of the attestation payload
-  const hasGateway = !!report.gateway_attestation;
-  const hasModel = Array.isArray(report.model_attestations) && report.model_attestations.length > 0;
-  const hasNvidia = hasModel && !!report.model_attestations[0].nvidia_payload;
-  const hasIntel = hasGateway && !!report.gateway_attestation.intel_quote;
+  // 2. Structural Presence Check
+  const gateway = report.gateway_attestation;
+  const modelAtt = report.model_attestations?.[0];
 
-  const gatewaySigner = report.gateway_attestation?.signing_address;
-  const modelSigner = report.model_attestations?.[0]?.signing_address;
-
-  console.log(`[4/4] Cryptographic Evidence Breakdown:`);
-  console.log(`  - Gateway Attestation: ${hasGateway ? 'VALID' : 'MISSING'}`);
-  console.log(`  - Intel TDX Quote:     ${hasIntel ? 'PRESENT' : 'NONE'}`);
-  console.log(`  - Gateway Signer Key:  ${gatewaySigner || 'N/A'}`);
-  console.log(`  - Model TEE Enclave:   ${hasModel ? 'ACTIVE' : 'INACTIVE'}`);
-  console.log(`  - NVIDIA GPU Payload:  ${hasNvidia ? 'ATTESTED' : 'NONE'}`);
-  console.log(`  - Model Signer Key:    ${modelSigner || 'N/A'}`);
-
-  if (!hasGateway || !hasModel || !hasIntel) {
-    throw new Error('Attestation verification failed: Incomplete hardware proof.');
+  if (!gateway || !gateway.intel_quote) {
+    throw new Error('[HAQ REJECT] Gateway Intel TDX quote missing from attestation report.');
+  }
+  if (!modelAtt || !modelAtt.nvidia_payload) {
+    throw new Error('[HAQ REJECT] Model NVIDIA GPU attestation payload missing.');
   }
 
-  console.log('\n>>> [PASS] HAQ VERIFICATION SUCCESSFUL: Enclave state is genuine & verified.');
+  // 3. Byte-Level Parsing of Intel TDX Quote v4
+  console.log(`[4/5] Parsing Intel TDX Quote v4 Byte Structure...`);
+  const quoteBuf = Buffer.from(gateway.intel_quote, 'hex');
+  if (quoteBuf.length < 636) {
+    throw new Error(`[HAQ REJECT] Intel TDX quote length too short: ${quoteBuf.length} bytes (expected >= 636).`);
+  }
+
+  // Quote Header (48 bytes)
+  const quoteVersion = quoteBuf.readUInt16LE(0);
+  const attKeyType = quoteBuf.readUInt16LE(2);
+  const teeType = quoteBuf.readUInt32LE(4);
+
+  if (quoteVersion !== 4) {
+    throw new Error(`[HAQ REJECT] Unexpected Intel Quote version: ${quoteVersion} (expected 4).`);
+  }
+  if (attKeyType !== 2) {
+    throw new Error(`[HAQ REJECT] Unexpected Attestation Key Type: ${attKeyType} (expected 2: ECDSA-256).`);
+  }
+  if (teeType !== 0x81) {
+    throw new Error(`[HAQ REJECT] Unexpected TEE Type: 0x${teeType.toString(16)} (expected 0x81: Intel TDX).`);
+  }
+
+  // TD Report Body: MRTD & REPORTDATA
+  const mrtd = quoteBuf.subarray(184, 232).toString('hex');
+  const quoteReportData = quoteBuf.subarray(568, 632).toString('hex');
+  const expectedReportData = gateway.report_data?.toLowerCase();
+
+  if (quoteReportData.toLowerCase() !== expectedReportData) {
+    throw new Error('[HAQ REJECT] Quote REPORTDATA mismatch against gateway report_data payload.');
+  }
+
+  // 4. Nonce & Signing Key Binding Verification (Quote REPORTDATA 64 bytes)
+  console.log(`[5/5] Cryptographic Invariant & Nonce Binding Verification:`);
+  const signerInQuote = quoteReportData.slice(0, 40).toLowerCase();
+  const gatewaySigner = gateway.signing_address.replace(/^0x/i, '').toLowerCase();
+  const nonceInQuote = quoteReportData.slice(64, 128).toLowerCase();
+
+  const isSignerBound = signerInQuote === gatewaySigner;
+  const isNonceBound = nonceInQuote === sessionNonce.toLowerCase();
+  const isModelNonceBound = modelAtt.request_nonce?.toLowerCase() === sessionNonce.toLowerCase();
+  const nvidiaPayloadBytes = typeof modelAtt.nvidia_payload === 'string'
+    ? Math.floor(modelAtt.nvidia_payload.length / 2)
+    : Buffer.from(JSON.stringify(modelAtt.nvidia_payload)).length;
+
+  console.log(`  - Intel TDX Quote:     PARSED v4 (TEE Type: 0x81 TDX, Length: ${quoteBuf.length} bytes)`);
+  console.log(`  - MRTD Measurement:    ${mrtd.slice(0, 16)}... (Parsed)`);
+  console.log(`  - Gateway Signer Key:  0x${gatewaySigner} (${isSignerBound ? 'BOUND' : 'UNBOUND'})`);
+  console.log(`  - Client Nonce Echo:   ${sessionNonce.slice(0, 16)}... (${isNonceBound ? 'VERIFIED' : 'FAILED'})`);
+  console.log(`  - Model TEE Enclave:   ${modelAtt.model_name} (Active, Nonce Echo: ${isModelNonceBound ? 'OK' : 'MISMATCH'})`);
+  console.log(`  - NVIDIA GPU Payload:  PRESENT (${nvidiaPayloadBytes} bytes payload, signature unverified)`);
+  console.log(`  - Model Signer Key:    ${modelAtt.signing_address}`);
+
+  // Fail Closed if any invariant fails
+  if (!isSignerBound) {
+    throw new Error(`[HAQ REJECT] Quote signing address (0x${signerInQuote}) does not match gateway signer (0x${gatewaySigner}).`);
+  }
+  if (!isNonceBound || !isModelNonceBound) {
+    throw new Error(`[HAQ REJECT] Nonce mismatch! Replay attack detected or quote nonce does not match request.`);
+  }
+
+  console.log('\n>>> [PASS] HAQ VERIFICATION SUCCESSFUL: Intel TDX Quote v4 Parsed & Nonce-Bound (Intel Root CA & GPU Attestation Signature Pending - GAP-006).');
   return {
     verified: true,
     nonce: sessionNonce,
-    gatewaySigner,
-    modelSigner,
+    quoteVersion,
+    teeType: 'Intel TDX (0x81)',
+    mrtd,
+    gatewaySigner: `0x${gatewaySigner}`,
+    modelSigner: modelAtt.signing_address,
     latencyMs: latency,
   };
 }

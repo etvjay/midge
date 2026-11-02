@@ -1,4 +1,4 @@
-# NEAR L1 Hackathon: Build Beyond Boundaries — Official Submission Pack
+# NEAR HACKATHON: Build Beyond Boundaries — Official Submission Pack
 ### Event Window: November 1–14, 2026 | $250k Prize Pool
 
 ---

@@ -1,7 +1,7 @@
 # System Requirements Specification (SRS)
 ## Project: Fly — Syndicate Network for Private Systems on NEAR
 **Document Identifier:** SRS-FLY-2026-V1.0  
-**Target Event:** NEAR L1 Hackathon: Build Beyond Boundaries (Nov 2026)  
+**Target Event:** NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)  
 **Standard:** ISO/IEC/IEEE 29148 lineage  
 
 ---

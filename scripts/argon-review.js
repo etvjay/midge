@@ -4,7 +4,7 @@
  * scripts/argon-review.js
  * 
  * Performs an independent Argon Review of the Fly Protocol repository
- * using the Google Gemini API key from environment / ~/.bashrc.
+ * using the Google Gemini API key from environment (process.env.GEMINI_API_KEY).
  */
 
 import fs from 'fs';
@@ -16,20 +16,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-// 1. Resolve Gemini API Key
+// 1. Resolve Gemini API Key from environment
 function getApiKey() {
-  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
-  const bashrcPath = '/home/ubuntu/.bashrc';
-  if (fs.existsSync(bashrcPath)) {
-    const lines = fs.readFileSync(bashrcPath, 'utf8').split('\n');
-    for (const l of lines) {
-      if (l.includes('GEMINI_API_KEY=')) {
-        const parts = l.split('=')[1].trim();
-        return parts.replace(/["']/g, '');
-      }
-    }
-  }
-  return null;
+  return process.env.GEMINI_API_KEY || null;
 }
 
 // 2. HTTP POST to Gemini API
@@ -83,12 +72,12 @@ async function callGemini(model, prompt, apiKey) {
 async function main() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
   console.log('║       GEMINI 4 ARGON / GEMINI PROTOCOL REPOSITORY REVIEW       ║');
-  console.log('║       NEAR L1 Hackathon: Build Beyond Boundaries (Nov 2026)    ║');
+  console.log('║    NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)          ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
   const apiKey = getApiKey();
   if (!apiKey) {
-    console.error('❌ Error: GEMINI_API_KEY not found in environment or ~/.bashrc.');
+    console.error('❌ Error: GEMINI_API_KEY not found in environment.');
     process.exit(1);
   }
 
@@ -105,7 +94,7 @@ async function main() {
   const claimsLedger = fs.readFileSync(path.join(rootDir, 'foundry/claims.jsonl'), 'utf8');
 
   const reviewPrompt = `
-You are a Principal Cryptographic Systems Architect, NEAR Core Protocol Auditor, and Senior Judge for the NEAR L1 Hackathon: Build Beyond Boundaries ($250k Prize Pool).
+You are a Principal Cryptographic Systems Architect, NEAR Core Protocol Auditor, and Senior Judge for the NEAR HACKATHON: Build Beyond Boundaries ($250k Prize Pool).
 Perform a rigorous, objective, and intellectually honest code and architectural review of the Fly Protocol repository.
 
 === CONTEXT & SUBMISSION ===
@@ -177,7 +166,7 @@ Provide a comprehensive, professional review structured as follows:
   const reviewContent = `# Fly Protocol — Independent Argon Architectural & Security Review
 **Model Evaluator:** ${res.model} (via Google Gemini API)  
 **Evaluation Date:** ${new Date().toISOString()}  
-**Target Repository:** Fly (NEAR L1 Hackathon: Build Beyond Boundaries)  
+**Target Repository:** Fly (NEAR HACKATHON: Build Beyond Boundaries)  
 **Governance Standard:** Builder Foundry v1.0  
 
 ---

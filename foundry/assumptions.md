@@ -1,7 +1,7 @@
 # Fly Protocol — Architectural Assumptions Register
 
 **Version:** 1.0.0  
-**Scope:** NEAR L1 Hackathon (Nov 1–14, 2026)  
+**Scope:** NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)  
 **Governance Standard:** Builder Foundry v1.0  
 
 | ID | Assumption | Status | Impact if False | Evidence Needed | Resolution |
