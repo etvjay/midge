@@ -1,7 +1,7 @@
 # Fly Protocol — Canonical Current State
 
 **Repository Version:** 1.0.0  
-**Git Head:** `85664277cdff98ae2a5fff9028db6afdfc2eff81`  
+**Git Head:** `5a4830d8fc33670dad3707e5a76fab1c6c49c4ca`  
 **Governance Standard:** Builder Foundry v1.0 & Repository Starter Virtuous Cycle  
 **Hackathon Target:** NEAR L1 Hackathon: Build Beyond Boundaries (Nov 1–14, 2026)  
 **Overall Status:** `E2E_VERIFIED`  
