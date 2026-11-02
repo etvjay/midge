@@ -93,7 +93,7 @@ export class FlyNestContract {
 
     const prevBalance = syn.escrow.get(flyerId) || 0;
     if (prevBalance === 0) {
-      if (syn.flyerCount >= 50) {
+      if (syn.activeFlyerCount >= 50) {
         throw new Error('[Deposit REJECT] Maximum 50 flyers reached for this syndicate.');
       }
       syn.flyerCount += 1;
@@ -151,8 +151,10 @@ export class FlyNestContract {
           type: 'spki',
         });
         const orderHash = typeof aggregateOrder === 'string' ? aggregateOrder : JSON.stringify(aggregateOrder);
-        // Message includes (contractId, id, epoch, roundNonce, orderHash)
-        const msg = Buffer.from(`${syn.contractId}:${syn.id}:${syn.epoch}:${syn.roundNonce}:${orderHash}`);
+        // Message includes (contractId, id, epoch, roundNonce, payoutRecipient, orderHash)
+        const msg = Buffer.from(
+          `${syn.contractId}:${syn.id}:${syn.epoch}:${syn.roundNonce}:${syn.payoutRecipient}:${orderHash}`
+        );
         const sig = Buffer.from(enclaveSignature, 'hex');
         const valid = crypto.verify(null, msg, keyObj, sig);
         if (!valid) {
@@ -173,7 +175,7 @@ export class FlyNestContract {
 
     if (syn.type === 'FLASH') {
       // Ephemeral Flash Syndicate dissolves after transferring pooled funds to settlement recipient
-      const payoutTarget = payoutAccount || syn.payoutRecipient;
+      const payoutTarget = syn.payoutRecipient;
       receipt.payoutTarget = payoutTarget;
       receipt.payoutTransferred = syn.totalEscrow;
       syn.totalSettledPayouts += syn.totalEscrow;
@@ -224,8 +226,8 @@ export class FlyNestContract {
       throw new Error(`No escrow balance found for Flyer '${flyerId}'.`);
     }
 
-    // Atomically refund caller
-    syn.escrow.set(flyerId, 0);
+    // Atomically refund caller and delete entry to reclaim storage
+    syn.escrow.delete(flyerId);
     syn.totalEscrow -= flyerBalance;
     syn.activeFlyerCount = Math.max(0, syn.activeFlyerCount - 1);
 

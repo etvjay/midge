@@ -1,5 +1,5 @@
 use near_sdk::store::{IterableMap, LookupMap};
-use near_sdk::{env, near, AccountId, NearToken, PanicOnDefault, Promise};
+use near_sdk::{env, near, AccountId, Gas, NearToken, PanicOnDefault, Promise};
 
 /// Minimum storage deposit to prevent storage griefing attacks (0.005 NEAR).
 const MIN_STORAGE_DEPOSIT_YOCTO: u128 = 5_000_000_000_000_000_000_000;
@@ -217,12 +217,12 @@ impl FlyCoordinator {
         );
 
         // If this is a new flyer, check max capacity
+        // If this flyer currently has 0 balance, count as an active flyer
         if current_balance.as_yoctonear() == 0 {
             assert!(
-                syn.flyer_count < MAX_FLYERS_PER_SYNDICATE,
+                syn.active_flyer_count < MAX_FLYERS_PER_SYNDICATE,
                 "[Deposit REJECT] Maximum 50 flyers reached for this syndicate."
             );
-            syn.flyer_count += 1;
             syn.active_flyer_count += 1;
         }
 
@@ -231,8 +231,8 @@ impl FlyCoordinator {
     }
 
     /// settle_batch(): Verifies HAQ attestation signature and executes settlement payout.
-    /// Enforces domain-separated message signing: (contract_id:syndicate_id:epoch:round_nonce:order_hash).
-    /// For Flash syndicates: transfers pooled escrow to payout recipient via Promise and clears state.
+    /// Enforces domain-separated message signing: (contract_id:syndicate_id:epoch:round_nonce:payout_recipient:order_hash).
+    /// For Flash syndicates: transfers pooled escrow to immutable payout recipient via Promise and clears state.
     /// For DarkVault: resets epoch_start_block for the new epoch and rolls over escrow.
     pub fn settle_batch(
         &mut self,
@@ -240,7 +240,6 @@ impl FlyCoordinator {
         attestation_nonce: String,
         aggregate_order_hash: String,
         enclave_signature: String,
-        payout_account: Option<AccountId>,
     ) {
         let syn = self
             .syndicates
@@ -286,13 +285,14 @@ impl FlyCoordinator {
         let mut pk_arr = [0u8; 32];
         pk_arr.copy_from_slice(&pk_bytes);
 
-        // Domain-separated signed message: (contract_id, syndicate_id, epoch, round_nonce, order_hash)
+        // Domain-separated signed message: (contract_id, syndicate_id, epoch, round_nonce, payout_recipient, order_hash)
         let message = format!(
-            "{}:{}:{}:{}:{}",
+            "{}:{}:{}:{}:{}:{}",
             env::current_account_id(),
             syn.id,
             syn.epoch,
             syn.round_nonce,
+            syn.payout_recipient,
             aggregate_order_hash
         );
         assert!(
@@ -305,17 +305,23 @@ impl FlyCoordinator {
 
         match syn.syndicate_type {
             SyndicateType::Flash => {
-                let payout_target = payout_account.unwrap_or_else(|| syn.payout_recipient.clone());
+                let payout_target = syn.payout_recipient.clone();
                 let payout_amount = syn.total_escrow;
-
-                // Transfer pooled funds to the settlement account
-                if payout_amount.as_yoctonear() > 0 {
-                    let _ = Promise::new(payout_target).transfer(payout_amount);
-                }
 
                 syn.total_settled_payouts = syn.total_settled_payouts.saturating_add(payout_amount);
                 syn.total_escrow = NearToken::from_yoctonear(0);
                 syn.status = SyndicateStatus::Settled;
+
+                // Transfer pooled funds to the immutable payout recipient with failure callback
+                if payout_amount.as_yoctonear() > 0 {
+                    let _ = Promise::new(payout_target)
+                        .transfer(payout_amount)
+                        .then(
+                            Self::ext(env::current_account_id())
+                                .with_static_gas(Gas::from_tgas(15))
+                                .on_settlement_payout(syn.id.clone(), payout_amount),
+                        );
+                }
             }
             SyndicateType::DarkVault => {
                 syn.epoch += 1;
@@ -368,8 +374,8 @@ impl FlyCoordinator {
             "[Hatch-Out REJECT] No escrow balance to refund for caller."
         );
 
-        // 4. Zero caller's balance in LookupMap to prevent double refund attacks
-        self.escrows.insert(escrow_key, NearToken::from_yoctonear(0));
+        // 4. Remove caller's entry from LookupMap to reclaim storage and prevent double refund attacks
+        self.escrows.remove(&escrow_key);
         syn.total_escrow = syn.total_escrow.saturating_sub(flyer_balance);
         syn.active_flyer_count = syn.active_flyer_count.saturating_sub(1);
 
@@ -378,7 +384,60 @@ impl FlyCoordinator {
             syn.status = SyndicateStatus::AbortedRefunded;
         }
 
-        Promise::new(caller).transfer(flyer_balance)
+        Promise::new(caller.clone())
+            .transfer(flyer_balance)
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(Gas::from_tgas(15))
+                    .on_hatch_out_payout(syndicate_id, caller, flyer_balance),
+            )
+    }
+
+    /// Callback for Flash settlement payout transfer failure handling.
+    #[private]
+    pub fn on_settlement_payout(
+        &mut self,
+        syndicate_id: String,
+        payout_amount: NearToken,
+    ) -> bool {
+        if !near_sdk::is_promise_success() {
+            if let Some(syn) = self.syndicates.get_mut(&syndicate_id) {
+                syn.status = SyndicateStatus::Active;
+                syn.total_escrow = syn.total_escrow.saturating_add(payout_amount);
+                syn.total_settled_payouts = syn.total_settled_payouts.saturating_sub(payout_amount);
+            }
+            return false;
+        }
+        true
+    }
+
+    /// Callback for escape hatch refund payout transfer failure handling.
+    #[private]
+    pub fn on_hatch_out_payout(
+        &mut self,
+        syndicate_id: String,
+        flyer_id: AccountId,
+        refund_amount: NearToken,
+    ) -> bool {
+        if !near_sdk::is_promise_success() {
+            let escrow_key = (syndicate_id.clone(), flyer_id.clone());
+            let current = self
+                .escrows
+                .get(&escrow_key)
+                .copied()
+                .unwrap_or_else(|| NearToken::from_yoctonear(0));
+            self.escrows.insert(escrow_key, current.saturating_add(refund_amount));
+
+            if let Some(syn) = self.syndicates.get_mut(&syndicate_id) {
+                syn.total_escrow = syn.total_escrow.saturating_add(refund_amount);
+                syn.active_flyer_count = syn.active_flyer_count.saturating_add(1);
+                if syn.status == SyndicateStatus::AbortedRefunded {
+                    syn.status = SyndicateStatus::Active;
+                }
+            }
+            return false;
+        }
+        true
     }
 
     /// Returns a flyer's current escrow balance in a syndicate.
@@ -421,11 +480,12 @@ mod tests {
         syndicate_id: &str,
         epoch: u64,
         nonce: &str,
+        payout_recipient: &str,
         order_hash: &str,
     ) -> (String, String) {
         let signing_key = SigningKey::from_bytes(&[42u8; 32]);
         let verifying_key = signing_key.verifying_key();
-        let message = format!("{}:{}:{}:{}:{}", contract_id, syndicate_id, epoch, nonce, order_hash);
+        let message = format!("{}:{}:{}:{}:{}:{}", contract_id, syndicate_id, epoch, nonce, payout_recipient, order_hash);
         let signature = signing_key.sign(message.as_bytes());
         (
             hex::encode(verifying_key.to_bytes()),
@@ -440,7 +500,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "swarm-01", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "swarm-01", 1, "", "payout-recipient.near", "");
 
         let syn_id = contract.hatch(
             "swarm-01".to_string(),
@@ -475,17 +535,18 @@ mod tests {
 
         assert_eq!(contract.get_escrow(syn_id.clone(), f2).as_near(), 15);
 
-        // Generate genuine Ed25519 signature over (contract, id, epoch, nonce, order_hash)
+        // Generate genuine Ed25519 signature over (contract, id, epoch, nonce, payout_recipient, order_hash)
         let order_hash = "order_twap_batch_01".to_string();
         let (_, valid_sig) = make_enclave_key_and_signature(
             "fly-coordinator.testnet",
             &syn_id,
             1,
             &active_nonce,
+            "payout-recipient.near",
             &order_hash,
         );
 
-        // Settle batch with genuine signature and custom payout account
+        // Settle batch with genuine signature (payout automatically dispatches to syn.payout_recipient)
         let ctx = get_context(owner, NearToken::from_near(0), 110);
         testing_env!(ctx.build());
         contract.settle_batch(
@@ -493,7 +554,6 @@ mod tests {
             active_nonce,
             order_hash,
             valid_sig,
-            Some("settlement-agent.near".parse().unwrap()),
         );
 
         let syn_after = contract.get_syndicate(syn_id).unwrap();
@@ -510,7 +570,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "bad-sig-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "bad-sig-swarm", 1, "", "bad-sig-swarm-treasury.near", "");
 
         let syn_id = contract.hatch(
             "bad-sig-swarm".to_string(),
@@ -535,7 +595,7 @@ mod tests {
         let fake_sig = hex::encode([99u8; 64]);
         let ctx = get_context(owner, NearToken::from_near(0), 110);
         testing_env!(ctx.build());
-        contract.settle_batch(syn_id, active_nonce, "order_hash".to_string(), fake_sig, None);
+        contract.settle_batch(syn_id, active_nonce, "order_hash".to_string(), fake_sig);
     }
 
     #[test]
@@ -546,7 +606,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "cross-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "cross-swarm", 1, "", "cross-swarm-treasury.near", "");
 
         let syn_id = contract.hatch(
             "cross-swarm".to_string(),
@@ -573,12 +633,58 @@ mod tests {
             &syn_id,
             1,
             &active_nonce,
+            "cross-swarm-treasury.near",
             "order_hash",
         );
 
         let ctx = get_context(owner, NearToken::from_near(0), 110);
         testing_env!(ctx.build());
-        contract.settle_batch(syn_id, active_nonce, "order_hash".to_string(), diff_contract_sig, None);
+        contract.settle_batch(syn_id, active_nonce, "order_hash".to_string(), diff_contract_sig);
+    }
+
+    #[test]
+    #[should_panic(expected = "[HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!")]
+    fn test_settle_batch_rejects_altered_payout_recipient() {
+        let owner: AccountId = "alice.near".parse().unwrap();
+        let ctx = get_context(owner.clone(), NearToken::from_near(1), 100);
+        testing_env!(ctx.build());
+
+        let mut contract = FlyCoordinator::new();
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "payout-theft-test", 1, "", "legit-treasury.near", "");
+
+        let syn_id = contract.hatch(
+            "payout-theft-test".to_string(),
+            Some("FLASH".to_string()),
+            Some(1),
+            Some(50),
+            enclave_pk,
+            "hash".to_string(),
+            Some(30),
+            Some("legit-treasury.near".parse().unwrap()),
+        );
+
+        let syn = contract.get_syndicate(syn_id.clone()).unwrap();
+        let active_nonce = syn.round_nonce.clone();
+
+        let f1: AccountId = "flyer1.near".parse().unwrap();
+        let ctx = get_context(f1, NearToken::from_near(10), 105);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        // Attacker creates or signs for attacker-wallet.near instead of legit-treasury.near
+        let (_, attacker_sig) = make_enclave_key_and_signature(
+            "fly-coordinator.testnet",
+            &syn_id,
+            1,
+            &active_nonce,
+            "attacker-wallet.near",
+            "order_hash",
+        );
+
+        // Settle batch must fail because contract's syn.payout_recipient is legit-treasury.near
+        let ctx = get_context(owner, NearToken::from_near(0), 110);
+        testing_env!(ctx.build());
+        contract.settle_batch(syn_id, active_nonce, "order_hash".to_string(), attacker_sig);
     }
 
     #[test]
@@ -589,7 +695,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "min-dep-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "min-dep-swarm", 1, "", "", "");
         let syn_id = contract.hatch(
             "min-dep-swarm".to_string(),
             None,
@@ -616,7 +722,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "cap-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "cap-swarm", 1, "", "", "");
         let syn_id = contract.hatch(
             "cap-swarm".to_string(),
             None,
@@ -651,7 +757,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "zero-quorum", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "zero-quorum", 1, "", "", "");
         contract.hatch(
             "zero-quorum".to_string(),
             None,
@@ -672,7 +778,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "zero-timeout", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "zero-timeout", 1, "", "", "");
         contract.hatch(
             "zero-timeout".to_string(),
             None,
@@ -693,7 +799,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "quorum-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "quorum-swarm", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "quorum-swarm".to_string(),
@@ -720,12 +826,13 @@ mod tests {
             &syn_id,
             1,
             &active_nonce,
+            &syn.payout_recipient.to_string(),
             "order_hash",
         );
 
         let ctx = get_context(owner, NearToken::from_near(0), 110);
         testing_env!(ctx.build());
-        contract.settle_batch(syn_id, active_nonce, "order_hash".to_string(), valid_sig, None);
+        contract.settle_batch(syn_id, active_nonce, "order_hash".to_string(), valid_sig);
     }
 
     #[test]
@@ -736,7 +843,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "nonce-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "nonce-swarm", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "nonce-swarm".to_string(),
@@ -754,17 +861,19 @@ mod tests {
         testing_env!(ctx.build());
         contract.deposit(syn_id.clone());
 
+        let syn = contract.get_syndicate(syn_id.clone()).unwrap();
         let (_, sig) = make_enclave_key_and_signature(
             "fly-coordinator.testnet",
             &syn_id,
             1,
             "wrong_nonce_value",
+            &syn.payout_recipient.to_string(),
             "order_hash",
         );
 
         let ctx = get_context(owner, NearToken::from_near(0), 110);
         testing_env!(ctx.build());
-        contract.settle_batch(syn_id, "wrong_nonce_value".to_string(), "order_hash".to_string(), sig, None);
+        contract.settle_batch(syn_id, "wrong_nonce_value".to_string(), "order_hash".to_string(), sig);
     }
 
     #[test]
@@ -775,7 +884,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "limit-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "limit-swarm", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "limit-swarm".to_string(),
@@ -802,7 +911,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "settle-dep-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "settle-dep-swarm", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "settle-dep-swarm".to_string(),
@@ -828,12 +937,13 @@ mod tests {
             &syn_id,
             1,
             &active_nonce,
+            &syn.payout_recipient.to_string(),
             "order_hash",
         );
 
         let ctx = get_context(owner, NearToken::from_near(0), 110);
         testing_env!(ctx.build());
-        contract.settle_batch(syn_id.clone(), active_nonce, "order_hash".to_string(), valid_sig, None);
+        contract.settle_batch(syn_id.clone(), active_nonce, "order_hash".to_string(), valid_sig);
 
         // Attempt deposit after settled
         let ctx = get_context(f1, NearToken::from_near(5), 120);
@@ -849,7 +959,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "BAD ID", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "BAD ID", 1, "", "", "");
         contract.hatch(
             "BAD ID".to_string(),
             None,
@@ -869,7 +979,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "vault-epoch", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "vault-epoch", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "vault-epoch".to_string(),
@@ -897,13 +1007,14 @@ mod tests {
             &syn_id,
             1,
             &nonce_epoch1,
+            &syn.payout_recipient.to_string(),
             "batch_01",
         );
 
         // Settle epoch 1 at block 120
         let ctx = get_context(owner, NearToken::from_near(0), 120);
         testing_env!(ctx.build());
-        contract.settle_batch(syn_id.clone(), nonce_epoch1.clone(), "batch_01".to_string(), sig1, None);
+        contract.settle_batch(syn_id.clone(), nonce_epoch1.clone(), "batch_01".to_string(), sig1);
 
         let syn_epoch2 = contract.get_syndicate(syn_id.clone()).unwrap();
         assert_eq!(syn_epoch2.epoch, 2);
@@ -930,7 +1041,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "premature-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "premature-swarm", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "premature-swarm".to_string(),
@@ -961,7 +1072,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "timeout-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "timeout-swarm", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "timeout-swarm".to_string(),
@@ -1016,7 +1127,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "settled-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "settled-swarm", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "settled-swarm".to_string(),
@@ -1042,12 +1153,13 @@ mod tests {
             &syn_id,
             1,
             &active_nonce,
+            &syn.payout_recipient.to_string(),
             "order_hash",
         );
 
         let ctx = get_context(owner, NearToken::from_near(0), 110);
         testing_env!(ctx.build());
-        contract.settle_batch(syn_id.clone(), active_nonce, "order_hash".to_string(), valid_sig, None);
+        contract.settle_batch(syn_id.clone(), active_nonce, "order_hash".to_string(), valid_sig);
 
         // Attempt hatch_out after settled at block 150
         let ctx = get_context(f1, NearToken::from_near(0), 150);
@@ -1063,7 +1175,7 @@ mod tests {
         testing_env!(ctx.build());
 
         let mut contract = FlyCoordinator::new();
-        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "double-swarm", 1, "", "");
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "double-swarm", 1, "", "", "");
 
         let syn_id = contract.hatch(
             "double-swarm".to_string(),
@@ -1090,5 +1202,63 @@ mod tests {
         let ctx = get_context(f1, NearToken::from_near(0), 155);
         testing_env!(ctx.build());
         let _ = contract.hatch_out(syn_id);
+    }
+
+    #[test]
+    fn test_repeat_deposit_withdraw_does_not_inflate_flyer_cap() {
+        let owner: AccountId = "alice.near".parse().unwrap();
+        let ctx = get_context(owner, NearToken::from_near(1), 100);
+        testing_env!(ctx.build());
+
+        let mut contract = FlyCoordinator::new();
+        let (enclave_pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "repeat-swarm", 1, "", "", "");
+
+        let syn_id = contract.hatch(
+            "repeat-swarm".to_string(),
+            Some("FLASH".to_string()),
+            Some(1),
+            Some(50),
+            enclave_pk,
+            "hash".to_string(),
+            Some(10), // timeout 10 blocks
+            None,
+        );
+
+        let f1: AccountId = "flyer1.near".parse().unwrap();
+        let f2: AccountId = "flyer2.near".parse().unwrap();
+
+        // f2 deposits 5 NEAR keeping the syndicate active
+        let ctx = get_context(f2.clone(), NearToken::from_near(5), 102);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        // Flyer 1 deposits and exits 5 times
+        for i in 0..5 {
+            let dep_block = 110 + i * 20;
+            let ctx = get_context(f1.clone(), NearToken::from_near(1), dep_block);
+            testing_env!(ctx.build());
+            contract.deposit(syn_id.clone());
+
+            let syn = contract.get_syndicate(syn_id.clone()).unwrap();
+            assert_eq!(syn.active_flyer_count, 2);
+
+            let exit_block = dep_block + 15; // past timeout (10 blocks)
+            let ctx = get_context(f1.clone(), NearToken::from_near(0), exit_block);
+            testing_env!(ctx.build());
+            let _ = contract.hatch_out(syn_id.clone());
+
+            let syn_after = contract.get_syndicate(syn_id.clone()).unwrap();
+            assert_eq!(syn_after.active_flyer_count, 1);
+            assert_eq!(contract.get_escrow(syn_id.clone(), f1.clone()).as_yoctonear(), 0);
+        }
+
+        // Now Flyer 1 deposits again successfully, active count is 2
+        let ctx = get_context(f1.clone(), NearToken::from_near(2), 250);
+        testing_env!(ctx.build());
+        contract.deposit(syn_id.clone());
+
+        let syn_final = contract.get_syndicate(syn_id.clone()).unwrap();
+        assert_eq!(syn_final.active_flyer_count, 2);
+        assert_eq!(contract.get_escrow(syn_id, f1).as_near(), 2);
     }
 }

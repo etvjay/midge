@@ -26,8 +26,8 @@ Fly provides a zero-setup, deterministic verification harness requiring only sta
   # or: npm run verify
   ```
 * **See:**
-  - `[STEP 1/4]` 17/17 NEAR L1 Rust smart contract unit tests pass in ~1.8s (`near-sdk 5.1`).
-  - `[STEP 2/4]` Release WebAssembly contract compiles cleanly to `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (257 KB).
+  - `[STEP 1/4]` 23 NEAR L1 Rust smart contract tests (19 unit + 4 integration) pass cleanly (`near-sdk 5.1`).
+  - `[STEP 2/4]` Release WebAssembly contract compiles cleanly to `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (271 KB).
   - `[STEP 3/4]` All 8 architectural verification layers execute in ~1.3s.
   - `[STEP 4/4]` Builder Foundry Control Plane passes with 0 invariant violations across 11 claims and 6 gaps.
   - Total runtime: `<4.0s`. Final evaluation verdict: `VERIFIED & AUDITED (Smart Contract Tested, TEE Parsed, Simulated)`.
@@ -101,7 +101,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 | Component | Implementation File | Status | Nature | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **TESTED** | **REAL CODE** | Written in Rust (`near-sdk 5.1`). Compiles to 257 KB release WASM. 17 unit tests verifying Ed25519 domain-separated signatures, storage guards, ID validation, LookupMap per-user escape hatch refunds, Flash settlement Promise payouts, and DarkVault epoch rollover. |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **TESTED** | **REAL CODE** | Written in Rust (`near-sdk 5.1`). Compiles to 271 KB release WASM. 23 tests (19 unit + 4 integration) verifying Ed25519 domain-separated signatures, storage guards, ID validation, LookupMap per-user escape hatch refunds, Flash settlement Promise payouts with failure recovery callbacks, and DarkVault epoch rollover. |
 | **TEE Remote Attestation** | `verifications/01-hardware-attestation.js` | **VERIFIED** | **LIVE EXTERNAL** | Queries live NEAR AI Cloud (`cloud-api.near.ai`) with a fresh 32-byte nonce. Parses binary Intel TDX Quote v4 and verifies `REPORTDATA` nonce echo. (Full Intel SGX/TDX Root CA signature verification pending - GAP-006). |
 | **TEE Aggregator Runtime** | `src/enclave/roost.js` | **TESTED** | **LOCAL PROCESS** | Ingestion, RSA-2048 decryption, batch aggregation, and RAM wiping execute in local Node.js process (GAP-004). Remote TEE VM container deployment is planned for production. |
 | **1Click Asset Registry** | `verifications/02-confidential-intents.js` | **VERIFIED** | **LIVE EXTERNAL** | Audits 210 cross-chain assets from live 1Click Swap API with deterministic snapshot fallback for test resilience. |
@@ -203,8 +203,9 @@ To ensure complete transparency and intellectual honesty for human and automated
 ├── contracts/
 │   └── fly-coordinator/          # NEAR L1 coordinator smart contract (Rust / near-sdk 5.1)
 │       ├── Cargo.toml
-│       ├── src/lib.rs            # hatch(), deposit(), settle_batch(), hatch_out() + 17 unit tests
-│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm (257 KB)
+│       ├── src/lib.rs            # hatch(), deposit(), settle_batch(), hatch_out() + 19 unit tests
+│       ├── tests/                # integration_tests.rs (4 multi-agent lifecycle & safety tests)
+│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm (271 KB)
 ├── src/
 │   ├── contracts/nest.js         # Nest coordinator contract state machine mirror
 │   ├── enclave/

@@ -10,6 +10,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,6 +79,17 @@ function runCheck() {
 
   if (!state.project || !state.head || !state.last_verified_head) {
     errors.push('foundry/state.json is missing required fields (project, head, last_verified_head).');
+  } else {
+    try {
+      execSync(`git cat-file -e ${state.head}^{commit}`, { cwd: rootDir, stdio: 'ignore' });
+    } catch {
+      errors.push(`foundry/state.json head commit '${state.head}' does not exist in git repository.`);
+    }
+    try {
+      execSync(`git cat-file -e ${state.last_verified_head}^{commit}`, { cwd: rootDir, stdio: 'ignore' });
+    } catch {
+      errors.push(`foundry/state.json last_verified_head commit '${state.last_verified_head}' does not exist in git repository.`);
+    }
   }
 
   if (!ALLOWED_STATES.has(state.status)) {
@@ -103,6 +115,13 @@ function runCheck() {
         }
         if (!ALLOWED_STATES.has(claim.state)) {
           errors.push(`Claim ${claim.id} has illegal state: ${claim.state}`);
+        }
+        if (claim.last_verified_head) {
+          try {
+            execSync(`git cat-file -e ${claim.last_verified_head}^{commit}`, { cwd: rootDir, stdio: 'ignore' });
+          } catch {
+            errors.push(`Claim ${claim.id} last_verified_head commit '${claim.last_verified_head}' does not exist in git.`);
+          }
         }
         if (!claim.evidence || !Array.isArray(claim.evidence) || claim.evidence.length === 0) {
           errors.push(`Claim ${claim.id} has no evidence files declared.`);
@@ -143,6 +162,12 @@ function runCheck() {
         if (gap.status === 'CLOSED') {
           if (!gap.closed_by_commit) {
             errors.push(`Gap ${gap.id} is marked CLOSED but lacks 'closed_by_commit'.`);
+          } else {
+            try {
+              execSync(`git cat-file -e ${gap.closed_by_commit}^{commit}`, { cwd: rootDir, stdio: 'ignore' });
+            } catch {
+              errors.push(`Gap ${gap.id} closed_by_commit '${gap.closed_by_commit}' does not exist in git.`);
+            }
           }
           if (!gap.evidence || gap.evidence.length === 0) {
             errors.push(`Gap ${gap.id} is marked CLOSED but lacks evidence.`);

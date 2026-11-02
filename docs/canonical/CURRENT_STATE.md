@@ -1,7 +1,7 @@
 # Fly Protocol — Canonical Current State
 
 **Repository Version:** 1.0.0  
-**Git Head:** `8f604464c78d0f19c8f62f3a6946bf8d5e865f12`  
+**Git Head:** `9ed0c93d746855a51ccb79cacde5850072cae510`  
 **Governance Standard:** Builder Foundry v1.0  
 **Hackathon Target:** NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)  
 **Overall Status:** `TESTED_AND_INTEGRATED`  
@@ -12,7 +12,7 @@
 
 Fly is an autonomous syndicate network purpose-built for private systems on NEAR Protocol. It enables autonomous AI agents, quant funds, and privacy collectives to pool capital, deliberate in hardware-attested enclaves, and execute cross-chain operations as a unified front without leaking member identities, proprietary trading models, prompt weights, or internal equity splits to public mempools.
 
-All 8 architectural verification layers, the NEAR L1 Rust smart contract (17 unit tests with domain-separated Ed25519 signature verification, LookupMap escrow storage, and Flash Promise settlement payouts), release WebAssembly binary (257 KB), and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
+All 8 architectural verification layers, the NEAR L1 Rust smart contract (23 tests: 19 unit + 4 integration with domain-separated Ed25519 signature verification, LookupMap escrow storage, and Flash Promise settlement payouts with failure recovery callbacks), release WebAssembly binary (271 KB), and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
 
 ---
 
@@ -35,8 +35,8 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (17 uni
 | **x402 Agent Commerce** | `src/commerce/x402.js` | **INTEGRATED** | `npm run verify:api` | HTTP 402 challenge, PingPay confidential micropayment HMAC bearer verification, token-gated alpha |
 | **MCP Server** | `src/mcp/server.js`, `bin/fly-mcp.js` | **INTEGRATED (stdio)** | `npm run verify:api` | 6 tools exposed via stdio JSON-RPC 2.0 compatible with `nearai/near-mcp` |
 | **FlyClient SDK** | `src/sdk/client.js` | **TESTED** | `npm run verify:api` | Unified JavaScript/TypeScript client library |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 17 Rust unit tests in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, and refund safety |
-| **Release WASM Binary** | `contracts/fly-coordinator/target` | **TESTED** | `npm run build:wasm` | 257 KB compiled WebAssembly binary (`wasm32-unknown-unknown`) |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 23 Rust tests (19 unit + 4 integration) in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, and refund safety |
+| **Release WASM Binary** | `contracts/fly-coordinator/target` | **TESTED** | `npm run build:wasm` | 271 KB compiled WebAssembly binary (`wasm32-unknown-unknown`) |
 | **Foundry Control Plane** | `foundry/` | **INTEGRATED** | `npm run check:foundry` | `state.json`, `claims.jsonl` (11 claims), `gaps.jsonl` (6 gaps, 1 high deferred), 8 phase specs |
 
 ---

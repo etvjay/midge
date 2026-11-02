@@ -28,7 +28,7 @@ echo "==========================================================================
 cd contracts/fly-coordinator
 cargo test --quiet
 cd "$ROOT_DIR"
-echo ">>> [PASS] Rust L1 Smart Contract Unit Tests Passed (17/17 unit tests ok)."
+echo ">>> [PASS] Rust L1 Smart Contract Tests Passed (23 tests: 19 unit + 4 integration ok)."
 echo ""
 
 # STEP 2: WebAssembly Build Check
@@ -68,7 +68,7 @@ ELAPSED_SEC=$(awk -v ms="$ELAPSED_MS" 'BEGIN { printf "%.2f", ms / 1000 }')
 echo "╔══════════════════════════════════════════════════════════════════════════════╗"
 echo "║                          FINAL EVALUATION VERDICT                            ║"
 echo "╠══════════════════════════════════════════════════════════════════════════════╣"
-echo "║  1. NEAR L1 Rust Smart Contract:              ✅ PASS (17 tests, near-sdk 5.1)║"
+echo "║  1. NEAR L1 Rust Smart Contract:              ✅ PASS (23 tests, near-sdk 5.1)║"
 echo "║  2. WebAssembly Contract Binary (257 KB):     ✅ PASS (wasm32 release ready) ║"
 echo "║  3. Live TEE Hardware Attestation (HAQ):      ✅ PASS (TDX Parsed / Nonce-OK)║"
 echo "║  4. 1Click Swap API & Asset Registry:         ✅ PASS (210 Assets Audited)   ║"

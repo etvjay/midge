@@ -78,7 +78,7 @@
 | **CLM-FMEA-01** | 5-layer resilience failure matrix handles Enclave crashes, Agent dropouts, Solver slippages, MPC timeouts, and Rogue agents | `TESTED` | `npm run verify:matrix` | `verifications/07-resilience-failure-matrix.js` |
 | **CLM-API-01** | Fly API daemon exposes 18 REST endpoints, real-time SSE event streaming, and x402 PingPay micropayment challenge middleware | `INTEGRATED` | `npm run verify:api` | `verifications/08-api-sse-mcp-e2e.js` |
 | **CLM-MCP-01** | Model Context Protocol (MCP) server exposes 6 syndicate tools compatible with `nearai/near-mcp` | `INTEGRATED` | `npm run verify:api` | `src/mcp/server.js`, `bin/fly-mcp.js` |
-| **CLM-RUST-01** | Production NEAR L1 smart contract in Rust (near-sdk 5.1) compiles to release WebAssembly (257 KB) and passes 17 unit tests | `TESTED` | `npm run verify:rust && npm run build:wasm` | `contracts/fly-coordinator/src/lib.rs` |
+| **CLM-RUST-01** | Production NEAR L1 smart contract in Rust (near-sdk 5.1) compiles to release WebAssembly (271 KB) and passes 23 tests (19 unit + 4 integration) | `TESTED` | `npm run verify:rust && npm run build:wasm` | `contracts/fly-coordinator/src/lib.rs`, `contracts/fly-coordinator/tests/integration_tests.rs` |
 | **CLM-SWARM-01** | 10-Flyer Dark Swarm simulation performs RSA-2048 encryption, in-RAM aggregation, zero-memory wipes, and decoupled pro-rata payouts | `SIMULATED` | `npm run demo:syndicate` | `src/simulation/runner.js` |
 
 ---

@@ -65,7 +65,9 @@ export async function verifyHatchProtocol() {
     executionStrategy: 'TWAP_5_MINUTES',
   };
   const orderStr = JSON.stringify(aggregateOrder);
-  const msgToSign = Buffer.from(`${syndicate.contractId}:${syndicate.id}:${syndicate.epoch}:${syndicate.roundNonce}:${orderStr}`);
+  const msgToSign = Buffer.from(
+    `${syndicate.contractId}:${syndicate.id}:${syndicate.epoch}:${syndicate.roundNonce}:${syndicate.payoutRecipient}:${orderStr}`
+  );
   const sigHex = crypto.sign(null, msgToSign, privateKey).toString('hex');
 
   const settlementResult = nest.settleBatch('dark-swarm-alpha', {
