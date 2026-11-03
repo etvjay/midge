@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Midge, a private syndicate network for private systems</title>
+<meta name="description" content="Institutions, funds, DAOs and agent swarms form syndicates on Midge and deal with each other in private, on NEAR. A NEAR HACKATHON prototype on testnet. No token.">
+<meta name="theme-color" content="#eef0ec">
+<meta property="og:title" content="Midge, a private syndicate network for private systems">
+<meta property="og:description" content="Private markets between private systems, on NEAR. A NEAR HACKATHON prototype on testnet. No token.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400&family=Newsreader:opsz,wght@6..72,300;6..72,400&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header" id="top">
+  <div class="hdr-left">
+    <svg class="exit-glyph" viewBox="0 0 20 12" width="16" height="10" aria-hidden="true"><circle cx="3" cy="8" r="2" fill="currentColor"/><path class="ink-exit" d="M5 7 Q 10 4 15 3.5" fill="none" stroke-width="1.4" stroke-linecap="round"/><circle class="ink-exit-fill" cx="17" cy="3.3" r="2"/></svg>
+    <div class="label-window" aria-hidden="true">
+      <ul class="labels">
+        <li>Network</li><li>Syndicates</li><li>Facilities</li><li>Architecture</li><li>Guarantees</li><li>Verification</li><li>Agents</li>
+      </ul>
+    </div>
+  </div>
+  <a class="logo" href="#network" aria-label="Midge, back to top">
+    <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true">
+      <circle id="d0" cx="22" cy="31" r="3.2" fill="currentColor"/>
+      <circle id="d1" cx="30" cy="25" r="2.6" fill="currentColor"/>
+      <circle id="d2" cx="28" cy="37" r="2.8" fill="currentColor"/>
+      <circle id="d3" cx="18" cy="41" r="2.2" fill="currentColor"/>
+      <circle id="d4" cx="35" cy="32" r="2.2" fill="currentColor"/>
+      <circle id="d5" cx="24" cy="20" r="1.8" fill="currentColor"/>
+      <circle id="d6" cx="13" cy="31" r="1.6" fill="currentColor"/>
+      <path class="ink-exit" d="M37 30.5 Q 44 25 50 23.2" fill="none" stroke-width="1.4" stroke-linecap="round"/>
+      <circle id="d7" class="ink-exit-fill" cx="53" cy="22.4" r="3"/>
+    </svg>
+  </a>
+  <nav class="hdr-right" aria-label="Sections">
+    <a href="#facilities">Facilities</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#verification" class="btn btn-ghost btn-sm">What runs today</a>
+  </nav>
+</header>
+
+<main id="main">
+
+<section id="network" class="sec hero" data-label="0" aria-labelledby="h-network">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <h1 id="h-network" class="display" data-split data-intro>A private syndicate network for private systems</h1>
+      <p class="lede intro-item">Institutions, funds, DAOs and agent swarms form syndicates on Midge and deal with each other in private: credit and repo, block trades, payroll, angel rounds and agent budgets. Deliberation stays sealed. Money stays in a contract no coordinator can empty, and every member can always leave on their own.</p>
+      <div class="actions intro-item">
+        <a class="btn btn-solid" href="#syndicates">See how a syndicate works</a>
+        <a class="btn btn-ghost" href="#verification">What runs today</a>
+      </div>
+      <p class="fine intro-item">Prototype on NEAR testnet. No token.</p>
+    </div>
+    <div class="members" role="list" aria-label="One example syndicate">
+      <div class="member intro-item" role="listitem"><span class="m-name">Treasury desk</span><span class="m-role">an institution</span></div>
+      <div class="member intro-item" role="listitem"><span class="m-name">Credit fund</span><span class="m-role">a lender</span></div>
+      <div class="member intro-item" role="listitem"><span class="m-name">Research swarm</span><span class="m-role">40 agents, one budget</span></div>
+      <div class="member intro-item" role="listitem"><span class="m-name">Angel circle</span><span class="m-role">a DAO of backers</span></div>
+      <p class="members-note intro-item">An example: four flyers, one syndicate. Each sees the terms it signed and nothing about the others.</p>
+    </div>
+  </div>
+</section>
+
+<section id="syndicates" class="sec rule-top" data-label="1" aria-labelledby="h-syndicates">
+  <div class="wrap stack-40">
+    <h2 id="h-syndicates" class="title" data-split>A syndicate is a private room with public rules</h2>
+    <div class="cols-3">
+      <div class="col reveal"><h3>Flyers hatch a syndicate</h3><p>A flyer is any member: an agent, a trading bot or an institution. Hatching a syndicate fixes its policy: who may be paid, how much per epoch and until which block. Every flyer signs the same policy hash when they deposit, and it can never change.</p></div>
+      <div class="col reveal" style="--d:90ms"><h3>They deliberate in the Roost</h3><p>Bids, sizes, votes and strategies go to the Roost sealed. It aggregates them into one batch and keeps only the result, signed for this contract, syndicate and round. In model-sealed mode even the operator holds only ciphertext.</p></div>
+      <div class="col reveal" style="--d:180ms"><h3>The Nest settles within the rules</h3><p>The Nest is the contract on NEAR that holds the money. A settlement outside the agreed recipients, caps or deadline is rejected there, even with a valid signature.</p></div>
+    </div>
+    <div class="lifecycles">
+      <div class="lc reveal"><h3>Flash syndicate</h3><p>Forms for one task, such as a block trade or an inference run, settles once and dissolves.</p></div>
+      <div class="lc reveal" style="--d:90ms"><h3>Dark Vault</h3><p>Persists across epochs, with a fresh nonce each round, and can run pods: smaller units with their own limits.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="facilities" class="facilities rule-top" data-label="2" aria-labelledby="h-facilities">
+  <div class="fac-pin">
+    <div class="wrap fac-head">
+      <h2 id="h-facilities" class="title" data-split>Facilities run on top of the network</h2>
+      <p class="fine">Each facility is a kind of syndicate. The status says what the code does today.</p>
+    </div>
+    <div class="track" id="track">
+      <article class="fcard">
+        <div class="fdiagram"><svg viewBox="0 0 240 180" aria-hidden="true">
+          <path class="draw" pathLength="100" d="M50 60 Q 70 130 108 130"/><path class="draw" pathLength="100" d="M132 130 Q 170 130 190 60"/>
+          <rect class="fade stroke-light" x="108" y="120" width="24" height="20" rx="2"/>
+          <circle class="fade dot-light" cx="50" cy="60" r="5"/><circle class="fade dot-glow" cx="190" cy="60" r="5"/>
+        </svg></div>
+        <div class="fbody"><h3>Private credit and repo</h3><p>A lender and a borrower set terms in a sealed RFQ. Collateral and principal move only as the policy allows.</p>
+          <dl><div><dt>Members</dt><dd>Treasury desks, credit funds</dd></div><div><dt>Sealed</dt><dd>Quotes, rates, margin health</dd></div><div><dt>Status</dt><dd>Simulated in the code</dd></div></dl></div>
+      </article>
+      <article class="fcard">
+        <div class="fdiagram"><svg viewBox="0 0 240 180" aria-hidden="true">
+          <path class="draw" pathLength="100" d="M50 90 C 90 30 150 150 190 90"/><path class="draw" pathLength="100" d="M50 90 C 90 150 150 30 190 90"/>
+          <circle class="fade dot-glow" cx="120" cy="90" r="4"/>
+          <circle class="fade dot-light" cx="44" cy="84" r="3"/><circle class="fade dot-light" cx="52" cy="98" r="2.4"/><circle class="fade dot-light" cx="40" cy="96" r="2"/>
+          <circle class="fade dot-light" cx="196" cy="84" r="3"/><circle class="fade dot-light" cx="188" cy="98" r="2.4"/><circle class="fade dot-light" cx="200" cy="96" r="2"/>
+        </svg></div>
+        <div class="fbody"><h3>Block trades</h3><p>Two desks cross a block at a reference midpoint without showing size to the market.</p>
+          <dl><div><dt>Members</dt><dd>Funds, market makers</dd></div><div><dt>Sealed</dt><dd>Size, limits, counterparties</dd></div><div><dt>Status</dt><dd>Simulated in the code</dd></div></dl></div>
+      </article>
+      <article class="fcard">
+        <div class="fdiagram"><svg viewBox="0 0 240 180" aria-hidden="true">
+          <path class="draw" pathLength="100" d="M44 90 Q 120 90 200 34"/><path class="draw" pathLength="100" d="M44 90 Q 120 90 200 62"/><path class="draw" pathLength="100" d="M44 90 L 200 90"/><path class="draw" pathLength="100" d="M44 90 Q 120 90 200 118"/><path class="draw" pathLength="100" d="M44 90 Q 120 90 200 146"/>
+          <circle class="fade dot-light" cx="44" cy="90" r="6"/>
+          <circle class="fade dot-light" cx="200" cy="34" r="3"/><circle class="fade dot-light" cx="200" cy="62" r="3"/><circle class="fade dot-light" cx="200" cy="90" r="3"/><circle class="fade dot-light" cx="200" cy="118" r="3"/><circle class="fade dot-light" cx="200" cy="146" r="3"/>
+        </svg></div>
+        <div class="fbody"><h3>Payroll</h3><p>An organisation pays contributors from one syndicate. Observers see the total, not who earned what.</p>
+          <dl><div><dt>Members</dt><dd>DAOs, agent organisations</dd></div><div><dt>Sealed</dt><dd>Individual amounts</dd></div><div><dt>Status</dt><dd>Planned</dd></div></dl></div>
+      </article>
+      <article class="fcard">
+        <div class="fdiagram"><svg viewBox="0 0 240 180" aria-hidden="true">
+          <path class="draw" pathLength="100" d="M40 40 Q 100 50 140 90"/><path class="draw" pathLength="100" d="M40 70 Q 100 75 140 90"/><path class="draw" pathLength="100" d="M40 110 Q 100 105 140 90"/><path class="draw" pathLength="100" d="M40 140 Q 100 130 140 90"/>
+          <path class="draw glow" pathLength="100" d="M144 88 Q 180 80 206 52"/>
+          <circle class="fade dot-light" cx="40" cy="40" r="3"/><circle class="fade dot-light" cx="40" cy="70" r="3"/><circle class="fade dot-light" cx="40" cy="110" r="3"/><circle class="fade dot-light" cx="40" cy="140" r="3"/>
+          <circle class="fade dot-glow" cx="208" cy="50" r="4.5"/>
+        </svg></div>
+        <div class="fbody"><h3>Angel rounds</h3><p>Backers size a round together and send one investment from a shared address.</p>
+          <dl><div><dt>Members</dt><dd>Angel circles, LPs</dd></div><div><dt>Sealed</dt><dd>Check sizes, identities</dd></div><div><dt>Status</dt><dd>Planned</dd></div></dl></div>
+      </article>
+      <article class="fcard">
+        <div class="fdiagram"><svg viewBox="0 0 240 180" aria-hidden="true">
+          <circle class="fade dash-ring" cx="96" cy="90" r="54"/>
+          <path class="draw" pathLength="100" d="M96 90 L 196 90"/>
+          <circle class="fade dot-light" cx="82" cy="80" r="2.4"/><circle class="fade dot-light" cx="104" cy="74" r="2"/><circle class="fade dot-light" cx="96" cy="90" r="3.4"/><circle class="fade dot-light" cx="110" cy="102" r="2.2"/><circle class="fade dot-light" cx="84" cy="104" r="2"/>
+          <circle class="fade dot-glow" cx="200" cy="90" r="5"/>
+        </svg></div>
+        <div class="fbody"><h3>Agent budgets</h3><p>Agents spend inside caps their principals set, and the principal can always pull the rest.</p>
+          <dl><div><dt>Members</dt><dd>People and their agents</dd></div><div><dt>Sealed</dt><dd>Strategy and spend plans</dd></div><div><dt>Status</dt><dd>Partly built</dd></div></dl></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="architecture" class="sec rule-top" data-label="3" aria-labelledby="h-architecture">
+  <div class="wrap stack-40">
+    <div class="split-head">
+      <h2 id="h-architecture" class="title" data-split>The Nest, the Roost and the Hatch</h2>
+      <p class="fine">Money and rules live in the Nest, on chain. Deliberation happens in the Roost, off chain. The Hatch is the way out. Every claim below maps to code or a transaction.</p>
+    </div>
+    <div class="arch">
+      <figure class="arch-figure">
+        <svg viewBox="0 0 560 360" role="img" aria-label="Flyers and agents deposit into the Nest on NEAR. The Roost proposes signed settlements. NEAR AI Cloud attests the model it uses. Chain Signatures reaches other chains. The Hatch lets a flyer leave.">
+          <path class="draw" pathLength="100" d="M92 92 Q 160 120 228 170"/>
+          <path class="draw" pathLength="100" d="M92 268 Q 160 240 228 196"/>
+          <path class="draw" pathLength="100" d="M280 72 L 280 150"/>
+          <path class="draw" pathLength="100" d="M332 182 Q 400 182 460 120"/>
+          <path class="draw" pathLength="100" d="M280 214 L 280 290"/>
+          <path class="draw glow" pathLength="100" d="M332 196 Q 410 230 470 262"/>
+          <rect class="fade arch-node" x="228" y="150" width="104" height="64" rx="4"/>
+          <text class="arch-label" x="280" y="178" text-anchor="middle">Nest</text>
+          <text class="arch-sub" x="280" y="196" text-anchor="middle">NEAR testnet</text>
+          <circle class="fade arch-dot" cx="80" cy="86" r="6"/><text class="arch-sub" x="80" y="68" text-anchor="middle">flyers</text>
+          <circle class="fade arch-dot" cx="80" cy="274" r="6"/><text class="arch-sub" x="80" y="300" text-anchor="middle">agents, via MCP</text>
+          <rect class="fade arch-node" x="222" y="24" width="116" height="48" rx="4"/>
+          <text class="arch-label" x="280" y="46" text-anchor="middle">Roost</text>
+          <text class="arch-sub" x="280" y="62" text-anchor="middle">sealed aggregation</text>
+          <rect class="fade arch-node" x="420" y="72" width="120" height="48" rx="4"/>
+          <text class="arch-label" x="480" y="94" text-anchor="middle">Chain Signatures</text>
+          <text class="arch-sub" x="480" y="110" text-anchor="middle">BTC, ETH, SOL</text>
+          <rect class="fade arch-node" x="216" y="290" width="128" height="48" rx="4"/>
+          <text class="arch-label" x="280" y="312" text-anchor="middle">NEAR AI Cloud</text>
+          <text class="arch-sub" x="280" y="328" text-anchor="middle">attested model</text>
+          <circle class="fade arch-glow" cx="474" cy="264" r="6"/><text class="arch-sub" x="474" y="292" text-anchor="middle">the Hatch</text>
+        </svg>
+      </figure>
+      <ul class="arch-list">
+        <li><div><h3>Nest</h3><p>The coordinator contract, in Rust on NEAR. Holds each syndicate's funds and its release policy: up to 8 recipients, a cap per epoch, a deadline. Takes up to 50 flyers and pays out pro rata.</p></div><span class="status live">Live on testnet</span></li>
+        <li><div><h3>Roost</h3><p>Where flyers deliberate. Bids go in encrypted and only a total comes out. Two modes. Local: exact sums, but whoever runs it can read the bids. Model-sealed: each bid is sealed to a NEAR AI Cloud model's attested key, so the operator holds only ciphertext. The model does the sum, and it is accepted only if three runs agree. The Roost can propose a settlement, never take custody.</p></div><span class="status">Local by default. Model-sealed mode tested live. Our own TEE is not built</span></li>
+        <li><div><h3>HAQ</h3><p>The attestation gate. NEAR AI Cloud's hardware quote is verified to Intel's root certificate and its model responses to the attested key. On chain, the Nest checks a signature bound to contract, syndicate, epoch, nonce, allocations and order, plus quorum.</p></div><span class="status live">Live, attestation checked off chain</span></li>
+        <li><div><h3>Hatch</h3><p>Hatching creates a syndicate. The Hatch is its escape valve: after the timeout any flyer takes back their own balance, with no coordinator and no other flyer.</p></div><span class="status live">Live on testnet</span></li>
+        <li><div><h3>Policy guard</h3><p>Spending limits around flyers. The Nest enforces deposit caps today; agent keys scoped to the Nest are next.</p></div><span class="status">Partly built</span></li>
+        <li><div><h3>Omnichain identity</h3><p>Chain Signatures give a syndicate its own Bitcoin, Ethereum and Solana addresses, signed by NEAR's threshold network.</p></div><span class="status">One signature verified on testnet</span></li>
+        <li><div><h3>Intents and the FAR shard</h3><p>The 1Click registry for cross-chain routes, and a private settlement shard with intent-minted tokens.</p></div><span class="status">Registry read-only, shard simulated</span></li>
+        <li><div><h3>Agent interfaces</h3><p>An MCP server with 10 tools, an SDK, an HTTP API with event streams, and x402 payments between agents.</p></div><span class="status live">Built</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="guarantees" class="guarantees dusk" data-label="4" data-theme="dusk" aria-labelledby="h-guarantees">
+  <div class="wrap band" id="band" aria-hidden="true">
+    <span class="band-l">Deliberation stays sealed</span>
+    <span class="band-r">Every member can leave alone</span>
+  </div>
+  <div class="wrap g-pin">
+    <div class="g-copy">
+      <h2 id="h-guarantees" class="title" data-split>The floor under every syndicate</h2>
+      <p class="lede-dusk">If the coordinator stalls, lies or disappears, nothing it holds can trap a member. Keep scrolling to watch one member leave.</p>
+      <dl class="g-list">
+        <div><dt>Bounded settlement</dt><dd>agreed recipients, caps, deadline</dd></div>
+        <div><dt>Sealed deliberation</dt><dd>deposits stay public</dd></div>
+        <div><dt>The Hatch</dt><dd id="exit-status">after the timeout, alone</dd></div>
+      </dl>
+    </div>
+    <figure class="plate">
+      <svg viewBox="0 0 640 480" role="img" aria-label="A swarm of members drawn as dots. As you scroll, one member leaves along its own line.">
+        <g id="swarm" fill="currentColor"></g>
+        <path id="exit-path" d="M472.3 220.3 Q 536 190 596 132" fill="none" stroke="#d9824a" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="156" stroke-dashoffset="156"/>
+        <circle id="exit-dot" cx="472.3" cy="220.3" r="3.4" fill="#e9ece8"/>
+        <text id="exit-l1" class="plate-l1" x="604" y="100" text-anchor="end" opacity="0">A member leaves alone</text>
+        <text id="exit-l2" class="plate-l2" x="604" y="120" text-anchor="end" opacity="0">hatch_out, tx BiKpqM7j…</text>
+      </svg>
+    </figure>
+  </div>
+</section>
+
+<section id="verification" class="sec dusk rule-top-dusk" data-label="5" data-theme="dusk" aria-labelledby="h-verification">
+  <div class="wrap stack-32">
+    <div class="split-head">
+      <h2 id="h-verification" class="title" data-split>What runs today</h2>
+      <button type="button" class="btn btn-dusk" id="replay">Replay recorded results</button>
+    </div>
+    <div class="live-panel" id="live-panel">
+      <div class="lp-head">
+        <h3>Check NEAR AI Cloud from this page</h3>
+        <div class="lp-actions">
+          <button type="button" class="btn btn-dusk" id="lp-run">Run live check</button>
+          <button type="button" class="btn btn-line" id="lp-replay">Test a wrong nonce</button>
+        </div>
+      </div>
+      <p class="fine-dusk lp-intro">Your browser picks a random nonce, asks NEAR AI Cloud for its hardware attestation and checks the answer on this page. Nothing passes through our server. The wrong-nonce test checks the same report against a different nonce, as if an old report were being replayed, so you can see the checks fail.</p>
+      <ol class="lp-list" id="lp-list" aria-live="polite"></ol>
+      <p class="fine-dusk lp-note" id="lp-note"></p>
+    </div>
+    <h3 class="rec-title">Recorded results</h3>
+    <p class="fine-dusk">Recorded by the repository's verifier and CI on NEAR testnet. Select a value to copy it.</p>
+    <div class="table-scroll">
+      <table class="checks">
+        <caption class="sr-only">Verification results</caption>
+        <thead class="sr-only"><tr><th scope="col">State</th><th scope="col">Check</th><th scope="col">Result</th><th scope="col">Evidence</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pip on"></span></td><th scope="row">Gateway TDX quote</th><td data-done="Verified to Intel's root certificate">Verified to Intel's root certificate</td><td><button type="button" class="copy" data-copy="dcap-qvl, NEAR AI Cloud" data-decode>dcap-qvl, NEAR AI Cloud</button></td></tr>
+          <tr><td><span class="pip on"></span></td><th scope="row">Model response signature</th><td data-done="Signed by the attested model key">Signed by the attested model key</td><td><button type="button" class="copy" data-copy="0xfdbd7952498b333206f360d71d97a1e0961e8ddf" data-decode>0xfdbd7952…1e8ddf</button></td></tr>
+          <tr><td><span class="pip on"></span></td><th scope="row">Testnet contract</th><td data-done="10 recorded transactions resolve">10 recorded transactions resolve</td><td><a class="copy" href="https://testnet.nearblocks.io/address/c.fly-1793636729.testnet" data-decode>c.fly-1793636729.testnet</a></td></tr>
+          <tr><td><span class="pip on"></span></td><th scope="row">Malicious settlement</th><td data-done="Rejected on chain, recipient not agreed">Rejected on chain, recipient not agreed</td><td><button type="button" class="copy" data-copy="Settle REJECT, lib.rs:557" data-decode>Settle REJECT, lib.rs:557</button></td></tr>
+          <tr><td><span class="pip on"></span></td><th scope="row">Sealed bids, model-sealed Roost</th><td data-done="8 of 8 live rounds exact, receipts verified">8 of 8 live rounds exact, receipts verified</td><td><button type="button" class="copy" data-copy="npm run verify:roost-model" data-decode>npm run verify:roost-model</button></td></tr>
+          <tr><td><span class="pip on"></span></td><th scope="row">Member exit</th><td data-done="hatch_out succeeded after the timeout">hatch_out succeeded after the timeout</td><td><button type="button" class="copy" data-copy="BiKpqM7j" data-decode>BiKpqM7j…</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sr-only" aria-live="polite" id="live"></p>
+  </div>
+</section>
+
+<section id="agents" class="sec sec-last" data-label="6" aria-labelledby="h-agents">
+  <div class="wrap agents">
+    <div>
+      <h2 id="h-agents" class="title" data-split>Agents join through MCP</h2>
+      <p class="lede-sm">An agent is a flyer like any other. It can find syndicates, hatch one, deposit, settle within the policy and leave through the Hatch, using the same tools a person would, and pay other agents for data with x402.</p>
+    </div>
+    <div class="tools">
+      <span class="tools-head">If you are an agent, start here</span>
+      <code data-decode>midge_list_syndicates</code>
+      <code data-decode>midge_get_my_syndicates</code>
+      <code data-decode>midge_hatch_syndicate</code>
+      <code data-decode>midge_deposit</code>
+      <code data-decode>midge_settle</code>
+      <code data-decode>midge_hatch_out</code>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <svg class="wordmark" id="wordmark" viewBox="0 0 1000 230" role="img" aria-label="midge"><text x="0" y="200">midge</text></svg>
+    <div class="foot-row">
+      <p>Midge is an independent NEAR HACKATHON prototype on testnet. No token. Not affiliated with Fly.trade or Fly.io.</p>
+      <a href="https://testnet.nearblocks.io/address/c.fly-1793636729.testnet">Contract on NEAR testnet</a>
+    </div>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>
