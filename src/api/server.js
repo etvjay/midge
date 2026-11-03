@@ -2,7 +2,7 @@ import http from 'node:http';
 import { EventEmitter } from 'node:events';
 import { FlyNestContract } from '../contracts/nest.js';
 import { FlyChainClient } from '../chain/client.js';
-import { RoostEnclave } from '../enclave/roost.js';
+import { createRoost } from '../enclave/factory.js';
 import { EnclaveCrypto } from '../enclave/crypto.js';
 import { SyndicatePod } from '../syndicate/pod.js';
 import { FarPrivateShardBridge } from '../settlement/far-shard.js';
@@ -29,7 +29,7 @@ export class FlyApiDaemon {
         this.mode = 'model';
       }
     }
-    this.roost = new RoostEnclave();
+    this.roost = createRoost(); // MIDGE_ROOST_BACKEND=local (default) | model-sealed
     this.farShard = new FarPrivateShardBridge();
     this.mpc = new ChainSignaturesMPC({ networkId: 'testnet' });
     this.x402 = new X402CommerceEngine();
@@ -441,11 +441,7 @@ export class FlyApiDaemon {
     // 3. Roost TEE Endpoints (/v1/roost)
     // ==========================================
     if (method === 'GET' && pathname === '/v1/roost/session-key') {
-      return this.sendJson(res, 200, {
-        sessionNonce: this.roost.sessionNonce,
-        publicKeyPem: this.roost.publicKeyPem,
-        enclaveModel: this.roost.model,
-      });
+      return this.sendJson(res, 200, { ...this.roost.getSessionInfo(), ...this.roost.describe() });
     }
 
     if (method === 'GET' && pathname === '/v1/roost/attestation') {
@@ -458,6 +454,7 @@ export class FlyApiDaemon {
       const receipt = this.roost.submitSealedIntent({
         flyerId: body.flyerId,
         cipherTextBase64: body.cipherTextBase64,
+        cipherTextHex: body.cipherTextHex,
       });
 
       this.events.emit('syndicate_event', {
@@ -470,7 +467,7 @@ export class FlyApiDaemon {
     }
 
     if (method === 'POST' && pathname === '/v1/roost/aggregate') {
-      const result = this.roost.aggregateAndClear();
+      const result = await this.roost.aggregateAndClear();
       return this.sendJson(res, 200, result);
     }
 

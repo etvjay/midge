@@ -7,6 +7,7 @@ import { verifyOtcAndComputeFacilities } from './verifications/06-otc-and-comput
 import { verifyResilienceFailureMatrix } from './verifications/07-resilience-failure-matrix.js';
 import { verifyApiSseMcpE2E } from './verifications/08-api-sse-mcp-e2e.js';
 import { verifyInferenceAttestation } from './scripts/verify-inference.js';
+import { verifyModelSealedRoost } from './verifications/09-model-sealed-roost.js';
 
 async function runAllVerifications() {
   console.log('╔════════════════════════════════════════════════════════════════╗');
@@ -80,6 +81,13 @@ async function runAllVerifications() {
     results.inference = { verified: false, error: err.message };
   }
 
+  try {
+    results.modelSealedRoost = await verifyModelSealedRoost();
+  } catch (err) {
+    console.error('❌ Model-Sealed Roost Check Failed:', err.message);
+    results.modelSealedRoost = { verified: false, error: err.message };
+  }
+
   const duration = ((Date.now() - startTotal) / 1000).toFixed(2);
   const isOffline = process.env.FLY_OFFLINE === '1';
   const allPassed =
@@ -91,7 +99,8 @@ async function runAllVerifications() {
     results.otcCompute.verified &&
     results.resilience.verified &&
     results.apiSseMcp.verified &&
-    results.inference.verified;
+    results.inference.verified &&
+    results.modelSealedRoost.verified;
 
   console.log('\n════════════════════════════════════════════════════════════════');
   if (isOffline) {
@@ -113,12 +122,13 @@ async function runAllVerifications() {
     ? '✅ PASS (Live External)'
     : (results.inference.skipped ? '⚠️ SKIPPED (No API key; not demonstrated)' : (isOffline ? '✅ PASS [OFFLINE FIXTURE]' : '✅ PASS (Recorded Fixture)'));
   console.log(` 9. TEE Deliberation Inference Attestation:      ${inferStatus}`);
+  console.log(` 10. Model-Sealed Roost (E2EE, mock gateway):     ${results.modelSealedRoost.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log('────────────────────────────────────────────────────────────────');
   console.log(` Total Execution Time: ${duration}s`);
   if (isOffline) {
-    console.log(` Verdict: ${allPassed ? 'ALL 9 VERIFICATIONS PASSED [OFFLINE FIXTURES MODE: 3 checks used fixtures]' : 'CHECKS FAILED'}`);
+    console.log(` Verdict: ${allPassed ? 'ALL 10 VERIFICATIONS PASSED [OFFLINE FIXTURES MODE: 3 checks used fixtures]' : 'CHECKS FAILED'}`);
   } else {
-    console.log(` Verdict: ${allPassed ? 'ALL 9 ARCHITECTURAL VERIFICATIONS PASSED (Contract & TEE Bound, Facilities Simulated)' : 'CHECKS FAILED'}`);
+    console.log(` Verdict: ${allPassed ? 'ALL 10 ARCHITECTURAL VERIFICATIONS PASSED (Contract & TEE Bound, Facilities Simulated)' : 'CHECKS FAILED'}`);
   }
   console.log('════════════════════════════════════════════════════════════════\n');
 

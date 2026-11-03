@@ -27,6 +27,8 @@
     "verify:onchain": "node scripts/verify-onchain.js",
     "verify:mpc": "node scripts/testnet-mpc.js",
     "verify:inference": "node scripts/verify-inference.js",
+    "verify:roost-model": "node scripts/verify-roost-model.js",
+    "verify:roost-sealed": "node verifications/09-model-sealed-roost.js",
     "build:wasm": "cd contracts/fly-coordinator && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",
     "baseline": "node scripts/baseline.js",
     "security:review": "node scripts/security-review.js",
@@ -49,6 +51,9 @@
   "license": "MIT",
   "dependencies": {
     "@nearai/inference-sdk": "^0.1.0",
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "ethers": "^6.17.0",
     "near-api-js": "^7.4.0"
   }

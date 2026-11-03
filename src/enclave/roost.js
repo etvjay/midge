@@ -17,6 +17,26 @@ export class RoostEnclave {
     this.sealedEncryptedIntents = [];
   }
 
+  /** What this backend does and does not protect. Honest by construction. */
+  describe() {
+    return {
+      backend: 'local',
+      inputsHiddenFromOperator: false,
+      hiddenBy: 'nothing: runs as an ordinary process; decrypted inputs sit in this process memory',
+      arithmetic: 'exact',
+      needsHosting: false,
+    };
+  }
+
+  getSessionInfo() {
+    return {
+      backend: 'local',
+      sessionNonce: this.sessionNonce,
+      publicKeyPem: this.publicKeyPem,
+      enclaveModel: this.model,
+    };
+  }
+
   /**
    * Retrieves verified TEE hardware attestation bound to the session nonce.
    * Fails closed if TDX Quote v4 header or REPORTDATA nonce binding does not match.
