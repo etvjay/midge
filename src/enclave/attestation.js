@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -98,4 +99,28 @@ export function selectVerifiedModelKey(report, opts) {
     throw new RoostAggregationError(`no model attestation candidate passed: ${[...new Set(failed)].join('; ')}`);
   }
   return accepted;
+}
+
+/**
+ * Fetch a model attestation with a fresh nonce and return the first candidate that passes every check.
+ * No API key is needed: members can run this themselves, so they never have to take a coordinator's word
+ * for which key to seal to.
+ */
+export async function fetchVerifiedModelKey({
+  baseUrl = 'https://cloud-api.near.ai',
+  model,
+  apiKey = null,
+  chain = 'if-available',
+  acceptedTcb = ['UpToDate'],
+  fetchImpl = globalThis.fetch,
+}) {
+  const nonce = crypto.randomBytes(32).toString('hex');
+  const url = new URL(`${baseUrl.replace(/\/$/, '')}/v1/attestation/report`);
+  url.search = new URLSearchParams({
+    model, provider: 'near', signing_algo: 'ed25519', include_tls_fingerprint: 'false', nonce,
+  }).toString();
+  const res = await fetchImpl(url, { headers: { 'x-no-aliasing': 'true', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) } });
+  if (!res.ok) throw new RoostAggregationError(`attestation request answered ${res.status}`);
+  const accepted = selectVerifiedModelKey(await res.json(), { nonce, model, chain, acceptedTcb });
+  return { nonce, publicKey: accepted.publicKey, tcbStatus: accepted.tcbStatus, checks: accepted.checks };
 }

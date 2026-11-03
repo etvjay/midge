@@ -2,14 +2,14 @@
 import readline from 'node:readline';
 import { FlyMcpServer } from '../src/mcp/server.js';
 import { FlyNestContract } from '../src/contracts/nest.js';
-import { RoostEnclave } from '../src/enclave/roost.js';
+import { createRoost } from '../src/enclave/factory.js';
 
 /**
  * Midge Model Context Protocol (MCP) Server:
  * Provides stdio JSON-RPC transport for LLM coding agents (Claude Code, Cursor, Codex).
  */
 const nest = new FlyNestContract();
-const roost = new RoostEnclave();
+const roost = createRoost();
 const mcp = new FlyMcpServer({
   mode: process.env.FLY_MODE || 'chain',
   nestContract: nest,

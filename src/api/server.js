@@ -14,7 +14,7 @@ import { ConfidentialComputeSyndicate } from '../facilities/compute-syndicate.js
 import { ResilienceEngine } from '../resilience/failure-matrix.js';
 
 export class FlyApiDaemon {
-  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null } = {}) {
+  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null, roostBackend = null } = {}) {
     this.port = port;
     this.host = host;
     this.allowedOrigins = allowedOrigins;
@@ -29,7 +29,7 @@ export class FlyApiDaemon {
         this.mode = 'model';
       }
     }
-    this.roost = createRoost(); // MIDGE_ROOST_BACKEND=local (default) | model-sealed
+    this.roost = createRoost({ backend: roostBackend }); // auto: model-sealed with a NEARAI_API_KEY, else a local simulation
     this.farShard = new FarPrivateShardBridge();
     this.mpc = new ChainSignaturesMPC({ networkId: 'testnet' });
     this.x402 = new X402CommerceEngine();
@@ -441,6 +441,7 @@ export class FlyApiDaemon {
     // 3. Roost TEE Endpoints (/v1/roost)
     // ==========================================
     if (method === 'GET' && pathname === '/v1/roost/session-key') {
+      if (typeof this.roost.ensureAttested === 'function') await this.roost.ensureAttested();
       return this.sendJson(res, 200, { ...this.roost.getSessionInfo(), ...this.roost.describe() });
     }
 
@@ -455,6 +456,7 @@ export class FlyApiDaemon {
         flyerId: body.flyerId,
         cipherTextBase64: body.cipherTextBase64,
         cipherTextHex: body.cipherTextHex,
+        cipherText: body.cipherText,
       });
 
       this.events.emit('syndicate_event', {

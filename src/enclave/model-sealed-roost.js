@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { generateClientKey, openFromModel, sealToModel } from './e2ee.js';
-import { selectVerifiedModelKey } from './attestation.js';
+import { fetchVerifiedModelKey } from './attestation.js';
 import { RoostAggregationError } from './errors.js';
 
 export { RoostAggregationError };
@@ -123,23 +123,24 @@ export class ModelSealedRoost {
 
   /** Fetch and verify a model attestation with a fresh nonce; remember the model key. */
   async attest() {
-    const nonce = crypto.randomBytes(32).toString('hex');
-    const url = new URL(`${this.baseUrl}/v1/attestation/report`);
-    url.search = new URLSearchParams({
-      model: this.model, provider: 'near', signing_algo: 'ed25519', include_tls_fingerprint: 'false', nonce,
-    }).toString();
-    const res = await this.#fetch(url, { headers: { Authorization: `Bearer ${this.#apiKey}`, 'x-no-aliasing': 'true' } });
-    if (!res.ok) throw new RoostAggregationError(`attestation request answered ${res.status}`);
-    const accepted = selectVerifiedModelKey(await res.json(), {
-      nonce, model: this.model, chain: this.chain, acceptedTcb: this.acceptedTcb,
+    const verified = await fetchVerifiedModelKey({
+      baseUrl: this.baseUrl, model: this.model, apiKey: this.#apiKey,
+      chain: this.chain, acceptedTcb: this.acceptedTcb, fetchImpl: this.#fetch,
     });
-    this.modelPublicKey = accepted.publicKey;
-    this.attestation = { nonce, tcbStatus: accepted.tcbStatus, checks: accepted.checks, publicKey: accepted.publicKey };
+    this.modelPublicKey = verified.publicKey;
+    this.attestation = { nonce: verified.nonce, tcbStatus: verified.tcbStatus, checks: verified.checks, publicKey: verified.publicKey };
     return this.attestation;
   }
 
+  async ensureAttested() {
+    if (!this.modelPublicKey) await this.attest();
+    return this.attestation;
+  }
+
+  /** Same shape callers expect from the local Roost (verified, sessionNonce) plus the model-sealed details. */
   async getAttestationQuote() {
-    return this.attest();
+    const a = await this.attest();
+    return { verified: true, sessionNonce: a.nonce, publicKey: a.publicKey, tcbStatus: a.tcbStatus, checks: a.checks };
   }
 
   /** Convenience for tests and demos: a flyer seals a bid to the attested model key. */
@@ -148,7 +149,8 @@ export class ModelSealedRoost {
     return sealToModel(JSON.stringify(payload), this.modelPublicKey);
   }
 
-  submitSealedIntent({ flyerId, cipherTextHex }) {
+  submitSealedIntent({ flyerId, cipherTextHex, cipherText }) {
+    cipherTextHex = cipherTextHex ?? cipherText;
     if (typeof flyerId !== 'string' || flyerId.length === 0) throw new RoostAggregationError('flyerId is required');
     if (typeof cipherTextHex !== 'string' || !/^[0-9a-f]+$/i.test(cipherTextHex) || cipherTextHex.length % 2 !== 0) {
       throw new RoostAggregationError('cipherTextHex must be an even-length hex string');

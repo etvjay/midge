@@ -1,4 +1,5 @@
 import { EnclaveCrypto } from '../enclave/crypto.js';
+import { sealBidForRoost } from '../enclave/member.js';
 
 /**
  * Midge Developer SDK Client (@midge/sdk):
@@ -100,14 +101,20 @@ export class FlyClient {
     return res.data;
   }
 
-  async submitSealedIntent({ syndicateId, flyerId, intentPayload, enclavePublicKeyPem }) {
-    // Encrypt client-side using enclave RSA public key
-    const cipherTextBase64 = EnclaveCrypto.encryptIntent(intentPayload, enclavePublicKeyPem);
-    const res = await this._request('POST', '/v1/roost/intents/sealed', {
-      syndicateId,
-      flyerId,
-      cipherTextBase64,
-    });
+  /**
+   * Seal a bid for a model-sealed Roost. Verifies the model attestation itself and refuses a key the
+   * coordinator merely asserts. Pass the result's cipherTextHex to submitSealedIntent.
+   */
+  async sealBid({ intentPayload, session, ...verifyOptions }) {
+    return sealBidForRoost({ session: session || (await this.getSessionKey()), payload: intentPayload, ...verifyOptions });
+  }
+
+  async submitSealedIntent({ syndicateId, flyerId, intentPayload, enclavePublicKeyPem, cipherTextHex }) {
+    // model-sealed Roost: the caller already sealed the bid with sealBid(). Local simulation: RSA below.
+    const body = cipherTextHex
+      ? { syndicateId, flyerId, cipherTextHex }
+      : { syndicateId, flyerId, cipherTextBase64: EnclaveCrypto.encryptIntent(intentPayload, enclavePublicKeyPem) };
+    const res = await this._request('POST', '/v1/roost/intents/sealed', body);
     return res.data;
   }
 

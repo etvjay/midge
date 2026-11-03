@@ -12,7 +12,7 @@ export async function verifyApiSseMcpE2E() {
 
   // 1. Boot FlyApiDaemon on ephemeral port
   console.log('[1/7] Booting FlyApiDaemon HTTP & SSE gateway...');
-  const daemon = new FlyApiDaemon({ port: 0 });
+  const daemon = new FlyApiDaemon({ port: 0, roostBackend: 'local' });
   const { port } = await daemon.start();
   const baseUrl = `http://127.0.0.1:${port}`;
   console.log(`  ✓ Gateway daemon live on ${baseUrl}`);
@@ -181,7 +181,7 @@ export async function verifyApiSseMcpE2E() {
 
     // 8. Test Security Controls: API Key Enforcement, CORS & Body Limits
     console.log('[8/8] Testing Security Controls: API Key, Body Limits & CORS...');
-    const secureDaemon = new FlyApiDaemon({ port: 0, apiKey: 'fly-sec-test-token-789' });
+    const secureDaemon = new FlyApiDaemon({ port: 0, apiKey: 'fly-sec-test-token-789', roostBackend: 'local' });
     const secAddress = await secureDaemon.start();
     const secBaseUrl = `http://127.0.0.1:${secAddress.port}`;
 

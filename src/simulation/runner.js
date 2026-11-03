@@ -1,16 +1,18 @@
 import { FlyNestContract } from '../contracts/nest.js';
-import { RoostEnclave } from '../enclave/roost.js';
-import { EnclaveCrypto } from '../enclave/crypto.js';
+import { createRoost } from '../enclave/factory.js';
 import { OneClickIntentAdapter } from '../intents/oneclick.js';
 
-export async function runDarkSwarmSimulation() {
+export async function runDarkSwarmSimulation({ backend } = {}) {
   console.log('╔════════════════════════════════════════════════════════════════╗');
   console.log('║             MIDGE: 10-FLYER DARK SWARM SIMULATION             ║');
   console.log('║       Asymmetric Encryption → TEE HAQ → FAR Shard Settlement  ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
   const nest = new FlyNestContract();
-  const roost = new RoostEnclave();
+  const roost = createRoost({ backend });
+  const roostInfo = roost.describe();
+  const modelSealed = roostInfo.backend === 'model-sealed';
+  console.log(`Roost backend: ${roostInfo.backend}. ${modelSealed ? 'Bids are sealed to a NEAR AI Cloud model; this process holds ciphertext only.' : 'SIMULATION: this process can read every bid.'}\n`);
   const oneClick = new OneClickIntentAdapter();
 
   const syndicateId = 'dark-swarm-10';
@@ -41,11 +43,17 @@ export async function runDarkSwarmSimulation() {
   console.log(`  ✓ Total Pooled Capital: ${syndicate.totalEscrow} USDC across 10 Flyers`);
 
   // Step 3: Roost TEE Attestation & Key Exchange
-  console.log('\n[STEP 3: TEE ROOST ATTESTATION] Requesting hardware enclave quote...');
+  console.log('\n[STEP 3: ROOST ATTESTATION] Requesting hardware attestation...');
   const attestation = await roost.getAttestationQuote();
-  console.log(`  ✓ TEE Enclave Status:   ${attestation.verified ? 'HARDWARE ATTESTED (Intel TDX)' : 'MOCK'}`);
-  console.log(`  ✓ Session Nonce:        ${attestation.sessionNonce.slice(0, 24)}...`);
-  console.log(`  ✓ Enclave Public Key:   ${attestation.publicKeyPem.split('\n')[1].slice(0, 30)}... (RSA-2048)`);
+  if (modelSealed) {
+    console.log(`  ✓ Model Key Attested:   Intel TDX chain verified, TCB ${attestation.tcbStatus}`);
+    console.log(`  ✓ Session Nonce:        ${attestation.sessionNonce.slice(0, 24)}...`);
+    console.log(`  ✓ Model Public Key:     ${attestation.publicKey.slice(0, 24)}... (Ed25519, E2EE v2)`);
+  } else {
+    console.log(`  ✓ NEAR AI Gateway:      ${attestation.verified ? 'attested (Intel TDX), which does NOT cover this local process' : 'MOCK'}`);
+    console.log(`  ✓ Session Nonce:        ${attestation.sessionNonce.slice(0, 24)}...`);
+    console.log(`  ✓ Enclave Public Key:   ${attestation.publicKeyPem.split('\n')[1].slice(0, 30)}... (RSA-2048)`);
+  }
 
   // Bind the round nonce to the syndicate for replay protection
   syndicate.roundNonce = attestation.sessionNonce;
@@ -60,22 +68,27 @@ export async function runDarkSwarmSimulation() {
       maxSlippage: 0.01,
       privateStrategyWeight: Math.random(),
     };
-    // REAL ASYMMETRIC ENCRYPTION using Enclave Public Key
-    const cipherTextBase64 = EnclaveCrypto.encryptIntent(plainPayload, attestation.publicKeyPem);
+    // Each flyer seals its own bid to the Roost's key (model key or local RSA key)
+    const cipherText = roost.sealIntent(plainPayload);
 
     roost.submitSealedIntent({
       flyerId,
-      cipherTextBase64,
+      cipherText,
     });
   }
-  console.log(`  ✓ 10 Asymmetrically Encrypted Intents Ingested into Enclave RAM.`);
+  console.log(`  ✓ 10 Sealed Intents Submitted (${modelSealed ? 'ciphertext only held by coordinator' : 'held in local process memory'}).`);
 
   // Step 5: Sealed Intent Aggregation (SIA)
-  console.log('\n[STEP 5: SIA AGGREGATION] Decrypting inside TEE RAM, aggregating TWAP & zeroing RAM...');
-  const { aggregateOrder, enclaveSignature } = roost.aggregateAndClear();
+  console.log('\n[STEP 5: SIA AGGREGATION] Aggregating sealed intents...');
+  const { aggregateOrder, enclaveSignature, receipt } = await roost.aggregateAndClear();
   console.log(`  ✓ Aggregated Order:    ${aggregateOrder.totalInputAmount} USDC for NEAR`);
-  console.log(`  ✓ Enclave Signature:   ${enclaveSignature.slice(0, 24)}... (Verified)`);
-  console.log(`  ✓ Raw Member RAM:      CLEARED (Zero-Knowledge Invariant Preserved)`);
+  if (modelSealed) {
+    console.log(`  ✓ Model Runs Agreed:   ${receipt.agreement}, ${receipt.runs.every((r) => r.signatureVerified) ? 'every response signature verified' : 'signatures NOT verified'}`);
+    console.log(`  ✓ Bids In The Clear:   NONE held by the coordinator (only the model TEE saw them)`);
+  } else {
+    console.log(`  ✓ Enclave Signature:   ${enclaveSignature.slice(0, 24)}... (Verified)`);
+    console.log(`  ✓ Raw Member RAM:      CLEARED (this simulation could read them first)`);
+  }
 
   // Step 6: HAQ Verification & On-Chain Settlement
   console.log('\n[STEP 6: NEST HAQ SETTLEMENT] Submitting batch proof to Nest contract...');

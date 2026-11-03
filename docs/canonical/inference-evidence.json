@@ -1,14 +1,14 @@
 {
   "model": "Qwen/Qwen3.6-35B-A3B-FP8",
-  "completionId": "4fe5dc7c23184add999e4459c63df23c",
+  "completionId": "ad870f1285224579902a578de7d06916",
   "requestHash": "8810c3e0fcc95c8d7a6d8f738237174bbafaa9e60c89a21959f41c6bb43d4a8f",
-  "responseHash": "c8ba9d6e2f92ab42bfb0769502c6f3787a2aed65deeb611d15ede1b12c83feb9",
-  "signedText": "Qwen/Qwen3.6-35B-A3B-FP8:8810c3e0fcc95c8d7a6d8f738237174bbafaa9e60c89a21959f41c6bb43d4a8f:c8ba9d6e2f92ab42bfb0769502c6f3787a2aed65deeb611d15ede1b12c83feb9",
+  "responseHash": "e67933e71ec13ccd83784be037d1bd1f59348ef7614ceba228fcfa96fbd57df2",
+  "signedText": "Qwen/Qwen3.6-35B-A3B-FP8:8810c3e0fcc95c8d7a6d8f738237174bbafaa9e60c89a21959f41c6bb43d4a8f:e67933e71ec13ccd83784be037d1bd1f59348ef7614ceba228fcfa96fbd57df2",
   "signatureKind": "provider_tee",
   "signingAlgo": "ecdsa",
   "signingAddress": "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
-  "signature": "0x41e8d9e3c8cb58c5674c86e3aa52dc66cc9c14fb4de68ad68d6dc0a1f79995c315825557214b25b31072c8bb87590aa78d9019b991de6dba4ac932883d1dc3581b",
+  "signature": "0x295dd83f4123c8aa1ac6868d0de1380adcf4d893ae1ea82b0a628586aad2840506cb680378e5c98a76456bf24020904ed103eb582a7a325692c42694411fdd531b",
   "tamperRejected": true,
   "verified": true,
-  "timestamp": "2026-11-03T05:42:50.337Z"
+  "timestamp": "2026-11-03T05:54:36.842Z"
 }

@@ -92,7 +92,13 @@ export class RoostEnclave {
   /**
    * Submit an asymmetrically encrypted intent into the enclave.
    */
-  submitSealedIntent({ flyerId, cipherTextBase64 }) {
+  /** A flyer seals a bid to this Roost's RSA key. Same call as the model-sealed backend. */
+  sealIntent(payload) {
+    return EnclaveCrypto.encryptIntent(payload, this.publicKeyPem);
+  }
+
+  submitSealedIntent({ flyerId, cipherTextBase64, cipherText }) {
+    cipherTextBase64 = cipherTextBase64 ?? cipherText;
     this.sealedEncryptedIntents.push({
       flyerId,
       cipherText: cipherTextBase64,

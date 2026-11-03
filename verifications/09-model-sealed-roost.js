@@ -3,7 +3,8 @@ import crypto from 'node:crypto';
 import { ed25519 } from '@noble/curves/ed25519.js';
 import { ModelSealedRoost, RoostAggregationError } from '../src/enclave/model-sealed-roost.js';
 import { sealToModel, openFromModel } from '../src/enclave/e2ee.js';
-import { createRoost } from '../src/enclave/factory.js';
+import { createRoost, resolveBackend } from '../src/enclave/factory.js';
+import { sealBidForRoost } from '../src/enclave/member.js';
 
 /**
  * Verification 09: the model-sealed Roost, against a local mock of the NEAR AI Cloud gateway.
@@ -42,6 +43,7 @@ function startMockGateway() {
 
     if (url.pathname === '/v1/attestation/report') {
       const nonce = url.searchParams.get('nonce');
+      state.lastAttestationHadAuth = Boolean(req.headers.authorization);
       const { pub } = keys();
       if (state.mode.noCandidates) return json(200, { model_attestations: [] });
       return json(200, {
@@ -124,7 +126,7 @@ export async function verifyModelSealedRoost() {
   }));
 
   try {
-    console.log('\n[1/7] Attestation of the model key');
+    console.log('\n[1/8] Attestation of the model key');
     gw.state.mode = {};
     let r = newRoost();
     const att = await r.attest();
@@ -142,7 +144,7 @@ export async function verifyModelSealedRoost() {
     }
     gw.state.mode = {};
 
-    console.log('\n[2/7] Sealing and aggregation');
+    console.log('\n[2/8] Sealing and aggregation');
     r = newRoost();
     await r.attest();
     fill(r, [1200, 850, 430]);
@@ -156,7 +158,7 @@ export async function verifyModelSealedRoost() {
       && gw.state.wireBodies.length === 3 && gw.state.wireBodies.every((b) => !b.includes(MARKER)), 'marker absent from state and from every request on the wire');
     check('model-sealed round reports its limits honestly', r.describe().inputsHiddenFromOperator === true && /language model/.test(r.describe().arithmetic));
 
-    console.log('\n[3/7] Fail-closed behaviour');
+    console.log('\n[3/8] Fail-closed behaviour');
     const failing = async (label, mode, pattern, opts) => {
       gw.state.mode = mode;
       const x = newRoost(opts);
@@ -178,7 +180,7 @@ export async function verifyModelSealedRoost() {
     await failing('a signature that does not verify', { badSignature: true }, /does not verify/);
     await failing('a signature from a key that is not the attested model key', { wrongSigner: true }, /not made by the attested model key/);
 
-    console.log('\n[4/7] Key rotation');
+    console.log('\n[4/8] Key rotation');
     r = newRoost();
     await r.attest();
     fill(r, [10, 20]);
@@ -187,7 +189,7 @@ export async function verifyModelSealedRoost() {
     r.reset();
     check('reset() drops stale ciphertext', r.sealedIntents.length === 0);
 
-    console.log('\n[5/7] Input validation');
+    console.log('\n[5/8] Input validation');
     r = newRoost();
     await r.attest();
     const good = r.sealIntent({ amount: 1 });
@@ -210,19 +212,52 @@ export async function verifyModelSealedRoost() {
     } catch { sealedToOther = true; }
     check('a bid sealed to a different key cannot be used (gateway cannot decrypt it)', sealedToOther);
 
-    console.log('\n[6/7] Scale and backend selection');
+    console.log('\n[6/8] Scale and backend selection');
     r = newRoost();
     await r.attest();
     const amounts = Array.from({ length: 50 }, (_, i) => 100 + ((i * 37) % 900));
     fill(r, amounts);
     const big = await r.aggregateAndClear();
     check('50 sealed bids aggregate to the exact total', big.aggregateOrder.totalInputAmount === amounts.reduce((a, b) => a + b, 0) && big.aggregateOrder.flyerCount === 50);
-    check('factory builds the local backend by default', createRoost({ backend: 'local' }).describe().backend === 'local');
+    check('factory builds the local simulation when asked for it by name', createRoost({ backend: 'local' }).describe().backend === 'local');
     check('factory builds the model-sealed backend', createRoost({ backend: 'model-sealed', apiKey: 'k' }).describe().backend === 'model-sealed');
     check('factory rejects an unknown backend', (() => { try { createRoost({ backend: 'x' }); return false; } catch { return true; } })());
     check('local backend states plainly that it hides nothing', createRoost({ backend: 'local' }).describe().inputsHiddenFromOperator === false);
 
-    console.log('\n[7/7] The API key stays out of serialised state');
+    console.log('\n[7/8] Default backend and member-side key verification');
+    const saved = { b: process.env.MIDGE_ROOST_BACKEND, k: process.env.NEARAI_API_KEY };
+    delete process.env.MIDGE_ROOST_BACKEND; delete process.env.NEARAI_API_KEY;
+    check('default is model-sealed when a NEAR AI key is configured', resolveBackend({ apiKey: 'k' }).backend === 'model-sealed');
+    check('default falls back to the local simulation only without a key, and says it fell back', resolveBackend({}).backend === 'local' && resolveBackend({}).fellBack === true);
+    check('asking for the local simulation by name is not a fallback', resolveBackend({ backend: 'local' }).fellBack === false);
+    process.env.NEARAI_API_KEY = 'env-key';
+    check('a key in the environment selects model-sealed', resolveBackend({}).backend === 'model-sealed');
+    if (saved.b === undefined) delete process.env.MIDGE_ROOST_BACKEND; else process.env.MIDGE_ROOST_BACKEND = saved.b;
+    if (saved.k === undefined) delete process.env.NEARAI_API_KEY; else process.env.NEARAI_API_KEY = saved.k;
+
+    gw.state.mode = {};
+    r = newRoost();
+    await r.attest();
+    const session = r.getSessionInfo();
+    const memberOpts = { baseUrl: gw.url, chain: 'skip' };
+    const m1 = await sealBidForRoost({ session, payload: { amount: 111, note: MARKER }, ...memberOpts });
+    check('a member verifies the attestation without an API key', gw.state.lastAttestationHadAuth === false);
+    const m2 = await sealBidForRoost({ session, payload: { amount: 222 }, ...memberOpts });
+    r.submitSealedIntent({ flyerId: 'm1', cipherTextHex: m1.cipherTextHex });
+    r.submitSealedIntent({ flyerId: 'm2', cipherText: m2.cipherTextHex });
+    const viaMembers = await r.aggregateAndClear();
+    check('bids sealed by members after their own verification aggregate correctly', viaMembers.aggregateOrder.totalInputAmount === 333);
+    const evil = { ...session, modelPublicKey: hex(ed25519.getPublicKey(crypto.randomBytes(32))) };
+    check('a member refuses a key the coordinator asserts but the attestation does not support',
+      await rejects(() => sealBidForRoost({ session: evil, payload: { amount: 1 }, ...memberOpts }), /does not match the attested key/));
+    gw.state.mode = { nonceNotInQuote: true };
+    check('a member refuses when the attestation does not verify',
+      await rejects(() => sealBidForRoost({ session, payload: { amount: 1 }, ...memberOpts }), /nonce is inside the quote/));
+    gw.state.mode = {};
+    check('a member refuses to treat a local-simulation session as sealed',
+      await rejects(() => sealBidForRoost({ session: { backend: 'local' }, payload: { amount: 1 }, ...memberOpts }), /not in model-sealed mode/));
+
+    console.log('\n[8/8] The API key stays out of serialised state');
     check('API key is not reachable through JSON', !JSON.stringify(newRoost()).includes('test-key'));
   } finally {
     gw.server.close();

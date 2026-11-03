@@ -37,7 +37,7 @@ Observed in a live attestation report (2026-11-03): NEAR AI Cloud's own gateway 
 
 ## 3b. Model-sealed Roost (built 2026-11-03)
 
-Status: built and tested, off by default. `MIDGE_ROOST_BACKEND=model-sealed` selects it; `src/enclave/factory.js` is the seam. Offline suite: `verifications/09-model-sealed-roost.js` (44 checks, mock gateway, part of `npm test`). Live suite: `npm run verify:roost-model` (needs `NEARAI_API_KEY`), evidence in `docs/canonical/roost-model-evidence.json`.
+Status: built and tested, and the default whenever `NEARAI_API_KEY` is set. `MIDGE_ROOST_BACKEND=local` forces the keyless simulation; `src/enclave/factory.js` is the seam. Offline suite: `verifications/09-model-sealed-roost.js` (53 checks, mock gateway, part of `npm test`). Live suite: `npm run verify:roost-model` (needs `NEARAI_API_KEY`), evidence in `docs/canonical/roost-model-evidence.json`.
 
 How it works: each member seals its bid to the model's attested Ed25519 key with independent code (X25519, HKDF-SHA256, XChaCha20-Poly1305). The coordinator relays ciphertext in one E2EE chat request, three times, and decrypts only the reply, which must be exactly `{"total","count"}`. The attestation is checked per round: Intel certificate chain via dcap-qvl, TCB status `UpToDate`, and REPORTDATA binding the model key to our fresh nonce. Each response carries a `provider_tee` Ed25519 signature that we verify against the attested key.
 
@@ -66,11 +66,25 @@ The Roost is now one interface with three backends:
 
 | Backend | Inputs hidden from operator | Arithmetic | Needs hosting | State |
 | --- | --- | --- | --- | --- |
-| `local` | No | Exact | No | Default, tested |
-| `model-sealed` | Yes, by NEAR's model TEE | Language model, 3 runs must agree | No | Built, live demonstrated |
+| `local` | No | Exact | No | Keyless simulation, used only without a key or when asked for by name |
+| `model-sealed` | Yes, by NEAR's model TEE | Language model, 3 runs must agree | No | Default with a key; live demonstrated |
 | `hosted` | Yes, by our own TEE | Exact | Yes | Not built; sections 4 to 8 |
 
-Next, in order: ask NEAR AI staff or read the IronClaw docs about hosting a custom Roost (route B); use `model-sealed` in the demo and say plainly what it does and does not prove.
+Member side: a member never trusts the coordinator's word about which key to seal to. `src/enclave/member.js` fetches and verifies the model attestation itself (the report needs no API key) and refuses a key the coordinator asserts but the attestation does not support. Without that check a dishonest coordinator could hand out its own key and read every bid.
+
+## 3c. IronClaw / Agent Hub (route B), read 2026-11-03
+
+Found in docs.ironclaw.com: hosted agents run inside NEAR AI Cloud TEEs (Agent Hub). Custom tools are WASM components plus a manifest, sandboxed with wasmtime and meant for "deterministic logic", installed from IronHub (a signed catalog with provenance tiers, including a private org-scoped tier). MCP tools are supported over HTTP(S) only; stdio is rejected, and our MCP server is stdio.
+
+Not found: any page on attesting a hosted instance or the tools installed in it.
+
+Why it does not give us a hosted Roost:
+- The measured, attested part would be IronClaw itself, not a tool we install into it.
+- `nearai/openclaw-nearai-worker` supports SSH into worker instances (`SSH_PUBKEY`, port 2222). If Agent Hub gives the owner a shell, the coordinator could read tool memory, which is exactly the threat a Roost must remove. I have not confirmed this for Agent Hub.
+
+Where it does fit: flyers. A member's private agent hosted in IronClaw could use Midge through an HTTP MCP endpoint (to be built; ours is stdio) or a WASM tool. That is a stretch goal for the Agents and Swarms tracks, not part of the Roost.
+
+Decision: route B is closed for the Roost and kept as a flyer-side integration idea. The hosted Roost (sections 4 to 8) would need a measured, shell-less image, which NEAR's public offering does not currently give us.
 
 ## 4. Design
 
