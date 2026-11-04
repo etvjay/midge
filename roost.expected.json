@@ -1,13 +1,11 @@
 {
-  "_comment": "Pinned expectations for verifying a hosted Roost. composeHash is null until the first real deploy: pin the compose hash that Phala reports for the published build. osImageHashes are production (non-dev) dstack images and must be confirmed against https://cloud.phala.com/verification/os-images before the first deploy.",
+  "_comment": "Pinned expectations for verifying a hosted Roost. composeHash is null until pinned after a real deploy (scripts/phala-burst.sh prints the hash Phala computed from our compose file). osImageHashes are production (non-dev) dstack images confirmed with `phala os-images` on 2026-11-04.",
   "composeHash": null,
   "osImageHashes": [
-    "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6",
-    "8409e2a24ea8325f3ea45d7c50622c952a8a4a961ffc139f5d9a81c4e47bd744"
+    "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6"
   ],
   "osImageHashSources": {
-    "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6": "dstack-0.6.1 non-dev, as named in Phala-Network/phala-pay deploy/README.md (not yet confirmed on the Phala OS images page)",
-    "8409e2a24ea8325f3ea45d7c50622c952a8a4a961ffc139f5d9a81c4e47bd744": "dstack-0.6.0, as listed at cloud.phala.com/dstack/0.6.0 (not yet confirmed as the non-dev variant)"
+    "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6": "dstack-0.6.1, is_dev=false, as listed by `phala os-images` (Phala Cloud API 2026-06-23) on 2026-11-04"
   },
   "verifierImage": "dstacktee/dstack-verifier@sha256:0ed61d60f6e0d44cf466e15dc6894f37152d8567cfa76bd8785a921b2d906c38"
 }

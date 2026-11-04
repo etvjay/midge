@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Deploy the hosted Roost to Phala for a SHORT, capped session, verify it, then delete it.
 #
-#   scripts/phala-burst.sh [--hours 3] [--hold] [--url <override>] [--dry-run]
+#   scripts/phala-burst.sh [--hours 3] [--image <ref@sha256:digest>] [--hold] [--url <override>] [--dry-run]
+#   --image uses a temporary compose file with that image reference instead of the one in the repo.
 #
 # STATUS: UNTESTED against the real Phala API until the first supervised run. Run it with --dry-run first,
 # and run the first real session with a person watching.
@@ -17,12 +18,13 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-HOURS=3; HOLD=0; DRY=0; URL_OVERRIDE=""
+HOURS=3; HOLD=0; DRY=0; URL_OVERRIDE=""; IMAGE_REF=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --hours) HOURS="$2"; shift 2 ;;
     --hold) HOLD=1; shift ;;
     --url) URL_OVERRIDE="$2"; shift 2 ;;
+    --image) IMAGE_REF="$2"; shift 2 ;;
     --dry-run) DRY=1; shift ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
@@ -39,6 +41,14 @@ MAX_SECONDS=$((HOURS * 3600))
 
 run() { if [ "$DRY" = 1 ]; then echo "[dry-run] $*"; else "$@"; fi; }
 
+mkdir -p "$STATE"; chmod 700 "$STATE"
+if [ -n "$IMAGE_REF" ]; then
+  [[ "$IMAGE_REF" == *@sha256:* ]] || { echo "--image must be pinned by digest (name@sha256:...)" >&2; exit 2; }
+  TMP_COMPOSE="$(mktemp "$STATE/compose.XXXXXX")"
+  sed "s|image: .*midge-roost@sha256:REPLACE_WITH_PUSHED_DIGEST|image: $IMAGE_REF|" "$COMPOSE" > "$TMP_COMPOSE"
+  COMPOSE="$TMP_COMPOSE"
+fi
+
 # --- preconditions
 if grep -q "REPLACE_WITH_PUSHED_DIGEST" "$COMPOSE"; then echo "[stop] $COMPOSE still has the placeholder image digest. Push the image first." >&2; [ "$DRY" = 1 ] || exit 1; fi
 if [ "$DRY" != 1 ]; then
@@ -46,7 +56,6 @@ if [ "$DRY" != 1 ]; then
   [ -n "$KEY" ] || { echo "[stop] PHALA_CLOUD_API_KEY is not set in .env" >&2; exit 1; }
   export PHALA_CLOUD_API_KEY="$KEY"
 fi
-mkdir -p "$STATE"; chmod 700 "$STATE"
 
 # --- coordinator key: generated here, kept outside the repo, sent to the CVM as an encrypted env var
 ADMIN_KEY_FILE="$STATE/roost-admin.key"
@@ -57,7 +66,7 @@ echo "ROOST_ADMIN_KEY=$(cat "$ADMIN_KEY_FILE")" > "$ENV_FILE"
 CVM_ID=""; DEADMAN_PID=""
 cleanup() {
   rc=$?
-  rm -f "$ENV_FILE"
+  rm -f "$ENV_FILE" "${TMP_COMPOSE:-}" "${TMP_EXPECTED:-}"
   if [ -n "$DEADMAN_PID" ]; then kill "$DEADMAN_PID" 2>/dev/null || true; fi
   if [ -n "$CVM_ID" ] && [ "$DRY" != 1 ]; then
     echo "[cleanup] deleting CVM $CVM_ID"
@@ -115,7 +124,18 @@ docker run -d --name midge-dstack-verifier --read-only --cap-drop ALL --security
 for i in $(seq 1 20); do curl -fsS -m 3 http://127.0.0.1:18080/health >/dev/null 2>&1 && break; sleep 2; done
 
 echo "[4/5] Verifying the Roost as a member would"
-node scripts/verify-hosted-roost.js --url "$URL" --verifier http://127.0.0.1:18080 --evidence docs/canonical/roost-hosted-evidence.json || { echo "[stop] verification FAILED; deleting the CVM" >&2; exit 1; }
+EXPECTED=roost.expected.json
+if python3 -c "import json,sys; sys.exit(0 if json.load(open('roost.expected.json')).get('composeHash') else 1)"; then :; else
+  DEPLOY_HASH="$(printf '%s' "$OUT" | python3 -c "import sys,json,re
+t=sys.stdin.read(); m=re.findall(r'\"compose_hash\"\s*:\s*\"([0-9a-fA-F]{64})\"', t); print(m[0] if m else '')")"
+  [ -n "$DEPLOY_HASH" ] || { echo "[stop] roost.expected.json has no composeHash and the deploy output did not report one" >&2; exit 1; }
+  TMP_EXPECTED="$(mktemp "$STATE/expected.XXXXXX")"
+  python3 -c "import json; d=json.load(open('roost.expected.json')); d['composeHash']='$DEPLOY_HASH'; json.dump(d,open('$TMP_EXPECTED','w'))"
+  EXPECTED="$TMP_EXPECTED"
+  echo "      [pin] using the compose hash Phala computed from our compose file: $DEPLOY_HASH"
+  echo "      [pin] review it, then put it in roost.expected.json to make it permanent"
+fi
+node scripts/verify-hosted-roost.js --url "$URL" --verifier http://127.0.0.1:18080 --expected "$EXPECTED" --evidence docs/canonical/roost-hosted-evidence.json || { echo "[stop] verification FAILED; deleting the CVM" >&2; exit 1; }
 
 if [ "$HOLD" = 1 ]; then
   echo "[5/5] Holding the CVM up. Roost: $URL  Coordinator key file: $ADMIN_KEY_FILE"
