@@ -1,0 +1,20 @@
+# Compose file for the hosted Roost on a Phala dstack CVM (production image, no shell).
+# The image reference must be a digest of a PUSHED image. Its digest becomes part of the compose hash
+# that the attestation measures, so editing this file changes the code identity on purpose.
+services:
+  roost:
+    image: ghcr.io/etvjay/midge-roost@sha256:REPLACE_WITH_PUSHED_DIGEST
+    restart: unless-stopped
+    environment:
+      # Set as an encrypted environment variable in Phala Cloud; only the CVM can decrypt it.
+      - ROOST_ADMIN_KEY=${ROOST_ADMIN_KEY}
+      - PORT=8080
+    volumes:
+      - /var/run/dstack.sock:/var/run/dstack.sock
+    ports:
+      - "8080:8080"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

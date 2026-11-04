@@ -1,0 +1,12 @@
+{
+  "name": "midge-roost",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Midge hosted Roost: minimal runtime dependencies for the measured image",
+  "dependencies": {
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0"
+  }
+}

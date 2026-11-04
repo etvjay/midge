@@ -1,0 +1,31 @@
+# Hosted Roost: build, deploy, verify
+
+The Roost is deterministic code that runs inside a dstack confidential VM (Phala Cloud). Members seal
+bids to its intent key; only the attested VM can read them. See `docs/roost-tee-plan.md`.
+
+## Build
+    deploy/roost/build.sh midge-roost:local     # minimal staged context, pinned Node base image
+
+Push the image to a public registry and put its digest in `docker-compose.yml`.
+
+## Verify (members do this before sealing a bid)
+    docker run --rm -p 127.0.0.1:18080:8080 dstacktee/dstack-verifier@sha256:0ed61d60f6e0d44cf466e15dc6894f37152d8567cfa76bd8785a921b2d906c38
+    node scripts/verify-hosted-roost.js --url https://<roost> --verifier http://127.0.0.1:18080
+
+It checks the Intel quote, the event log, the OS image, that the quote's report data equals
+sha512(domain, settle key, intent key, your fresh nonce), the pinned compose hash and the pinned OS image
+hashes in `roost.expected.json`. Pin `composeHash` after the first deploy.
+
+## Deploy on a small budget
+- Smallest instance, production image (`dstack-0.6.x`, not `dstack-dev-*`). Never use a dev image: it has SSH.
+- Public logs OFF. The Roost never logs request bodies.
+- Set `ROOST_ADMIN_KEY` (24+ characters) as an encrypted environment variable.
+- Billing is per second. **Delete the CVM when the session ends.** A card on the account keeps a CVM
+  running past a zero balance and charges the card; without a card it stops. The Roost keeps no state
+  (its keys are born inside the VM on each start), so deleting loses nothing.
+- Run only for evidence capture, the demo and a stated judging window. About 25 hours fit in a $5 credit.
+
+## Local development without hardware
+The dstack simulator and the verifier both run as containers. The simulator patches report data into a
+recorded attestation, so the verifier must REJECT it; that rejection is a test, not a bug. Only a real
+CVM produces a quote that verifies.
