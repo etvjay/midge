@@ -9,7 +9,7 @@ bids to its intent key; only the attested VM can read them. See `docs/roost-tee-
 Push the image to a public registry and put its digest in `docker-compose.yml`.
 
 ## Verify (members do this before sealing a bid)
-    docker run --rm -p 127.0.0.1:18080:8080 dstacktee/dstack-verifier@sha256:0ed61d60f6e0d44cf466e15dc6894f37152d8567cfa76bd8785a921b2d906c38
+    docker run --rm -p 127.0.0.1:18080:8080 ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41
     node scripts/verify-hosted-roost.js --url https://<roost> --verifier http://127.0.0.1:18080
 
 It checks the Intel quote, the event log, the OS image, that the quote's report data equals

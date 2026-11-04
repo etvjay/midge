@@ -8,7 +8,7 @@
  *   node scripts/verify-hosted-roost.js --url https://<roost> --verifier http://127.0.0.1:18080
  *
  * Needs the official dstack-verifier running (a container; see docs/roost-tee-plan.md):
- *   docker run --rm -p 127.0.0.1:18080:8080 dstacktee/dstack-verifier@sha256:0ed61d60f6e0d44cf466e15dc6894f37152d8567cfa76bd8785a921b2d906c38
+ *   docker run --rm -p 127.0.0.1:18080:8080 ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41
  *
  * Pinned expectations (compose hash of our build, production OS image hashes) live in
  * roost.expected.json. Exits 0 only if every check passes. Against the dstack simulator it must fail.
@@ -27,8 +27,10 @@ const url = arg('url');
 const verifierUrl = arg('verifier', 'http://127.0.0.1:18080');
 const expectedPath = arg('expected', path.join(rootDir, 'roost.expected.json'));
 const evidencePath = arg('evidence');
-if (!url) {
-  console.error('usage: verify-hosted-roost.js --url <roost base url> [--verifier <dstack-verifier url>] [--expected <file>] [--evidence <out.json>]');
+const bundlePath = arg('save-bundle');
+const fromBundle = arg('from-bundle');
+if (!url && !fromBundle) {
+  console.error('usage: verify-hosted-roost.js (--url <roost base url> | --from-bundle <file>) [--verifier <dstack-verifier url>] [--expected <file>] [--evidence <out.json>] [--save-bundle <file>]');
   process.exit(2);
 }
 
@@ -38,12 +40,20 @@ if (!expected.composeHash || (Array.isArray(expected.composeHash) && expected.co
   process.exit(1);
 }
 
-const nonce = crypto.randomBytes(32).toString('hex');
-console.log(`[1/3] Asking ${url} for an attestation with a fresh nonce ${nonce.slice(0, 16)}…`);
-const res = await fetch(`${url.replace(/\/$/, '')}/attestation?nonce=${nonce}`);
-if (!res.ok) { console.error(`[REJECT] attestation request answered ${res.status}`); process.exit(1); }
-const bundle = await res.json();
-console.log(`      ${bundle.attestation.length / 2} bytes of attestation, simulated flag from the Roost: ${bundle.simulated}`);
+let nonce;
+let bundle;
+if (fromBundle) {
+  ({ nonce, bundle } = JSON.parse(fs.readFileSync(fromBundle, 'utf8')));
+  console.log(`[1/3] Using a saved bundle (nonce ${nonce.slice(0, 16)}…): no VM needed, the Intel collateral is fetched now`);
+} else {
+  nonce = crypto.randomBytes(32).toString('hex');
+  console.log(`[1/3] Asking ${url} for an attestation with a fresh nonce ${nonce.slice(0, 16)}…`);
+  const res = await fetch(`${url.replace(/\/$/, '')}/attestation?nonce=${nonce}`);
+  if (!res.ok) { console.error(`[REJECT] attestation request answered ${res.status}`); process.exit(1); }
+  bundle = await res.json();
+  console.log(`      ${bundle.attestation.length / 2} bytes of attestation, simulated flag from the Roost: ${bundle.simulated}`);
+  if (bundlePath) { fs.writeFileSync(bundlePath, JSON.stringify({ nonce, bundle })); fs.chmodSync(bundlePath, 0o600); console.log(`      bundle saved to ${bundlePath}`); }
+}
 
 console.log(`[2/3] Verifying through dstack-verifier at ${verifierUrl}…`);
 const result = await verifyHostedAttestation(bundle, { nonce, verifierUrl, composeHash: expected.composeHash, osImageHashes: expected.osImageHashes });
@@ -51,7 +61,7 @@ for (const c of result.checks) console.log(`  ${c.ok ? '✓' : '✗'} ${c.name}$
 
 if (evidencePath) {
   fs.writeFileSync(evidencePath, JSON.stringify({
-    checkedAt: new Date().toISOString(), url, nonce, ok: result.ok, checks: result.checks, details: result.details,
+    checkedAt: new Date().toISOString(), url: url || '(saved bundle)', nonce, ok: result.ok, checks: result.checks, details: result.details,
     settlePublicKey: bundle.settlePublicKey, intentPublicKey: bundle.intentPublicKey,
     verifierImage: expected.verifierImage, note: 'Attestation bytes are not included; re-run this script to verify live.',
   }, null, 2));

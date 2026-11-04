@@ -34,7 +34,7 @@ if ! [[ "$HOURS" =~ ^[0-9]+$ ]] || [ "$HOURS" -lt 1 ] || [ "$HOURS" -gt 12 ]; th
 COMPOSE=deploy/roost/docker-compose.yml
 OS_IMAGE="${PHALA_OS_IMAGE:-dstack-0.6.1}"       # production, non-dev; must match roost.expected.json
 INSTANCE="${PHALA_INSTANCE:-tdx.small}"
-VERIFIER_IMAGE="dstacktee/dstack-verifier@sha256:0ed61d60f6e0d44cf466e15dc6894f37152d8567cfa76bd8785a921b2d906c38"
+VERIFIER_IMAGE="${VERIFIER_IMAGE:-ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41}"
 STATE="${MIDGE_STATE_DIR:-$HOME/.midge-phala}"
 PHALA=(npx --yes phala@1.2.0)
 MAX_SECONDS=$((HOURS * 3600))
@@ -81,7 +81,7 @@ echo "[1/5] Deploying $NAME ($INSTANCE, $OS_IMAGE, 20G disk, public logs off), c
 if [ "$DRY" = 1 ]; then
   echo "[dry-run] ${PHALA[*]} deploy -n $NAME -c $COMPOSE -t $INSTANCE --image $OS_IMAGE --disk-size 20G --no-dev-os --no-public-logs --wait -j -e <env file with ROOST_ADMIN_KEY>"
   echo "[dry-run] dead-man's switch: sleep $MAX_SECONDS; ${PHALA[*]} cvms delete <id> --yes"
-  echo "[dry-run] verify: node scripts/verify-hosted-roost.js --url <cvm url> --verifier http://127.0.0.1:18080 --evidence docs/canonical/roost-hosted-evidence.json"
+  echo "[dry-run] verify: node scripts/verify-hosted-roost.js --url <cvm url> --verifier http://127.0.0.1:18080 --save-bundle "$STATE/last-bundle.json" --evidence docs/canonical/roost-hosted-evidence.json"
   echo "[dry-run] done; nothing was deployed and nothing costs money"
   exit 0
 fi
@@ -150,7 +150,10 @@ if python3 -c "import json,sys; v=json.load(open('roost.expected.json')).get('co
   printf '%s' "$CH" | python3 -c "import sys,json; c=json.load(sys.stdin)['candidates']; d=json.load(open('roost.expected.json')); d['composeHash']=c; json.dump(d,open('$TMP_EXPECTED','w'))"
   EXPECTED="$TMP_EXPECTED"
 fi
-node scripts/verify-hosted-roost.js --url "$URL" --verifier http://127.0.0.1:18080 --expected "$EXPECTED" --evidence docs/canonical/roost-hosted-evidence.json || { echo "[stop] verification FAILED; deleting the CVM" >&2; exit 1; }
+node scripts/verify-hosted-roost.js --url "$URL" --verifier http://127.0.0.1:18080 --expected "$EXPECTED" --save-bundle "$STATE/last-bundle.json" --evidence "$STATE/last-evidence.json" || { echo "[stop] verification FAILED; deleting the CVM" >&2; exit 1; }
+
+cp "$STATE/last-evidence.json" docs/canonical/roost-hosted-evidence.json
+echo "      evidence written to docs/canonical/roost-hosted-evidence.json (only a passing run writes it)"
 
 if [ "$HOLD" = 1 ]; then
   echo "[5/5] Holding the CVM up. Roost: $URL  Coordinator key file: $ADMIN_KEY_FILE"

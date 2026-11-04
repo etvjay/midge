@@ -7,5 +7,5 @@
   "osImageHashSources": {
     "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6": "dstack-0.6.1, is_dev=false, as listed by `phala os-images` (Phala Cloud API 2026-06-23) on 2026-11-04"
   },
-  "verifierImage": "dstacktee/dstack-verifier@sha256:0ed61d60f6e0d44cf466e15dc6894f37152d8567cfa76bd8785a921b2d906c38"
+  "verifierImage": "ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41"
 }

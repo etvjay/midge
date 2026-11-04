@@ -44,7 +44,7 @@ export async function verifyHostedAttestation(bundle, { nonce, verifierUrl, comp
   }
   const d = result.details || {};
   const app = d.app_info || {};
-  add('dstack-verifier accepts the attestation', result.is_valid === true, result.reason ? String(result.reason).slice(0, 160) : '');
+  add('dstack-verifier accepts the attestation', result.is_valid === true, result.reason ? String(result.reason).slice(0, 700) : '');
   add('Intel quote verifies', d.quote_verified === true);
   add('event log replays to the measured RTMR3', d.event_log_verified === true);
   add('OS image hash verifies against the published image', d.os_image_hash_verified === true);
