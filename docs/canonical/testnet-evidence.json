@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-11-02T19:02:33.792Z",
+  "timestamp": "2026-11-04T12:18:49.799Z",
   "network": "testnet",
   "coordinatorContract": "c.fly-1793636729.testnet",
-  "contractCodeHash": "GwjB69No5TfDcuFTrff67kNmRUd7fQDW75kMxZp9Mxwi",
-  "wasmSha256": "ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1",
+  "contractCodeHash": "5maXUkmSgoUQ52RtDSSzZ1gzyhEgJdBuFESgXCiTbqoG",
+  "wasmSha256": "46da35f061fa34fe02790328aaa96d75f509cd0d00d595e73f9b69eb030a798b",
   "masterAccount": "fly-1793636729.testnet",
   "flyers": [
     "f1.fly-1793636729.testnet",
     "f2.fly-1793636729.testnet",
     "f3.fly-1793636729.testnet"
   ],
-  "syndicatesDiscovered": 6,
+  "syndicatesDiscovered": 10,
   "syndicates": [
     {
       "id": "syn-flash-1793645977",
@@ -59,66 +59,98 @@
       "policy_hash": "3bde51bd1dbeab27675c5d5c14574919047181a690b080d5d3434219ced01a29",
       "active_flyers": 0,
       "total_escrow": "0"
+    },
+    {
+      "id": "lab-mw20t3zk-1",
+      "type": "Flash",
+      "status": "Active",
+      "policy_hash": "ffae209188a05e4bfebaa23a4cea15a59b468cd587e817d126b1dea5f66b9414",
+      "active_flyers": 0,
+      "total_escrow": "0"
+    },
+    {
+      "id": "lab-mw20u2n7-1",
+      "type": "Flash",
+      "status": "Active",
+      "policy_hash": "ffae209188a05e4bfebaa23a4cea15a59b468cd587e817d126b1dea5f66b9414",
+      "active_flyers": 0,
+      "total_escrow": "0"
+    },
+    {
+      "id": "lab-mw20uhid-1",
+      "type": "Flash",
+      "status": "Settled",
+      "policy_hash": "ffae209188a05e4bfebaa23a4cea15a59b468cd587e817d126b1dea5f66b9414",
+      "active_flyers": 0,
+      "total_escrow": "0"
+    },
+    {
+      "id": "lab-mw20uhid-2",
+      "type": "Flash",
+      "status": "Settled",
+      "policy_hash": "ffae209188a05e4bfebaa23a4cea15a59b468cd587e817d126b1dea5f66b9414",
+      "active_flyers": 0,
+      "total_escrow": "0"
     }
   ],
   "transactions": [
     {
-      "action": "hatch:syn-flash-1793646106",
-      "txHash": "3x3WcdZeZn8hKeQ3JMUp5QZUzLSqibE93JcTTxCszbht",
-      "explorer": "https://testnet.nearblocks.io/txns/3x3WcdZeZn8hKeQ3JMUp5QZUzLSqibE93JcTTxCszbht"
+      "action": "hatch:syn-flash-1793794682",
+      "txHash": "r46LxJwkUkEujUkXS7XSFsTnSEh6bYDjVUfnWvhtRcA",
+      "explorer": "https://testnet.nearblocks.io/txns/r46LxJwkUkEujUkXS7XSFsTnSEh6bYDjVUfnWvhtRcA"
     },
     {
       "action": "deposit:flyer1",
-      "txHash": "6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT",
-      "explorer": "https://testnet.nearblocks.io/txns/6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT"
+      "txHash": "272zQ17vAHWiRm8rkUPARUfY8KEVkD1XcMGjJyqoLrSv",
+      "explorer": "https://testnet.nearblocks.io/txns/272zQ17vAHWiRm8rkUPARUfY8KEVkD1XcMGjJyqoLrSv"
     },
     {
       "action": "deposit:flyer2",
-      "txHash": "3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm",
-      "explorer": "https://testnet.nearblocks.io/txns/3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm"
+      "txHash": "BV5m4otQaJvk4XGVkAEL8M3VX1Pk6sKEhtQEjxiwrZ2C",
+      "explorer": "https://testnet.nearblocks.io/txns/BV5m4otQaJvk4XGVkAEL8M3VX1Pk6sKEhtQEjxiwrZ2C"
     },
     {
-      "action": "settle_batch:syn-flash-1793646106",
-      "txHash": "F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF",
-      "gasBurntTGas": "5.92",
-      "explorer": "https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF"
+      "action": "settle_batch:syn-flash-1793794682",
+      "txHash": "3ubBCjrJkZ6BbP1dak9CNxMxbgN9XuV8Ba6bjumrQPBw",
+      "gasBurntTGas": "5.93",
+      "explorer": "https://testnet.nearblocks.io/txns/3ubBCjrJkZ6BbP1dak9CNxMxbgN9XuV8Ba6bjumrQPBw"
     },
     {
       "action": "attack_rejected:non_whitelisted_recipient",
-      "txHash": "ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh",
+      "txHash": "5YC3wjCd4zErntxJtwomXUecoB3Vtt39RSMYVmxRhvzg",
       "status": "ON_CHAIN_REJECTED",
       "reason": "Recipient not in allowed_recipients whitelist",
-      "explorer": "https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh"
+      "explorer": "https://testnet.nearblocks.io/txns/5YC3wjCd4zErntxJtwomXUecoB3Vtt39RSMYVmxRhvzg"
     },
     {
       "action": "attack_rejected:over_cap_release",
-      "txHash": "pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW",
+      "txHash": "FjuqZFgbXkmNN9JMrVfG3UorHigNXgtP3DqSgaHVFBse",
       "status": "ON_CHAIN_REJECTED",
       "reason": "Allocation sum exceeds max_release_bps_per_epoch cap",
-      "explorer": "https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW"
+      "explorer": "https://testnet.nearblocks.io/txns/FjuqZFgbXkmNN9JMrVfG3UorHigNXgtP3DqSgaHVFBse"
     },
     {
       "action": "attack_rejected:wrong_nonce_replay",
-      "txHash": "FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg",
+      "txHash": "6MCp4Rk81efabkzKLxRCCNXWXwWU2FC1RBqtgY1PNsbL",
       "status": "ON_CHAIN_REJECTED",
       "reason": "Nonce mismatch replay attack blocked",
-      "explorer": "https://testnet.nearblocks.io/txns/FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg"
+      "explorer": "https://testnet.nearblocks.io/txns/6MCp4Rk81efabkzKLxRCCNXWXwWU2FC1RBqtgY1PNsbL"
     },
     {
-      "action": "hatch:syn-escape-1793646136",
-      "txHash": "GEWxs59E2xxnDTUQajBzTNvUKgRgzsKFCcrQxVpgjmmp",
-      "explorer": "https://testnet.nearblocks.io/txns/GEWxs59E2xxnDTUQajBzTNvUKgRgzsKFCcrQxVpgjmmp"
+      "action": "hatch:syn-escape-1793794712",
+      "txHash": "14Yo9gkYSV4ioFFZNw3t4FpLY6FPGfyJygi1PeTMLEQB",
+      "explorer": "https://testnet.nearblocks.io/txns/14Yo9gkYSV4ioFFZNw3t4FpLY6FPGfyJygi1PeTMLEQB"
     },
     {
       "action": "deposit:flyer2:escape",
-      "txHash": "DzQvbzpfwPhS59CyESMAwW2YMcBTkzYV341utodbwYAh",
-      "explorer": "https://testnet.nearblocks.io/txns/DzQvbzpfwPhS59CyESMAwW2YMcBTkzYV341utodbwYAh"
+      "txHash": "GJWRg9YfVtFgkwmWfivUWX26YqfmpWKwZ6y1o28YReFW",
+      "explorer": "https://testnet.nearblocks.io/txns/GJWRg9YfVtFgkwmWfivUWX26YqfmpWKwZ6y1o28YReFW"
     },
     {
-      "action": "hatch_out:syn-escape-1793646136",
-      "txHash": "BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB",
-      "gasBurntTGas": "5.10",
-      "explorer": "https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB"
+      "action": "hatch_out:syn-escape-1793794712",
+      "txHash": "D8SmEfSebHJniiMxSKTVokZHnYMHp2dTLVhFG7A1Tjxs",
+      "gasBurntTGas": "5.11",
+      "explorer": "https://testnet.nearblocks.io/txns/D8SmEfSebHJniiMxSKTVokZHnYMHp2dTLVhFG7A1Tjxs"
     }
   ]
 }
