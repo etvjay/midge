@@ -106,7 +106,7 @@ export async function runDarkSwarmSimulation({ backend } = {}) {
   const payouts = oneClick.calculateProRataDistribution(simulatedNearAcquired, contributions);
   console.log(`  ✓ Total NEAR Acquired: ${simulatedNearAcquired} wNEAR`);
   console.log(`  ✓ Sample Payouts:      ${Object.entries(payouts).slice(0, 3).map(([k, v]) => `${k} -> ${v} NEAR`).join(' | ')}`);
-  console.log(`  ✓ Decoupled Graph:     Zero on-chain links between depositor wallets and payout addresses.`);
+  console.log(`  ✓ Decoupled Graph:     Simulated: no on-chain link between depositor wallets and payout addresses (the FAR shard is a simulation).`);
 
   console.log('\n════════════════════════════════════════════════════════════════');
   console.log(' [RESULT] DARK SWARM EXECUTION COMPLETE: 10/10 FLYERS PROCESSED');

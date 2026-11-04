@@ -28,7 +28,7 @@ Existing Web3 paradigms fail autonomous swarms:
 
 **Midge solves this by unbundling coordination from custody:**
 1. **Public Escrow on NEAR L1:** Deposits, depositor accounts, and available escrow balances are public on NEAR L1 (`contracts/fly-coordinator`).
-2. **Confidential Coordination in TEE:** Individual order parameters, strategy weights, and reservation bounds are encrypted directly to an Intel TDX hardware enclave (verified via `dcap-qvl` to Intel's Root CA). Deliberation and Sealed Intent Aggregation (SIA) execute in memory before individual inputs are zero-wiped.
+2. **Confidential Coordination:** Individual bids are sealed to a NEAR AI Cloud model's attested key (the default whenever a NEAR AI key is configured). Each round verifies the Intel TDX quote chain, the TCB status and that the model key is bound to a fresh nonce, so the coordinator holds ciphertext only; members verify that key themselves rather than trusting the coordinator. A language model does the sum, accepted only if three runs agree (8 of 8 live rounds exact, recorded in `docs/canonical/roost-model-evidence.json`). A hosted Roost with exact arithmetic is built and tested against the dstack simulator and the official `dstack-verifier`, but **has not yet run on a real TDX VM**. Without a NEAR AI key the Roost falls back to a local simulation that can read every bid and says so at startup.
 3. **Constrained Settlement Authority:** The TEE is **never a custodian**. It cannot hold withdrawal keys or direct arbitrary payouts. It can only propose settlements strictly conforming to an immutable `ReleasePolicy` (allowlisted recipient accounts, max per-epoch release caps, and deadlines) to which depositors explicitly consented upon depositing.
 4. **Independent Non-Custodial Recovery (`hatch_out`):** If an enclave or operator crashes, stalls, or disappears past `timeout_blocks`, any individual depositor can unilaterally reclaim 100% of their remaining eligible balance directly from the contract. This operation requires zero operator cooperation, zero enclave signatures, and does not touch or dilute any other participant's escrow.
 
@@ -41,8 +41,10 @@ To quantify the economic benefit of confidential sealed-intent aggregation over 
 | Metric | Public Sequential Execution (Mempool + MEV Bot) | Midge Sealed-Intent Batch (Uniform Clearing) | Delta / Economic Benefit |
 | :--- | :--- | :--- | :--- |
 | **Realized Slippage** | 16.67% ± 0.37% (95% CI: [16.30%, 17.05%]) | 15.60% ± 0.37% (95% CI: [15.23%, 15.97%]) | **-1.07% Lower Slippage** |
-| **Adversary MEV Profit** | $519.44 ± $16.00 (95% CI: [$503.44, $535.43]) | **$0.00 ± $0.00** | **100% MEV Eliminated** |
+| **Adversary MEV Profit** | $519.44 ± $16.00 (95% CI: [$503.44, $535.43]) | **$0.00 ± $0.00** | **Zero by assumption** (the modelled adversary cannot see sealed intents) |
 | **Net Value Preserved** | Baseline Exposure | **+$481.09 ± $10.06 Saved** | **+$481.09 per 8-Agent Swarm** |
+
+*Read this as a model, not a measurement.* The adversary profit is zero because the simulation assumes a sealed batch hides intents from the adversary; it prices that exposure and does not show it on a live network. Deposits and balances remain public on NEAR L1.
 
 *Methodology & Reproducibility:* $N = 100$ independent runs, deterministic seed `0x464c59`, 95% Student's $t$-distribution confidence intervals.  
 Run command: `npm run baseline` (or `node scripts/baseline.js`). Output recorded in [`docs/canonical/baseline-simulation.json`](docs/canonical/baseline-simulation.json).
@@ -226,7 +228,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 | **Model-Sealed Roost** | `src/enclave/model-sealed-roost.js`, `src/enclave/e2ee.js` | **LIVE DEMONSTRATED** | **NEAR AI CLOUD (E2EE)** | Bids are sealed by each member to a NEAR AI Cloud model's attested key (Intel TDX chain verified, TCB `UpToDate`); the coordinator relays ciphertext only. Three runs must agree and the count must match, so it fails closed. 8 of 8 live rounds exact (3 to 50 bids, 4 injection attempts), receipts verified. The sum is done by a language model, not exact code, and a hardware-isolated Roost of our own is still not built. This is the default whenever `NEARAI_API_KEY` is set; members verify the model key themselves (no key needed) and refuse one the coordinator merely asserts. Evidence: `docs/canonical/roost-model-evidence.json`. |
 | **Hosted Roost (dstack CVM)** | `src/roost-service/`, `deploy/roost/` | **TESTED** | **NOT YET ON HARDWARE** | Exact aggregation, in-process keys bound into the TDX report data, settlement signed only for what the sealed bids support. Verified against the real dstack simulator and the official `dstack-verifier` image (the simulator's mock quote is correctly rejected). It has not run on a real TDX VM, so no hardware claim is made; GAP-004 stays open. |
 | **FAR Private Shard** | `src/settlement/far-shard.js` | **TESTED** | **LOCAL SIMULATION** | Evaluated as an in-process PBFT 200ms cryptographic state machine with IMT tokens and decoupled graphs (GAP-002) pending native L1 private sharding validator nodes. |
-| **Confidential RFQ & OTC** | `src/facilities/rfq-adjudication.js`, `otc-block-trade.js` | **TESTED** | **LOCAL SIMULATION** | In-memory Zero-MEV borrow matching and midpoint crossing dark pool simulations. |
+| **Confidential RFQ & OTC** | `src/facilities/rfq-adjudication.js`, `otc-block-trade.js` | **TESTED** | **LOCAL SIMULATION** | In-memory sealed-bid borrow matching and midpoint crossing dark pool simulations. |
 
 ---
 
@@ -310,6 +312,18 @@ For hackathon track justifications and submission assets, see:
 📋 **[`docs/canonical/SUBMISSION_ASSETS.md`](docs/canonical/SUBMISSION_ASSETS.md)**
 
 ---
+
+## 6b. Known Limits and Disclosures
+
+- **Contract deployer key.** The testnet coordinator account `c.fly-1793636729.testnet` still holds one full-access key (the deployer's). The *policy* is immutable inside the contract, but whoever holds that key could redeploy the *code*. The final submission instance will have all access keys deleted, which anyone can check with `view_access_key_list` returning no keys. Until then, treat the contract code as replaceable by the deployer.
+- **Aggregation.** The model-sealed Roost relies on a language model for the sum (three agreeing runs, count check, strict reply format). The hosted Roost computes it exactly but has not run on real TDX hardware.
+- **Chain Signatures.** One secp256k1 signature on testnet was produced and verified; no transaction has been broadcast on another chain.
+- **Facilities.** RFQ/repo, OTC block trades and the FAR private shard are in-memory simulations. Payroll and angel rounds are planned. On a public chain, individual payouts are visible unless a private settlement layer is used, which we do not have.
+- **Testnet only.** No mainnet deployment, no audit by a third party, and no external users yet.
+
+## 6c. Built With (AI assistance and libraries)
+
+Much of this code, documentation and the verification scripts were written with AI coding assistants (Claude Code from Anthropic, and a second coding agent) working under human direction; every claim in the README is meant to point to a command or a transaction. Third-party components: `near-sdk` (Rust) and `near-api-js`, `ethers`, `@noble/curves`, `@noble/ciphers`, `@noble/hashes`, `dcap-qvl` (Intel quote verification), the dstack simulator and `dstack-verifier` (Phala, used as locked-down containers for tests), NEAR AI Cloud (inference, attestation), NEAR Chain Signatures, the 1Click API (read-only), and Node.js 24. The brand and the static site in `site/` were designed with AI assistance as well.
 
 ## 7. Repository Architecture & File Index
 
