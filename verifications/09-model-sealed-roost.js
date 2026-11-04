@@ -85,7 +85,7 @@ export function startMockGateway() {
         let count = bids.length;
         if (state.mode.jitter && n % 3 === 1) total += 1;
         if (state.mode.miscount) count -= 1;
-        const reply = state.mode.extraField ? JSON.stringify({ total, count, details: bids.map((b) => b.amount) })
+        const reply = state.mode.scriptedReply ? state.mode.scriptedReply(plain) : state.mode.extraField ? JSON.stringify({ total, count, details: bids.map((b) => b.amount) })
           : state.mode.extraText ? `Sure. ${JSON.stringify({ total, count })} Also: ${bids.map((b) => b.amount).join(',')}`
           : JSON.stringify({ total, count });
         const content = state.mode.plaintextReply ? reply : sealToModel(reply, clientPub);
