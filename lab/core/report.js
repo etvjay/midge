@@ -29,7 +29,7 @@ export function buildReport(dir) {
   L.push(`- **Runtime:** Node ${env.runtime.node}, ${env.runtime.platform}; docker: ${env.tools.docker || 'no'}; dcap-qvl: ${env.tools.dcapQvl || 'no'}`);
   L.push(`- **Pins:** verifier \`${env.pins.verifierImage || 'none'}\`; compose hash \`${(env.pins.composeHash && String(env.pins.composeHash).slice(0, 16)) || 'none'}…\``);
   L.push(`- **Capabilities at start:** ${Object.entries(start.capabilities).map(([k, v]) => `${k}=${v ? 'yes' : 'no'}`).join(', ')}`);
-  L.push(`- **Integrity:** ${events.length} events, hash-chained; root \`${end ? end.hash : 'RUN NOT FINISHED'}\`. Verify with \`node lab/verify-run.js ${path.relative(process.cwd(), dir)}\``, '');
+  L.push(`- **Integrity:** ${events.length} events, hash-chained; root \`${end ? end.chain_hash : 'RUN NOT FINISHED'}\`. Verify with \`node lab/verify-run.js ${path.relative(process.cwd(), dir)}\``, '');
 
   L.push('## Verdicts', '', '| Experiment | Tier | Verdict | Steps | Assertions | Notes |', '|---|---|---|---|---|---|');
   const exps = [...new Map(events.filter((e) => e.type === 'exp.start').map((e) => [e.exp, e])).values()];
@@ -60,7 +60,7 @@ export function buildReport(dir) {
       for (const e of se) {
         if (e.type === 'assert') lines.push(`- ${e.ok ? '✓' : '✗'} ${e.claim}${!e.ok ? ` — expected ${trunc(e.expected)}, got ${trunc(e.actual)}` : ''}`);
         if (e.type === 'observe') lines.push(`- observed **${e.label}**: \`${trunc(e.value?.preview ?? e.value, 140)}\`${e.value?.blob ? ` (full: ${e.value.blob}, sha256 ${e.value.sha256.slice(0, 12)}…)` : ''}`);
-        if (e.type === 'evidence') lines.push(`- evidence ${e.kind}: ${trunc(Object.fromEntries(Object.entries(e).filter(([k]) => !['seq', 'ts', 'type', 'exp', 'step', 'attempt', 'prev', 'hash', 'kind'].includes(k))), 220)}`);
+        if (e.type === 'evidence') lines.push(`- evidence ${e.kind}: ${trunc(Object.fromEntries(Object.entries(e).filter(([k]) => !['seq', 'ts', 'type', 'exp', 'step', 'attempt', 'chain_prev', 'chain_hash', 'kind'].includes(k))), 220)}`);
         if (e.type === 'note') lines.push(`- note: ${e.text}`);
         if (e.type === 'skip') lines.push(`- skipped: ${e.reason}`);
       }

@@ -48,6 +48,26 @@ export default {
       s.assert('a blob holding a secret is redacted too', !fs.readFileSync(path.join(dir, 'blobs', r.blob(`x ${secret} y`).sha256), 'utf8').includes(secret));
     });
 
+    await ctx.step('events whose data has a field named hash (a transaction hash) still verify', async (s) => {
+      // Regression: a real run broke its own chain because evidence events carried a `hash` field.
+      const dir = tmp();
+      const r = new Recorder({ dir });
+      r.event('run.start', {});
+      r.event('evidence', { kind: 'tx', hash: 'a'.repeat(64), explorer: 'https://example/tx', ok: true });
+      const prev = r.rootHash;
+      r.event('run.end', { rootHashOfPrevious: prev });
+      fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify({ rootHash: r.rootHash }));
+      const v = verifyRunDir(dir);
+      s.assert('the chain verifies with a data field called hash', v.ok, { actual: v.problems });
+      s.assert('the data field survived unchanged', JSON.parse(lines(dir)[1]).hash === 'a'.repeat(64));
+      let rejected = false;
+      try { r.event('x', { chain_hash: 'oops' }); } catch { rejected = true; }
+      s.assert('a field that would collide with the envelope is rejected loudly', rejected);
+      let rejectedType = false;
+      try { r.event('x', { type: 'oops' }); } catch { rejectedType = true; }
+      s.assert('so is a field called type', rejectedType);
+    });
+
     await ctx.step('an untouched log verifies as intact', async (s) => {
       const dir = miniRun();
       const v = verifyRunDir(dir);
@@ -70,8 +90,7 @@ export default {
       s.assert('truncating the closing event is detected', !verifyRunDir(dir).ok);
 
       dir = miniRun(); ls = lines(dir);
-      const forged = JSON.parse(ls[2]); forged.value = 999; const { hash: _h, ...rest } = forged;
-      forged.hash = 'f'.repeat(64); ls[2] = JSON.stringify(forged); write(dir, ls);
+      const forged = JSON.parse(ls[2]); forged.value = 999; forged.chain_hash = 'f'.repeat(64); ls[2] = JSON.stringify(forged); write(dir, ls);
       s.assert('a forged hash that does not match the content is detected', !verifyRunDir(dir).ok);
     });
 

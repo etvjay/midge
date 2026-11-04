@@ -21,6 +21,8 @@ export function canonical(value) {
 
 export const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 export const GENESIS = '0'.repeat(64);
+/** Envelope fields. Experiment data may use any other name, including `hash` (a transaction hash, for example). */
+export const RESERVED = new Set(['seq', 'ts', 'type', 'chain_prev', 'chain_hash']);
 
 export class Recorder {
   constructor({ dir, redact = (x) => x, now = () => new Date() }) {
@@ -36,9 +38,10 @@ export class Recorder {
   }
 
   event(type, fields = {}) {
-    const body = this.redact({ seq: this.seq, ts: this.now().toISOString(), type, ...fields, prev: this.prev });
+    for (const k of Object.keys(fields)) if (RESERVED.has(k)) throw new Error(`event field "${k}" is reserved by the recorder (it would corrupt the hash chain); rename it`);
+    const body = this.redact({ seq: this.seq, ts: this.now().toISOString(), type, ...fields, chain_prev: this.prev });
     const hash = sha256(this.prev + canonical(body));
-    fs.appendFileSync(this.file, JSON.stringify({ ...body, hash }) + '\n');
+    fs.appendFileSync(this.file, JSON.stringify({ ...body, chain_hash: hash }) + '\n');
     this.prev = hash;
     this.seq += 1;
     this.counts[type] = (this.counts[type] || 0) + 1;
@@ -67,16 +70,16 @@ export function verifyRunDir(dir) {
   lines.forEach((line, i) => {
     let ev;
     try { ev = JSON.parse(line); } catch { problems.push(`line ${i}: not valid JSON`); return; }
-    const { hash, ...body } = ev;
+    const { chain_hash: hash, ...body } = ev;
     if (ev.seq !== i) problems.push(`line ${i}: sequence number is ${ev.seq}`);
-    if (ev.prev !== prev) problems.push(`line ${i}: prev hash does not match the previous event (an event was changed, removed or reordered)`);
+    if (ev.chain_prev !== prev) problems.push(`line ${i}: prev hash does not match the previous event (an event was changed, removed or reordered)`);
     if (sha256(prev + canonical(body)) !== hash) problems.push(`line ${i}: hash does not match the event content`);
     prev = hash;
     last = ev;
     counts[ev.type] = (counts[ev.type] || 0) + 1;
   });
   if (!last || last.type !== 'run.end') problems.push('the log does not end with run.end (truncated or still running)');
-  else if (last.rootHashOfPrevious !== (JSON.parse(lines[lines.length - 2] || '{}').hash || GENESIS)) problems.push('run.end does not commit to the previous event hash');
+  else if (last.rootHashOfPrevious !== (JSON.parse(lines[lines.length - 2] || '{}').chain_hash || GENESIS)) problems.push('run.end does not commit to the previous event hash');
   const blobDir = path.join(dir, 'blobs');
   for (const line of lines) {
     const ev = JSON.parse(line);
