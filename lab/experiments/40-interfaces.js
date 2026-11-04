@@ -27,7 +27,7 @@ export default {
     'Model mode and a local Roost: this checks the interfaces\' behaviour and honesty, not the chain. The chain paths are E-IFACE-CHAIN.',
     'The compute facility\'s network call is replaced by a recorded fixture; the code path from the route to the facility is real, the attestation is not.',
     'Coverage means "called with at least one valid and one invalid input and the result asserted", not exhaustive input testing.',
-    'Several API behaviours that are unsafe outside model mode are pinned here as KNOWN GAPs: the experiment asserts the current behaviour and records a problem, so fixing one turns this red and forces the gap to be closed in the ledger.',
+    'Model mode and the stub-client checks cannot prove the chain paths; E-IFACE-CHAIN does. Items still open are recorded as problems in the report (the SDK has no method for the health, SSE, pods and timelock routes; a client error on deposit is reported as HTTP 500).',
   ],
   async run(ctx) {
     const root = ctx.rootDir;
