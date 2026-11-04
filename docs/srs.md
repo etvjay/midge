@@ -95,7 +95,8 @@ flowchart TD
 * **FR-015 (Pre-Timeout Lockout):** The Nest contract shall reject any `hatch_out()` request submitted prior to the expiration of the timelock while the round is marked `ACTIVE`.
 
 ### 3.6 Persistent Treasuries & Multichain Extensions
-* **FR-016 (Dark Vault Lifecycles):** The Nest contract shall support long-lived syndicates (`DARK_VAULT`) that persist across sequential epochs, maintaining rolling compute budgets and specialized sub-swarms (Pods).
+* **FR-016 (Dark Vault Lifecycles):** The Nest contract shall support long-lived syndicates (`DARK_VAULT`) that persist across sequential epochs: a settlement that leaves escrow behind starts a new epoch, restarts the `hatch_out()` timelock and issues a new round nonce.
+* **FR-016a (Pods, planned):** A syndicate may be divided into pods (sub-groups of Flyers with a type, a role per member and a capital cap). **Not implemented in the Nest.** Pods exist as an in-memory model (`src/syndicate/pod.js`) with an API route to create and list them; no settlement checks a pod's cap, and nothing on chain knows pods exist. Enforcing a pod's cap would belong in the release policy or in the Roost's signing rules.
 * **FR-017 (Omnichain Threshold Identity):** The system shall derive native Bitcoin Taproot, EVM, and Solana addresses from the syndicate account via NEAR Chain Signatures MPC (`v1.signer`).
 * **FR-018 (x402 Agent Micro-Commerce):** Flyers within deliberation shall be capable of exchanging proprietary data or oracle signals via HTTP 402 payment challenges settled instantly via PingPay micro-channels.
 

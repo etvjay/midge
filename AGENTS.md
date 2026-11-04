@@ -66,7 +66,7 @@ npm run verify:api       # HTTP Gateway Daemon, SSE Streams, x402 & MCP Server
 ---
 
 ## Environment & Security Rules
-- All API keys and secrets belong in `.env`.
+- All API keys and secrets belong in `.env`. The NEAR chain client does not read `.env` on its own: pass credentials in the environment or point `MIDGE_ENV_FILE` at the file. Without write credentials, chain-mode writes are refused.
 - Never commit private keys or API credentials to git.
 - Testnet first (`*.fly.testnet`).
 - Strict UI Freeze: No frontend modifications; focus entirely on cryptographic protocol, smart contracts, and agent tooling.

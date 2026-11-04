@@ -189,8 +189,8 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
   - Boots `FlyApiDaemon` on ephemeral port.
   - Verifies Server-Sent Events (SSE) streaming at `/v1/stream/syndicate/{id}`.
   - Executes x402 micro-commerce flow: initial HTTP 402, payment invoice generation, HMAC bearer proof verification, and protected resource release.
-  - Audits Model Context Protocol (MCP) server: 10 tools exposed to LLM agents (`midge_hatch_syndicate`, `midge_deposit`, `midge_settle`, `midge_hatch_out`, `midge_list_syndicates`, `midge_get_my_syndicates`, `midge_submit_sealed_intent`, `midge_get_roost_quote`, `midge_execute_rfq_borrow`, `midge_execute_otc_block`).
-  - Verifies Security Controls: public `/health`, protected `/v1/roost/session-key` returning HTTP 401 without `X-Midge-Api-Key` and HTTP 200 with it, and payload limit guard (>512KB rejected with HTTP 413).
+  - Audits Model Context Protocol (MCP) server: 10 tools exposed to LLM agents (`midge_hatch_syndicate`, `midge_deposit`, `midge_settle`, `midge_hatch_out`, `midge_list_syndicates`, `midge_get_my_syndicates`, `midge_submit_sealed_intent`, `midge_verify_haq_attestation`, `midge_create_confidential_rfq`, `midge_match_otc_block`). The first five are chain-backed in `FLY_MODE=chain` (they need write credentials and refuse otherwise); the RFQ and OTC tools drive the simulated facilities; `midge_verify_haq_attestation` reports `NOT_VERIFIED` for a local simulation Roost.
+  - Verifies Security Controls: public `/health`, protected `/v1/roost/session-key?syndicateId={id}` returning HTTP 401 without `X-Midge-Api-Key` and HTTP 200 with it, and payload limit guard (>512KB rejected with HTTP 413).
 
 ---
 

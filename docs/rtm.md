@@ -23,7 +23,8 @@
 | **FR-013** | Deterministic Round Block Timelock | UC-004 | ADR-004 (State Machine) | VER-003, VER-007 | Verified |
 | **FR-014** | `hatch_out()` Sovereign 100% Refund | UC-004 | ADR-004 (Escape Hatch) | VER-003, VER-007 | Verified |
 | **FR-015** | Pre-Timeout Lockout Protection | UC-004 | ADR-004 (Escape Hatch) | VER-003, VER-007 | Verified |
-| **FR-016** | Dark Vault Persistent Multi-Epoch Lifecycles | UC-001 | ADR-004 (Vault Model) | VER-004 (Dark Vault Test) | Verified |
+| **FR-016** | Dark Vault Persistent Multi-Epoch Lifecycles | UC-001 | ADR-004 (Vault Model) | VER-004 (JS model) and the Rust test `test_dark_vault_epoch_rollover_resets_escape_hatch_timer`; never run on testnet | Verified in tests; not run live |
+| **FR-016a** | Pods (sub-groups with capital caps) | UC-001 | none | VER-004 (JS model only) | **Simulated**: the contract does not enforce pods; no settlement checks a pod cap |
 | **FR-017** | Omnichain Threshold Identity Derivation | UC-005 | ADR-003 (Chain Signatures)| VER-004 (MPC Derivation) | Verified |
 | **FR-018** | x402 Agent Micro-Commerce Negotiations | UC-002 | ADR-004 (Micro-Commerce)| VER-004 (x402 Micropayments)| Verified |
 | **FR-019** | Confidential RFQs & Private Margin Adjudication | UC-006 | ADR-002 (Credit/Repo) | VER-005 (RFQ Adjudication)| Verified |
