@@ -53,13 +53,19 @@ export class ConfidentialComputeSyndicate {
     return {
       model: this.model,
       sessionNonce,
-      hardwareVerified: !!attestation.gateway_attestation?.intel_quote,
+      // What was actually checked: whether the attestation report contains a quote. The quote itself is NOT verified here
+      // (use the model-sealed Roost, which verifies the Intel chain), so hardwareVerified is false and says so.
+      quotePresent: !!attestation.gateway_attestation?.intel_quote,
+      hardwareVerified: false,
+      hardwareVerifiedNote: 'The attestation quote is fetched but not verified by this facility.',
       gatewaySigner: attestation.gateway_attestation?.signing_address,
       modelSigner: attestation.model_attestations?.[0]?.signing_address,
       gpuPayloadVerified: attestation.model_attestations?.[0]?.payload_matches_model,
+      // sha256(prompt). No model was called and nothing was inferred: this is a stand-in for a result digest.
       inferenceResultHash: resultHash,
-      privacyGuarantee: 'ZERO_PROMPT_LOGGING_TEE_ISOLATION',
-      costDeductedNear: 1.5,
+      simulation: true,
+      note: 'SIMULATION: no inference ran. inferenceResultHash is the SHA-256 of the prompt, and the credit pool is an in-memory ledger that pays no one.',
+      costDeductedNear: 1.5, // illustrative: nothing is charged anywhere
     };
   }
 }

@@ -54,7 +54,7 @@ export async function verifyOtcAndComputeFacilities() {
     requiredQuorum: 2,
   });
 
-  console.log(`  ✓ Hardware Attested:   ${inference.hardwareVerified ? 'YES (Intel TDX)' : 'NO'}`);
+  console.log(`  ✓ Attestation Quote:   ${inference.quotePresent ? 'quote present, NOT verified here' : 'no quote'}`);
   console.log(`  ✓ Model Signer:        ${inference.modelSigner}`);
   console.log(`  ✓ Privacy Protection:  ${inference.privacyGuarantee}`);
   console.log(`  ✓ Result Digest:       ${inference.inferenceResultHash.substring(0, 24)}...`);

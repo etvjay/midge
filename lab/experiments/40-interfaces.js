@@ -66,7 +66,7 @@ export default {
 
     try {
       await ctx.step('start the API daemon in model mode with a local Roost', async (s) => {
-        daemon = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'local' });
+        daemon = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'local', simulateHaq: true });
         const { port } = await daemon.start();
         base = `http://127.0.0.1:${port}`;
         const client = new FlyClient({ baseUrl: base, fetchFn: seenFetch });
@@ -155,8 +155,8 @@ export default {
           const inf = await sdk.executeComputeInference('what is 2+2', 2);
           s.assert('executeComputeInference with quorum returns a result bound to the prompt hash', /^[0-9a-f]{64}$/.test(inf.inferenceResultHash || ''), { actual: Object.keys(inf) });
           s.assert('inference below quorum is refused', await sdk.executeComputeInference('x', 5).then(() => false, () => true));
-          s.assert('KNOWN GAP-017: the "inference result" is the SHA-256 of the prompt, not a model output (pinned)', inf.inferenceResultHash === (await import('node:crypto')).createHash('sha256').update('what is 2+2').digest('hex'));
-          s.problem('minor', 'GAP-017: /v1/facilities/compute/infer returns sha256(prompt) as "inferenceResultHash" and hardwareVerified only checks that a quote is present; no inference runs and no quote is verified');
+          s.assert('GAP-017 (fixed): the response says it is a simulation, that no inference ran, and that the quote was not verified', inf.simulation === true && /no inference ran/.test(inf.note || '') && inf.hardwareVerified === false && inf.quotePresent === true, { actual: { simulation: inf.simulation, hardwareVerified: inf.hardwareVerified, quotePresent: inf.quotePresent } });
+          s.assert('and the digest is still exactly the SHA-256 of the prompt, which the note says', inf.inferenceResultHash === (await import('node:crypto')).createHash('sha256').update('what is 2+2').digest('hex'));
         } finally { globalThis.fetch = origFetch; }
         const challenge = await sdk.createX402Challenge({ sellerFlyerId: 'oracle.near', resourceId: 'alpha-feed', priceUsdc: 2.5, description: 'signal' });
         const unpaid = await sdk.fetchProtectedResource('alpha-feed');
@@ -293,9 +293,28 @@ export default {
         s.assert('a bid sealed to syndicate A\'s key cannot be read by syndicate B\'s Roost (the sealing keys are per syndicate)', wrongKey.status >= 400 || afterWrong.json?.aggregateOrder?.totalInputAmount !== 99, { actual: [wrongKey.status, afterWrong.json?.aggregateOrder] });
         s.assert('the Roost routes require a syndicateId (HTTP 400)', (await raw('GET', '/v1/roost/session-key')).status === 400 && (await raw('POST', '/v1/roost/aggregate', {})).status === 400);
         s.assert('aggregating for a syndicate nothing was sealed for is a 404', (await raw('POST', '/v1/roost/aggregate', { syndicateId: 'never-sealed' })).status === 404);
-        const haq = await raw('POST', '/v1/mpc/sign', { syndicateSubAccount: 'a.b', targetChain: 'ETH', payloadHash: 'ab'.repeat(32), haqVerified: true });
-        s.assert('GAP-015 (pinned): the caller says haqVerified:true and the MPC signing gate opens', haq.status === 200, { actual: haq.status });
-        s.problem('major', 'GAP-015: POST /v1/mpc/sign trusts a haqVerified flag supplied in the request body, so the "no cross-chain signature without a valid attestation" gate is whatever the caller says it is (simulated signing only; no MPC network is called)');
+        // GAP-015 (fixed): the server decides the attestation gate. A plain daemon (no simulateHaq) must refuse whatever the body says.
+        const plain = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'local' });
+        const { port: pp } = await plain.start(); const pb = `http://127.0.0.1:${pp}`;
+        const sign = (body) => fetch(pb + '/v1/mpc/sign', { method: 'POST', body: JSON.stringify({ syndicateSubAccount: 'gap-sign.c.test', targetChain: 'ETH', payloadHash: 'ab'.repeat(32), ...body }) }).then(async (r) => ({ status: r.status, json: await r.json() }));
+        try {
+          const claimed = await sign({ haqVerified: true });
+          s.assert('GAP-015 (fixed): a caller saying haqVerified:true no longer opens the MPC gate (HTTP 403)', claimed.status === 403, { actual: [claimed.status, claimed.json] });
+          s.assert('and the refusal says why (no Roost, nothing to verify)', /nothing to verify|no Roost/i.test(claimed.json?.haqBasis || ''), { actual: claimed.json?.haqBasis });
+          const live = await sign({ haqVerified: true, simulate: false });
+          s.assert('a caller asking for simulate:false is not forwarded either (still 403, never a live signature attempt)', live.status === 403);
+          plain.roosts.set('gap-sign', { describe: () => ({ backend: 'local' }) });
+          s.assert('a local Roost has no hardware attestation, so the gate stays shut', (await sign({ haqVerified: true })).json?.haqBasis?.includes('local Roost') === true);
+          plain.roosts.set('gap-sign', { describe: () => ({ backend: 'model-sealed' }), chain: 'if-available', ensureAttested: async () => ({ checks: [{ name: 'quote', ok: true }], tcbStatus: 'UpToDate' }) });
+          s.assert('a model-sealed Roost that does not require the Intel certificate chain does not open it', (await sign({})).status === 403);
+          plain.roosts.set('gap-sign', { describe: () => ({ backend: 'model-sealed' }), chain: 'required', ensureAttested: async () => ({ checks: [{ name: 'quote', ok: true }, { name: 'chain', ok: false }], tcbStatus: 'UpToDate' }) });
+          s.assert('a model-sealed Roost with a failing check does not open it', (await sign({})).status === 403);
+          plain.roosts.set('gap-sign', { describe: () => ({ backend: 'model-sealed' }), chain: 'required', ensureAttested: async () => ({ checks: [{ name: 'quote', ok: true }, { name: 'chain', ok: true }], tcbStatus: 'UpToDate' }) });
+          const open = await sign({});
+          s.assert('only a model-sealed Roost attested with the certificate chain opens it, and the response gives the basis', open.status === 200 && /attested with the certificate chain/.test(open.json?.haqBasis || ''), { actual: open });
+        } finally { await plain.stop(); }
+        const simulated = await raw('POST', '/v1/mpc/sign', { syndicateSubAccount: 'a.b', targetChain: 'ETH', payloadHash: 'ab'.repeat(32) });
+        s.assert('an operator who starts the server with simulateHaq gets a signature, and the response says it was simulated', simulated.status === 200 && /SIMULATED/.test(simulated.json?.haqBasis || ''), { actual: simulated.status });
         const syn2 = `gap2-${tag}`; await sdk.hatchSyndicate({ id: syn2, quorumThreshold: 1 }); await sdk.deposit(syn2, 'holder.near', 6);
         const ghost = await raw('POST', '/v1/syndicates/' + syn2 + '/settle', { allocations: [{ recipient: 'x.near', amount: 1 }] });
         s.assert('GAP-016 (fixed): model-mode settle says it is not binding: no signature or allocation was checked and no state changed', ghost.status === 200 && ghost.json?.status === 'SETTLED_MODEL' && ghost.json?.binding === false && /no state changed/.test(ghost.json?.note || '') && (await raw('GET', '/v1/syndicates/' + syn2)).json?.totalEscrow === 6, { actual: ghost.json?.status });
