@@ -1,6 +1,6 @@
 # Roost in a TEE: scope and plan
 
-Status: the hosted Roost is built and tested without hardware (section 3e), but has not run on a real TDX VM; GAP-004 stays open until it is. The model-sealed backend (section 3b) is built and tested.
+Status: the hosted Roost is built, tested offline and attested on a real Phala TDX VM (section 3e); a full member round on a live VM and a VM kept up for judging are not done; GAP-004 stays open until it is. The model-sealed backend (section 3b) is built and tested.
 
 ## 1. What is true today
 
@@ -120,7 +120,7 @@ Done and tested without hardware:
 Tested against the real dstack simulator and the real dstack-verifier image (both as locked-down containers): the Roost obtains an attestation from the agent, and the verifier rejects the simulator's patched quote ("ISV enclave report signature is invalid") while accepting the signature on the original recorded fixture. That rejection is a negative test, not a failure.
 
 Not done, and not claimable yet:
-- Real TDX run: attempt 1 (2026-11-04, Phala `tdx.small`, `dstack-0.6.1`) verified the Intel quote, the platform and TCB, and bound our keys and fresh nonce into the report data, but the official verifier could not parse the guest's `vm_config.tdx_measurement` because the verifier image used (Docker Hub `latest`, built 2026-09-10) predates dstack 0.6. The official images are at `ghcr.io/dstack-tee/dstack-verifier:<version>` and are now used, pinned by digest. A full pass is still to be demonstrated.
+- Real TDX run: **passed 2026-11-04.** Attempt 1 was rejected only because the verifier image (Docker Hub `latest`, built 2026-09-10) predates dstack 0.6; the official `ghcr.io/dstack-tee/dstack-verifier` image (0.6.3, pinned by digest) then accepted the attestation on all 12 checks, after the compose-hash derivation was fixed against the real hash (Phala's API reports absent fields as null; dropping them reproduces the attested hash, now a known-answer test). Evidence: `docs/canonical/roost-hosted-evidence.json` and the saved bundle. The VM was deleted right after capture.
 - The image is not pushed to a registry, so `docker-compose.yml` still holds a placeholder digest and `roost.expected.json` has no pinned `composeHash`.
 - The OS image hashes in `roost.expected.json` come from a third-party README and a Phala page snippet and must be confirmed against Phala's OS images page.
 - The Docker build pins the base image and file timestamps but is not guaranteed bit-reproducible; the pushed image digest, via the compose hash, is the identity that is attested.

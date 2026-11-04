@@ -29,3 +29,12 @@ hashes in `roost.expected.json`. Pin `composeHash` after the first deploy.
 The dstack simulator and the verifier both run as containers. The simulator patches report data into a
 recorded attestation, so the verifier must REJECT it; that rejection is a test, not a bug. Only a real
 CVM produces a quote that verifies.
+
+## Re-verify the recorded run (no VM, no credits)
+The attestation of the real Phala TDX VM captured on 2026-11-04 is saved in
+`docs/canonical/roost-hosted-bundle-2026-11-04.json`. Start the pinned verifier, then:
+
+    docker run -d --name midge-dstack-verifier --read-only --cap-drop ALL -p 127.0.0.1:18080:8080 --tmpfs /tmp:size=600m ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41
+    npm run verify:hosted-bundle
+
+It needs network access for Intel's collateral. It shows what that VM attested at capture time; it cannot show that a VM is running now.
