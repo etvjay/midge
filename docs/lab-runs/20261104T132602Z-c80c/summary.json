@@ -1,0 +1,15 @@
+{
+  "runId": "20261104T132602Z-c80c",
+  "startedAt": "2026-11-04T13:26:02.093Z",
+  "rootHash": "15e76ca7892c90bea20571e60e0e92030f5a6a45ad6b6c5541e2052d1e0368d5",
+  "verdicts": {
+    "E-IFACE-MODEL": {
+      "attempts": [
+        "FAIL"
+      ],
+      "verdict": "FAIL"
+    }
+  },
+  "events": 145,
+  "commit": "476af425fc337b1a85d15ba23b26f16dd11def62"
+}

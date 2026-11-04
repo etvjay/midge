@@ -1,0 +1,40 @@
+======================================================
+ [VERIFICATION 8] HTTP DAEMON, SSE, x402 & MCP SERVER
+ Target: Complete End-to-End Interface Layer Integration
+======================================================
+[1/7] Booting FlyApiDaemon HTTP & SSE gateway...
+  ✓ Gateway daemon live on http://127.0.0.1:39237
+[2/7] Testing Syndicate Lifecycle over HTTP REST...
+  ✓ Hatched Syndicate: e2e-swarm-live (DARK_VAULT)
+  ✓ Deposited Escrow:   75 NEAR (Flyer: agent-alpha.near)
+[3/7] Connecting to Server-Sent Events (SSE) Stream (/v1/stream/syndicate/e2e-swarm-live)...
+  ✓ SSE Stream State:   ACTIVE (Streaming)
+[4/7] Testing Roost TEE Cryptography & Sealed Ingestion...
+  ✓ Roost Public Key:   Retrieved RSA-2048 (Model: Qwen/Qwen3.6-35B-A3B-FP8)
+  ✓ Sealed Ingestion:   ENCRYPTED_IN_ENCLAVE_RAM (344 bytes encrypted)
+[5/7] Testing Dark Facilities & OTC Matching over HTTP...
+  ✓ Confidential RFQ:   Matched at 4.9% APR | Health: HEALTHY
+  ✓ OTC Block Cross:    10000 wNEAR for 40000 USDC ($4.00/NEAR)
+[6/7] Testing x402 Agent Micro-Commerce Flow...
+  ✓ Step A (No Auth):   HTTP 402 Payment Required
+    ↳ Header Check:     X-402-Payment-Required: true
+  ✓ Step B (Settled):   rcpt_622e79e6542c8eec421514ae (PINGPAY_CONFIDENTIAL_MICROPAYMENT)
+  ✓ Security Check:     Unsigned receipt rejected (HTTP 402, HMAC proof required)
+  ✓ Step C (With Auth): HTTP 200 OK
+    ↳ Alpha Payload:    ALPHA_SIGNALS_CROSS_CHAIN_PROPRIETARY_SIGNAL_DATA (Released to: agent-alpha.near)
+[7/8] Testing Model Context Protocol (MCP) Server Integration...
+  ✓ MCP Tools Listed:   10 Tools Available for LLM Agents
+  ✓ MCP Tool Executed:  midge_hatch_syndicate -> mcp-agent-syndicate (mcp-agent-syndicate.fly-coordinator.testnet) [Mode: model]
+  ✓ MCP Tool Executed:  midge_deposit -> 0.05 NEAR deposited [Mode: model]
+  ✓ MCP Tool Executed:  midge_settle -> SETTLED_MODEL [Mode: model]
+  ✓ MCP Tool Executed:  midge_list_syndicates -> 1 syndicates discovered [Mode: model]
+  ✓ MCP Tool Executed:  midge_get_my_syndicates -> 1 member syndicates found [Mode: model]
+  ✓ Chain MCP Executed: midge_list_syndicates -> 3 on-chain syndicates [Mode: chain]
+[8/8] Testing Security Controls: API Key, Body Limits & CORS...
+  ✓ Public Route Check: /health returns HTTP 200 without API key
+  ✓ API Key Enforcement: Protected route returns HTTP 401 Unauthorized
+  ✓ Auth Verification:  Protected route returns HTTP 200 with X-Midge-Api-Key
+  ✓ Body Limit Guard:   Payload >512KB rejected with HTTP 413
+
+>>> [PASS] HTTP DAEMON, SSE, x402 & MCP SERVER VERIFIED (Integrated Gateway).
+

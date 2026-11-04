@@ -1,0 +1,32 @@
+
+======================================================
+ [VERIFICATION 3] HATCH PROTOCOL & ESCAPE HATCH (FMEA)
+ Target: FlyNest JS Model & OutLayer Policies (State Machine Simulation)
+======================================================
+[1/5] Executing hatch() factory on Nest contract...
+  - Hatched Sub-Account: dark-swarm-alpha.fly-coordinator.testnet
+  - Nonce:               578dd9bdcabf94ec...
+  - OutLayer Max Spend:  100 USDC
+  - Enclave Ed25519 PK:  6bbeb04b67eecbdb...
+[2/5] Simulating 4 Flyers depositing into FAR Escrow...
+  - Total Pooled Escrow: 200 USDC across 4 Flyers
+  - OutLayer Policy Check: [BLOCKED] Rogue deposit of 500 USDC rejected.
+[3/5] Simulating Happy Path: Roost submits valid Ed25519 HAQ Proof...
+  - Settlement Result:   SETTLED (Amount: 200 USDC)
+  - Signature Verified:  true (Ed25519 64-byte signature validated)
+[4/5] Testing Invariant: hatch_out() blocked on settled syndicates...
+  - Post-Settlement Check: [BLOCKED] [Hatch-Out REJECT] Cannot hatch out of a settled syndicate.
+[5/5] Simulating Failure Path: TEE Roost stalls & Timelock expires...
+  - Created 'stalled-swarm-beta' with 100 USDC across 2 agents
+  - Pre-timeout check:   [LOCKED] Cannot prematurely drain escrow.
+  - Post-timeout refund: [TRIGGERED] 75 USDC refunded to agent-isolated
+  - Remaining Escrow:    25 USDC (agent-backup escrow preserved)
+  - Final caller refund: [TRIGGERED] 25 USDC refunded to agent-backup
+  - Final Syndicate Status: ABORTED_REFUNDED (all funds safely repatriated)
+[6/6] Auditing Deployed NEAR Testnet Contract State [RECORDED FIXTURE]...
+  - Deployed Contract:   c.fly-1793636729.testnet (Audited from recorded fixture)
+  - On-Chain Settlement: syn-flash-1793637420 -> Status: Settled (Total Paid: 0.06 NEAR)
+  - On-Chain Escape:     syn-escape-1793637435 -> Status: AbortedRefunded (Escrow: 0, Fully Refunded)
+  - Explorer Verified:   8 recorded transactions in docs/canonical/testnet-evidence.json
+
+>>> [PASS] HATCH & ESCAPE HATCH VERIFIED [RECORDED FIXTURE]: Safety invariants hold.
