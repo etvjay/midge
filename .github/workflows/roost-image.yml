@@ -10,7 +10,10 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'deploy/roost/**'
+      - 'deploy/roost/Dockerfile'
+      - 'deploy/roost/package.json'
+      - 'deploy/roost/package-lock.json'
+      - 'deploy/roost/build.sh'
       - 'src/roost-service/**'
       - 'src/enclave/e2ee.js'
       - 'src/enclave/errors.js'
