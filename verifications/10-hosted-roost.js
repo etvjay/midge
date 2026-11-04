@@ -5,6 +5,7 @@ import { HostedRoostClient } from '../src/roost-service/client.js';
 import { sealToModel, generateClientKey } from '../src/enclave/e2ee.js';
 import { verifyHostedAttestation } from '../src/roost-service/verify-hosted.js';
 import { getComposeHash, expectedComposeHashes, toDeterministicJson } from '../src/roost-service/compose-hash.js';
+import fs from 'node:fs';
 import http from 'node:http';
 
 /**
@@ -218,6 +219,10 @@ export async function verifyHostedRoost() {
   check('detects a provider that changed our compose text', expectedComposeHashes({ cvmJson: { compose_file: appCompose }, ourCompose: ours + '# edited' }).matchesOurCompose === false);
   check('detects a different image digest in the compose', expectedComposeHashes({ cvmJson: { compose_file: { ...appCompose, docker_compose_file: ours.replace('a'.repeat(64), 'b'.repeat(64)) } }, ourCompose: ours }).matchesOurCompose === false);
   check('says so when the response holds no app-compose', expectedComposeHashes({ cvmJson: { unrelated: 1 }, ourCompose: ours }).ok === false);
+  const real = JSON.parse(fs.readFileSync(new URL('./fixtures/phala-app-compose-0.6.1.json', import.meta.url), 'utf8'));
+  const realDerived = expectedComposeHashes({ cvmJson: { compose_file: real.appCompose }, ourCompose: real.appCompose.docker_compose_file });
+  check('KNOWN ANSWER from real hardware: the derived hash equals the hash a real Phala TDX VM attested', realDerived.ok && realDerived.matchesOurCompose && realDerived.candidates[0] === real.attestedComposeHash, real.attestedComposeHash.slice(0, 16));
+  check('KNOWN ANSWER: hashing the null fields as Phala reports them would NOT reproduce it (nulls mean absent)', getComposeHash(real.appCompose) !== real.attestedComposeHash);
   {
     const roostC = new HostedRoost({ provider: new FakeProvider() });
     const nonceC = crypto.randomBytes(32).toString('hex');

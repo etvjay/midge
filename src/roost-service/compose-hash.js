@@ -51,6 +51,19 @@ export function findAppCompose(json) {
 }
 
 /**
+ * Phala's API reports fields that are absent from the real app-compose as null (salt, swap_size, port_policy...).
+ * Hashing them would not reproduce the measured hash; dropping them does (checked against a real run, see
+ * verifications/fixtures/phala-app-compose-0.6.1.json). An empty string, an empty list and false are kept.
+ */
+export function dropNulls(value) {
+  if (Array.isArray(value)) return value.map(dropNulls);
+  if (value && typeof value === 'object' && value.constructor === Object) {
+    return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== null && v !== undefined).map(([k, v]) => [k, dropNulls(v)]));
+  }
+  return value;
+}
+
+/**
  * Work out what the compose hash must be for a CVM deployed from `ourCompose`, without trusting any hash
  * the provider reports. The guest hashes the exact app-compose string it was given, and clients reproduce
  * that string as sorted compact JSON, so both candidates are returned.
@@ -60,7 +73,8 @@ export function expectedComposeHashes({ cvmJson, ourCompose }) {
   const found = findAppCompose(cvmJson);
   if (!found) return { ok: false, reason: 'no app-compose with a docker_compose_file found in the provider response' };
   const matchesOurCompose = found.object.docker_compose_file === ourCompose;
-  const candidates = new Set([getComposeHash(found.object), getComposeHash(found.object, { normalize: true })]);
+  const present = dropNulls(found.object);
+  const candidates = new Set([getComposeHash(present), getComposeHash(present, { normalize: true }), getComposeHash(found.object)]);
   if (found.raw) candidates.add(crypto.createHash('sha256').update(found.raw, 'utf8').digest('hex'));
   return { ok: true, matchesOurCompose, candidates: [...candidates], composeKeys: Object.keys(found.object).sort() };
 }
