@@ -46,7 +46,7 @@ async function main() {
 
   console.log(`Execution Mode : ${mode.toUpperCase()}`);
   console.log(`Coordinator    : ${coordinatorId}`);
-  console.log(`Code Hash      : ${evidence?.contractCodeHash || '5maXUkmSgoUQ52RtDSSzZ1gzyhEgJdBuFESgXCiTbqoG'}`);
+  console.log(`Code Hash      : ${evidence?.contractCodeHash || 'Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9'}`);
   console.log(`WASM SHA-256   : ${evidence?.wasmSha256 || 'ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1'}`);
   console.log(`Target Network : testnet\n`);
 

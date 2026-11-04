@@ -8,7 +8,7 @@
 **Publication Date:** November 2026  
 **Reference Implementations:**  
 - NEAR L1 Coordinator: [`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet)  
-- Code Hash: `5maXUkmSgoUQ52RtDSSzZ1gzyhEgJdBuFESgXCiTbqoG`  
+- Code Hash: `Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9`  
 - SHA-256 WASM: `ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1`  
 
 ---
@@ -393,7 +393,7 @@ The entire protocol, contract test suite, hardware attestation, and on-chain pro
 # 1. Run complete canonical verification suite (<20.0s runtime)
 ./scripts/verify
 
-# 2. Run the 47 NEAR L1 Rust unit, integration, and fuzz invariant tests
+# 2. Run the 53 NEAR L1 Rust unit, integration, and fuzz invariant tests
 cd contracts/fly-coordinator && cargo test
 
 # 3. Compile the release WebAssembly binary (304 KB)

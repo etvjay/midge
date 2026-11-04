@@ -131,5 +131,5 @@ cargo test
 - **Target WASM:** `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm`
 - **WASM Size:** 304 KB (311,421 bytes)
 - **SHA-256:** `ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1`
-- **Deployed Testnet Code Hash:** `5maXUkmSgoUQ52RtDSSzZ1gzyhEgJdBuFESgXCiTbqoG`
+- **Deployed Testnet Code Hash:** `Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9`
 - **Active Testnet Instance:** [`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet)

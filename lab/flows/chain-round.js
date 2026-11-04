@@ -12,7 +12,7 @@ import { near, fmt, sleep, computePolicyHash } from '../lib/near.js';
  * Every "must fail" step asserts that the on-chain STATE did not change, not only that an error came back.
  */
 /** The contract build this lab was written against. Changes with any contract change; see foundry/gaps.jsonl GAP-009. */
-export const EXPECTED_CODE_HASH = '5maXUkmSgoUQ52RtDSSzZ1gzyhEgJdBuFESgXCiTbqoG';
+export const EXPECTED_CODE_HASH = 'Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9';
 const fakeProvider = { simulated: true, attest: async () => Buffer.from('rogue-no-hardware'), info: async () => ({}) };
 
 export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = null, runTag }) {
