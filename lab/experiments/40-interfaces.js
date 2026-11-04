@@ -8,6 +8,9 @@ import { FlyNestContract } from '../../src/contracts/nest.js';
 import { createRoost } from '../../src/enclave/factory.js';
 import { EnclaveCrypto } from '../../src/enclave/crypto.js';
 import { httpRoutes, matchRoute, sdkMethods } from '../lib/surface.js';
+import crypto from 'node:crypto';
+import { FlyChainClient, deriveSubKeyPair } from '../../src/chain/client.js';
+import { computeAllocationsHash as roostAllocationsHash } from '../../src/roost-service/hosted-roost.js';
 
 const PIN = { routes: 32, sdk: 26, mcp: 10 }; // a source change moves these and forces a human to look
 
@@ -269,6 +272,30 @@ export default {
     } finally {
       await ctx.step('stop the daemon', async (s) => { if (daemon) await daemon.stop(); globalThis.fetch = origFetch; s.assert('the daemon stopped', true); }, { always: true });
     }
+
+    await ctx.step('chain client: argument shapes and signing parity with the contract (no network)', async (s) => {
+      // The chain client sent order_hash/epoch/nonce (the contract wants attestation_nonce and aggregate_order_hash),
+      // sent allocations as pairs (the contract wants { recipient, amount }), and hashed them differently from the
+      // contract. All three made a chain-mode settlement impossible; none was visible without driving it.
+      const key = deriveSubKeyPair('lab-seed', 'client-shape');
+      const c = new FlyChainClient({ accountId: 'lab.testnet', privateKey: key.keyPair.toString() });
+      const pairs = [['zed.testnet', '0.5'], ['abe.testnet', 2n * 10n ** 24n]];
+      const norm = c.normalizeAllocations(pairs);
+      s.assert('pairs are normalised to { recipient, amount } objects with yocto strings', norm[0].recipient === 'zed.testnet' && norm[0].amount === '500000000000000000000000' && norm[1].amount === '2000000000000000000000000', { actual: norm });
+      s.assert('objects are accepted too and come out the same', JSON.stringify(c.normalizeAllocations(norm)) === JSON.stringify(norm));
+      const h = c.computeAllocationsHash(pairs);
+      s.assert('the client\'s allocations hash equals the Roost\'s, which the contract accepts on testnet', h === roostAllocationsHash(norm), { expected: roostAllocationsHash(norm), actual: h });
+      s.assert('the hash does not depend on the order of the allocations', h === c.computeAllocationsHash([...pairs].reverse()));
+      const seed = key.rawPriv; const pub = crypto.createPublicKey({ key: Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), key.rawPub]), format: 'der', type: 'spki' });
+      const signed = c.signSettlement({ syndicateId: 'syn-x', epoch: 1, nonce: 'abcdef0123456789', allocations: pairs, orderHash: 'ff'.repeat(32), enclavePrivateKey: seed });
+      s.assert('signSettlement signs the contract\'s message: contract:syndicate:epoch:nonce:allocationsHash:orderHash', signed.message === `${c.contractId}:syn-x:1:abcdef0123456789:${h}:${'ff'.repeat(32)}`, { actual: signed.message });
+      s.assert('and the signature verifies under the matching public key', crypto.verify(null, Buffer.from(signed.message), pub, Buffer.from(signed.signatureHex, 'hex')));
+      const refuses = async (fn) => fn().then(() => false, (e) => e.message);
+      s.assert('hatch without an enclave key is refused before anything is sent', /enclavePublicKey/.test(await refuses(() => c.hatch({ syndicateId: 'abc' })) || ''));
+      s.assert('hatch with an all-zero enclave key is refused (nobody could ever settle it)', /not all zeros/.test(await refuses(() => c.hatch({ syndicateId: 'abc', enclavePublicKey: '0'.repeat(64) })) || ''));
+      s.assert('settleBatch without a string nonce is refused (the old numeric default 1 could never match)', /round_nonce/.test(await refuses(() => c.settleBatch({ syndicateId: 'a', allocations: pairs, orderHash: 'x', nonce: 1, enclaveSignature: 'ab'.repeat(64) })) || ''));
+      s.assert('settleBatch without a 64-byte signature is refused', /128 hex/.test(await refuses(() => c.settleBatch({ syndicateId: 'a', allocations: pairs, orderHash: 'x', nonce: 'abcdef0123', enclaveSignature: 'ab' })) || ''));
+    });
 
     await ctx.step('MCP (in process): every tool, and the four that used to claim success without doing anything', async (s) => {
       const nest = new FlyNestContract();

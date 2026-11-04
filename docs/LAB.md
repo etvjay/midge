@@ -18,7 +18,7 @@ Runs go to `lab/runs/` (gitignored). `lab/promote.js` copies a run you want to k
 | Tier | Needs | Experiments | Cost |
 |---|---|---|---|
 | offline | nothing | `E-LAB-01` (self-test), `E-SUITE-OFFLINE` (10 suites), `E-CHECK-FOUNDRY`, `E-RUST-CONTRACT`, `E-IFACE-MODEL` (every route, SDK method and MCP tool) | free |
-| testnet | NEAR key in `.env`, network | `E-CHAIN-ROUND-LOCAL` | about 0.002 NEAR per attempt |
+| testnet | NEAR key in `.env`, network | `E-CHAIN-ROUND-LOCAL` (about 0.002 NEAR per attempt), `E-IFACE-CHAIN` (MCP, SDK and API against the real contract; about 0.066 NEAR per attempt) | small |
 | cloud | NEAR AI key, network, `dcap-qvl` | `E-MODEL-SEALED-LIVE-01` | a few cents of inference |
 | hardware | Phala key, NEAR key, Docker, `dcap-qvl` | `E-HOSTED-LIVE-01` | about $0.002 (a VM for ~2 min) |
 
@@ -56,7 +56,7 @@ Verify any of them: `node lab/verify-run.js docs/lab-runs/<id>`.
 | **Chain Signatures** | MPC-derived BTC, ETH, SOL addresses | **Model** (offline) |
 | **Facilities** | Confidential RFQ with covenants, OTC block trades, compute syndicate | **Model** (offline) |
 | **x402 commerce** | Agents pay each other over HTTP 402 | **Model** (offline) |
-| **Gateway**: HTTP API (32 routes incl. 2 SSE streams), MCP (10 tools) and the `FlyClient` SDK (26 methods) | Agent-facing interfaces | Every route, method and tool exercised in model mode by `E-IFACE-MODEL` (coverage derived from source). The chain-backed paths are not yet exercised. Open gaps GAP-013 to GAP-018 are pinned in that experiment |
+| **Gateway**: HTTP API (32 routes incl. 2 SSE streams), MCP (10 tools) and the `FlyClient` SDK (26 methods) | Agent-facing interfaces | Every route, method and tool exercised in model mode by `E-IFACE-MODEL` (coverage derived from source). The chain-backed paths (MCP hatch, deposit, settle, hatch_out; SDK settle and hatch-out through the API) are exercised on testnet by `E-IFACE-CHAIN`. The API's own hatch, deposit and get-by-id routes are still the in-memory model (GAP-016). Open gaps GAP-013 to GAP-018 are pinned in `E-IFACE-MODEL` |
 
 ## Limits of what this shows
 
