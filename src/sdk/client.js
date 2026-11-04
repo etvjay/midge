@@ -72,7 +72,7 @@ export class FlyClient {
     return res.data;
   }
 
-  async settleBatch(syndicateId, { allocations = [], orderHash = null, epoch = 1, nonce = 1, enclaveSignature = null } = {}) {
+  async settleBatch(syndicateId, { allocations = [], orderHash = null, epoch = null, nonce = null, enclaveSignature = null } = {}) {
     const res = await this._request('POST', `/v1/syndicates/${syndicateId}/settle`, {
       allocations,
       orderHash,

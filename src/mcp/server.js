@@ -46,6 +46,7 @@ export const FLY_MCP_TOOLS = [
         syndicateType: { type: 'string', enum: ['FLASH', 'DARK_VAULT'], default: 'FLASH' },
         quorumThreshold: { type: 'number', description: 'Minimum number of Flyers required to deliberate' },
         maxSpendNear: { type: 'number', description: 'OutLayer per-flyer spending cap in NEAR' },
+        enclavePublicKey: { type: 'string', description: "The Roost's Ed25519 settlement public key, 64 hex characters. Required on chain: the contract only accepts settlements signed by this key, so a syndicate hatched without a real one can never be settled" },
         expectedCodeHash: { type: 'string', description: 'Expected MRENCLAVE measurement of the Roost enclave' },
         timeoutBlocks: { type: 'number', description: 'Timelock block window before escape hatch unlocks' },
         allowedRecipients: {
@@ -89,16 +90,15 @@ export const FLY_MCP_TOOLS = [
         syndicateId: { type: 'string', description: 'Unique identifier of the target syndicate' },
         allocations: {
           type: 'array',
-          description: 'Array of [recipientAccountId, amountNear] pairs to payout',
+          description: 'Array of [recipientAccountId, amountNear] pairs (or { recipient, amount } objects) to pay out',
           items: {
             type: 'array',
             items: { type: 'string' },
           },
         },
-        orderHash: { type: 'string', description: '32-byte hex hash of the aggregate order / deliberation' },
-        epoch: { type: 'number', default: 1, description: 'Epoch sequence number' },
-        nonce: { type: 'number', default: 1, description: 'Batch nonce' },
-        enclaveSignature: { type: 'string', description: 'Ed25519 signature over 6-tuple canonical message' },
+        orderHash: { type: 'string', description: "The Roost's aggregate order hash (the aggregate_order_hash the signature covers)" },
+        nonce: { type: 'string', description: "The syndicate's current round_nonce, read from get_syndicate. It changes after every settlement that leaves escrow behind" },
+        enclaveSignature: { type: 'string', description: "The Roost's Ed25519 signature over contract:syndicate:epoch:nonce:allocationsHash:orderHash, 128 hex characters" },
       },
       required: ['syndicateId', 'allocations'],
     },
@@ -270,6 +270,7 @@ export class FlyMcpServer {
             syndicateId: args.syndicateId,
             syndicateType: args.syndicateType || 'FLASH',
             quorumThreshold: args.quorumThreshold || 2,
+            enclavePublicKey: args.enclavePublicKey,
             expectedCodeHash: args.expectedCodeHash,
             timeoutBlocks: args.timeoutBlocks || 100,
             releasePolicy: policy,
@@ -317,8 +318,7 @@ export class FlyMcpServer {
             syndicateId: args.syndicateId,
             allocations: args.allocations || [],
             orderHash: args.orderHash,
-            epoch: args.epoch || 1,
-            nonce: args.nonce || 1,
+            nonce: args.nonce,
             enclaveSignature: args.enclaveSignature,
           });
           return this.formatOutput(res);

@@ -117,8 +117,14 @@ export class FlyChainClient {
     return crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
   }
 
+  /**
+   * Allocations as the contract wants them: [{ recipient, amount }] with amount in yoctoNEAR (string).
+   * Accepts [recipient, amount] pairs or { recipient, amount } objects; an amount can be NEAR (number or short
+   * string) or yocto (bigint or a long string).
+   */
   normalizeAllocations(allocations = []) {
-    return allocations.map(([recip, amt]) => {
+    return allocations.map((a) => {
+      const [recip, amt] = Array.isArray(a) ? a : [a?.recipient, a?.amount];
       let amtYocto;
       if (typeof amt === 'bigint') {
         amtYocto = amt.toString();
@@ -129,8 +135,14 @@ export class FlyChainClient {
       } else {
         amtYocto = String(amt);
       }
-      return [recip, amtYocto];
+      return { recipient: recip, amount: amtYocto };
     });
+  }
+
+  /** The contract's allocations hash: sorted by recipient, "recipient:yocto" joined by commas, SHA-256. */
+  computeAllocationsHash(allocations) {
+    const sorted = this.normalizeAllocations(allocations).sort((x, y) => (x.recipient < y.recipient ? -1 : x.recipient > y.recipient ? 1 : 0));
+    return crypto.createHash('sha256').update(sorted.map((x) => `${x.recipient}:${x.amount}`).join(','), 'utf8').digest('hex');
   }
 
   /**
@@ -144,13 +156,10 @@ export class FlyChainClient {
     orderHash = '0'.repeat(64),
     enclavePrivateKey,
   }) {
-    // 1. Normalize allocations to yoctoNEAR format matching on-chain contract
+    // 1. Allocations hash exactly as the contract computes it (sorted, comma-joined). The previous version joined with
+    // ';' and did not sort, so no signature it produced could verify on chain.
     const formattedAllocations = this.normalizeAllocations(allocations);
-    let allocStr = '';
-    for (const [recip, amt] of formattedAllocations) {
-      allocStr += `${recip}:${amt};`;
-    }
-    const allocationsHash = crypto.createHash('sha256').update(allocStr, 'utf8').digest('hex');
+    const allocationsHash = this.computeAllocationsHash(formattedAllocations);
 
     // 2. Compute canonical message 6-tuple
     const message = `${this.contractId}:${syndicateId}:${epoch}:${nonce}:${allocationsHash}:${orderHash}`;
@@ -222,10 +231,15 @@ export class FlyChainClient {
     expectedCodeHash = 'valid-mrenclave-code-hash',
     timeoutBlocks = 100,
     releasePolicy = null,
-    attachedDepositNear = '0.05',
+    attachedDepositNear = '0.01',
   }) {
     if (!this.account) {
       throw new Error('[FlyChainClient] Missing NEAR_ACCOUNT_ID / NEAR_PRIVATE_KEY for on-chain transaction');
+    }
+    // A syndicate hatched without the Roost's settlement key (the old default was 64 zeros) can never be settled:
+    // nobody holds a private key for it. Refuse instead of creating one.
+    if (!/^[0-9a-f]{64}$/i.test(enclavePublicKey || '') || /^0+$/.test(enclavePublicKey)) {
+      throw new Error('[FlyChainClient] hatch needs enclavePublicKey: the Roost\'s 32-byte Ed25519 settlement public key as 64 hex characters (not all zeros). Without it the syndicate could never be settled.');
     }
 
     const policy = releasePolicy || {
@@ -240,7 +254,7 @@ export class FlyChainClient {
         syndicate_id: syndicateId,
         syndicate_type: syndicateType,
         quorum_threshold: quorumThreshold,
-        enclave_public_key: enclavePublicKey || '0'.repeat(64),
+        enclave_public_key: enclavePublicKey,
         expected_code_hash: expectedCodeHash,
         timeout_blocks: timeoutBlocks,
         release_policy: policy,
@@ -308,32 +322,30 @@ export class FlyChainClient {
     };
   }
 
-  async settleBatch({
-    syndicateId,
-    allocations,
-    orderHash = '0'.repeat(64),
-    epoch = 1,
-    nonce = 1,
-    enclaveSignature,
-  }) {
+  /**
+   * Submit a signed settlement. `nonce` is the syndicate's current round_nonce (a string read from get_syndicate), and
+   * `enclaveSignature` is the Roost's signature over contract:syndicate:epoch:nonce:allocationsHash:orderHash.
+   * (The previous version sent order_hash/epoch/nonce, which the contract does not accept, so it could never settle.)
+   */
+  async settleBatch({ syndicateId, allocations, orderHash, nonce, enclaveSignature }) {
     if (!this.account) {
       throw new Error('[FlyChainClient] Missing NEAR_ACCOUNT_ID / NEAR_PRIVATE_KEY for on-chain transaction');
     }
+    if (typeof nonce !== 'string' || nonce.length < 8) throw new Error('[FlyChainClient] settleBatch needs the syndicate\'s current round_nonce (a string from get_syndicate) as `nonce`');
+    if (typeof orderHash !== 'string' || orderHash.length === 0) throw new Error('[FlyChainClient] settleBatch needs the Roost\'s aggregate orderHash');
+    if (typeof enclaveSignature !== 'string' || enclaveSignature.length !== 128) throw new Error('[FlyChainClient] settleBatch needs the Roost\'s 64-byte signature as 128 hex characters');
 
-    // Convert Near amounts in allocations to yocto string if given in NEAR
     const formattedAllocations = this.normalizeAllocations(allocations);
-
     const action = actions.functionCall(
       'settle_batch',
       {
         syndicate_id: syndicateId,
+        attestation_nonce: nonce,
+        aggregate_order_hash: orderHash,
         allocations: formattedAllocations,
-        order_hash: orderHash,
-        epoch,
-        nonce,
         enclave_signature: enclaveSignature,
       },
-      60_000_000_000_000n, // 60 TGas
+      100_000_000_000_000n, // 100 TGas, as the contract's own settlement flow uses
       0n
     );
 
@@ -362,8 +374,7 @@ export class FlyChainClient {
     const action = actions.functionCall(
       'hatch_out',
       { syndicate_id: syndicateId },
-      30_000_000_000_000n, // 30 TGas
-      0n
+      60_000_000_000_000n, // 60 TGas, the amount the contract's own flows attach (measured burn about 5 TGas; unused gas is refunded)
     );
 
     const res = await this.account.signAndSendTransaction({
