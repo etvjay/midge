@@ -13,7 +13,7 @@ import { roostReportData } from './hosted-roost.js';
  * @param {object} opts
  * @param {string} opts.nonce             the nonce this caller sent (never trust the bundle's own copy)
  * @param {string} opts.verifierUrl       e.g. http://127.0.0.1:18080
- * @param {string} opts.composeHash       pinned compose hash (hex)
+ * @param {string|string[]} opts.composeHash  pinned compose hash (hex), or the candidates computed from our compose file
  * @param {string[]} opts.osImageHashes   pinned production OS image hashes (hex, with or without 0x)
  * @param {string[]} [opts.acceptedTcb]   default ['UpToDate']
  */
@@ -52,7 +52,8 @@ export async function verifyHostedAttestation(bundle, { nonce, verifierUrl, comp
   add('TCB status is acceptable', acceptedTcb.includes(d.tcb_status), String(d.tcb_status));
   add('OS image is not a development image', d.os_image_is_dev !== true);
   add('quote report data equals sha512(our keys, our nonce)', strip(d.report_data) === expectedReportData, strip(d.report_data).slice(0, 16));
-  add('compose hash equals the pinned hash of our build', strip(app.compose_hash) === strip(composeHash) && strip(composeHash).length === 64, strip(app.compose_hash).slice(0, 16));
+  const pins = [].concat(composeHash || []).map(strip).filter(Boolean);
+  add('compose hash equals the pinned hash of our build', pins.length > 0 && pins.every((h) => h.length === 64) && pins.includes(strip(app.compose_hash)), strip(app.compose_hash).slice(0, 16));
   add('OS image hash is one we pin', (osImageHashes || []).map(strip).includes(strip(app.os_image_hash)), strip(app.os_image_hash).slice(0, 16));
   return { ok: checks.every((c) => c.ok), checks, details: { tcb: d.tcb_status, composeHash: app.compose_hash, osImageHash: app.os_image_hash, appId: app.app_id } };
 }

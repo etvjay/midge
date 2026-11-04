@@ -33,7 +33,7 @@ if (!url) {
 }
 
 const expected = JSON.parse(fs.readFileSync(expectedPath, 'utf8'));
-if (!expected.composeHash) {
+if (!expected.composeHash || (Array.isArray(expected.composeHash) && expected.composeHash.length === 0)) {
   console.error(`[REJECT] ${path.basename(expectedPath)} has no pinned composeHash yet, so the code identity cannot be checked. Pin it after the first deploy.`);
   process.exit(1);
 }

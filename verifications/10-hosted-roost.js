@@ -4,6 +4,7 @@ import { createRoostServer } from '../src/roost-service/server.js';
 import { HostedRoostClient } from '../src/roost-service/client.js';
 import { sealToModel, generateClientKey } from '../src/enclave/e2ee.js';
 import { verifyHostedAttestation } from '../src/roost-service/verify-hosted.js';
+import { getComposeHash, expectedComposeHashes, toDeterministicJson } from '../src/roost-service/compose-hash.js';
 import http from 'node:http';
 
 /**
@@ -37,7 +38,7 @@ export async function verifyHostedRoost() {
   const rejects = async (fn, re) => { try { await fn(); return false; } catch (e) { return !re || re.test(e.message); } };
   const bid = (roost, flyerId, payload) => roost.submitSealedIntent({ flyerId, cipherTextHex: sealToModel(JSON.stringify(payload), roost.intentPublicKey) });
 
-  console.log('\n[1/7] Keys and attestation binding');
+  console.log('\n[1/8] Keys and attestation binding');
   const provider = new FakeProvider();
   let roost = new HostedRoost({ provider });
   check('settlement and intent keys are distinct 32-byte keys', roost.settlePublicKey !== roost.intentPublicKey && /^[0-9a-f]{64}$/.test(roost.settlePublicKey) && /^[0-9a-f]{64}$/.test(roost.intentPublicKey));
@@ -55,7 +56,7 @@ export async function verifyHostedRoost() {
   const sim = new HostedRoost({ provider: new FakeProvider({ simulated: true }) });
   check('a simulator-backed Roost never claims hidden inputs', sim.describe().inputsHiddenFromOperator === false && sim.describe().simulated === true);
 
-  console.log('\n[2/7] Exact aggregation');
+  console.log('\n[2/8] Exact aggregation');
   roost = new HostedRoost({ provider });
   bid(roost, 'a', { amount: '0.1' }); bid(roost, 'b', { amount: 0.2 }); bid(roost, 'c', { amount: 0.3 });
   let out = roost.aggregateAndClear({ roundId: 'r1' });
@@ -72,7 +73,7 @@ export async function verifyHostedRoost() {
   check('toMicro and formatMicro round-trip', formatMicro(toMicro('12.340000')) === '12.34' && toMicro(-1) === null && toMicro(1e21) === null && toMicro('1e3') === null && toMicro('0.1234567') === null && toMicro(NaN) === null);
   check('the coordinator-side state never holds a bid in the clear', (() => { const r = new HostedRoost({ provider }); bid(r, 'x', { amount: 5, note: MARKER }); return !JSON.stringify(r.sealedIntents).includes(MARKER) && !JSON.stringify(r.getSessionInfo()).includes(MARKER); })());
 
-  console.log('\n[3/7] Bad bids are excluded, not fatal');
+  console.log('\n[3/8] Bad bids are excluded, not fatal');
   roost = new HostedRoost({ provider });
   bid(roost, 'good1', { amount: 10 });
   bid(roost, 'neg', { amount: -5, note: MARKER });
@@ -97,7 +98,7 @@ export async function verifyHostedRoost() {
     && throws(() => new HostedRoost({ provider }).submitSealedIntent({ flyerId: 'z', cipherTextHex: 'ab'.repeat(10) }), /bytes/)
     && throws(() => new HostedRoost({ provider }).submitSealedIntent({ flyerId: 'z', cipherTextHex: 'ab'.repeat(5000) }), /bytes/));
 
-  console.log('\n[4/7] Settlement signing is bounded and single-use');
+  console.log('\n[4/8] Settlement signing is bounded and single-use');
   roost = new HostedRoost({ provider });
   bid(roost, 'a', { amount: 1 }); bid(roost, 'b', { amount: 2 });
   out = roost.aggregateAndClear({ roundId: 'angel-1' }); // total 3 NEAR
@@ -121,7 +122,7 @@ export async function verifyHostedRoost() {
   check('the allocations hash ignores order and sorts recipients byte-wise', computeAllocationsHash(allocations) === computeAllocationsHash(flipped)
     && computeAllocationsHash([{ recipient: 'a-b.testnet', amount: '1' }, { recipient: 'a.testnet', amount: '2' }]) === crypto.createHash('sha256').update('a-b.testnet:1,a.testnet:2').digest('hex'));
 
-  console.log('\n[5/7] HTTP surface and access control');
+  console.log('\n[5/8] HTTP surface and access control');
   roost = new HostedRoost({ provider });
   const adminKey = 'test-admin-key-with-24-or-more-chars';
   const server = createRoostServer({ roost, adminKey });
@@ -151,7 +152,7 @@ export async function verifyHostedRoost() {
     server.close();
   }
 
-  console.log('\n[6/7] Attestation verification wrapper (mock dstack-verifier)');
+  console.log('\n[6/8] Attestation verification wrapper (mock dstack-verifier)');
   const PINNED_COMPOSE = 'c'.repeat(64);
   const PINNED_OS = ['d'.repeat(64)];
   let mode = {};
@@ -202,7 +203,37 @@ export async function verifyHostedRoost() {
     mock.close();
   }
 
-  console.log('\n[7/7] The coordinator key is not exposed');
+  console.log('\n[7/8] Compose hash derived from our own compose file');
+  const ours = 'services:\n  roost:\n    image: ghcr.io/etvjay/midge-roost@sha256:' + 'a'.repeat(64) + '\n';
+  const appCompose = { runner: 'docker-compose', name: 'midge-roost', docker_compose_file: ours, public_logs: false, allowed_envs: ['ROOST_ADMIN_KEY'] };
+  const canonical = toDeterministicJson(appCompose);
+  const rawHash = crypto.createHash('sha256').update(canonical).digest('hex');
+  check('hash ignores key order, respects array order, and maps NaN to null',
+    getComposeHash({ b: 1, a: { d: 1, c: 2 } }) === getComposeHash({ a: { c: 2, d: 1 }, b: 1 })
+    && getComposeHash({ a: [1, 2] }) !== getComposeHash({ a: [2, 1] }) && getComposeHash({ a: NaN }) === getComposeHash({ a: null }));
+  const fromString = expectedComposeHashes({ cvmJson: { data: { app_compose: canonical } }, ourCompose: ours });
+  check('derives the hash from an app-compose string and it equals sha256 of that exact string', fromString.ok && fromString.matchesOurCompose && fromString.candidates.includes(rawHash));
+  const fromObject = expectedComposeHashes({ cvmJson: { compose_file: appCompose }, ourCompose: ours });
+  check('derives the hash from an app-compose object as well', fromObject.ok && fromObject.candidates.includes(rawHash));
+  check('detects a provider that changed our compose text', expectedComposeHashes({ cvmJson: { compose_file: appCompose }, ourCompose: ours + '# edited' }).matchesOurCompose === false);
+  check('detects a different image digest in the compose', expectedComposeHashes({ cvmJson: { compose_file: { ...appCompose, docker_compose_file: ours.replace('a'.repeat(64), 'b'.repeat(64)) } }, ourCompose: ours }).matchesOurCompose === false);
+  check('says so when the response holds no app-compose', expectedComposeHashes({ cvmJson: { unrelated: 1 }, ourCompose: ours }).ok === false);
+  {
+    const roostC = new HostedRoost({ provider: new FakeProvider() });
+    const nonceC = crypto.randomBytes(32).toString('hex');
+    const bundleC = await roostC.getAttestationBundle(nonceC);
+    const mockC = http.createServer((req, res) => { req.resume(); req.on('end', () => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ is_valid: true, details: { quote_verified: true, event_log_verified: true, os_image_hash_verified: true, tee_variant: 'dstack-tdx', tcb_status: 'UpToDate', os_image_is_dev: false, report_data: bundleC.reportData, app_info: { compose_hash: rawHash, os_image_hash: 'd'.repeat(64) } } })); }); });
+    await new Promise((r) => mockC.listen(0, '127.0.0.1', r));
+    const urlC = `http://127.0.0.1:${mockC.address().port}`;
+    const vOpts = { nonce: nonceC, verifierUrl: urlC, osImageHashes: ['d'.repeat(64)] };
+    try {
+      check('the verifier accepts when the attested hash is among the derived candidates', (await verifyHostedAttestation(bundleC, { ...vOpts, composeHash: fromString.candidates })).ok === true);
+      check('the verifier rejects when the attested hash is not among them', (await verifyHostedAttestation(bundleC, { ...vOpts, composeHash: ['e'.repeat(64)] })).ok === false);
+      check('the verifier rejects an empty or malformed pin list', (await verifyHostedAttestation(bundleC, { ...vOpts, composeHash: [] })).ok === false && (await verifyHostedAttestation(bundleC, { ...vOpts, composeHash: ['abc'] })).ok === false);
+    } finally { mockC.close(); }
+  }
+
+  console.log('\n[8/8] The coordinator key is not exposed');
   check('serialising the Roost exposes only public keys', JSON.stringify(roost) === JSON.stringify({ backend: 'hosted', settlePublicKey: roost.settlePublicKey, intentPublicKey: roost.intentPublicKey }) && !JSON.stringify(roost).includes(adminKey));
 
   const failed = results.filter((r) => !r.ok);
