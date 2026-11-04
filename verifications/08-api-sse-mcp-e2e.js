@@ -50,7 +50,7 @@ export async function verifyApiSseMcpE2E() {
 
     // 4. Test Roost TEE Cryptography & Sealed Intent Ingestion over HTTP
     console.log('[4/7] Testing Roost TEE Cryptography & Sealed Ingestion...');
-    const session = await client.getSessionKey();
+    const session = await client.getSessionKey('e2e-swarm-live');
     console.log(`  ✓ Roost Public Key:   Retrieved RSA-2048 (Model: ${session.enclaveModel})`);
 
     const sealedResp = await client.submitSealedIntent({
@@ -194,14 +194,14 @@ export async function verifyApiSseMcpE2E() {
       console.log('  ✓ Public Route Check: /health returns HTTP 200 without API key');
 
       // 8b. Protected route fails with 401 without API key
-      const unauthRes = await fetch(`${secBaseUrl}/v1/roost/session-key`);
+      const unauthRes = await fetch(`${secBaseUrl}/v1/roost/session-key?syndicateId=sec-test-syn`);
       if (unauthRes.status !== 401) {
         throw new Error(`Expected /v1/roost/session-key 401 without key, got ${unauthRes.status}`);
       }
       console.log('  ✓ API Key Enforcement: Protected route returns HTTP 401 Unauthorized');
 
       // 8c. Protected route succeeds with X-Midge-Api-Key
-      const authRes = await fetch(`${secBaseUrl}/v1/roost/session-key`, {
+      const authRes = await fetch(`${secBaseUrl}/v1/roost/session-key?syndicateId=sec-test-syn`, {
         headers: { 'X-Midge-Api-Key': 'fly-sec-test-token-789' },
       });
       if (authRes.status !== 200) {

@@ -91,13 +91,14 @@ export class FlyClient {
   }
 
   // --- 2. Roost Enclave & Cryptography ---
-  async getSessionKey() {
-    const res = await this._request('GET', '/v1/roost/session-key');
+  /** The session key of the Roost that serves this syndicate. Every syndicate has its own Roost and its own bids. */
+  async getSessionKey(syndicateId) {
+    const res = await this._request('GET', `/v1/roost/session-key?syndicateId=${encodeURIComponent(syndicateId ?? '')}`);
     return res.data;
   }
 
-  async getAttestationQuote(nonce) {
-    const res = await this._request('GET', `/v1/roost/attestation${nonce ? `?nonce=${nonce}` : ''}`);
+  async getAttestationQuote(syndicateId, nonce) {
+    const res = await this._request('GET', `/v1/roost/attestation?syndicateId=${encodeURIComponent(syndicateId ?? '')}${nonce ? `&nonce=${nonce}` : ''}`);
     return res.data;
   }
 
@@ -105,8 +106,8 @@ export class FlyClient {
    * Seal a bid for a model-sealed Roost. Verifies the model attestation itself and refuses a key the
    * coordinator merely asserts. Pass the result's cipherTextHex to submitSealedIntent.
    */
-  async sealBid({ intentPayload, session, ...verifyOptions }) {
-    return sealBidForRoost({ session: session || (await this.getSessionKey()), payload: intentPayload, ...verifyOptions });
+  async sealBid({ syndicateId, intentPayload, session, ...verifyOptions }) {
+    return sealBidForRoost({ session: session || (await this.getSessionKey(syndicateId)), payload: intentPayload, ...verifyOptions });
   }
 
   async submitSealedIntent({ syndicateId, flyerId, intentPayload, enclavePublicKeyPem, cipherTextHex }) {

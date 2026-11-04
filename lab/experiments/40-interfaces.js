@@ -120,11 +120,11 @@ export default {
       });
 
       await ctx.step('SDK: Roost (session key, attestation, sealing, aggregation)', async (s) => {
-        const session = await sdk.getSessionKey();
+        const session = await sdk.getSessionKey(synId);
         s.assert('the session key says which backend it is and that inputs are NOT hidden from the operator', session.backend === 'local' && session.inputsHiddenFromOperator === false, { actual: { backend: session.backend, hidden: session.inputsHiddenFromOperator } });
-        const quote = await sdk.getAttestationQuote('ab'.repeat(16));
+        const quote = await sdk.getAttestationQuote(synId, 'ab'.repeat(16));
         s.assert('getAttestationQuote returns a session nonce and the public key', typeof quote.sessionNonce === 'string' && /BEGIN PUBLIC KEY/.test(quote.publicKeyPem || ''), { actual: Object.keys(quote) });
-        s.assert('sealBid refuses a local-simulation Roost (it only trusts an attested model key)', await sdk.sealBid({ intentPayload: { amount: 1 } }).then(() => false, (e) => /not in model-sealed mode|ROOST REJECT/.test(e.message)));
+        s.assert('sealBid refuses a local-simulation Roost (it only trusts an attested model key)', await sdk.sealBid({ syndicateId: synId, intentPayload: { amount: 1 } }).then(() => false, (e) => /not in model-sealed mode|ROOST REJECT/.test(e.message)));
         const receipt = await sdk.submitSealedIntent({ syndicateId: synId, flyerId: 'alice.near', intentPayload: { amount: 7 }, enclavePublicKeyPem: session.publicKeyPem });
         s.assert('submitSealedIntent stores ciphertext and counts it', receipt.status === 'ENCRYPTED_IN_ENCLAVE_RAM' && receipt.count === 1 && receipt.bytes > 100, { actual: receipt });
         s.assert('the receipt does not contain the plaintext amount', !/"amount"\s*:\s*7\b/.test(JSON.stringify(receipt)));
@@ -205,7 +205,7 @@ export default {
         await sdk.deposit(sid, 'dave.near', 3);
         s.assert('a deposit appears on the stream as deposit_received', await wait(a.out, 'deposit_received'), { actual: a.out });
         await sdk.deposit(`${sid}`, 'erin.near', 1);
-        await sdk.submitSealedIntent({ syndicateId: sid, flyerId: 'dave.near', intentPayload: { amount: 1 }, enclavePublicKeyPem: (await sdk.getSessionKey()).publicKeyPem });
+        await sdk.submitSealedIntent({ syndicateId: sid, flyerId: 'dave.near', intentPayload: { amount: 1 }, enclavePublicKeyPem: (await sdk.getSessionKey(sid)).publicKeyPem });
         s.assert('a sealed intent appears as sealed_intent_received with a count and no amount', await wait(a.out, 'sealed_intent_received'));
         const other = await events(`/v1/stream/syndicate/someone-else-${tag}`); await sdk.deposit(sid, 'frank.near', 1);
         await new Promise((r) => setTimeout(r, 200));
@@ -257,12 +257,19 @@ export default {
         const forced = await raw('POST', '/v1/emergency/hatch-out', { syndicateId: syn, flyerId: 'victim.near', currentBlock: 999999 });
         s.assert('GAP-013 (fixed): claiming a high block height does not open the timelock (HTTP 423)', forced.status === 423 && /LOCKED/.test(forced.json?.error || ''), { actual: [forced.status, forced.json?.error] });
         s.assert('the victim\'s escrow is untouched by the attempt', (await raw('GET', '/v1/syndicates/' + syn)).json?.totalEscrow === 4);
-        const sess = await sdk.getSessionKey();
-        await raw('POST', '/v1/roost/aggregate', {}); // drain whatever earlier steps left in the shared queue
-        await raw('POST', '/v1/roost/intents/sealed', { syndicateId: 'syn-A', flyerId: 'a', cipherTextBase64: EnclaveCrypto.encryptIntent({ amount: 11 }, sess.publicKeyPem) });
-        const crossed = await raw('POST', '/v1/roost/aggregate', { syndicateId: 'syn-B' });
-        s.assert('GAP-014 (pinned): a bid sealed under syndicate A is aggregated when syndicate B asks', crossed.json?.aggregateOrder?.totalInputAmount === 11, { actual: crossed.json?.aggregateOrder });
-        s.problem('major', 'GAP-014: the Roost endpoints ignore syndicateId; one bid queue is shared by every syndicate, so aggregating for syndicate B returns and clears syndicate A\'s bids');
+        const sessA = await sdk.getSessionKey('syn-aaa'); const sessB = await sdk.getSessionKey('syn-bbb');
+        s.assert('GAP-014 (fixed): two syndicates get two different Roosts with different keys', sessA.publicKeyPem !== sessB.publicKeyPem && sessA.sessionNonce !== sessB.sessionNonce);
+        await raw('POST', '/v1/roost/intents/sealed', { syndicateId: 'syn-aaa', flyerId: 'a', cipherTextBase64: EnclaveCrypto.encryptIntent({ amount: 11 }, sessA.publicKeyPem) });
+        await raw('POST', '/v1/roost/intents/sealed', { syndicateId: 'syn-bbb', flyerId: 'b', cipherTextBase64: EnclaveCrypto.encryptIntent({ amount: 5 }, sessB.publicKeyPem) });
+        const aggB = await raw('POST', '/v1/roost/aggregate', { syndicateId: 'syn-bbb' });
+        s.assert('aggregating for syndicate B totals only B\'s bid (5), not A\'s (11)', aggB.json?.aggregateOrder?.totalInputAmount === 5 && aggB.json?.aggregateOrder?.flyerCount === 1, { actual: aggB.json?.aggregateOrder });
+        const aggA = await raw('POST', '/v1/roost/aggregate', { syndicateId: 'syn-aaa' });
+        s.assert('syndicate A\'s bid is still there afterwards and totals 11', aggA.json?.aggregateOrder?.totalInputAmount === 11, { actual: aggA.json?.aggregateOrder });
+        const wrongKey = await raw('POST', '/v1/roost/intents/sealed', { syndicateId: 'syn-bbb', flyerId: 'x', cipherTextBase64: EnclaveCrypto.encryptIntent({ amount: 99 }, sessA.publicKeyPem) });
+        const afterWrong = await raw('POST', '/v1/roost/aggregate', { syndicateId: 'syn-bbb' }).then((r) => r, () => ({ status: 0 }));
+        s.assert('a bid sealed to syndicate A\'s key cannot be read by syndicate B\'s Roost (the sealing keys are per syndicate)', wrongKey.status >= 400 || afterWrong.json?.aggregateOrder?.totalInputAmount !== 99, { actual: [wrongKey.status, afterWrong.json?.aggregateOrder] });
+        s.assert('the Roost routes require a syndicateId (HTTP 400)', (await raw('GET', '/v1/roost/session-key')).status === 400 && (await raw('POST', '/v1/roost/aggregate', {})).status === 400);
+        s.assert('aggregating for a syndicate nothing was sealed for is a 404', (await raw('POST', '/v1/roost/aggregate', { syndicateId: 'never-sealed' })).status === 404);
         const haq = await raw('POST', '/v1/mpc/sign', { syndicateSubAccount: 'a.b', targetChain: 'ETH', payloadHash: 'ab'.repeat(32), haqVerified: true });
         s.assert('GAP-015 (pinned): the caller says haqVerified:true and the MPC signing gate opens', haq.status === 200, { actual: haq.status });
         s.problem('major', 'GAP-015: POST /v1/mpc/sign trusts a haqVerified flag supplied in the request body, so the "no cross-chain signature without a valid attestation" gate is whatever the caller says it is (simulated signing only; no MPC network is called)');

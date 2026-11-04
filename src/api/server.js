@@ -29,7 +29,12 @@ export class FlyApiDaemon {
         this.mode = 'model';
       }
     }
-    this.roost = createRoost({ backend: roostBackend }); // auto: model-sealed with a NEARAI_API_KEY, else a local simulation
+    // One Roost per syndicate, created on first use. A single shared Roost kept one bid queue for every syndicate, so
+    // aggregating for syndicate B totalled and cleared syndicate A's bids (GAP-014). Backend 'auto' picks model-sealed
+    // with a NEARAI_API_KEY, else a local simulation. The hosted Roost is not served by this API: it has its own service.
+    this.roostBackend = roostBackend;
+    this.roosts = new Map();
+    this.maxRoosts = 1000;
     this.farShard = new FarPrivateShardBridge();
     this.mpc = new ChainSignaturesMPC({ networkId: 'testnet' });
     this.x402 = new X402CommerceEngine();
@@ -70,6 +75,21 @@ export class FlyApiDaemon {
         resolve();
       }
     });
+  }
+
+  /** The Roost for one syndicate. Throws a 400 for a missing or malformed id and a 503 when too many are live. */
+  roostFor(syndicateId, { create = true } = {}) {
+    if (typeof syndicateId !== 'string' || !/^[a-z0-9_-]{3,64}$/.test(syndicateId)) {
+      const err = new Error('syndicateId is required (3-64 characters matching [a-z0-9_-]): every syndicate has its own Roost and its own bids.');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (!this.roosts.has(syndicateId)) {
+      if (!create) return null;
+      if (this.roosts.size >= this.maxRoosts) { const err = new Error('Too many live Roosts'); err.statusCode = 503; throw err; }
+      this.roosts.set(syndicateId, createRoost({ backend: this.roostBackend }));
+    }
+    return this.roosts.get(syndicateId);
   }
 
   getCorsOrigin(req) {
@@ -446,18 +466,19 @@ export class FlyApiDaemon {
     // 3. Roost TEE Endpoints (/v1/roost)
     // ==========================================
     if (method === 'GET' && pathname === '/v1/roost/session-key') {
-      if (typeof this.roost.ensureAttested === 'function') await this.roost.ensureAttested();
-      return this.sendJson(res, 200, { ...this.roost.getSessionInfo(), ...this.roost.describe() });
+      const roost = this.roostFor(url.searchParams.get('syndicateId'));
+      if (typeof roost.ensureAttested === 'function') await roost.ensureAttested();
+      return this.sendJson(res, 200, { syndicateId: url.searchParams.get('syndicateId'), ...roost.getSessionInfo(), ...roost.describe() }, req);
     }
 
     if (method === 'GET' && pathname === '/v1/roost/attestation') {
-      const quote = await this.roost.getAttestationQuote();
-      return this.sendJson(res, 200, quote);
+      const quote = await this.roostFor(url.searchParams.get('syndicateId')).getAttestationQuote();
+      return this.sendJson(res, 200, quote, req);
     }
 
     if (method === 'POST' && pathname === '/v1/roost/intents/sealed') {
       const body = await this.parseBody(req);
-      const receipt = this.roost.submitSealedIntent({
+      const receipt = this.roostFor(body.syndicateId).submitSealedIntent({
         flyerId: body.flyerId,
         cipherTextBase64: body.cipherTextBase64,
         cipherTextHex: body.cipherTextHex,
@@ -470,12 +491,14 @@ export class FlyApiDaemon {
         payload: { flyerId: body.flyerId, count: receipt.count },
       });
 
-      return this.sendJson(res, 200, receipt);
+      return this.sendJson(res, 200, receipt, req);
     }
 
     if (method === 'POST' && pathname === '/v1/roost/aggregate') {
-      const result = await this.roost.aggregateAndClear();
-      return this.sendJson(res, 200, result);
+      const body = await this.parseBody(req);
+      const roost = this.roostFor(body.syndicateId, { create: false });
+      if (!roost) return this.sendJson(res, 404, { error: `No Roost for syndicate '${body.syndicateId}': nothing was sealed for it.` }, req);
+      return this.sendJson(res, 200, await roost.aggregateAndClear(), req);
     }
 
     // ==========================================
