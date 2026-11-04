@@ -1,0 +1,80 @@
+{
+  "checkedAt": "2026-11-04T11:01:51.607Z",
+  "url": "(saved bundle)",
+  "nonce": "b97cb6b9e6bba373e5a65a00f49b1406567d45b248efa825f23a749dec1ae7ed",
+  "ok": true,
+  "checks": [
+    {
+      "name": "bundle has the expected format",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "bundle report data matches our keys and our nonce",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dstack-verifier accepts the attestation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Intel quote verifies",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "event log replays to the measured RTMR3",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "OS image hash verifies against the published image",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "platform is a dstack TDX confidential VM",
+      "ok": true,
+      "detail": "dstack-tdx"
+    },
+    {
+      "name": "TCB status is acceptable",
+      "ok": true,
+      "detail": "UpToDate"
+    },
+    {
+      "name": "OS image is not a development image",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "quote report data equals sha512(our keys, our nonce)",
+      "ok": true,
+      "detail": "3d7041fcfa6515cb"
+    },
+    {
+      "name": "compose hash equals the pinned hash of our build",
+      "ok": true,
+      "detail": "8a0180ff698c44b5"
+    },
+    {
+      "name": "OS image hash is one we pin",
+      "ok": true,
+      "detail": "ec43cb8c5e04b6bb"
+    }
+  ],
+  "details": {
+    "tcb": "UpToDate",
+    "composeHash": "8a0180ff698c44b5e743acca369fbfe9f309fbf084cf87415f6962fb8e1be6c8",
+    "osImageHash": "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6",
+    "appId": "708cd4bd03c79ab0feedbd5b1d444ddbf0feff43"
+  },
+  "settlePublicKey": "64d60c52751fda84226858462f75e9e60d20db093cf0cbba696a925942267b50",
+  "intentPublicKey": "bd2ae0a5bacd71f724ca4bfc6d4bc62ca442c76386684b09276baacdbc6ae00d",
+  "verifierImage": "ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41",
+  "note": "Full pass on a real Phala TDX VM. The attestation was taken from a live confidential VM (Phala tdx.small, dstack-0.6.1, deploy of deploy/roost/docker-compose.yml pinned to ghcr.io/etvjay/midge-roost@sha256:11a3b248...) at about 2026-11-04T11:00Z and then re-verified from the saved bundle with the official ghcr.io/dstack-tee/dstack-verifier image (Intel collateral fetched at verification time). The VM was deleted right after capture to stay inside a small credit, so this proves what that VM attested then, not that it is live now. Re-verify with: npm run verify:hosted-bundle",
+  "bundle": "docs/canonical/roost-hosted-bundle-2026-11-04.json",
+  "composeHashDerivedFrom": "sha256 of Phala's app-compose with null (absent) fields dropped, which equals the hash the VM attested; known-answer fixture: verifications/fixtures/phala-app-compose-0.6.1.json"
+}

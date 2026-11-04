@@ -31,6 +31,7 @@
     "verify:roost-sealed": "node verifications/09-model-sealed-roost.js",
     "verify:roost-hosted": "node verifications/10-hosted-roost.js",
     "verify:hosted-attestation": "node scripts/verify-hosted-roost.js",
+    "verify:hosted-bundle": "node scripts/verify-hosted-roost.js --from-bundle docs/canonical/roost-hosted-bundle-2026-11-04.json --verifier http://127.0.0.1:18080",
     "build:wasm": "cd contracts/fly-coordinator && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",
     "baseline": "node scripts/baseline.js",
     "security:review": "node scripts/security-review.js",

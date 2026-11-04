@@ -1,11 +1,12 @@
 {
-  "_comment": "Pinned expectations for verifying a hosted Roost. composeHash is null until pinned after a real deploy (scripts/phala-burst.sh prints the hash Phala computed from our compose file). osImageHashes are production (non-dev) dstack images confirmed with `phala os-images` on 2026-11-04.",
-  "composeHash": null,
+  "_comment": "Pinned expectations for verifying a hosted Roost. composeHash is the hash for the current compose file and image digest; osImageHashes are production (non-dev) dstack images confirmed with `phala os-images` on 2026-11-04.",
+  "composeHash": "8a0180ff698c44b5e743acca369fbfe9f309fbf084cf87415f6962fb8e1be6c8",
   "osImageHashes": [
     "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6"
   ],
   "osImageHashSources": {
     "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6": "dstack-0.6.1, is_dev=false, as listed by `phala os-images` (Phala Cloud API 2026-06-23) on 2026-11-04"
   },
-  "verifierImage": "ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41"
+  "verifierImage": "ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41",
+  "composeHashSource": "Derived from our deploy/roost/docker-compose.yml as Phala generated its app-compose (null fields dropped) and equal to the hash a real VM attested on 2026-11-04. It changes with any edit to the compose file, including a new image digest."
 }
