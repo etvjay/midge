@@ -1,0 +1,20 @@
+
+======================================================
+ [VERIFICATION 2] CONFIDENTIAL INTENTS & LIQUIDITY
+ Target: 1Click Swap API & FAR Shard Asset Registry
+======================================================
+[1/3] Mode: OFFLINE FIXTURES (FLY_OFFLINE=1 set)
+[2/3] Loaded 210 verified cross-chain assets from fixtures/oneclick-tokens.json.
+[3/3] Benchmark Syndicate Assets Audited:
+  - wNEAR: Price $3.96 | Decimals: 24 | AssetId: nep141:wrap.near
+  - USDC:  Price $0.99956 | Decimals: 6 | AssetId: nep141:17208628f84f5...
+  - ETH:   Price $2265.93 | Decimals: 18 | AssetId: nep141:eth.bridge.near
+
+--- Verified Confidential Intent Intent Payload ---
+  Origin:          nep141:wrap.near (1 wNEAR)
+  Destination:     nep141:17208628f84f5d6ad33f0da... (USDC)
+  Confidentiality: basic (FAR Private Shard settlement)
+  Slippage Limit:  1%
+  Refund Route:    fly-escrow-refund.testnet (Escape hatch bound)
+
+>>> [PASS] CONFIDENTIAL INTENTS VERIFIED [RECORDED FIXTURE]: 210 assets audited & schemas match.

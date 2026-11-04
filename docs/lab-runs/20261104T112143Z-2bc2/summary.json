@@ -1,0 +1,17 @@
+{
+  "runId": "20261104T112143Z-2bc2",
+  "startedAt": "2026-11-04T11:21:43.595Z",
+  "rootHash": "68759cf56f881c2c6364b576a3cb2e6e5bf16b8bf2b05f26c7e09ad3b88cfc20",
+  "verdicts": {
+    "E-CHAIN-ROUND-LOCAL": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 293,
+  "commit": "509877b6a43917faa90d64848ab07b9485e7f863"
+}
