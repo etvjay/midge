@@ -1,6 +1,6 @@
 # Roost in a TEE: scope and plan
 
-Status: the hosted Roost (sections 4 to 8) is a plan and is not built; GAP-004 stays open until it is. The model-sealed backend (section 3b) is built and tested.
+Status: the hosted Roost is built and tested without hardware (section 3e), but has not run on a real TDX VM; GAP-004 stays open until it is. The model-sealed backend (section 3b) is built and tested.
 
 ## 1. What is true today
 
@@ -85,6 +85,47 @@ Why it does not give us a hosted Roost:
 Where it does fit: flyers. A member's private agent hosted in IronClaw could use Midge through an HTTP MCP endpoint (to be built; ours is stdio) or a WASM tool. That is a stretch goal for the Agents and Swarms tracks, not part of the Roost.
 
 Decision: route B is closed for the Roost and kept as a flyer-side integration idea. The hosted Roost (sections 4 to 8) would need a measured, shell-less image, which NEAR's public offering does not currently give us.
+
+## 3d. Hosting decision and budget (2026-11-04)
+
+Decision: host on Phala (dstack). A reply in the NEAR builders chat the team received on 2026-11-04 says NEAR AI has no program hosting except IronClaw, that Phala is fine, and that the NEAR model can be verified from inside the TEE. That is exactly this design (hosted Roost for exact sums and signing; NEAR AI Cloud for model calls and their attestation). The sender's identity is not verified; the answer matches the documentation research above.
+
+Budget: the team has about $5, so the hosted Roost runs in bursts, never 24/7.
+- Smallest CPU instance (`tdx.small`) is $0.06 per hour plus about $0.003 per hour of disk, billed per second with no minimum for CPU instances (the 24 hour and 30 day minimums apply to GPUs only). $5 is roughly 80 hours of uptime; the plan uses about 25.
+- Delete the CVM after every session. The Roost keeps no state (its keys are born inside the enclave each run), and Phala's billing page and pricing page disagree on whether a stopped CVM is charged for storage.
+- With a card on the account, Phala keeps CVMs running past a zero balance and charges the card. Without a card they stop. Every deploy script must therefore delete the CVM itself on exit; do not rely on the balance running out.
+- Develop for free against the dstack simulator (`@phala/dstack-sdk`, `DstackClient('http://localhost:8090')`). The simulator's quotes are mock and will not pass Intel verification; only a real CVM run proves the chain.
+
+| Phase | Uptime | Cost |
+| --- | --- | --- |
+| Build and test against the simulator | none | $0 |
+| First real deploy, tests T1 to T5 (quote chain, REPORTDATA binding, compose hash, modified image rejected) | about 4 h | about $0.25 |
+| Full round with separate members, NEAR model verification, testnet settlement, evidence capture | about 3 h | about $0.20 |
+| Demo video recording | about 2 h | about $0.13 |
+| Optional on-demand window during judging | about 8 h | about $0.50 |
+| Reserve | | about $3.80 |
+
+Judges do not need a live hosted Roost: the rules (Q-012) allow a local demo with a reproducible README and an X video, and call a hosted demo a plus. The evidence for the hosted Roost is a saved attestation bundle (quote plus the collateral needed to verify it later) and a verifier that checks the saved bundle offline. Whether `dcap-qvl` can verify a saved quote without fetching collateral online still has to be confirmed.
+
+## 3e. Built so far for the hosted Roost (2026-11-04)
+
+Done and tested without hardware:
+- `src/roost-service/hosted-roost.js`: the Roost as exact, deterministic code. Intent and settlement keys are born in the process. Attestation report data is `sha512("midge-roost-v1", settle key, intent key, nonce)`. Amounts are exact decimals (0.1 + 0.2 + 0.3 is 0.6). Malformed or undecryptable bids are excluded and named, never fatal. It signs the Nest settlement message only for allocations its own sealed aggregate supports, and only once per aggregate.
+- `src/roost-service/provider.js`: talks to the dstack 0.6 guest agent over its unix socket. No SDK.
+- `src/roost-service/server.js` and `client.js`: HTTP surface. Members can read the session and attestation and submit bids. Aggregate and settle need a coordinator key. No bodies are logged and there are no debug routes.
+- `src/roost-service/verify-hosted.js` and `scripts/verify-hosted-roost.js`: members verify a Roost before sealing a bid, through the official dstack-verifier, pinned by digest. It checks the quote, the event log, the OS image, the report data against our keys and a fresh nonce, the pinned compose hash and the pinned OS image hashes.
+- `deploy/roost/`: minimal Dockerfile (Node 24 base pinned by digest, three runtime dependencies, non-root), staged build script, Phala compose file, deploy notes.
+- Verification 11 (`verifications/10-hosted-roost.js`): 53 checks, stable over 200 runs, part of `npm test`.
+
+Tested against the real dstack simulator and the real dstack-verifier image (both as locked-down containers): the Roost obtains an attestation from the agent, and the verifier rejects the simulator's patched quote ("ISV enclave report signature is invalid") while accepting the signature on the original recorded fixture. That rejection is a negative test, not a failure.
+
+Not done, and not claimable yet:
+- No real TDX run. Every quote so far is a simulator mock or a recorded fixture.
+- The image is not pushed to a registry, so `docker-compose.yml` still holds a placeholder digest and `roost.expected.json` has no pinned `composeHash`.
+- The OS image hashes in `roost.expected.json` come from a third-party README and a Phala page snippet and must be confirmed against Phala's OS images page.
+- The Docker build pins the base image and file timestamps but is not guaranteed bit-reproducible; the pushed image digest, via the compose hash, is the identity that is attested.
+- Phala account, first deploy and evidence capture (tests T1 to T5), which need your credits.
+- Coordinator wiring from a round to `settle_batch` on testnet.
 
 ## 4. Design
 
