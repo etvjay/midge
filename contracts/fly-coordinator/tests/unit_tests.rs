@@ -2137,3 +2137,235 @@ fn test_partial_flash_settlement_allows_a_fresh_signature_on_the_new_nonce() {
         5
     );
 }
+
+// ---- Pruning finished syndicates (GAP-010: records were never removed) ----------------------------------------
+
+/// Hatches a FLASH syndicate at block 100, deposits 10 NEAR from flyer1 and settles all of it. Returns everything a
+/// test needs to try to replay the settlement later.
+fn settled_flash(
+    contract: &mut FlyCoordinator,
+    id: &str,
+    hatch_block: u64,
+) -> (String, Vec<Allocation>, String) {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner.clone(), NearToken::from_near(1), hatch_block).build());
+    let (enclave_pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", id, 1, "", "", "");
+    let syn_id = contract.hatch(
+        id.to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        enclave_pk,
+        "hash".to_string(),
+        Some(30),
+        None,
+        None,
+    );
+    let p_hash = contract.get_policy_hash(syn_id.clone());
+    let f1: AccountId = "flyer1.near".parse().unwrap();
+    testing_env!(get_context(f1, NearToken::from_near(10), hatch_block + 5).build());
+    contract.deposit(syn_id.clone(), p_hash);
+
+    let syn = contract.get_syndicate(syn_id.clone()).unwrap();
+    let allocations = vec![Allocation {
+        recipient: syn.payout_recipient.clone(),
+        amount: NearToken::from_near(10),
+    }];
+    let alloc_hash = compute_allocations_hash(&allocations);
+    let (_, sig) = make_enclave_key_and_signature(
+        "fly-coordinator.testnet",
+        &syn_id,
+        1,
+        &syn.round_nonce,
+        &alloc_hash,
+        "order_hash",
+    );
+    testing_env!(get_context(owner, NearToken::from_near(0), hatch_block + 10).build());
+    contract.settle_batch(
+        syn_id.clone(),
+        syn.round_nonce.clone(),
+        "order_hash".to_string(),
+        allocations.clone(),
+        sig.clone(),
+    );
+    let selfid: AccountId = "fly-coordinator.testnet".parse().unwrap();
+    testing_env_with_promise_results(
+        get_context(selfid, NearToken::from_near(0), hatch_block + 11).build(),
+        PromiseResult::Successful(vec![]),
+    );
+    assert!(contract.on_settlement_payout(
+        syn_id.clone(),
+        allocations.clone(),
+        NearToken::from_near(10),
+        alloc_hash,
+        "order_hash".to_string(),
+    ));
+    assert_eq!(
+        contract.get_syndicate(syn_id.clone()).unwrap().status,
+        SyndicateStatus::Settled
+    );
+    (syn_id, allocations, sig)
+}
+
+#[test]
+fn test_prune_removes_a_settled_syndicate_and_logs_it() {
+    let mut contract = FlyCoordinator::new();
+    let (id, _, _) = settled_flash(&mut contract, "prune-swarm", 100);
+    assert_eq!(contract.get_syndicate_count(), 1);
+    let caller: AccountId = "anyone.near".parse().unwrap();
+    testing_env!(get_context(caller, NearToken::from_near(0), 200).build());
+    contract.prune_syndicate(id.clone());
+    assert!(contract.get_syndicate(id.clone()).is_none());
+    assert_eq!(contract.get_syndicate_count(), 0);
+    assert!(contract.list_syndicates(None, None).is_empty());
+    let logs = near_sdk::test_utils::get_logs().join("\n");
+    assert!(logs.contains("syndicate_pruned") && logs.contains("\"final_status\":\"Settled\""));
+    let owner: AccountId = "alice.near".parse().unwrap();
+    assert_eq!(contract.get_member_syndicate_count(owner), 0);
+}
+
+#[test]
+#[should_panic(
+    expected = "[Prune REJECT] Only a Settled or AbortedRefunded syndicate can be pruned."
+)]
+fn test_prune_refuses_an_active_syndicate() {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner, NearToken::from_near(1), 100).build());
+    let mut contract = FlyCoordinator::new();
+    let (enclave_pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", "live-swarm", 1, "", "", "");
+    let id = contract.hatch(
+        "live-swarm".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        enclave_pk,
+        "hash".to_string(),
+        Some(30),
+        None,
+        None,
+    );
+    contract.prune_syndicate(id);
+}
+
+#[test]
+#[should_panic(expected = "Syndicate not found")]
+fn test_prune_refuses_an_unknown_syndicate() {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner, NearToken::from_near(0), 100).build());
+    let mut contract = FlyCoordinator::new();
+    contract.prune_syndicate("never-existed".to_string());
+}
+
+#[test]
+fn test_prune_an_aborted_refunded_syndicate() {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner.clone(), NearToken::from_near(1), 100).build());
+    let mut contract = FlyCoordinator::new();
+    let (enclave_pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", "abort-swarm", 1, "", "", "");
+    let id = contract.hatch(
+        "abort-swarm".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        enclave_pk,
+        "hash".to_string(),
+        Some(30),
+        None,
+        None,
+    );
+    let p_hash = contract.get_policy_hash(id.clone());
+    let f1: AccountId = "flyer1.near".parse().unwrap();
+    testing_env!(get_context(f1.clone(), NearToken::from_near(5), 105).build());
+    contract.deposit(id.clone(), p_hash);
+    testing_env!(get_context(f1, NearToken::from_near(0), 200).build());
+    let _ = contract.hatch_out(id.clone());
+    assert_eq!(
+        contract.get_syndicate(id.clone()).unwrap().status,
+        SyndicateStatus::AbortedRefunded
+    );
+    contract.prune_syndicate(id.clone());
+    assert!(contract.get_syndicate(id).is_none());
+}
+
+#[test]
+#[should_panic(expected = "Nonce mismatch")]
+fn test_a_pruned_id_can_be_reused_and_the_old_signature_is_dead() {
+    let mut contract = FlyCoordinator::new();
+    let (id, allocations, old_sig) = settled_flash(&mut contract, "reuse-swarm", 100);
+    let old_nonce = {
+        // the first round nonce is sha256(id:created_block); recompute what the old syndicate had
+        let seed = format!("{}:{}", id, 100);
+        near_sdk::env::sha256(seed.as_bytes())
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>()
+    };
+    testing_env!(get_context("anyone.near".parse().unwrap(), NearToken::from_near(0), 150).build());
+    contract.prune_syndicate(id.clone());
+
+    // someone hatches the same id again, later, with the same enclave key
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner.clone(), NearToken::from_near(1), 300).build());
+    let (enclave_pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", &id, 1, "", "", "");
+    contract.hatch(
+        id.clone(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        enclave_pk,
+        "hash".to_string(),
+        Some(30),
+        None,
+        None,
+    );
+    let p_hash = contract.get_policy_hash(id.clone());
+    let f1: AccountId = "flyer1.near".parse().unwrap();
+    testing_env!(get_context(f1, NearToken::from_near(10), 305).build());
+    contract.deposit(id.clone(), p_hash);
+    let fresh = contract.get_syndicate(id.clone()).unwrap();
+    assert_ne!(
+        fresh.round_nonce, old_nonce,
+        "the new syndicate must have a different nonce"
+    );
+
+    // replay the OLD settlement, byte for byte
+    testing_env!(get_context(owner, NearToken::from_near(0), 310).build());
+    contract.settle_batch(
+        id,
+        old_nonce,
+        "order_hash".to_string(),
+        allocations,
+        old_sig,
+    );
+}
+
+#[test]
+fn test_compact_member_index_drops_ids_of_pruned_syndicates() {
+    let mut contract = FlyCoordinator::new();
+    let (a, _, _) = settled_flash(&mut contract, "compact-a", 100);
+    let (_b, _, _) = settled_flash(&mut contract, "compact-b", 200);
+    let f1: AccountId = "flyer1.near".parse().unwrap();
+    assert_eq!(contract.get_member_syndicate_count(f1.clone()), 2);
+    testing_env!(get_context("anyone.near".parse().unwrap(), NearToken::from_near(0), 400).build());
+    contract.prune_syndicate(a);
+    // pruning cannot reach the flyer's index (the finished syndicate no longer lists them): the id lingers
+    assert_eq!(contract.get_member_syndicate_count(f1.clone()), 2);
+    assert_eq!(
+        contract
+            .list_syndicates_by_member(f1.clone(), None, None)
+            .len(),
+        1,
+        "the view skips the missing record"
+    );
+    assert_eq!(contract.compact_member_index(f1.clone()), 1);
+    assert_eq!(contract.get_member_syndicate_count(f1.clone()), 1);
+    assert_eq!(
+        contract.compact_member_index(f1),
+        0,
+        "compacting twice removes nothing"
+    );
+}

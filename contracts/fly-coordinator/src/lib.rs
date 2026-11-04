@@ -939,6 +939,81 @@ impl FlyCoordinator {
         self.syndicates.get(&syndicate_id).cloned()
     }
 
+    /// prune_syndicate(): permissionless garbage collection of a finished syndicate.
+    ///
+    /// A Settled or AbortedRefunded syndicate with no escrow left keeps its record in contract storage forever, and the
+    /// contract account pays for that storage out of the same balance that holds everyone's escrow. Anyone may remove
+    /// such a record. The record is gone after this call (get_syndicate returns null); the history stays in the event
+    /// log, which `syndicate_pruned` extends with the final status. Reusing the id is safe: the first round nonce is
+    /// derived from the id and the block it was hatched in, so a signature for the old syndicate verifies on no new one.
+    pub fn prune_syndicate(&mut self, syndicate_id: String) {
+        let syn = self
+            .syndicates
+            .get(&syndicate_id)
+            .unwrap_or_else(|| env::panic_str("Syndicate not found"));
+        assert!(
+            matches!(
+                syn.status,
+                SyndicateStatus::Settled | SyndicateStatus::AbortedRefunded
+            ),
+            "[Prune REJECT] Only a Settled or AbortedRefunded syndicate can be pruned."
+        );
+        assert!(
+            syn.total_escrow.as_yoctonear() == 0,
+            "[Prune REJECT] The syndicate still holds escrow."
+        );
+        assert!(
+            !syn.is_settling,
+            "[Prune REJECT] A settlement is still in flight."
+        );
+        let owner = syn.owner.clone();
+        let status = syn.status.clone();
+        let epoch = syn.epoch;
+        let policy_hash = syn.policy_hash.clone();
+        let total_settled = syn.total_settled_payouts.as_yoctonear();
+
+        self.syndicates.remove(&syndicate_id);
+        if let Some(ids) = self.member_syndicates.get(&owner).cloned() {
+            let kept: Vec<String> = ids.into_iter().filter(|id| id != &syndicate_id).collect();
+            self.member_syndicates.insert(owner, kept);
+        }
+
+        env::log_str(&format!(
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"syndicate_pruned\",\"data\":[{{\"syndicate_id\":\"{}\",\"final_status\":\"{:?}\",\"epoch\":{},\"total_settled_payouts\":\"{}\",\"policy_hash\":\"{}\"}}]}}",
+            syndicate_id, status, epoch, total_settled, policy_hash
+        ));
+    }
+
+    /// compact_member_index(): drops ids of syndicates that no longer exist from an account's index and returns how
+    /// many were dropped. Permissionless and bounded by that one account's list. Pruning cannot clean the index of
+    /// every flyer (a finished syndicate no longer lists them), so each account compacts its own.
+    pub fn compact_member_index(&mut self, account_id: AccountId) -> u64 {
+        let ids = self
+            .member_syndicates
+            .get(&account_id)
+            .cloned()
+            .unwrap_or_default();
+        let before = ids.len();
+        let kept: Vec<String> = ids
+            .into_iter()
+            .filter(|id| self.syndicates.get(id).is_some())
+            .collect();
+        let removed = (before - kept.len()) as u64;
+        if removed > 0 {
+            self.member_syndicates.insert(account_id, kept);
+        }
+        removed
+    }
+
+    /// Number of syndicates in an account's index (creator or flyer). May include ids that were pruned until the account
+    /// calls compact_member_index.
+    pub fn get_member_syndicate_count(&self, account_id: AccountId) -> u64 {
+        self.member_syndicates
+            .get(&account_id)
+            .map(|v| v.len() as u64)
+            .unwrap_or(0)
+    }
+
     /// Returns the total count of hatched syndicates.
     pub fn get_syndicate_count(&self) -> u64 {
         self.syndicates.len() as u64
