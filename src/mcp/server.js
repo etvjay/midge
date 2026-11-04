@@ -1,4 +1,7 @@
 import { FlyChainClient } from '../chain/client.js';
+import { FlyNestContract } from '../contracts/nest.js';
+import { ConfidentialRfqFacility } from '../facilities/rfq-adjudication.js';
+import { OtcBlockTradeFacility } from '../facilities/otc-block-trade.js';
 
 /**
  * Custom Array wrapper to support both array methods (e.g. .length, .map, iterators)
@@ -138,30 +141,22 @@ export const FLY_MCP_TOOLS = [
   },
   {
     name: 'midge_submit_sealed_intent',
-    description: 'Asymmetrically encrypts order parameters and submits into the Roost TEE in-RAM queue.',
+    description: 'Submits an ALREADY SEALED bid (ciphertext) to the Roost. This tool never sees or echoes the bid: seal it first against the Roost session key (SDK sealBid, or encrypt to the published public key). Plaintext amounts are refused.',
     inputSchema: {
       type: 'object',
       properties: {
         syndicateId: { type: 'string' },
         flyerId: { type: 'string' },
-        amount: { type: 'number' },
-        maxSlippage: { type: 'number', default: 0.01 },
-        pair: { type: 'string', default: 'USDC/NEAR' },
+        cipherTextHex: { type: 'string', description: 'Bid sealed to a model-sealed or hosted Roost, hex' },
+        cipherTextBase64: { type: 'string', description: 'Bid sealed to a local-simulation Roost (RSA), base64' },
       },
-      required: ['syndicateId', 'flyerId', 'amount'],
+      required: ['syndicateId', 'flyerId'],
     },
   },
   {
     name: 'midge_verify_haq_attestation',
-    description: 'Verifies the live Intel TDX hardware attestation report and code measurement from NEAR AI Cloud.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        nonce: { type: 'string', description: '32-byte cryptographic session nonce' },
-        model: { type: 'string', default: 'Qwen/Qwen3.6-35B-A3B-FP8' },
-      },
-      required: ['nonce'],
-    },
+    description: 'Runs a fresh attestation of the Roost this server is configured with and reports VERIFIED only if every check passes. A local simulation Roost has no hardware attestation and is reported NOT_VERIFIED. A hosted Roost must be verified with scripts/verify-hosted-roost.js, which needs the dstack verifier; this tool reports NOT_VERIFIED for it rather than guess. A fresh nonce is generated per call.',
+    inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'midge_create_confidential_rfq',
@@ -200,6 +195,8 @@ export class FlyMcpServer {
     chainClient = null,
     nestContract = null,
     roostEnclave = null,
+    rfqFacility = null,
+    otcFacility = null,
   } = {}) {
     // Mode resolution: explicit argument -> FLY_MODE env -> default 'chain'
     const envMode = process.env.FLY_MODE;
@@ -217,7 +214,19 @@ export class FlyMcpServer {
       }
     }
 
+    // Model mode always has a real in-memory contract. Without one the tools used to answer with canned
+    // *_MOCK successes that did nothing.
+    if (this.mode === 'model' && !this.nestContract) this.nestContract = new FlyNestContract();
+    this.rfq = rfqFacility || new ConfidentialRfqFacility();
+    this.otc = otcFacility || new OtcBlockTradeFacility();
     this.tools = FLY_MCP_TOOLS;
+  }
+
+  /** Chain mode without write keys must refuse a write. Falling back to the model while the output says "chain" misleads the caller. */
+  requireWritable(tool) {
+    if (this.mode === 'chain' && !(this.chainClient && this.chainClient.isConfiguredForWrites())) {
+      throw new Error(`[${tool}] chain mode needs NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY to send transactions. Set FLY_MODE=model to use the in-memory simulation instead.`);
+    }
   }
 
   listTools() {
@@ -250,6 +259,7 @@ export class FlyMcpServer {
 
     switch (name) {
       case 'midge_hatch_syndicate': {
+        this.requireWritable('midge_hatch_syndicate');
         if (isChain && this.chainClient.isConfiguredForWrites()) {
           const policy = {
             allowed_recipients: args.allowedRecipients || [this.chainClient.accountId],
@@ -278,15 +288,11 @@ export class FlyMcpServer {
             subAccount: res.subAccount,
           });
         }
-        return this.formatOutput({
-          status: 'HATCHED_MOCK',
-          syndicateId: args.syndicateId,
-          id: args.syndicateId,
-          subAccount: `${args.syndicateId}.fly-coordinator.testnet`,
-        });
+        throw new Error('[midge_hatch_syndicate] no contract available');
       }
 
       case 'midge_deposit': {
+        this.requireWritable('midge_deposit');
         if (isChain && this.chainClient.isConfiguredForWrites()) {
           const res = await this.chainClient.deposit({
             syndicateId: args.syndicateId,
@@ -301,14 +307,11 @@ export class FlyMcpServer {
           const res = this.nestContract.deposit(args.syndicateId, flyer, amt);
           return this.formatOutput(res);
         }
-        return this.formatOutput({
-          status: 'DEPOSITED_MOCK',
-          syndicateId: args.syndicateId,
-          amountNear: args.amountNear || 0.02,
-        });
+        throw new Error('[midge_deposit] no contract available');
       }
 
       case 'midge_settle': {
+        this.requireWritable('midge_settle');
         if (isChain && this.chainClient.isConfiguredForWrites()) {
           const res = await this.chainClient.settleBatch({
             syndicateId: args.syndicateId,
@@ -321,20 +324,18 @@ export class FlyMcpServer {
           return this.formatOutput(res);
         }
         if (this.nestContract) {
+          if (!this.nestContract.syndicates?.has(args.syndicateId)) throw new Error(`Syndicate '${args.syndicateId}' not found`);
           return this.formatOutput({
             status: 'SETTLED_MODEL',
             syndicateId: args.syndicateId,
             allocations: args.allocations,
           });
         }
-        return this.formatOutput({
-          status: 'SETTLED_MOCK',
-          syndicateId: args.syndicateId,
-          allocations: args.allocations,
-        });
+        throw new Error('[midge_settle] no contract available');
       }
 
       case 'midge_hatch_out': {
+        this.requireWritable('midge_hatch_out');
         if (isChain && this.chainClient.isConfiguredForWrites()) {
           const res = await this.chainClient.hatchOut({
             syndicateId: args.syndicateId,
@@ -346,10 +347,7 @@ export class FlyMcpServer {
           const res = this.nestContract.hatchOut(args.syndicateId, 999999, flyer);
           return this.formatOutput(res);
         }
-        return this.formatOutput({
-          status: 'HATCHED_OUT_MOCK',
-          syndicateId: args.syndicateId,
-        });
+        throw new Error('[midge_hatch_out] no contract available');
       }
 
       case 'midge_list_syndicates': {
@@ -364,11 +362,7 @@ export class FlyMcpServer {
           const list = this.nestContract.listSyndicates(args.fromIndex, args.limit);
           return this.formatOutput(list);
         }
-        return this.formatOutput([
-          { id: 'syn-research-alpha', type: 'FLASH', status: 'ACTIVE', active_flyers: 2 },
-          { id: 'syn-trading-beta', type: 'FLASH', status: 'SETTLED', active_flyers: 3 },
-          { id: 'syn-compute-gamma', type: 'FLASH', status: 'ABORTED_REFUNDED', active_flyers: 0 },
-        ]);
+        return this.formatOutput([]);
       }
 
       case 'midge_get_my_syndicates': {
@@ -383,43 +377,53 @@ export class FlyMcpServer {
           const list = this.nestContract.getSyndicatesByMember(args.accountId, args.fromIndex, args.limit);
           return this.formatOutput(list);
         }
-        return this.formatOutput([
-          { id: 'syn-research-alpha', role: 'member', status: 'ACTIVE' },
-          { id: 'syn-trading-beta', role: 'member', status: 'SETTLED' },
-        ]);
+        return this.formatOutput([]);
       }
 
-      case 'midge_submit_sealed_intent':
-        return this.formatOutput({
-          status: 'SEALED_ENCRYPTED_IN_ROOST_RAM',
-          syndicateId: args.syndicateId,
+      case 'midge_submit_sealed_intent': {
+        if (!this.roostEnclave) throw new Error('[midge_submit_sealed_intent] no Roost is configured on this server');
+        if (args.amount !== undefined || (!args.cipherTextHex && !args.cipherTextBase64)) {
+          throw new Error('[midge_submit_sealed_intent] pass a sealed bid (cipherTextHex or cipherTextBase64), never a plaintext amount. Seal it against the Roost session key first.');
+        }
+        const receipt = this.roostEnclave.submitSealedIntent({
           flyerId: args.flyerId,
-          amount: args.amount,
-          pair: args.pair || 'USDC/NEAR',
+          cipherTextHex: args.cipherTextHex,
+          cipherTextBase64: args.cipherTextBase64,
         });
+        return this.formatOutput({ syndicateId: args.syndicateId, flyerId: args.flyerId, ...receipt });
+      }
 
-      case 'midge_verify_haq_attestation':
-        return this.formatOutput({
-          status: 'HAQ_ATTESTATION_VALID',
-          nonce: args.nonce,
-          model: args.model || 'Qwen/Qwen3.6-35B-A3B-FP8',
-          tcbStatus: 'UpToDate',
-        });
+      case 'midge_verify_haq_attestation': {
+        const roost = this.roostEnclave;
+        if (!roost) return this.formatOutput({ status: 'NOT_VERIFIED', reason: 'no Roost is configured on this server, so there is nothing to verify' });
+        const d = typeof roost.describe === 'function' ? roost.describe() : {};
+        if (!d.backend || d.backend === 'local') {
+          return this.formatOutput({ status: 'NOT_VERIFIED', backend: 'local', reason: 'the local simulation Roost has no hardware attestation; its inputs are readable by the operator' });
+        }
+        if (typeof roost.attest === 'function') {
+          try {
+            const att = await roost.attest();
+            const ok = att.checks.length > 0 && att.checks.every((c) => c.ok);
+            return this.formatOutput({
+              status: ok ? 'VERIFIED' : 'NOT_VERIFIED',
+              backend: d.backend,
+              model: roost.model,
+              tcbStatus: att.tcbStatus,
+              checks: att.checks.map((c) => ({ name: c.name, ok: c.ok })),
+              ...(ok ? {} : { reason: 'one or more attestation checks failed' }),
+            });
+          } catch (err) {
+            return this.formatOutput({ status: 'NOT_VERIFIED', backend: d.backend, reason: err.message });
+          }
+        }
+        return this.formatOutput({ status: 'NOT_VERIFIED', backend: d.backend, reason: `backend '${d.backend}' is verified with scripts/verify-hosted-roost.js (needs the dstack verifier); this tool does not guess` });
+      }
 
       case 'midge_create_confidential_rfq':
-        return this.formatOutput({
-          status: 'RFQ_CREATED',
-          borrowerId: args.borrowerId,
-          requestedAmountUsdc: args.requestedAmountUsdc,
-        });
+        return this.formatOutput(this.rfq.createRfq(args));
 
       case 'midge_match_otc_block':
-        return this.formatOutput({
-          status: 'OTC_BLOCK_CROSSED',
-          buyOrderId: args.buyOrderId,
-          sellOrderId: args.sellOrderId,
-          referencePrice: args.referencePrice,
-        });
+        return this.formatOutput(this.otc.matchCrossingOrders(args.buyOrderId, args.sellOrderId, args.referencePrice));
 
       default:
         throw new Error(`Unknown Midge MCP tool: ${name}`);

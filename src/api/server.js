@@ -390,6 +390,7 @@ export class FlyApiDaemon {
           return this.sendJson(res, 400, { error: err.message }, req);
         }
       }
+      if (!this.nest.syndicates.has(synId)) return this.sendJson(res, 404, { error: 'Syndicate not found' }, req);
       return this.sendJson(res, 200, {
         status: 'SETTLED_MODEL',
         syndicateId: synId,
@@ -554,8 +555,15 @@ export class FlyApiDaemon {
 
     if (method === 'POST' && pathname === '/v1/mpc/sign') {
       const body = await this.parseBody(req);
-      const sig = this.mpc.requestThresholdSignature(body);
-      return this.sendJson(res, 200, sig);
+      // requestThresholdSignature is async: without the await a valid request answered "{}" and a rejected one
+      // (e.g. haqVerified false) became an unhandled rejection that terminated the whole process.
+      try {
+        const sig = await this.mpc.requestThresholdSignature(body);
+        return this.sendJson(res, 200, sig, req);
+      } catch (err) {
+        if (/MPC REJECT/.test(err.message)) return this.sendJson(res, 403, { error: err.message }, req);
+        throw err;
+      }
     }
 
     // ==========================================
