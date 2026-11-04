@@ -120,7 +120,7 @@ Done and tested without hardware:
 Tested against the real dstack simulator and the real dstack-verifier image (both as locked-down containers): the Roost obtains an attestation from the agent, and the verifier rejects the simulator's patched quote ("ISV enclave report signature is invalid") while accepting the signature on the original recorded fixture. That rejection is a negative test, not a failure.
 
 Not done, and not claimable yet:
-- No real TDX run. Every quote so far is a simulator mock or a recorded fixture.
+- Real TDX run: attempt 1 (2026-11-04, Phala `tdx.small`, `dstack-0.6.1`) verified the Intel quote, the platform and TCB, and bound our keys and fresh nonce into the report data, but the official verifier could not parse the guest's `vm_config.tdx_measurement` because the verifier image used (Docker Hub `latest`, built 2026-09-10) predates dstack 0.6. The official images are at `ghcr.io/dstack-tee/dstack-verifier:<version>` and are now used, pinned by digest. A full pass is still to be demonstrated.
 - The image is not pushed to a registry, so `docker-compose.yml` still holds a placeholder digest and `roost.expected.json` has no pinned `composeHash`.
 - The OS image hashes in `roost.expected.json` come from a third-party README and a Phala page snippet and must be confirmed against Phala's OS images page.
 - The Docker build pins the base image and file timestamps but is not guaranteed bit-reproducible; the pushed image digest, via the compose hash, is the identity that is attested.

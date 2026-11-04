@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-11-04T10:56:57.974Z",
+  "url": "https://07026017ab782ab34a2d42e80e5b3c8ee25d0ae9-8080.dstack-pha-prod5.phala.network",
+  "nonce": "435cc883624e765fb575b2d5c7f4426f6eefd840c6826f8febc1a52ba335efe1",
+  "ok": false,
+  "checks": [
+    {
+      "name": "bundle has the expected format",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "bundle report data matches our keys and our nonce",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "dstack-verifier accepts the attestation",
+      "ok": false,
+      "detail": "OS image hash verification failed: failed to decode vm_config.tdx_measurement CBOR: TdxOsImageMeasurement: failed to decode CBOR: Semantic(None, \"missing field "
+    },
+    {
+      "name": "Intel quote verifies",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "event log replays to the measured RTMR3",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "name": "OS image hash verifies against the published image",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "name": "platform is a dstack TDX confidential VM",
+      "ok": true,
+      "detail": "dstack-tdx"
+    },
+    {
+      "name": "TCB status is acceptable",
+      "ok": true,
+      "detail": "UpToDate"
+    },
+    {
+      "name": "OS image is not a development image",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "quote report data equals sha512(our keys, our nonce)",
+      "ok": true,
+      "detail": "e6fcde643150c2fa"
+    },
+    {
+      "name": "compose hash equals the pinned hash of our build",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "name": "OS image hash is one we pin",
+      "ok": false,
+      "detail": ""
+    }
+  ],
+  "details": {
+    "tcb": "UpToDate"
+  },
+  "settlePublicKey": "e99654bde958f68dd8185eea8bfae2009ce085caa1bd151bf06b25b64e41b508",
+  "intentPublicKey": "01cebe2c2b99652ef60178801f038183c9f0fa33ea256225a89c290913447d18",
+  "verifierImage": "dstacktee/dstack-verifier@sha256:0ed61d60f6e0d44cf466e15dc6894f37152d8567cfa76bd8785a921b2d906c38",
+  "note": "Attempt 1 on a real Phala TDX VM (dstack-0.6.1), 2026-11-04. NOT a successful verification. The Intel quote verified, the platform was dstack-tdx with TCB UpToDate on a production OS image, and the quote's report data equalled sha512(our keys, our fresh nonce). The run was rejected because the verifier image used (Docker Hub dstacktee/dstack-verifier:latest, built 2026-09-10) predates dstack 0.6 and could not parse the guest's vm_config.tdx_measurement, so the event log, OS image and compose hash checks failed as a cascade. Superseded by a run with the official ghcr.io/dstack-tee/dstack-verifier image."
+}
