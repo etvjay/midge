@@ -92,12 +92,15 @@ export class FlyChainClient {
     const env = loadEnv(envFile || process.env.MIDGE_ENV_FILE);
     this.networkId = networkId || process.env.NEAR_NETWORK || env.NEAR_NETWORK || 'testnet';
     this.nodeUrl = nodeUrl || process.env.NEAR_RPC_URL || env.NEAR_RPC_URL || 'https://test.rpc.fastnear.com';
+    this.accountId = accountId || process.env.NEAR_ACCOUNT_ID || env.NEAR_ACCOUNT_ID || null;
+    // Which contract to talk to. Explicit, or COORDINATOR_ID, or - for a client that holds an account - the contract the
+    // bootstrap deploys for that account, c.<account>. Only a client with no account (read-only) falls back to the public
+    // demonstration contract. A hard-coded default for writers sent a newcomer's transactions to the author's contract.
     this.contractId =
       contractId ||
       process.env.COORDINATOR_ID ||
       env.COORDINATOR_ID ||
-      'c.fly-1793636729.testnet';
-    this.accountId = accountId || process.env.NEAR_ACCOUNT_ID || env.NEAR_ACCOUNT_ID || null;
+      (this.accountId ? `c.${this.accountId}` : 'c.fly-1793636729.testnet');
     this.privateKey = privateKey || process.env.NEAR_PRIVATE_KEY || env.NEAR_PRIVATE_KEY || null;
 
     this.provider = new JsonRpcProvider({ url: this.nodeUrl });
