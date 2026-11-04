@@ -29,6 +29,8 @@
     "verify:inference": "node scripts/verify-inference.js",
     "verify:roost-model": "node scripts/verify-roost-model.js",
     "verify:roost-sealed": "node verifications/09-model-sealed-roost.js",
+    "verify:roost-hosted": "node verifications/10-hosted-roost.js",
+    "verify:hosted-attestation": "node scripts/verify-hosted-roost.js",
     "build:wasm": "cd contracts/fly-coordinator && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",
     "baseline": "node scripts/baseline.js",
     "security:review": "node scripts/security-review.js",
