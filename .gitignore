@@ -6,3 +6,6 @@ contracts/**/target/
 .DS_Store
 HANDOFF.md
 HANDOFF-9PLUS.md
+lab/runs/*
+!lab/runs/.gitkeep
+.lab/
