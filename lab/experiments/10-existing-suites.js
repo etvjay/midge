@@ -50,7 +50,7 @@ export default [
         const results = [...r.out.matchAll(/test result: (\w+)\. (\d+) passed; (\d+) failed/g)];
         const total = results.reduce((a, m) => a + Number(m[2]), 0); const failed = results.reduce((a, m) => a + Number(m[3]), 0);
         s.assert('no Rust test failed', failed === 0, { actual: failed });
-        s.assert('the expected number of Rust tests ran (44: 34 unit, 6 integration, 4 invariant)', total === 44, { expected: 44, actual: total });
+        s.assert('the expected number of Rust tests ran (47: 37 unit, 6 integration, 4 invariant)', total === 47, { expected: 47, actual: total });
       });
     },
   },

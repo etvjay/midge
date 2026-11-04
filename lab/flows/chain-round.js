@@ -11,7 +11,8 @@ import { near, fmt, sleep, computePolicyHash } from '../lib/near.js';
  *
  * Every "must fail" step asserts that the on-chain STATE did not change, not only that an error came back.
  */
-const YOCTO = 10n ** 24n;
+/** The contract build this lab was written against. Changes with any contract change; see foundry/gaps.jsonl GAP-009. */
+export const EXPECTED_CODE_HASH = '5maXUkmSgoUQ52RtDSSzZ1gzyhEgJdBuFESgXCiTbqoG';
 const fakeProvider = { simulated: true, attest: async () => Buffer.from('rogue-no-hardware'), info: async () => ({}) };
 
 export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = null, runTag }) {
@@ -48,6 +49,8 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     const tx = await chain.send(coord.account, 'settle_batch', { syndicate_id: id, attestation_nonce: st.round_nonce, aggregate_order_hash: aggregate.orderHash, allocations, enclave_signature: signed.signature }, { gas: 100000000000000n, label: `settle_batch ${id}` });
     return { tx, signed, params };
   }
+  /** Run a transaction, ALWAYS record it as evidence (with its error text), and assert it succeeded. */
+  const must = async (s, claim, txPromise) => { const tx = await txPromise; txEvidence(s, tx); s.assert(claim, tx.ok, { actual: tx.error }); return tx; };
   const txEvidence = (s, tx) => s.evidence('tx', { label: tx.label, hash: tx.hash, ok: tx.ok, explorer: tx.explorer, gasTGas: tx.gasTGas, error: tx.error });
 
   const out = {};
@@ -66,7 +69,13 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     s.assert('the master account can pay for hatching (0.1 NEAR)', have[chain.masterId] > near('0.1'));
     const hash = await chain.codeHash();
     s.observe('deployed code hash', hash);
-    s.assert('the deployed contract is the audited build', hash === 'GwjB69No5TfDcuFTrff67kNmRUd7fQDW75kMxZp9Mxwi', { expected: 'GwjB69No5TfDcuFTrff67kNmRUd7fQDW75kMxZp9Mxwi', actual: hash });
+    s.assert('the deployed contract is the audited build', hash === EXPECTED_CODE_HASH, { expected: EXPECTED_CODE_HASH, actual: hash });
+    // The contract account pays for its own code and state (1e19 yocto per byte) out of the same balance that holds
+    // escrow. When headroom ran out, hatch failed mid-run with "lacks balance for state"; check it up front instead.
+    const acct = await chain.provider.query({ request_type: 'view_account', finality: 'final', account_id: chain.coordinatorId });
+    const headroom = BigInt(acct.amount) - BigInt(acct.storage_usage) * 10n ** 19n;
+    s.observe('contract account storage', { balance: fmt(acct.amount), bytesUsed: acct.storage_usage, headroomNear: fmt(headroom) });
+    s.assert('the contract account has at least 0.15 NEAR of storage headroom (each syndicate record costs about 0.01)', headroom > near('0.15'), { actual: fmt(headroom) });
     out.startBalances = have;
   }, { critical: true });
 
@@ -129,9 +138,9 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   const id2 = synId(2);
   let agg2;
   await ctx.step('ATTACK 3: a valid Roost signature cannot pay a recipient outside the policy', async (s) => {
-    s.assert('hatch #2 succeeded', (await hatch(id2)).ok);
+    await must(s, 'hatch #2 succeeded', hatch(id2));
     await chain.waitFor(() => state(id2), { what: 'syndicate 2' });
-    for (const f of F.slice(0, 2)) s.assert(`${f.id} deposited 0.02`, (await deposit(f, id2, '0.02')).ok);
+    for (const f of F.slice(0, 2)) await must(s, `${f.id} deposited 0.02`, deposit(f, id2, '0.02'));
     await chain.waitFor(async () => BigInt((await state(id2)).total_escrow) === near('0.04'), { what: 'escrow 0.04' });
     agg2 = await sealedRound(F.slice(0, 2), '0.02');
     const thief = `thief-${runTag}.testnet`;
@@ -167,12 +176,47 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     s.assert('syndicate #2 is Settled', Boolean(fin));
   });
 
+  const id4 = synId(4);
+  await ctx.step('ATTACK 5: a partial settlement cannot be replayed, and the next round needs a fresh signature', async (s) => {
+    // Regression for GAP-009: before 2026-11-04 the nonce rotated only for Dark Vaults, so a signature for part of
+    // the escrow could be replayed by anyone until the escrow was gone. Settling the FULL escrow (as the steps above
+    // do) cannot see this, because the syndicate is then closed and the replay fails for that reason instead.
+    await must(s, 'hatch #4 succeeded', hatch(id4));
+    await chain.waitFor(() => state(id4), { what: 'syndicate 4' });
+    await must(s, 'f1 deposited 0.03', deposit(F[0], id4, '0.03'));
+    await chain.waitFor(async () => BigInt((await state(id4)).total_escrow) === near('0.03'), { what: 'escrow 0.03' });
+    const aggA = await sealedRound(F.slice(0, 1), '0.03');
+    const st0 = await state(id4);
+    const part = [{ recipient: rcpt.id, amount: String(near('0.01')) }];
+    const first = await settle(id4, part, aggA);
+    txEvidence(s, first.tx);
+    s.assert('the partial settlement (0.01 of 0.03) succeeded', first.tx.ok, { actual: first.tx.error });
+    const st1 = await chain.waitFor(async () => { const x = await state(id4); return BigInt(x.total_escrow) === near('0.02') ? x : null; }, { what: 'escrow 0.02' });
+    s.assert('0.02 is left and the syndicate is still active', /active|open/i.test(String(st1.status)), { actual: st1.status });
+    s.assert('the round nonce rotated after the partial settlement', st1.round_nonce !== st0.round_nonce, { actual: st1.round_nonce });
+    s.assert('it is still epoch 1 (a Flash syndicate does not start new epochs)', Number(st1.epoch) === Number(st0.epoch), { actual: st1.epoch });
+    const before = await bal(rcpt.account);
+    const replay = await chain.send(coord.account, 'settle_batch', { syndicate_id: id4, attestation_nonce: st0.round_nonce, aggregate_order_hash: aggA.orderHash, allocations: part, enclave_signature: first.signed.signature }, { gas: 100000000000000n, label: `REPLAY settle_batch ${id4} (partial)` });
+    txEvidence(s, replay);
+    s.observe('contract answer', replay.error);
+    s.assert('the replay of the partial settlement failed', !replay.ok);
+    const st2 = await state(id4);
+    s.assert('the escrow is unchanged by the replay', st2.total_escrow === st1.total_escrow, { expected: st1.total_escrow, actual: st2.total_escrow });
+    s.assert('the recipient received nothing from the replay', (await bal(rcpt.account)) === before);
+    const aggB = await sealedRound(F.slice(0, 1), '0.02');
+    const second = await settle(id4, [{ recipient: rcpt.id, amount: st2.total_escrow }], aggB);
+    txEvidence(s, second.tx);
+    s.assert('a fresh signature on the new nonce settles the rest', second.tx.ok, { actual: second.tx.error });
+    const fin = await chain.waitFor(async () => { const x = await state(id4); return /settled/i.test(String(x.status)) ? x : null; }, { what: 'Settled #4' });
+    s.assert('syndicate #4 is Settled with no escrow left', Boolean(fin) && BigInt(fin.total_escrow) === 0n);
+  });
+
   const id3 = synId(3);
   await ctx.step('the Roost stalls: a member takes their own funds back with hatch_out', async (s) => {
-    s.assert('hatch #3 (timeout 2 blocks) succeeded', (await hatch(id3, { timeoutBlocks: 2 })).ok);
+    await must(s, 'hatch #3 (timeout 2 blocks) succeeded', hatch(id3, { timeoutBlocks: 2 }));
     await chain.waitFor(() => state(id3), { what: 'syndicate 3' });
     const f2 = F[1];
-    s.assert('f2 deposited 0.03', (await deposit(f2, id3, '0.03')).ok);
+    await must(s, 'f2 deposited 0.03', deposit(f2, id3, '0.03'));
     await chain.waitFor(async () => BigInt((await state(id3)).total_escrow) === near('0.03'), { what: 'escrow 0.03' });
     await sleep(10000); // the Roost never signs; the timelock passes
     const tx = await chain.send(f2.account, 'hatch_out', { syndicate_id: id3 }, { gas: 60000000000000n, label: `hatch_out ${id3}` });
@@ -192,8 +236,8 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   });
 
   await ctx.step('return the funds: the recipient pays the members back so the experiment can be repeated', async (s) => {
-    // Round 1 took 0.02 from each of f1, f2, f3 and round 2 took 0.02 from f1 and f2; all of it went to the recipient.
-    const back = [[F[0], '0.04'], [F[1], '0.04'], [F[2], '0.02']];
+    // Round 1 took 0.02 from each of f1, f2, f3, round 2 took 0.02 from f1 and f2, and round 4 took 0.03 from f1; all of it went to the recipient.
+    const back = [[F[0], '0.07'], [F[1], '0.04'], [F[2], '0.02']];
     for (const [f, amt] of back) {
       let ok = true; let hash = null; let error = null;
       try { const r = await rcpt.account.transfer({ receiverId: f.id, amount: near(amt) }); hash = r.transaction?.hash || r.transaction_outcome?.id; } catch (e) { ok = false; error = e.message.slice(0, 200); }
@@ -207,7 +251,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     const sent = chain.ledger.length; const failed = chain.ledger.filter((t) => !t.ok);
     s.observe('transactions sent', sent);
     s.observe('transactions that failed (expected: the 3 attack attempts)', failed.map((t) => t.label));
-    s.assert('exactly the three attacks failed on chain', failed.length === 3 && failed.every((t) => /REPLAY|settle_batch/.test(t.label)), { actual: failed.map((t) => t.label) });
+    s.assert('exactly the four attack attempts failed on chain', failed.length === 4 && failed.every((t) => /REPLAY|settle_batch/.test(t.label)), { actual: failed.map((t) => t.label) });
     const end = {}; for (const a of [chain.master, ...F.map((f) => f.account), rcpt.account]) end[a.accountId] = await bal(a);
     const spent = Object.keys(end).reduce((acc, k) => acc + ((out.startBalances[k] ?? end[k]) - end[k]), 0n);
     s.observe('net NEAR spent across all accounts (gas and storage)', fmt(spent, 5));
