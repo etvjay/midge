@@ -47,6 +47,13 @@
 
 ---
 
+### Optional Scene 2c (about 30 s): The attested model decides the split, the contract bounds it
+- **Do:** `node lab/run.js --only E-ADVISOR-LIVE-01`
+- **See:** the Roost totals two sealed bids exactly (0.06 NEAR) and tells the attested NEAR AI model only that total and three recipient ids. The model answers 0.03 / 0.02 / 0.01. The Roost signs within the total, the contract pays exactly those amounts, and the allocations hash the contract logged matches the model's signed, decrypted answer. Then the same machinery with a lying advisor: a split above the total is refused by the Roost, a payment to someone outside the policy is refused by the contract, and an unreachable model simply settles on the exact rule.
+- **Say:** "The model advises. It can make a bad split. It cannot make a bigger payout or pay someone outside the policy."
+
+---
+
 ### [1:15 – 1:55] Scene 3: Valid Settlement & Omnichain Chain Signatures
 - **Screen:** Terminal showing Step 5 batch settlement transaction and `npm run verify:mpc` calling `v1.signer-prod.testnet`.
 - **Narrator Audio:**

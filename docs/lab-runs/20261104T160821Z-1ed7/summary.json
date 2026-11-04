@@ -1,0 +1,16 @@
+{
+  "runId": "20261104T160821Z-1ed7",
+  "startedAt": "2026-11-04T16:08:21.603Z",
+  "rootHash": "a2e6c18984f455c719a7e7ed39d63a079851114031208c7170aa1a630ef470d8",
+  "verdicts": {
+    "E-ADVISOR-LIVE-01": {
+      "attempts": [
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 114,
+  "commit": "cd2d972f183e4f3f25473fc51bba6e9e72ba57ce"
+}

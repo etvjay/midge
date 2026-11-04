@@ -64,9 +64,10 @@ export function validateProposal(parsed, { totalMicro, recipients }) {
   return { ok: problems.length === 0, problems, allocations: problems.length === 0 ? out : [], sumMicro: sum };
 }
 
+// maxTokens: reasoning tokens count against it, and a low budget cuts the answer off, so the default is generous.
 export class AttestedAdvisor {
   #apiKey; #fetch;
-  constructor({ apiKey = process.env.NEARAI_API_KEY, model = 'Qwen/Qwen3.6-35B-A3B-FP8', baseUrl = 'https://cloud-api.near.ai', chain = 'required', acceptedTcb = ['UpToDate'], maxTokens = 1500, fetchImpl = globalThis.fetch } = {}) {
+  constructor({ apiKey = process.env.NEARAI_API_KEY, model = 'Qwen/Qwen3.6-35B-A3B-FP8', baseUrl = 'https://cloud-api.near.ai', chain = 'required', acceptedTcb = ['UpToDate'], maxTokens = 8000, fetchImpl = globalThis.fetch } = {}) {
     if (!apiKey) throw new AdvisorError('AttestedAdvisor needs a NEAR AI Cloud API key (NEARAI_API_KEY)');
     this.#apiKey = apiKey; this.#fetch = fetchImpl;
     Object.assign(this, { model, baseUrl: baseUrl.replace(/\/$/, ''), chain, acceptedTcb, maxTokens });
@@ -102,11 +103,17 @@ export class AttestedAdvisor {
   }
 
   /** Ask for a split of `totalNear` among recipients by weight. The caller decides what to do with an invalid or off-rule answer. */
-  async proposeAllocation({ totalNear, recipients }) {
+  async proposeAllocation({ totalNear, recipients, onError = 'throw' }) {
     const totalMicro = parseMicro(totalNear);
     const system = 'You split an amount of NEAR among recipients in proportion to integer weights. Reply with a JSON object and nothing else: {"allocations":[{"recipient":"<id exactly as listed>","amount":"<decimal NEAR, at most 6 decimals>"}]}. Floor each share down to 6 decimals. Include every listed recipient once. Never include a recipient that is not listed. The amounts must add up to no more than the total.';
     const user = `Total: ${formatMicro(totalMicro)} NEAR\nRecipients (id, weight):\n${recipients.map((r) => `${r.id}, ${r.weight}`).join('\n')}`;
-    const { plaintext, record } = await this.ask({ system, user });
+    let asked;
+    try { asked = await this.ask({ system, user }); } catch (e) {
+      if (onError !== 'fallback') throw e;
+      // The caller settles on the exact rule instead. Nothing about the model's failure is hidden: error says why.
+      return { validation: { ok: false, problems: [`the model could not be used: ${e.message}`], allocations: [], sumMicro: 0n }, sameAsRule: false, rule: proportionalSplit(totalMicro, recipients), record: null, error: e.message, total: { micro: String(totalMicro) }, recipients };
+    }
+    const { plaintext, record } = asked;
     let parsed = null; try { parsed = JSON.parse(plaintext.trim()); } catch { /* validateProposal reports it */ }
     const validation = validateProposal(parsed, { totalMicro, recipients });
     const rule = proportionalSplit(totalMicro, recipients);

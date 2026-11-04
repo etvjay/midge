@@ -47,7 +47,7 @@ node lab/run.js --tier testnet                       # E-CHAIN-ROUND-LOCAL (~0.0
 |---|---|---|---|
 | offline | nothing | `E-LAB-01` (self-test), `E-SUITE-OFFLINE` (10 suites), `E-CHECK-FOUNDRY`, `E-RUST-CONTRACT`, `E-IFACE-MODEL` (every route, SDK method and MCP tool) | free |
 | testnet | NEAR key in `.env`, network | `E-CHAIN-ROUND-LOCAL` (about 0.034 NEAR net per attempt), `E-IFACE-CHAIN` (MCP, SDK and API against the real contract; about 0.066), `E-SECURITY-FCKEY-01` (a compromised agent bounded by a function-call key; about 0.025). Measured as the net change in the master account. | small |
-| cloud | NEAR AI key, network, `dcap-qvl` | `E-MODEL-SEALED-LIVE-01` | a few cents of inference |
+| cloud | NEAR AI key, network, `dcap-qvl` | `E-MODEL-SEALED-LIVE-01` (a few cents of inference); `E-ADVISOR-LIVE-01` (the advisor with the real contract; also needs a NEAR key, about 0.05 NEAR) | cents |
 | hardware | Phala key, NEAR key, Docker, `dcap-qvl` | `E-HOSTED-LIVE-01` | about $0.002 (a VM for ~2 min) |
 
 An experiment whose requirements are missing is skipped and recorded as skipped, not passed. There is no sandbox tier.
@@ -75,6 +75,7 @@ Verify any of them: `node lab/verify-run.js docs/lab-runs/<id>`.
 | **Dark Vault** syndicate | Persistent, multi-epoch treasury | Rust test for the type; epoch rollover in the JS model; **not run live**. Whether the deployed contract itself performs the rollover is unverified |
 | **Roost, hosted** (`src/roost-service`) | Our code in a Phala TDX VM: exact aggregation, bounded signing | **Live** |
 | **Roost, model-sealed** (`src/enclave`) | Bids sealed to an attested NEAR AI model | **Live** (`E-MODEL-SEALED-LIVE-01`) |
+| **Advisor** (`src/advisor`) | An attested NEAR AI model proposes how to split a total among the policy's recipients; the Roost bounds it, the contract enforces it; the model's signed answer is stored as a record anyone can verify against the allocations hash the contract logs | **Live** (`E-ADVISOR-LIVE-01`, with `E-ADVISOR-MODEL` offline). The model sees only the total and the recipient ids, never a bid |
 | **Roost, local** | Keyless simulation; can read bids | Used by offline tests |
 | **HAQ** attestation | Proof the Nest gates on | Verified live for the hosted Roost |
 | **Pod** (`src/syndicate/pod.js`) | Sub-swarm with a capital cap (`SCOUT`, `EXECUTION`, `RISK`, `CREDIT`) | **Model**; no on-chain enforcement |
