@@ -126,10 +126,11 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
   ./scripts/verify
   ```
 * **See:**
-  - `[STEP 1/4]` 36 NEAR L1 Rust smart contract tests (28 unit, 6 integration, 2 proptest property-based fuzzing tests across 10,000+ transitions) pass cleanly with Clippy and Fmt (`near-sdk 5.1`).
-  - `[STEP 2/4]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (319 KB).
-  - `[STEP 3/4]` 9 architectural verification layers execute in ~8s, validating live Intel TDX DCAP verification, deployed testnet contract states, TEE inference attestation, and API controls.
-  - `[STEP 4/4]` Builder Foundry Control Plane passes with 0 invariant violations across 11 claims and 7 gaps.
+  - `[STEP 1/5]` 44 NEAR L1 Rust smart contract tests (34 unit, 6 integration, 4 proptest property-based fuzzing tests across 10,000+ transitions) pass cleanly with Clippy and Fmt (`near-sdk 5.1`).
+  - `[STEP 2/5]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (305 KB).
+  - `[STEP 3/5]` 8-layer cryptographic verification suite executes, validating live Intel TDX DCAP verification, 1Click asset registry, escape hatch FMEA, Dark Vault MPC, confidential RFQ & OTC, resilience matrix, and live NEAR AI Cloud TEE inference response signature.
+  - `[STEP 4/5]` Independent on-chain verifier audits 10 live testnet transactions & cryptographic attack rejection proofs on `c.fly-1793636729.testnet`.
+  - `[STEP 5/5]` Builder Foundry Control Plane passes with 0 invariant violations across 13 claims and 8 gaps.
 
 ---
 
