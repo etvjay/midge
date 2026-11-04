@@ -1,0 +1,21 @@
+{
+  "runId": "20261104T151732Z-080a",
+  "startedAt": "2026-11-04T15:17:32.531Z",
+  "rootHash": "f2b0aa211762a9a685748d341e0661a92f1222d22f8f8b52414d256fbd82e0d1",
+  "verdicts": {
+    "E-CHAIN-ROUND-LOCAL": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-IFACE-CHAIN": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 212,
+  "commit": "c4abc28650639b199c68050b466b0e024bf09c6f"
+}
