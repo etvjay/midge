@@ -59,5 +59,5 @@ export function matchRoute(routes, method, pathname) {
 
 export function sdkMethods(rootDir) {
   const src = fs.readFileSync(path.join(rootDir, 'src/sdk/client.js'), 'utf8');
-  return [...src.matchAll(/^ {2}async ([a-zA-Z]\w*)\(/gm)].map((m) => m[1]).filter((n) => !n.startsWith('_'));
+  return [...src.matchAll(/^ {2}(?:async \*?|\*)?([a-zA-Z_]\w*)\(/gm)].map((m) => m[1]).filter((n) => !n.startsWith('_') && !['constructor', 'if', 'for', 'while', 'switch', 'catch'].includes(n));
 }

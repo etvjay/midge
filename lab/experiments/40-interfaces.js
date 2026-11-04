@@ -8,11 +8,12 @@ import { FlyNestContract } from '../../src/contracts/nest.js';
 import { createRoost } from '../../src/enclave/factory.js';
 import { EnclaveCrypto } from '../../src/enclave/crypto.js';
 import { httpRoutes, matchRoute, sdkMethods } from '../lib/surface.js';
+import { startMockGateway, MODEL as MOCK_MODEL } from '../../verifications/09-model-sealed-roost.js';
 import crypto from 'node:crypto';
 import { FlyChainClient, deriveSubKeyPair } from '../../src/chain/client.js';
 import { computeAllocationsHash as roostAllocationsHash } from '../../src/roost-service/hosted-roost.js';
 
-const PIN = { routes: 32, sdk: 26, mcp: 10 }; // a source change moves these and forces a human to look
+const PIN = { routes: 32, sdk: 32, mcp: 10 }; // a source change moves these and forces a human to look
 
 /** Stand-in for the NEAR AI attestation endpoint the compute facility calls, so the offline tier stays offline. */
 const ATTEST_FIXTURE = { gateway_attestation: { intel_quote: 'fixture-quote', signing_address: '0xfixture-gateway' }, model_attestations: [{ signing_address: '0xfixture-model', payload_matches_model: true }] };
@@ -27,7 +28,7 @@ export default {
     'Model mode and a local Roost: this checks the interfaces\' behaviour and honesty, not the chain. The chain paths are E-IFACE-CHAIN.',
     'The compute facility\'s network call is replaced by a recorded fixture; the code path from the route to the facility is real, the attestation is not.',
     'Coverage means "called with at least one valid and one invalid input and the result asserted", not exhaustive input testing.',
-    'Model mode and the stub-client checks cannot prove the chain paths; E-IFACE-CHAIN does. Items still open are recorded as problems in the report (the SDK has no method for the health, SSE, pods and timelock routes; a client error on deposit is reported as HTTP 500).',
+    'Model mode and the stub-client checks cannot prove the chain paths; E-IFACE-CHAIN does. Anything still open is recorded as a problem in the report.',
   ],
   async run(ctx) {
     const root = ctx.rootDir;
@@ -70,7 +71,17 @@ export default {
         const { port } = await daemon.start();
         base = `http://127.0.0.1:${port}`;
         const client = new FlyClient({ baseUrl: base, fetchFn: seenFetch });
-        sdk = new Proxy(client, { get(t, p) { const v = t[p]; if (typeof v !== 'function' || String(p).startsWith('_') || p === 'constructor') return v; return async (...a) => { hits.sdk.add(String(p)); currentSdk = String(p); try { return await v.apply(t, a); } finally { currentSdk = null; } }; } });
+        const attribute = (name, fn) => { const prev = currentSdk; currentSdk = name; try { return fn(); } finally { currentSdk = prev; } };
+        sdk = new Proxy(client, { get(t, p) {
+          const v = t[p]; if (typeof v !== 'function' || String(p).startsWith('_') || p === 'constructor') return v;
+          return (...a) => {
+            hits.sdk.add(String(p));
+            const r = attribute(String(p), () => v.apply(t, a));
+            // A stream is an async iterator: its request goes out on the first next(), after this call has returned.
+            if (r && typeof r[Symbol.asyncIterator] === 'function') { const it = r[Symbol.asyncIterator](); return { [Symbol.asyncIterator]() { return this; }, next: (...n) => attribute(String(p), () => it.next(...n)), return: (...n) => it.return(...n) }; }
+            return r.then ? attribute(String(p), () => r) : r;
+          };
+        } });
         const h = await raw('GET', '/health');
         s.assert('the daemon answers /health', h.status === 200 && h.json?.status === 'OK', { actual: h.status });
         s.assert('responses say they are model mode, so nobody mistakes them for chain results', h.json?.mode === 'model' && /MODEL MODE/.test(h.json?.notice || ''), { actual: h.json });
@@ -111,8 +122,7 @@ export default {
         const ghost = await raw('GET', '/v1/syndicates/ghost-syn');
         s.assert('an unknown syndicate is a 404', ghost.status === 404);
         const ghostDep = await raw('POST', '/v1/syndicates/ghost-syn/deposit', { flyerId: 'x', amountNear: 1 });
-        s.assert('depositing into an unknown syndicate is refused', ghostDep.status >= 400, { actual: ghostDep.status });
-        if (ghostDep.status >= 500) s.problem('minor', 'a client error (deposit into an unknown syndicate) is reported as HTTP 500 instead of 404/409, so a client cannot tell its mistake from a server fault');
+        s.assert('depositing into an unknown syndicate is a 404 (it used to be a 500, which a client reads as a server fault)', ghostDep.status === 404, { actual: ghostDep.status });
         const big = await seenFetch(base + '/v1/syndicates/hatch', { method: 'POST', body: JSON.stringify({ id: 'x'.repeat(600 * 1024) }) }).then((r) => r.status, () => 'socket-reset');
         s.assert('a 600 KB body is refused (413 or a closed socket)', big === 413 || big === 'socket-reset', { actual: big });
         const timelock = await raw('GET', `/v1/emergency/timelock/ghost-syn`);
@@ -178,17 +188,15 @@ export default {
         await sdk.hatchSyndicate({ id: e2, quorumThreshold: 1, timeoutBlocks: 50 }); await sdk.deposit(e2, 'carol.near', 2);
         const early = await sdk.emergencyHatchOut(e2, 'carol.near').then(() => 'refunded', () => 'locked');
         s.assert('an emergency hatch-out claiming an early block is locked', early === 'locked');
-        const hs = await raw('GET', '/v1/health');
-        s.assert('/v1/health is the same as /health', hs.status === 200 && hs.json?.status === 'OK');
-        const tl = await raw('GET', `/v1/emergency/timelock/${e2}`);
-        s.assert('the timelock view reports the creation block, the timeout, the model\'s current block and the blocks remaining', tl.json?.timeoutBlocks === 50 && Number.isFinite(tl.json?.createdAtBlock) && tl.json?.currentBlock >= tl.json?.createdAtBlock && tl.json?.blocksRemaining > 0, { actual: tl.json });
-        const pod = await raw('POST', `/v1/syndicates/${e2}/pods`, { podId: 'pod-1', podType: 'SCOUT', maxCapitalAllocation: 10 });
-        const pods = await raw('GET', `/v1/syndicates/${e2}/pods`);
-        s.assert('a pod can be created and listed', pod.status === 201 && Array.isArray(pods.json?.pods) && pods.json.pods.some((p) => p.podId === 'pod-1'), { actual: [pod.status, pods.json] });
-        s.assert('the pods response is an object that says it is the model (it used to be a bare array with no label)', pods.json?.mode === 'model' && /MODEL MODE/.test(pods.json?.notice || ''), { actual: pods.json });
-        const unmapped = routes.filter((r) => !sdkViaHttp.has(r.key)).map((r) => r.key);
-        s.observe('HTTP routes with no SDK method', unmapped);
-        s.problem('minor', `the SDK has no method for ${unmapped.length} HTTP routes: ${unmapped.join('; ')}`);
+        const hs = await sdk.health();
+        s.assert('sdk.health() reports OK and the coordinator contract', hs.status === 'OK' && /^c\./.test(hs.coordinatorContract || ''), { actual: hs });
+        s.assert('/health is the same as /v1/health', (await raw('GET', '/health')).json?.status === 'OK');
+        const tl = await sdk.getTimelock(e2);
+        s.assert('sdk.getTimelock reports the creation block, the timeout, the model\'s current block and the blocks remaining', tl.timeoutBlocks === 50 && Number.isFinite(tl.createdAtBlock) && tl.currentBlock >= tl.createdAtBlock && tl.blocksRemaining > 0, { actual: tl });
+        const pod = await sdk.createPod(e2, { podId: 'pod-1', podType: 'SCOUT', maxCapitalAllocation: 10 });
+        const pods = await sdk.listPods(e2);
+        s.assert('sdk.createPod and sdk.listPods: a pod can be created and listed', pod.podId === 'pod-1' && Array.isArray(pods.pods) && pods.pods.some((p) => p.podId === 'pod-1'), { actual: [pod, pods] });
+        s.assert('the pods response is an object that says it is the model (it used to be a bare array with no label)', pods.mode === 'model' && /MODEL MODE/.test(pods.notice || ''), { actual: pods });
       });
 
       await ctx.step('SSE: both streams deliver events as they happen', async (s) => {
@@ -218,6 +226,53 @@ export default {
         await sdk.checkLoanHealth(loan.loanId, 2800);
         s.assert('a loan health check appears on the RFQ stream', await wait(b.out, 'healthy_tick') || b.out.some((e) => e !== 'connected'), { actual: b.out });
         b.close();
+      });
+
+      await ctx.step('SDK: both SSE streams as async iterators', async (s) => {
+        const sid = `sdkse-${tag}`;
+        await sdk.hatchSyndicate({ id: sid, quorumThreshold: 1 });
+        const seen = [];
+        const stream = sdk.streamSyndicate(sid);
+        const reader = (async () => { for await (const ev of stream) { seen.push(ev); if (seen.length >= 3) break; } })();
+        const waitFor = async (pred) => { for (let i = 0; i < 60 && !seen.some(pred); i += 1) await new Promise((r) => setTimeout(r, 50)); return seen.some(pred); };
+        s.assert('the first event is "connected" and names the syndicate', await waitFor((x) => x.event === 'connected' && x.data?.syndicateId === sid), { actual: seen });
+        await sdk.deposit(sid, 'gina.near', 2);
+        s.assert('a deposit arrives as { event: "deposit_received", data } with the amount', await waitFor((x) => x.event === 'deposit_received' && x.data?.amount === 2), { actual: seen });
+        await sdk.deposit(sid, 'hal.near', 1);
+        await reader;
+        s.assert('breaking out of the loop ends the stream (three events were read, then it stopped)', seen.length === 3, { actual: seen.map((x) => x.event) });
+        const rfq = await sdk.createRfq({ borrowerId: 'z.near', requestedAmountUsdc: 1000, collateralAsset: 'ETH', collateralAmount: 1, maxAprPercent: 9, durationDays: 7 });
+        await sdk.submitRfqQuote(rfq.rfqId, { lenderId: 'l.near', offeredAprPercent: 5, maxLtvPercent: 70, liquidationThresholdPercent: 85 });
+        const loan = await sdk.matchRfqLoan(rfq.rfqId);
+        const loanEvents = []; const ac = new AbortController();
+        const loanReader = (async () => { for await (const ev of sdk.streamRfqLoan(loan.loanId, { signal: ac.signal })) loanEvents.push(ev.event); })();
+        for (let i = 0; i < 60 && !loanEvents.includes('connected'); i += 1) await new Promise((r) => setTimeout(r, 50));
+        await sdk.checkLoanHealth(loan.loanId, 2800);
+        for (let i = 0; i < 60 && loanEvents.length < 2; i += 1) await new Promise((r) => setTimeout(r, 50));
+        ac.abort(); await loanReader;
+        s.assert('streamRfqLoan delivers "connected" then the health tick, and an AbortSignal ends it', loanEvents[0] === 'connected' && loanEvents.length >= 2, { actual: loanEvents });
+        s.assert('streaming an unknown path raises an error rather than hanging', await (async () => { const g = new FlyClient({ baseUrl: base, fetchFn: seenFetch })._stream('/v1/nope'); return g.next().then(() => false, () => true); })());
+      });
+
+      await ctx.step('SDK sealBid and the Roost API with a model-sealed Roost (mock NEAR AI gateway, no key needed)', async (s) => {
+        const gw = await startMockGateway();
+        const sealedApi = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'model-sealed', roostOptions: { apiKey: 'test-key', baseUrl: gw.url, model: MOCK_MODEL, chain: 'skip' } });
+        const { port } = await sealedApi.start();
+        const c = new FlyClient({ baseUrl: `http://127.0.0.1:${port}` });
+        const sid = `seal-${tag}`;
+        try {
+          const session = await c.getSessionKey(sid);
+          s.assert('the session says model-sealed, attested, and hidden from the operator', session.backend === 'model-sealed' && session.attested === true && session.inputsHiddenFromOperator === true, { actual: { backend: session.backend, attested: session.attested } });
+          const sealed = await c.sealBid({ syndicateId: sid, intentPayload: { amount: 42 }, baseUrl: gw.url, chain: 'skip' });
+          s.assert('sealBid verifies the model\'s attestation itself and returns ciphertext sealed to the attested key', /^[0-9a-f]+$/.test(sealed.cipherTextHex) && sealed.modelPublicKey === session.modelPublicKey, { actual: Object.keys(sealed) });
+          s.assert('the ciphertext does not contain the amount', !Buffer.from(sealed.cipherTextHex, 'hex').toString('latin1').includes('42'));
+          const r1 = await c.submitSealedIntent({ syndicateId: sid, flyerId: 'f1', cipherTextHex: sealed.cipherTextHex });
+          const r2 = await c.submitSealedIntent({ syndicateId: sid, flyerId: 'f2', cipherTextHex: (await c.sealBid({ syndicateId: sid, intentPayload: { amount: 8 }, baseUrl: gw.url, chain: 'skip' })).cipherTextHex });
+          s.assert('submitSealedIntent stores the ciphertext (the API never sees a plaintext amount)', r1.count === 1 && r2.count === 2, { actual: [r1, r2] });
+          const agg = await c.triggerBatchAggregation(sid);
+          s.assert('triggerBatchAggregation: the attested model totals 42 + 8 = 50 across agreeing runs', agg.aggregateOrder?.totalInputAmount === 50 && agg.aggregateOrder?.flyerCount === 2, { actual: agg.aggregateOrder });
+          s.assert('a key the coordinator advertises but the attestation does not support is refused by the member', await c.sealBid({ syndicateId: sid, session: { ...session, modelPublicKey: 'ab'.repeat(32) }, intentPayload: { amount: 1 }, baseUrl: gw.url, chain: 'skip' }).then(() => false, (e) => /does not match the attested key/.test(e.message)));
+        } finally { await sealedApi.stop(); await new Promise((r) => gw.server.close(r)); }
       });
 
       await ctx.step('security controls: API key, CORS, public health', async (s) => {
@@ -443,6 +498,10 @@ export default {
       s.assert('every declared HTTP route was exercised', unhitRoutes.length === 0, { actual: unhitRoutes });
       s.assert('every SDK method was called', unhitSdk.length === 0, { actual: unhitSdk });
       s.assert('every MCP tool was called', unhitMcp.length === 0, { actual: unhitMcp });
+      // /health is an alias of /v1/health, so one method covers both URLs.
+      const unmapped = routes.filter((r) => r.key !== 'GET /health' && !sdkViaHttp.has(r.key)).map((r) => r.key);
+      s.observe('HTTP routes with no SDK method', unmapped);
+      s.assert('every HTTP route is reachable from an SDK method (health, both SSE streams, pods and the timelock had none)', unmapped.length === 0, { actual: unmapped });
       s.assert('every request the experiment sent was attributed to a declared route or the 404 probe', unmatched.every((k) => /\/v1\/nope/.test(k)), { actual: unmatched });
     });
   },

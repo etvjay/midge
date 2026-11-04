@@ -142,9 +142,16 @@ export default {
         const count = Number(await chain.view('get_syndicate_count', {}));
         const list = await sdk.listSyndicates({ fromIndex: Math.max(0, count - 5), limit: 5 });
         s.assert('listSyndicates over the API returns the chain\'s newest syndicates', list.mode === 'chain' && list.syndicates.some((x) => x.id === s3), { actual: list.syndicates?.map((x) => x.id) });
-        // by-member paging indexes the member's own list, not the global one
-        const mine = await sdk.getSyndicatesByMember(chain.masterId, { fromIndex: 0, limit: 50 });
-        s.assert('getSyndicatesByMember reads the chain and includes the syndicates this run created for the account', mine.mode === 'chain' && [s1, s2, s3].every((x) => mine.syndicates?.some((y) => y.id === x)), { actual: mine.syndicates?.length });
+        // By-member paging indexes the member's own list, oldest first, so the newest syndicates are on the last page.
+        // (A single page of 50 stopped reaching this run's syndicates once the account was in more than 50.)
+        const mineAll = []; let pages = 0;
+        for (let from = 0; pages < 40; from += 50, pages += 1) {
+          const page = await sdk.getSyndicatesByMember(chain.masterId, { fromIndex: from, limit: 50 });
+          mineAll.push(...(page.syndicates || []));
+          if ((page.syndicates || []).length < 50) { var mine = { mode: page.mode, syndicates: mineAll }; break; }
+        }
+        s.observe('syndicates the interface account is a member of (all pages)', mineAll.length);
+        s.assert('getSyndicatesByMember reads the chain and, across pages, includes the syndicates this run created for the account', mine?.mode === 'chain' && [s1, s2, s3].every((x) => mine.syndicates.some((y) => y.id === x)), { actual: mineAll.length });
         const s4 = id(4);
         const hatched = await sdk.hatchSyndicate({ id: s4, quorumThreshold: 1, timeoutBlocks: 50, expectedCodeHash: EXPECTED_CODE_HASH, enclavePublicKey: roost.settlePublicKey, allowedRecipients: [rcpt.id] });
         s.assert('sdk.hatchSyndicate -> API -> chain hatches on chain, with a transaction hash and the round nonce (GAP-016: it used to create an in-memory model syndicate)', hatched.mode === 'chain' && Boolean(hatched.txHash) && typeof hatched.roundNonce === 'string', { actual: hatched });

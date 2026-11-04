@@ -56,7 +56,7 @@ Verify any of them: `node lab/verify-run.js docs/lab-runs/<id>`.
 | **Chain Signatures** | MPC-derived BTC, ETH, SOL addresses | **Model** (offline) |
 | **Facilities** | Confidential RFQ with covenants, OTC block trades, compute syndicate | **Model** (offline) |
 | **x402 commerce** | Agents pay each other over HTTP 402 | **Model** (offline) |
-| **Gateway**: HTTP API (32 routes incl. 2 SSE streams), MCP (10 tools) and the `FlyClient` SDK (26 methods) | Agent-facing interfaces | Every route, method and tool exercised in model mode by `E-IFACE-MODEL` (coverage derived from source). The chain-backed paths (MCP hatch, deposit, settle, hatch_out; SDK hatch, deposit, get, settle and hatch-out through the API in chain mode) are exercised on testnet by `E-IFACE-CHAIN`. Gaps GAP-011 to GAP-019 found by these experiments are all closed; the remaining items (SDK has no method for the health, SSE, pods and timelock routes; a deposit into an unknown syndicate is HTTP 500) are recorded as problems in the report |
+| **Gateway**: HTTP API (32 routes incl. 2 SSE streams), MCP (10 tools) and the `FlyClient` SDK (32 methods) | Agent-facing interfaces | Every route, method and tool exercised in model mode by `E-IFACE-MODEL` (coverage derived from source). The chain-backed paths (MCP hatch, deposit, settle, hatch_out; SDK hatch, deposit, get, settle and hatch-out through the API in chain mode) are exercised on testnet by `E-IFACE-CHAIN`. Gaps GAP-011 to GAP-019 found by these experiments are all closed; every HTTP route is now reachable from an SDK method, including the two SSE streams (async iterators), and the interface report records no open problems |
 
 ## Limits of what this shows
 
