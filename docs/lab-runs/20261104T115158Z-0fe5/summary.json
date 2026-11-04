@@ -1,0 +1,15 @@
+{
+  "runId": "20261104T115158Z-0fe5",
+  "startedAt": "2026-11-04T11:51:58.529Z",
+  "rootHash": "c785f1f3ddb515a8211443f063a7db09cffa77cd01067d30dc83d623fdc69e22",
+  "verdicts": {
+    "E-MODEL-SEALED-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 50,
+  "commit": "0274136a98443ce35e7fbcb2b28525cb84bc382e"
+}

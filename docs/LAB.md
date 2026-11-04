@@ -19,6 +19,7 @@ Runs go to `lab/runs/` (gitignored). `lab/promote.js` copies a run you want to k
 |---|---|---|---|
 | offline | nothing | `E-LAB-01` (self-test), `E-SUITE-OFFLINE` (10 suites), `E-CHECK-FOUNDRY`, `E-RUST-CONTRACT` | free |
 | testnet | NEAR key in `.env`, network | `E-CHAIN-ROUND-LOCAL` | about 0.002 NEAR per attempt |
+| cloud | NEAR AI key, network, `dcap-qvl` | `E-MODEL-SEALED-LIVE-01` | a few cents of inference |
 | hardware | Phala key, NEAR key, Docker, `dcap-qvl` | `E-HOSTED-LIVE-01` | about $0.002 (a VM for ~2 min) |
 
 An experiment whose requirements are missing is skipped and recorded as skipped, not passed. There is no sandbox tier yet.
@@ -29,6 +30,7 @@ An experiment whose requirements are missing is skipped and recorded as skipped,
 |---|---|
 | `20261104T112446Z-fddf` offline | self-test, 10 suites, foundry audit, Rust: pass |
 | `20261104T112143Z-2bc2` testnet, 3 attempts | 40 assertions each: pass |
+| `20261104T115158Z-0fe5` model-sealed Roost, live NEAR AI Cloud | 29 assertions: pass; 8 of 8 rounds exact, including 4 prompt-injection attempts |
 | `20261104T112702Z-6252` real Phala TDX VM | 73 assertions: pass; VM deleted, account empty |
 
 Verify any of them: `node lab/verify-run.js docs/lab-runs/<id>`.
@@ -44,7 +46,7 @@ Verify any of them: `node lab/verify-run.js docs/lab-runs/<id>`.
 | **Flash** syndicate | Single-round, ephemeral | **Live** |
 | **Dark Vault** syndicate | Persistent, multi-epoch treasury | Rust test for the type; epoch rollover in the JS model; **not run live**. Whether the deployed contract itself performs the rollover is unverified |
 | **Roost, hosted** (`src/roost-service`) | Our code in a Phala TDX VM: exact aggregation, bounded signing | **Live** |
-| **Roost, model-sealed** (`src/enclave`) | Bids sealed to an attested NEAR AI model | Run live earlier (8/8, `docs/canonical/roost-model-evidence.json`), not yet a lab experiment |
+| **Roost, model-sealed** (`src/enclave`) | Bids sealed to an attested NEAR AI model | **Live** (`E-MODEL-SEALED-LIVE-01`) |
 | **Roost, local** | Keyless simulation; can read bids | Used by offline tests |
 | **HAQ** attestation | Proof the Nest gates on | Verified live for the hosted Roost |
 | **Pod** (`src/syndicate/pod.js`) | Sub-swarm with a capital cap (`SCOUT`, `EXECUTION`, `RISK`, `CREDIT`) | **Model**; no on-chain enforcement |
