@@ -30,9 +30,11 @@ async function main() {
   const coordinatorId = evidence.coordinatorContract;
   const expectedCodeHash = evidence.contractCodeHash;
   const rpcUrl = process.env.NEAR_RPC_URL || 'https://test.rpc.fastnear.com';
+  const archivalRpcUrl = process.env.NEAR_ARCHIVAL_RPC_URL || 'https://archival-rpc.testnet.near.org';
 
   console.log(`[1/4] Connecting to Independent NEAR RPC (${rpcUrl})...`);
   const provider = new JsonRpcProvider({ url: rpcUrl });
+  const txProvider = new JsonRpcProvider({ url: archivalRpcUrl });
 
   // Quick connectivity ping
   try {
@@ -66,12 +68,12 @@ async function main() {
   }
 
   // 3. Verify all recorded transactions on chain
-  console.log('\n[4/4] Verifying Transaction Statuses on NEAR Testnet Ledger...');
+  console.log(`\n[4/4] Verifying Transaction Statuses on NEAR Testnet Ledger (${archivalRpcUrl})...`);
   let verifiedCount = 0;
   for (const item of evidence.transactions) {
     const isAttack = item.action.startsWith('attack_rejected');
-    const sender = isAttack ? coordinatorId : coordinatorId;
-    const tx = await provider.sendJsonRpc('tx', [item.txHash, sender]);
+    const sender = coordinatorId;
+    const tx = await txProvider.sendJsonRpc('tx', [item.txHash, sender]);
     const statusKeys = Object.keys(tx.status || {});
 
     if (isAttack) {
