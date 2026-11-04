@@ -218,6 +218,16 @@ export class FlyChainClient {
     return this.callView('get_escrow', { syndicate_id: syndicateId, account_id: flyerId });
   }
 
+  /** Number of syndicate records the contract holds. */
+  async getSyndicateCount() {
+    return Number(await this.callView('get_syndicate_count', {}));
+  }
+
+  /** Entries in an account's index (creator or flyer). Includes ids of pruned syndicates until the account compacts its index. */
+  async getMemberSyndicateCount(accountId) {
+    return Number(await this.callView('get_member_syndicate_count', { account_id: accountId }));
+  }
+
   async listSyndicates({ fromIndex = 0, limit = 10 } = {}) {
     return this.callView('list_syndicates', {
       from_index: fromIndex,

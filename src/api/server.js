@@ -82,6 +82,31 @@ export class FlyApiDaemon {
     });
   }
 
+  /** Parse and validate fromIndex, limit (1..50) and order (asc|desc) from a query string. Throws a 400. */
+  parsePage(url) {
+    const fromIndex = parseInt(url.searchParams.get('fromIndex') || '0', 10);
+    const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+    const order = url.searchParams.get('order') || 'asc';
+    const bad = (m) => { const err = new Error(m); err.statusCode = 400; throw err; };
+    if (!Number.isInteger(fromIndex) || fromIndex < 0) bad('fromIndex must be an integer >= 0');
+    if (!Number.isInteger(limit) || limit < 1) bad('limit must be an integer >= 1');
+    if (!['asc', 'desc'].includes(order)) bad("order must be 'asc' or 'desc'");
+    return { fromIndex, limit: Math.min(limit, 50), order };
+  }
+
+  /** Fetch one page: ascending from fromIndex, or descending from the end. `fetch(start, count)` returns items in index order. */
+  async pageWindow(total, { fromIndex, limit, order }, fetchRange) {
+    if (fromIndex >= total) return [];
+    if (order === 'asc') return fetchRange(fromIndex, Math.min(limit, total - fromIndex));
+    const count = Math.min(limit, total - fromIndex);
+    const start = Math.max(0, total - fromIndex - count);
+    return [...(await fetchRange(start, count))].reverse();
+  }
+
+  pageEnvelope(total, { fromIndex, limit, order }) {
+    return { total, fromIndex, limit, order, hasMore: fromIndex + limit < total };
+  }
+
   /** True when this server writes to the chain. In chain mode without write access a write is refused, never answered from the model. */
   chainWrites() {
     if (this.mode !== 'chain') return false;
@@ -369,25 +394,24 @@ export class FlyApiDaemon {
       });
     }
 
-    // List all syndicates (paginated)
+    // List all syndicates (paginated). total is the number of records, not the page length; order is asc (default,
+    // oldest first) or desc (newest first). Pruning swaps the last record into the freed slot, so "newest" means highest index.
     if (method === 'GET' && (pathname === '/v1/syndicates' || pathname === '/v1/syndicates/')) {
-      const fromIndex = parseInt(url.searchParams.get('fromIndex') || '0', 10);
-      const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+      const page = this.parsePage(url);
       if (this.mode === 'chain' && this.chainClient) {
         try {
-          const list = await this.chainClient.listSyndicates({ fromIndex, limit });
-          return this.sendJson(res, 200, {
-            total: list.length,
-            syndicates: list,
-          }, req);
+          const total = await this.chainClient.getSyndicateCount();
+          const items = await this.pageWindow(total, page, (start, count) => this.chainClient.listSyndicates({ fromIndex: start, limit: count }));
+          return this.sendJson(res, 200, { ...this.pageEnvelope(total, page), syndicates: items.map((r) => this.chainRecordToApi(r)) }, req);
         } catch (e) {
-          // fallback to model if rpc unavailable
+          return this.sendJson(res, 502, { error: `Could not read the chain: ${e.message}` }, req);
         }
       }
-      const list = this.nest.listSyndicates(fromIndex, limit);
+      const total = this.nest.getSyndicateCount();
+      const items = await this.pageWindow(total, page, (start, count) => this.nest.listSyndicates(start, count));
       return this.sendJson(res, 200, {
-        total: this.nest.getSyndicateCount(),
-        syndicates: list.map((syn) => ({
+        ...this.pageEnvelope(total, page),
+        syndicates: items.map((syn) => ({
           id: syn.id,
           type: syn.type,
           subAccount: syn.subAccount,
@@ -401,26 +425,26 @@ export class FlyApiDaemon {
       }, req);
     }
 
-    // List syndicates by member account
+    // List syndicates by member account. total counts the account's index entries, which can include syndicates that
+    // were pruned until the account compacts its index, so a page can hold fewer than `limit` entries.
     if (method === 'GET' && pathname.startsWith('/v1/syndicates/member/')) {
       const memberId = pathname.replace('/v1/syndicates/member/', '');
-      const fromIndex = parseInt(url.searchParams.get('fromIndex') || '0', 10);
-      const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+      const page = this.parsePage(url);
       if (this.mode === 'chain' && this.chainClient) {
         try {
-          const list = await this.chainClient.listSyndicatesByMember(memberId, { fromIndex, limit });
-          return this.sendJson(res, 200, {
-            member: memberId,
-            syndicates: list,
-          }, req);
+          const total = await this.chainClient.getMemberSyndicateCount(memberId);
+          const items = await this.pageWindow(total, page, (start, count) => this.chainClient.listSyndicatesByMember(memberId, { fromIndex: start, limit: count }));
+          return this.sendJson(res, 200, { member: memberId, ...this.pageEnvelope(total, page), syndicates: items.map((r) => this.chainRecordToApi(r)) }, req);
         } catch (e) {
-          // fallback to model if rpc unavailable
+          return this.sendJson(res, 502, { error: `Could not read the chain: ${e.message}` }, req);
         }
       }
-      const list = this.nest.getSyndicatesByMember(memberId, fromIndex, limit);
+      const total = this.nest.getSyndicatesByMember(memberId, 0, 1e9).length;
+      const items = await this.pageWindow(total, page, (start, count) => this.nest.getSyndicatesByMember(memberId, start, count));
       return this.sendJson(res, 200, {
         member: memberId,
-        syndicates: list.map((syn) => ({
+        ...this.pageEnvelope(total, page),
+        syndicates: items.map((syn) => ({
           id: syn.id,
           type: syn.type,
           subAccount: syn.subAccount,

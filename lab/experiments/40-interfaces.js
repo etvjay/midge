@@ -275,6 +275,30 @@ export default {
         } finally { await sealedApi.stop(); await new Promise((r) => gw.server.close(r)); }
       });
 
+      await ctx.step('pagination: total is the record count, order asc/desc, hasMore, and bad input is a 400', async (s) => {
+        const pd = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'local' });
+        const { port } = await pd.start(); const pb = `http://127.0.0.1:${port}`;
+        const pc = new FlyClient({ baseUrl: pb });
+        try {
+          for (let i = 1; i <= 7; i += 1) { await pc.hatchSyndicate({ id: `page-${tag}-${i}`, quorumThreshold: 1 }); await pc.deposit(`page-${tag}-${i}`, 'pager.near', 1); }
+          const idx = (r) => r.syndicates.map((x) => Number(x.id.split('-').pop()));
+          const asc = await pc.listSyndicates({ limit: 3 });
+          s.assert('the first page ascending is 1,2,3 with total 7 (the record count, not the page length) and hasMore', JSON.stringify(idx(asc)) === '[1,2,3]' && asc.total === 7 && asc.hasMore === true && asc.order === 'asc', { actual: [idx(asc), asc.total, asc.hasMore] });
+          const desc = await pc.listSyndicates({ limit: 3, order: 'desc' });
+          s.assert('the first page descending is the newest first: 7,6,5', JSON.stringify(idx(desc)) === '[7,6,5]' && desc.total === 7 && desc.hasMore === true, { actual: idx(desc) });
+          const desc3 = await pc.listSyndicates({ fromIndex: 6, limit: 3, order: 'desc' });
+          s.assert('the last descending page is just the oldest one and hasMore is false', JSON.stringify(idx(desc3)) === '[1]' && desc3.hasMore === false, { actual: [idx(desc3), desc3.hasMore] });
+          const all = []; for (let from = 0; ; from += 3) { const pg = await pc.listSyndicates({ fromIndex: from, limit: 3, order: 'desc' }); all.push(...idx(pg)); if (!pg.hasMore) break; }
+          s.assert('walking descending pages until hasMore is false returns every record exactly once', JSON.stringify(all) === '[7,6,5,4,3,2,1]', { actual: all });
+          s.assert('a page past the end is empty, not an error', (await pc.listSyndicates({ fromIndex: 50 })).syndicates.length === 0);
+          const mine = await pc.getSyndicatesByMember('pager.near', { limit: 2, order: 'desc' });
+          s.assert('by-member descending: newest first, with the account\'s total', JSON.stringify(idx(mine)) === '[7,6]' && mine.total === 7 && mine.hasMore === true, { actual: [idx(mine), mine.total] });
+          s.assert('a limit above 50 is clamped to 50', (await pc.listSyndicates({ limit: 500 })).limit === 50);
+          const bad = async (q) => (await fetch(`${pb}/v1/syndicates?${q}`)).status;
+          s.assert('a bad order, a negative fromIndex and a zero limit are each a 400', (await Promise.all([bad('order=sideways'), bad('fromIndex=-1'), bad('limit=0')])).every((c) => c === 400));
+        } finally { await pd.stop(); }
+      });
+
       await ctx.step('security controls: API key, CORS, public health', async (s) => {
         const secure = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'local', apiKey: 'lab-test-key-not-a-secret-1234567890' });
         const { port } = await secure.start(); const sb = `http://127.0.0.1:${port}`;
@@ -294,12 +318,13 @@ export default {
 
       await ctx.step('chain mode (stub client, no network): each response says what served it, and a write without keys is refused', async (s) => {
         const rec = { id: 'known-syn', syndicate_type: 'Flash', sub_account: 'known-syn.c.test', status: 'Active', epoch: 1, total_escrow: '20000000000000000000000', quorum_threshold: 1, flyers: ['a.testnet'], round_nonce: 'ab'.repeat(32), enclave_public_key: 'cd'.repeat(32), timeout_blocks: 50, created_at_block: 100, epoch_start_block: 100 };
-        const stub = { accountId: null, isConfiguredForWrites: () => false, listSyndicates: async () => [rec], listSyndicatesByMember: async () => [rec], getSyndicate: async (id) => (id === 'known-syn' ? rec : null), getBlockHeight: async () => 130 };
+        const stub = { accountId: null, isConfiguredForWrites: () => false, getSyndicateCount: async () => 1, getMemberSyndicateCount: async () => 1, listSyndicates: async ({ fromIndex, limit }) => [rec].slice(fromIndex, fromIndex + limit), listSyndicatesByMember: async (_a, { fromIndex, limit }) => [rec].slice(fromIndex, fromIndex + limit), getSyndicate: async (id) => (id === 'known-syn' ? rec : null), getBlockHeight: async () => 130 };
         const d = new FlyApiDaemon({ port: 0, mode: 'chain', roostBackend: 'local', chainClient: stub });
         const { port } = await d.start(); const cb = `http://127.0.0.1:${port}`;
         const get = async (p, init) => { const r = await fetch(cb + p, init); return { status: r.status, json: await r.json().catch(() => null) }; };
         try {
-          const list = await get('/v1/syndicates'); s.assert('list is served by the chain', list.json?.mode === 'chain');
+          const list = await get('/v1/syndicates');
+          s.assert('list is served by the chain, in the API shape, with the record count as total', list.json?.mode === 'chain' && list.json?.total === 1 && list.json?.syndicates?.[0]?.id === 'known-syn' && list.json?.syndicates?.[0]?.roundNonce === rec.round_nonce, { actual: list.json });
           const one = await get('/v1/syndicates/known-syn');
           s.assert('get-by-id is served by the chain, in the API shape, with the exact escrow in yocto', one.json?.mode === 'chain' && one.json?.id === 'known-syn' && one.json?.totalEscrow === 0.02 && one.json?.totalEscrowYocto === '20000000000000000000000' && one.json?.roundNonce === rec.round_nonce, { actual: one.json });
           s.assert('an unknown id is a 404, not an answer from the model', (await get('/v1/syndicates/nope-syn')).status === 404);
@@ -313,6 +338,12 @@ export default {
           s.assert('facilities are labelled model even in chain mode (they never touch the chain)', rfq.json?.mode === 'model' && /MODEL MODE/.test(rfq.json?.notice || ''), { actual: rfq.json?.mode });
           const sk = await get('/v1/roost/session-key?syndicateId=known-syn');
           s.assert('the Roost is labelled off-chain, not chain and not model', sk.json?.mode === 'off-chain' && !sk.json?.notice, { actual: sk.json?.mode });
+          const broken = new FlyApiDaemon({ port: 0, mode: 'chain', roostBackend: 'local', chainClient: { ...stub, getSyndicateCount: async () => { throw new Error('rpc down'); } } });
+          const { port: bp } = await broken.start();
+          try {
+            const r = await fetch(`http://127.0.0.1:${bp}/v1/syndicates`); const j = await r.json();
+            s.assert('when the chain cannot be read, the list is a 502 with the reason, not an answer from the model labelled chain (it used to fall back silently)', r.status === 502 && /rpc down/.test(j.error || '') && !j.syndicates, { actual: [r.status, j] });
+          } finally { await broken.stop(); }
         } finally { await d.stop(); }
       });
 

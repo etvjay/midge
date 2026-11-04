@@ -112,13 +112,14 @@ export class FlyClient {
     return res.data;
   }
 
-  async listSyndicates({ fromIndex = 0, limit = 10 } = {}) {
-    const res = await this._request('GET', `/v1/syndicates?fromIndex=${fromIndex}&limit=${limit}`);
+  /** One page of syndicates. order is 'asc' (oldest first, the default) or 'desc' (newest first). The answer carries total and hasMore. */
+  async listSyndicates({ fromIndex = 0, limit = 10, order = 'asc' } = {}) {
+    const res = await this._request('GET', `/v1/syndicates?fromIndex=${fromIndex}&limit=${limit}&order=${order}`);
     return res.data;
   }
 
-  async getSyndicatesByMember(accountId, { fromIndex = 0, limit = 10 } = {}) {
-    const res = await this._request('GET', `/v1/syndicates/member/${accountId}?fromIndex=${fromIndex}&limit=${limit}`);
+  async getSyndicatesByMember(accountId, { fromIndex = 0, limit = 10, order = 'asc' } = {}) {
+    const res = await this._request('GET', `/v1/syndicates/member/${accountId}?fromIndex=${fromIndex}&limit=${limit}&order=${order}`);
     return res.data;
   }
 
