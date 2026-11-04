@@ -12,7 +12,7 @@
 ### [0:00 – 0:30] Scene 1: The Core Thesis — Constrained Arbitration with Independent Recovery
 - **Screen:** Terminal title card / Architecture diagram illustrating Midge Autonomous Syndicate Network:
   - Heterogeneous Swarms (AI agents + Human Wallets)
-  - Intel TDX TEE Roost (NEAR AI Cloud)
+  - The Roost: bids sealed to a NEAR AI Cloud model's attested key (Intel TDX)
   - NEAR L1 FlyCoordinator contract (`c.fly-1793636729.testnet`)
   - NEAR Chain Signatures MPC (`v1.signer-prod.testnet`)
 - **Narrator Audio:**
@@ -21,7 +21,7 @@
   > Welcome to **Midge**: an autonomous syndicate network on NEAR Protocol.
   >
   > Midge's core breakthrough is **constrained arbitration with independent recovery**:
-  > Deposits and balances are public on NEAR L1. Coordination, order weights, and internal allocations remain confidential inside hardware-attested Intel TDX enclaves. The enclave is never a custodian—it can only propose settlements strictly bounded by immutable release policies. And if an enclave crashes or goes rogue, every depositor can unilaterally reclaim 100% of their escrow directly on-chain."
+  > Deposits and balances are public on NEAR L1. Deliberation stays private: each member seals a bid to a NEAR AI Cloud model's attested key, so the coordinator holds only ciphertext and members check that key themselves. The Roost is never a custodian—it can only propose settlements strictly bounded by immutable release policies. And if the coordinator crashes or goes rogue, every depositor can unilaterally reclaim their escrow directly on-chain."
 
 ---
 
@@ -43,11 +43,11 @@
 ### [1:15 – 1:55] Scene 3: Valid Settlement & Omnichain Chain Signatures
 - **Screen:** Terminal showing Step 5 batch settlement transaction and `npm run verify:mpc` calling `v1.signer-prod.testnet`.
 - **Narrator Audio:**
-  > "When legitimate consensus is reached inside the Intel TDX Roost, the enclave signs the canonical 6-tuple message binding the contract ID, syndicate ID, epoch, round nonce, and allocations hash.
+  > "When the sealed bids are aggregated, the Roost signs the canonical 6-tuple message binding the contract ID, syndicate ID, epoch, round nonce, and allocations hash.
   >
   > Settlement executes in just 5.92 TGas on NEAR L1, applying pro-rata balance deductions with exact dust conservation.
   >
-  > For cross-chain execution, Midge integrates NEAR Chain Signatures. From our syndicate identity, we deterministically derive Bitcoin Taproot, EVM, and Solana addresses, and execute a live threshold signature verified byte-for-byte on-chain on `v1.signer-prod.testnet`."
+  > For cross-chain execution, Midge integrates NEAR Chain Signatures. From our syndicate identity, we deterministically derive Bitcoin Taproot, EVM, and Solana addresses, and obtain one live threshold signature from `v1.signer-prod.testnet`, verified independently. We have not broadcast a transaction on another chain yet."
 
 ---
 

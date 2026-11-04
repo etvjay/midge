@@ -1,75 +1,72 @@
 # Midge: Hackathon Submission Assets & Pack
-**NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)**
+**NEAR HACKATHON (Nov 1-14, 2026)**
+
+> Rewritten 2026-11-04 so that every claim matches what exists today. The earlier draft overclaimed (an
+> attested "hardware enclave" for the Roost, "MEV eliminated", "omnichain transactions settle natively").
+> **Re-check each line against `docs/canonical/CURRENT_STATE.md` and the README status table before
+> submitting, and update the hosted-Roost sentence once a real-hardware run exists.**
 
 ---
 
-## 1. Social Post (X / Twitter)
-*Note: NEAR Hackathon rules require stating it was built at NEAR HACKATHON with video or screenshots attached.*
+## 1. Social Post (X)
+*Rules: say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, attach the demo video. The human posts it.*
 
-### Draft Text:
+### Draft text
 ```text
-Excited to unveil Midge: the Autonomous Syndicate Network for Private Systems on @NEARProtocol! 🚀
+Midge: a private syndicate network for private systems, built at NEAR HACKATHON on @NEARProtocol.
 
-Built at the NEAR HACKATHON: Build Beyond Boundaries (@NEARHorizon).
+Members seal their bids to NEAR AI Cloud's attested TEE, so the coordinator never sees them. The contract only pays recipients, caps and deadlines everyone agreed to, and any member can exit alone.
 
-AI agent collectives and capital pools face a dilemma: trust an off-chain bot with your keys, or leak your private trading alpha to public mempools.
-
-Midge solves this with Constrained Arbitration & Independent Recovery:
-🔒 Intel TDX Hardware Attestation via NEAR AI Cloud (DCAP-QVL verified to Intel Root CA)
-⚡ Sealed Intent Aggregation (SIA) in memory with zero-memory wipes (MEV eliminated)
-🛡️ Bounded Settlement Authority: Enclaves can only settle to allowlisted recipients under strict caps
-🚪 Sovereign Escape Hatch (`hatch_out`): Any user reclaims 100% of escrow after timelock without operator assistance
-🌐 Omnichain Threshold Execution across BTC, ETH & SOL via NEAR Chain Signatures MPC
-
-Live on NEAR Testnet (c.fly-1793636729.testnet) with 44 Rust tests, property fuzzing & 10 agent MCP tools!
-
-Watch the 2.5-minute demo 👇
-#NEAR #NEARProtocol #AI #Privacy #Crypto #BuildBeyondBoundaries
+Live on testnet. Verify it yourself: npm run verify
+#NEARHackathon
 ```
 
 ---
 
-## 2. Project Description / Idea Text (Character Count: 1,948 / 2,000 max)
+## 2. Project Description / Idea Text (1861 / 2,000 characters)
 
 ```text
-Midge is an autonomous syndicate protocol combining hardware-attested confidential computing, cross-chain intent settlement, and omnichain threshold cryptography on NEAR Protocol.
+Midge is a private syndicate network for private systems on NEAR: institutions, funds, DAOs and agent swarms form syndicates and deal with each other without exposing their bids or strategies.
 
-Decentralized swarms and capital pooling face a fundamental trilemma between custody, privacy, and liveness: giving private keys to autonomous off-chain agents creates catastrophic custody risk if the node fails; public multi-sigs leak order strategies and trading weights to MEV front-runners; and traditional smart contract escrows freeze capital permanently if external oracles become unresponsive.
+Pooling money forces a choice: trust an off-chain coordinator with custody, or deliberate in public where bids and sizes leak. Midge separates the two. The Nest, a Rust contract on NEAR testnet (c.fly-1793636729.testnet), holds the money and an immutable policy: up to 8 allowed recipients, a cap per epoch, a deadline. A settlement pays out only with a signature bound to the contract, syndicate, epoch, nonce, allocations and order, and only inside that policy; payouts to unapproved recipients are rejected on chain (3 attack transactions recorded). If the coordinator stalls, any member calls hatch_out after the timeout and takes back their own balance alone.
 
-Midge resolves this with a core architectural paradigm: constrained arbitration with independent recovery.
+Deliberation is private. Each member seals a bid to a NEAR AI Cloud model's attested key. Every round verifies the Intel TDX quote chain, TCB status and a fresh-nonce binding of the key, and members check that key themselves instead of trusting the coordinator. The coordinator holds only ciphertext. A model adds the bids, and the result is accepted only if three runs agree (8 of 8 live rounds exact, including prompt-injection attempts). Deposits and balances remain public on NEAR L1.
 
-Participants (heterogeneous swarms of AI agents and human wallets) pool capital into bounded sub-accounts on NEAR L1. Deposits and balances are public on-chain, while individual order parameters, strategy weights, and trade bounds are encrypted to an Intel TDX hardware enclave (verified to Intel's Root CA via DCAP-QVL). Deliberation and Sealed Intent Aggregation (SIA) execute in memory before individual inputs are zero-wiped.
+A hosted Roost with exact arithmetic is built for a Phala confidential VM and tested against the dstack simulator and the official verifier; it has not yet run on real TDX hardware.
 
-Crucially, the enclave holds zero custody. It can only propose settlements strictly bounded by an immutable ReleasePolicy (allowlisted recipients, per-epoch release caps, and block deadlines) to which depositors explicitly consented. Even if an enclave key is compromised, settlements to unauthorized recipients are rejected on-chain.
+Also built: 10 MCP tools for agents, an SDK and HTTP API, a live attestation panel at midge.vercel.app, 44 Rust tests, one verified Chain Signatures signature, and a one-command verifier (npm run verify) that CI runs.
 
-On NEAR L1, the fly-coordinator contract executes batch settlements in 5.92 TGas. Omnichain transactions settle natively across Bitcoin Taproot, Ethereum, and Solana via NEAR Chain Signatures MPC (v1.signer-prod.testnet). If an enclave or operator stalls, Midge's Hatch Protocol activates a non-custodial escape hatch (hatch_out), allowing any individual depositor to unilaterally repatriate 100% of their escrow balance after a block timelock without operator assistance.
+Limits: testnet only; RFQ, OTC and payroll facilities are simulations; nothing broadcast on other chains yet.
 ```
 
 ---
 
-## 3. Track Alignments & Specific Built Features
+## 3. Track Alignments (what is built, what is not)
 
-| Track | Role | Specific Fit & Built Architecture |
-| :--- | :--- | :--- |
-| **Privacy** | **Primary** | Hardware-isolated Intel TDX remote attestation from NEAR AI Cloud verified via `dcap-qvl` to Intel SGX Root CA with zero advisories; Sealed Intent Aggregation in RAM with zero-memory wipes. Public on-chain deposits paired with confidential strategy deliberation. |
-| **Swarms** | Secondary | Multi-syndicate network topology: collectives of autonomous AI agents and human wallets instantiate syndicates, pool liquidity, and coordinate decisions across specialized multi-agent pods with on-chain discovery (`list_syndicates`, `list_syndicates_by_member`). |
-| **Agents** | Secondary | Native Model Context Protocol (MCP) server integration (`FlyMcpServer`, 10 tools) with dual `chain` and `model` modes, allowing Claude Code, Codex, and LLMs to hatch, deposit, settle, and escape directly over stdio JSON-RPC. |
-| **Security** | Secondary | Constrained settlement authority with immutable `ReleasePolicy` allowlists and caps; on-chain rejection proofs of malicious settlements; unilateral `hatch_out` escape hatch; 44 Rust tests (34 unit, 6 integration, 4 proptest fuzzing invariants over 10,000+ transitions). |
-| **DeFi** | Secondary | 1Click Swap API integration auditing 210 assets, measured economic baseline simulation proving MEV elimination and 1.07% lower slippage, and omnichain settlement to BTC/ETH/SOL via live NEAR Chain Signatures MPC (`v1.signer-prod.testnet`). |
+| Track | Role | Built | Not built or caveat |
+| :--- | :--- | :--- | :--- |
+| **Privacy & Private AI** | Primary | Bids sealed to a NEAR AI Cloud model's attested key; per-round Intel TDX chain, TCB and nonce-binding verification; member-side key verification; signed response receipts; live attestation panel; 8 of 8 live rounds exact | The sum is done by a language model; the hosted Roost (exact sums, own TEE) has not run on real hardware |
+| **AI Swarms** | Secondary | Syndicates with on-chain discovery (`list_syndicates`, `list_syndicates_by_member`), a 10-flyer sealed-bid round settled through the Nest simulation | The 20 buyers / 5 sellers scripted demo is not built |
+| **AI Security & Defense** | Secondary | Immutable `ReleasePolicy` (recipients, caps, deadline); on-chain rejection of malicious settlements; unilateral `hatch_out`; 44 Rust tests including property tests | No function-call access key scoped to the contract and no prompt-injected-agent attack demo yet |
+
+Tracks not claimed: Unstoppable DeFi (the 1Click integration is read-only and the economic table is a simulation), Agent Economy.
 
 ---
 
 ## 4. Pre-Submission Human Verification Checklist (Human-Gated)
 
-Before submitting via `POST https://nearhackathon.com/api/applications`:
-- [ ] Ensure `.env` and all private key files remain strictly gitignored.
-- [ ] Run secret scanner: `git log -p | grep -E "ed25519:|secp256k1:|PRIVATE_KEY"` confirms zero committed credentials.
+Before submitting via the form at https://nearhackathon.com/#apply or `POST https://nearhackathon.com/api/applications`:
+- [ ] `.env` and key files remain gitignored; run a history scan (done 2026-11-04: no matches for the real key values or common secret patterns).
+- [ ] Re-read `https://nearhackathon.com/HACKATHON.md` (dates and rules may change).
+- [ ] Repository is public (done 2026-11-04) and a LICENSE file exists (done).
+- [ ] Demo post is public, says built at NEAR HACKATHON, tags @NEARProtocol and #NEARHackathon, and has a video attached (screenshots alone are not enough if judges cannot open the demo).
 - [ ] Confirm project metadata:
-  - **Project Name:** Midge
-  - **Tracks:** `privacy` (primary), `swarms`, `agents`, `security`, `defi`
-  - **Lead Name & Email:** [Confirmed by User]
-  - **Team Size:** `1` (or user specified)
-  - **Mainnet Payout Account:** [User mainnet .near account]
-  - **Repository URL:** [Public GitHub URL after human unlocks visibility]
-  - **Demo Post URL:** [Public X post link after human posts video]
-- [ ] Review final payload printed in console and give explicit "yes" before dispatching.
+  - **Project name:** Midge
+  - **Tracks:** `privacy` (primary), `swarms`, `security`
+  - **Team lead name and email:** [User]
+  - **Team size:** [User]
+  - **Mainnet payout account (named .near account the team creates):** [User]
+  - **Repository URL:** https://github.com/etvjay/midge
+  - **Demo post URL:** [after the human posts]
+  - **What you built (20 to 2000 characters):** the idea text above
+- [ ] Print the final JSON payload and wait for an explicit yes before sending. A repository can be submitted only once.
