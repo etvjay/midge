@@ -13,6 +13,32 @@ node lab/promote.js lab/runs/<id>            # copy a verified run into docs/lab
 
 Runs go to `lab/runs/` (gitignored). `lab/promote.js` copies a run you want to keep into `docs/lab-runs/`. Promote only after scanning for secrets; the recorder redacts known secret shapes but the scan is the check.
 
+## Run it yourself, from nothing
+
+Everything below is testnet and free. Each step says what it costs and what you should see.
+
+```bash
+git clone https://github.com/etvjay/midge && cd midge && npm install
+node scripts/lab-env.mjs check --tier offline        # ready. (needs Node 18+; Rust only for the contract tests)
+node lab/run.js --tier offline                       # about a minute: self-test, 10 suites, foundry audit, Rust, every interface
+```
+
+That is the whole offline tier: no keys, no network, no money. To go on to the real contract on NEAR testnet:
+
+```bash
+node scripts/setup-testnet-account.js                # creates fly-<n>.testnet with 10 NEAR from NEAR's testnet helper, writes .env (mode 0600)
+npm run build:wasm                                   # needs Rust and the wasm32-unknown-unknown target
+node scripts/lab-env.mjs bootstrap                   # deploys the contract to c.<your account> and runs the end-to-end flow (about 0.3 NEAR)
+node scripts/lab-env.mjs check --tier testnet        # master balance, contract hash, storage headroom
+node lab/run.js --tier testnet                       # E-CHAIN-ROUND-LOCAL (~0.03 NEAR) and E-IFACE-CHAIN (~0.07 NEAR)
+```
+
+- **Your own contract, your own hash.** The experiments compare the deployed contract with, in order: `LAB_EXPECTED_CODE_HASH`, the wasm built from your checkout, then the hash pinned for the lab's own deployment. A copy you built and deployed yourself therefore passes against your build.
+- **Fresh accounts per run.** Each testnet experiment creates its own member accounts, prunes the syndicates it made, compacts their indexes and deletes the accounts back into the master, then asserts the contract holds as many records as before. If a run is killed, `node scripts/lab-env.mjs cleanup` removes what it left.
+- **Running low.** `node scripts/lab-env.mjs fund` asks the testnet helper for a fresh 10 NEAR account and sweeps it into yours (only if you are below 2 NEAR; the helper can rate-limit). `status` shows balance, syndicate counts and the contract's storage headroom; `prune [--rescue] [--dry-run]` removes finished syndicates and keeps the ones `docs/canonical/testnet-evidence.json` cites.
+- **Other tiers.** `cloud` needs `NEARAI_API_KEY`, network and `dcap-qvl` (a few cents). `hardware` also needs `PHALA_CLOUD_API_KEY` and Docker (about $0.002 for a two-minute VM; the run deletes it and checks the account is empty). `check --tier <name>` says what is missing and how to get it.
+- **What is not here.** There is no local-emulator ("sandbox") tier: every chain experiment needs the real testnet and its helper, so a run depends on testnet being up. Wherever "model mode" appears, it is the in-memory simulation, labelled as such.
+
 ## Tiers
 
 | Tier | Needs | Experiments | Cost |
@@ -22,7 +48,7 @@ Runs go to `lab/runs/` (gitignored). `lab/promote.js` copies a run you want to k
 | cloud | NEAR AI key, network, `dcap-qvl` | `E-MODEL-SEALED-LIVE-01` | a few cents of inference |
 | hardware | Phala key, NEAR key, Docker, `dcap-qvl` | `E-HOSTED-LIVE-01` | about $0.002 (a VM for ~2 min) |
 
-An experiment whose requirements are missing is skipped and recorded as skipped, not passed. There is no sandbox tier yet.
+An experiment whose requirements are missing is skipped and recorded as skipped, not passed. There is no sandbox tier.
 
 ## What was run live
 

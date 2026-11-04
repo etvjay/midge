@@ -21,7 +21,7 @@ import { connect, fmt, near } from '../lab/lib/near.js';
 import { fundFromHelper } from '../lab/lib/faucet.js';
 import { leftovers, memberHandle, teardownMembers, accountExists } from '../lab/lib/members.js';
 import { probeCapabilities } from '../lab/core/env.js';
-import { bs58encode } from '../src/chain/client.js';
+import { expectedCodeHash } from '../lab/lib/contract.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const [cmd = 'help', ...rest] = process.argv.slice(2);
@@ -43,14 +43,6 @@ const HOW = {
   docker: 'install Docker (the dstack verifier runs in a container)',
   'dcap-qvl': 'cargo install dcap-qvl (verifies Intel TDX quotes)',
 };
-
-function expectedCodeHash() {
-  if (process.env.LAB_EXPECTED_CODE_HASH) return { hash: process.env.LAB_EXPECTED_CODE_HASH, source: 'LAB_EXPECTED_CODE_HASH' };
-  const wasm = path.join(rootDir, 'contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm');
-  if (fs.existsSync(wasm)) return { hash: bs58encode(crypto.createHash('sha256').update(fs.readFileSync(wasm)).digest()), source: 'the wasm built from this checkout' };
-  const m = fs.readFileSync(path.join(rootDir, 'lab/flows/chain-round.js'), 'utf8').match(/EXPECTED_CODE_HASH = '([^']+)'/);
-  return { hash: m?.[1], source: 'the hash pinned in lab/flows/chain-round.js' };
-}
 
 async function pages(chain, method, args = {}) {
   const out = [];
@@ -96,7 +88,7 @@ async function main() {
       const chain = await connect(rootDir);
       const bal = await chain.balance(chain.master);
       const hash = await chain.codeHash().catch(() => null);
-      const want = expectedCodeHash();
+      const want = expectedCodeHash(rootDir);
       say(`\n  master account ${chain.masterId}: ${fmt(bal)} NEAR${bal < near('0.5') ? '   <- low: node scripts/lab-env.mjs fund' : ''}`);
       say(`  contract ${chain.coordinatorId}: ${hash ? `code hash ${hash}` : 'NOT DEPLOYED (node scripts/lab-env.mjs bootstrap)'}`);
       if (hash && want.hash) say(`  ${hash === want.hash ? '✓' : '✗'} matches ${want.source}${hash === want.hash ? '' : ` (${want.hash})`}`);

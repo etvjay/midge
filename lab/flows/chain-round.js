@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { HostedRoost } from '../../src/roost-service/hosted-roost.js';
 import { sealToModel } from '../../src/enclave/e2ee.js';
 import { near, fmt, sleep, computePolicyHash } from '../lib/near.js';
+import { expectedCodeHash } from '../lib/contract.js';
 
 /**
  * A full syndicate round on NEAR testnet against a hosted Roost, as a sequence of recorded steps:
@@ -11,8 +12,6 @@ import { near, fmt, sleep, computePolicyHash } from '../lib/near.js';
  *
  * Every "must fail" step asserts that the on-chain STATE did not change, not only that an error came back.
  */
-/** The contract build this lab was written against. Changes with any contract change; see foundry/gaps.jsonl GAP-009. */
-export const EXPECTED_CODE_HASH = 'Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9';
 const fakeProvider = { simulated: true, attest: async () => Buffer.from('rogue-no-hardware'), info: async () => ({}) };
 
 export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = null, runTag, members = null }) {
@@ -73,7 +72,8 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     s.assert('the master account can pay for hatching (0.1 NEAR)', have[chain.masterId] > near('0.1'));
     const hash = await chain.codeHash();
     s.observe('deployed code hash', hash);
-    s.assert('the deployed contract is the audited build', hash === EXPECTED_CODE_HASH, { expected: EXPECTED_CODE_HASH, actual: hash });
+    const want = expectedCodeHash(ctx.rootDir);
+    s.assert(`the deployed contract is the build expected from ${want.source}`, hash === want.hash, { expected: want.hash, actual: hash });
     // The contract account pays for its own code and state (1e19 yocto per byte) out of the same balance that holds
     // escrow. When headroom ran out, hatch failed mid-run with "lacks balance for state"; check it up front instead.
     const acct = await chain.provider.query({ request_type: 'view_account', finality: 'final', account_id: chain.coordinatorId });

@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { connect, fmt, near, sleep, loadEnvFile } from '../lib/near.js';
 import { FlyChainClient } from '../../src/chain/client.js';
 import { createMembers, teardownMembers, accountExists } from '../lib/members.js';
-import { EXPECTED_CODE_HASH } from '../flows/chain-round.js';
+import { expectedCodeHash } from '../lib/contract.js';
 import { FlyMcpServer } from '../../src/mcp/server.js';
 import { FlyApiDaemon } from '../../src/api/server.js';
 import { FlyClient } from '../../src/sdk/client.js';
@@ -51,7 +51,8 @@ export default {
       const signed = roost.signSettlement({ contractId: chain.coordinatorId, syndicateId, epoch: Number(st.epoch), roundNonce: st.round_nonce, allocations, orderHash: agg.orderHash });
       return { agg, st, signed };
     };
-    const hatchArgs = (sid, extra = {}) => ({ syndicateId: sid, expectedCodeHash: EXPECTED_CODE_HASH, quorumThreshold: 1, enclavePublicKey: roost.settlePublicKey, allowedRecipients: [rcpt.id], timeoutBlocks: 50, ...extra });
+    const want = expectedCodeHash(ctx.rootDir);
+    const hatchArgs = (sid, extra = {}) => ({ syndicateId: sid, expectedCodeHash: want.hash, quorumThreshold: 1, enclavePublicKey: roost.settlePublicKey, allowedRecipients: [rcpt.id], timeoutBlocks: 50, ...extra });
 
     await ctx.step('preflight: write access, deployed contract, balances, storage headroom', async (s) => {
       // Write access is passed in explicitly: the chain client no longer reads the repository's .env on its own (GAP-018).
@@ -61,7 +62,7 @@ export default {
       s.assert('the MCP server is in chain mode and can write', mcp.mode === 'chain' && mcp.chainClient?.isConfiguredForWrites(), { actual: mcp.mode });
       s.assert('the interface account is the lab\'s master account', mcp.chainClient?.accountId === chain.masterId, { actual: mcp.chainClient?.accountId });
       const hash = await chain.codeHash();
-      s.assert('the deployed contract is the build this lab was written against', hash === EXPECTED_CODE_HASH, { expected: EXPECTED_CODE_HASH, actual: hash });
+      s.assert(`the deployed contract is the build expected from ${want.source}`, hash === want.hash, { expected: want.hash, actual: hash });
       const bal = await chain.balance(chain.master);
       s.observe('interface account balance (NEAR)', fmt(bal));
       s.assert('the interface account has at least 0.25 NEAR (an attempt costs about 0.07)', bal > near('0.25'), { actual: fmt(bal) });
@@ -76,7 +77,7 @@ export default {
 
     const s1 = id(1);
     await ctx.step('MCP: hatch with the Roost\'s key, deposit, settle with its signature', async (s) => {
-      const noKey = await call(s, 'midge_hatch_syndicate', { syndicateId: id('nokey'), expectedCodeHash: EXPECTED_CODE_HASH });
+      const noKey = await call(s, 'midge_hatch_syndicate', { syndicateId: id('nokey'), expectedCodeHash: want.hash });
       s.assert('hatching without an enclave key is refused before any transaction (a keyless syndicate could never settle)', !noKey.ok && /enclavePublicKey/.test(noKey.e), { actual: noKey });
       const h = await call(s, 'midge_hatch_syndicate', hatchArgs(s1));
       s.assert('midge_hatch_syndicate reports HATCHED_ON_CHAIN with a transaction hash', h.ok && h.r.status === 'HATCHED_ON_CHAIN' && Boolean(h.r.txHash), { actual: h });
@@ -151,7 +152,7 @@ export default {
         s.observe('syndicates in the interface account\'s index (total)', mine.total);
         s.assert('getSyndicatesByMember reads the chain, newest first, with the index size as total, and includes the syndicates this run created', mine.mode === 'chain' && mine.total >= 3 && [s1, s2, s3].every((x) => mine.syndicates.some((y) => y.id === x)), { actual: [mine.total, mine.syndicates?.length] });
         const s4 = id(4);
-        const hatched = await sdk.hatchSyndicate({ id: s4, quorumThreshold: 1, timeoutBlocks: 50, expectedCodeHash: EXPECTED_CODE_HASH, enclavePublicKey: roost.settlePublicKey, allowedRecipients: [rcpt.id] });
+        const hatched = await sdk.hatchSyndicate({ id: s4, quorumThreshold: 1, timeoutBlocks: 50, expectedCodeHash: want.hash, enclavePublicKey: roost.settlePublicKey, allowedRecipients: [rcpt.id] });
         s.assert('sdk.hatchSyndicate -> API -> chain hatches on chain, with a transaction hash and the round nonce (GAP-016: it used to create an in-memory model syndicate)', hatched.mode === 'chain' && Boolean(hatched.txHash) && typeof hatched.roundNonce === 'string', { actual: hatched });
         const onChain = await chain.waitFor(() => state(s4), { what: 'syndicate 4 on chain' });
         s.assert('the chain really has it, with the Roost\'s key', onChain.enclave_public_key === roost.settlePublicKey);
