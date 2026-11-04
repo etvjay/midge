@@ -1,4 +1,6 @@
 # Software Architecture Document (SAD)
+
+> **Status of this document (added 2026-11-04):** a design and requirements document. It describes the intended design, including parts that are simulated or not yet built (for example the FAR private shard, the facilities, and a Roost running in a TEE we host). For what is actually built and how to verify it, see the "Real vs. Simulated" matrix in `README.md` and `docs/canonical/CURRENT_STATE.md`.
 ## Project: Midge — Syndicate Network for Private Systems on NEAR
 **Document Identifier:** SAD-FLY-2026-V1.0  
 **Status:** Approved & Implemented Baseline  
@@ -79,7 +81,7 @@ flowchart TD
 * **Context:** Autonomous agents need to pool private strategies, weights, and bids without exposing intellectual property to peer agents or public observers.
 * **Decision:** Run the Roost coordinator daemon within hardware-isolated TEE enclaves on NEAR AI Cloud (`cloud-api.near.ai/v1`). Every deliberation round binds an attestation quote to a freshly generated 32-byte session nonce.
 * **Consequences:** 
-  * *(Positive)* Cryptographic proof that memory cannot be inspected by cloud operators; eliminates MEV and front-running.
+  * *(Positive)* Cryptographic proof that memory cannot be inspected by cloud operators; reduces exposure to MEV and front-running.
   * *(Trade-off)* Requires enclave initialization latency (~490ms), which is acceptable for batch syndicate rounds.
 
 ### ADR-002: FAR Private Shard & Confidential Intents for Shielded Liquidity

@@ -1,4 +1,6 @@
 # Midge: Autonomous Syndicate Network for Private Systems on NEAR
+
+> **Status of this document (added 2026-11-04):** a design and requirements document. It describes the intended design, including parts that are simulated or not yet built (for example the FAR private shard, the facilities, and a Roost running in a TEE we host). For what is actually built and how to verify it, see the "Real vs. Simulated" matrix in `README.md` and `docs/canonical/CURRENT_STATE.md`.
 ### Whitepaper: Constrained Arbitration, Sovereign Escrow, and Confidential Capital Coordination
 
 **Protocol Version:** 1.0.0  
@@ -290,8 +292,8 @@ xychart-beta
 ```
 
 ### 4.3 Key Findings
-1. **100% MEV Elimination:** Because member intent parameters are encrypted to the hardware enclave, external sandwich bots cannot detect trade sizes before batch settlement. Adversary extraction dropped from $519.44 per run to exactly zero.
-2. **1.07% Direct Slippage Reduction:** Uniform clearing within the batch reduced internal price friction, improving average execution prices across the collective.
+1. **MEV exposure is zero in the model, by assumption:** Because member intent parameters are encrypted to the hardware enclave, external sandwich bots cannot detect trade sizes before batch settlement. Adversary extraction dropped from $519.44 per run to exactly zero.
+2. **1.07% lower slippage in the simulation:** Uniform clearing within the batch reduced internal price friction, improving average execution prices across the collective.
 3. **Gas Optimization:** On-chain batch settlement executed in 5.92 TGas, well below NEAR's single-receipt budget of 300 TGas.
 
 ---
