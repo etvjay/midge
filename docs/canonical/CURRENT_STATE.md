@@ -12,7 +12,7 @@
 
 Midge is an autonomous syndicate network purpose-built for private systems on NEAR Protocol. It enables autonomous AI agents, quant funds, and privacy collectives to pool capital, deliberate in hardware-attested enclaves, and execute cross-chain operations as a unified front without leaking member identities, proprietary trading models, prompt weights, or internal equity splits to public mempools.
 
-All 8 architectural verification layers, the NEAR L1 Rust smart contract (31 tests: 25 unit + 6 integration with domain-separated Ed25519 signature verification, LookupMap escrow storage, Flash Promise settlement payouts with failure recovery callbacks, and flyer storage reclamation), release WebAssembly binary (277 KB), and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
+All 8 architectural verification layers, the NEAR L1 Rust smart contract (44 tests: 34 unit + 6 integration + 4 property-based, with domain-separated Ed25519 signature verification, LookupMap escrow storage, Flash Promise settlement payouts with failure recovery callbacks, and flyer storage reclamation), release WebAssembly binary (277 KB), and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
 
 ---
 
@@ -37,7 +37,7 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (31 tes
 | **x402 Agent Commerce** | `src/commerce/x402.js` | **INTEGRATED** | `npm run verify:api` | HTTP 402 challenge, PingPay confidential micropayment HMAC bearer verification, token-gated alpha |
 | **MCP Server** | `src/mcp/server.js`, `bin/midge-mcp.js` | **INTEGRATED (stdio)** | `npm run verify:api` | 6 tools exposed via stdio JSON-RPC 2.0 compatible with `nearai/near-mcp` |
 | **FlyClient SDK** | `src/sdk/client.js` | **TESTED** | `npm run verify:api` | Unified JavaScript/TypeScript client library |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 31 Rust tests (25 unit + 6 integration) in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, storage reclamation, and refund safety |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 44 Rust tests (34 unit + 6 integration + 4 property-based) in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, storage reclamation, and refund safety |
 | **Release WASM Binary** | `contracts/fly-coordinator/target` | **TESTED** | `npm run build:wasm` | 277 KB compiled WebAssembly binary (`wasm32-unknown-unknown`) |
 | **Foundry Control Plane** | `foundry/` | **INTEGRATED** | `npm run check:foundry` | `state.json`, `claims.jsonl` (11 claims), `gaps.jsonl` (7 gaps, 1 high deferred), 8 phase specs |
 
