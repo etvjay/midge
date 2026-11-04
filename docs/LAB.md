@@ -33,7 +33,7 @@ node scripts/lab-env.mjs check --tier testnet        # master balance, contract 
 node lab/run.js --tier testnet                       # E-CHAIN-ROUND-LOCAL (~0.03 NEAR) and E-IFACE-CHAIN (~0.07 NEAR)
 ```
 
-- **What bootstrap costs.** It moves about 5 NEAR out of your master account into the contract and three flyer accounts; about 3.3 NEAR of that is the contract's storage staking (the code is stored on chain at 1e19 yocto per byte). It is not spent: deleting those accounts returns it. After that the two testnet experiments together cost about 0.1 NEAR.
+- **What bootstrap costs.** It moves about 5 NEAR out of your master account into the contract and three flyer accounts; about 3.3 NEAR of that is the contract's storage staking (the code is stored on chain at 1e19 yocto per byte). It is not spent: deleting those accounts returns it. After that the three testnet experiments together cost about 0.13 NEAR.
 - **Followed end to end.** This guide was run from a clean clone with a brand-new account on 2026-11-04: the build produced the identical code hash (`Gh8NAA2e…`, so the build is reproducible), bootstrap deployed it, and both testnet experiments passed (run `20261104T151213Z-46e2`). That run found two bugs the lab's own account had hidden: the e2e script under-funded the coordinator for the contract's size, and the chain client sent a new account's writes to the author's contract. Both are fixed.
 - **Your own contract, your own hash.** The experiments compare the deployed contract with, in order: `LAB_EXPECTED_CODE_HASH`, the wasm built from your checkout, then the hash pinned for the lab's own deployment. A copy you built and deployed yourself therefore passes against your build.
 - **Fresh accounts per run.** Each testnet experiment creates its own member accounts, prunes the syndicates it made, compacts their indexes and deletes the accounts back into the master, then asserts the contract holds as many records as before. If a run is killed, `node scripts/lab-env.mjs cleanup` removes what it left.
@@ -46,7 +46,7 @@ node lab/run.js --tier testnet                       # E-CHAIN-ROUND-LOCAL (~0.0
 | Tier | Needs | Experiments | Cost |
 |---|---|---|---|
 | offline | nothing | `E-LAB-01` (self-test), `E-SUITE-OFFLINE` (10 suites), `E-CHECK-FOUNDRY`, `E-RUST-CONTRACT`, `E-IFACE-MODEL` (every route, SDK method and MCP tool) | free |
-| testnet | NEAR key in `.env`, network | `E-CHAIN-ROUND-LOCAL` (about 0.002 NEAR per attempt), `E-IFACE-CHAIN` (MCP, SDK and API against the real contract; about 0.066 NEAR per attempt) | small |
+| testnet | NEAR key in `.env`, network | `E-CHAIN-ROUND-LOCAL` (about 0.034 NEAR net per attempt), `E-IFACE-CHAIN` (MCP, SDK and API against the real contract; about 0.066), `E-SECURITY-FCKEY-01` (a compromised agent bounded by a function-call key; about 0.025). Measured as the net change in the master account. | small |
 | cloud | NEAR AI key, network, `dcap-qvl` | `E-MODEL-SEALED-LIVE-01` | a few cents of inference |
 | hardware | Phala key, NEAR key, Docker, `dcap-qvl` | `E-HOSTED-LIVE-01` | about $0.002 (a VM for ~2 min) |
 

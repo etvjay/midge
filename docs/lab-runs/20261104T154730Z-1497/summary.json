@@ -1,0 +1,27 @@
+{
+  "runId": "20261104T154730Z-1497",
+  "startedAt": "2026-11-04T15:47:30.217Z",
+  "rootHash": "fc9162b0a7b2f66284456b766dd64c6c0d5fb85569fe7a77a3441d1a2a0c1cef",
+  "verdicts": {
+    "E-CHAIN-ROUND-LOCAL": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-IFACE-CHAIN": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-SECURITY-FCKEY-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 290,
+  "commit": "b399bb8650fe84d736fd78a7582c9f905047360b"
+}

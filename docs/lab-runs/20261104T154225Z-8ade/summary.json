@@ -1,0 +1,17 @@
+{
+  "runId": "20261104T154225Z-8ade",
+  "startedAt": "2026-11-04T15:42:25.825Z",
+  "rootHash": "dc657ad11925ce203d36eff2da61671a4002ac5583c7aa965afb3e494f83e9ef",
+  "verdicts": {
+    "E-SECURITY-FCKEY-01": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 236,
+  "commit": "ca3a4d3943b87099264c520383c3fd7f2cd2256c"
+}
