@@ -40,7 +40,8 @@
     "security:review": "node scripts/security-review.js",
     "check:foundry": "node scripts/check-foundry.js",
     "review:argon": "node scripts/argon-review.js",
-    "lab:env": "node scripts/lab-env.mjs"
+    "lab:env": "node scripts/lab-env.mjs",
+    "build:site": "node scripts/build-site-data.mjs && node scripts/build-site-3d.mjs"
   },
   "keywords": [
     "near",
@@ -63,5 +64,9 @@
     "@noble/hashes": "^2.4.0",
     "ethers": "^6.17.0",
     "near-api-js": "^7.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "three": "0.186.1"
   }
 }

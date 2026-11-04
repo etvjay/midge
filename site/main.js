@@ -94,9 +94,9 @@ class Stage {
     this.scene.draw(ctx, this.w, this.h, t, this.state);
   }
   start() {
-    if (REDUCE || this.raf) return;
+    if (REDUCE || this.raf || this.off) return;
     const loop = (now) => {
-      if (!this.visible) { this.raf = 0; return; }
+      if (!this.visible || this.off) { this.raf = 0; return; }
       if (this.t0 === null) this.t0 = now - (this.lastT || 0) * 1000;
       this.lastT = (now - this.t0) / 1000; this.draw(this.lastT); this.raf = requestAnimationFrame(loop);
     };
@@ -489,6 +489,8 @@ addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); if (e.target.__onIn) e.target.__onIn(); } }), { threshold: 0.15 });
 for (const el of $$('.section .title, .section .lede-sm, .card, .mini, .chapter, .arch, .split, .answer, .table-wrap')) { el.classList.add('reveal'); io.observe(el); }
+// Siblings in a grid enter 40 ms apart, never more than 160 ms behind the first.
+for (const g of $$('.grid-2, .grid-3, .grid-4, .grid-5')) [...g.children].forEach((c, i) => { c.style.transitionDelay = `${Math.min(i * 40, 160)}ms`; });
 const st = $('.status-table'); if (st) { $$('tbody tr', st).forEach((tr, i) => { tr.style.transitionDelay = `${i * 60}ms`; }); io.observe(st); }
 // Kickers decode from ciphertext when they come into view.
 for (const k of $$('.kicker')) {
@@ -597,6 +599,7 @@ function row(list, ok, label, detail) {
     row(list, signerOk && nonceOk, `${who} signing key and the nonce are inside the quote`, `${signerOk ? 'key matches' : 'key differs'}, ${nonceOk ? 'nonce matches' : 'nonce differs'}`);
   };
   const check = async (replay) => {
+    const btn = replay ? rep : run; const label = btn.textContent; btn.setAttribute('aria-busy', 'true'); btn.textContent = 'Checking…'; btn.classList.remove('done');
     run.disabled = rep.disabled = true; list.textContent = ''; note.textContent = 'Asking NEAR AI Cloud for attestation…';
     try {
       const nonce = toHex(crypto.getRandomValues(new Uint8Array(32)));
@@ -614,7 +617,16 @@ function row(list, ok, label, detail) {
         + 'Not checked in the browser: the Intel certificate chain and TCB status, the NVIDIA GPU evidence, and response signatures. The repository verifier checks the Intel chain.';
       live.textContent = fails ? 'Live check finished with failures' : 'Live check passed';
     } catch (err) { note.textContent = `Could not complete the live check from this browser: ${err.message}.`; }
-    finally { run.disabled = rep.disabled = false; }
+    finally { run.disabled = rep.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = label; btn.classList.add('done'); }
   };
   run.addEventListener('click', () => check(false)); rep.addEventListener('click', () => check(true));
 })();
+
+// ---------------------------------------------------------------- 3D moments (three.js), progressive enhancement
+if (!REDUCE) {
+  const go = () => import('./scene3d.js').then(({ boot }) => boot({ hosts: [
+    { el: $('.hero'), kind: 'hero', fallback: $('canvas[data-scene="hero"]') },
+    { el: $('canvas[data-scene="arch"]').parentElement, kind: 'arch', fallback: $('canvas[data-scene="arch"]') },
+  ] })).then((r) => { document.documentElement.dataset.webgl = r && r.ok ? 'on' : 'off'; }).catch(() => { document.documentElement.dataset.webgl = 'off'; });
+  if (document.readyState === 'complete') setTimeout(go, 200); else addEventListener('load', () => setTimeout(go, 200), { once: true });
+}
