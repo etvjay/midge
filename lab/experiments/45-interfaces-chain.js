@@ -145,15 +145,20 @@ export default {
         // by-member paging indexes the member's own list, not the global one
         const mine = await sdk.getSyndicatesByMember(chain.masterId, { fromIndex: 0, limit: 50 });
         s.assert('getSyndicatesByMember reads the chain and includes the syndicates this run created for the account', mine.mode === 'chain' && [s1, s2, s3].every((x) => mine.syndicates?.some((y) => y.id === x)), { actual: mine.syndicates?.length });
-        const ghost = await fetch(`http://127.0.0.1:${port}/v1/syndicates/${s1}`);
-        s.assert('GAP-016 (pinned): get-by-id on a syndicate that exists on chain is a 404, because that route reads the in-memory model', ghost.status === 404, { actual: ghost.status });
-        s.problem('major', 'GAP-016: in chain mode GET /v1/syndicates/:id, hatch and deposit use the in-memory model, so an agent that lists syndicates from the chain cannot fetch any of them by id through the same API');
-
         const s4 = id(4);
-        s.assert('hatch #4 (through the MCP; the API\'s hatch route is the model)', (await call(s, 'midge_hatch_syndicate', hatchArgs(s4))).ok);
-        await chain.waitFor(() => state(s4), { what: 'syndicate 4' });
-        s.assert('deposit 0.02', (await call(s, 'midge_deposit', { syndicateId: s4, amountNear: '0.02' })).ok);
+        const hatched = await sdk.hatchSyndicate({ id: s4, quorumThreshold: 1, timeoutBlocks: 50, expectedCodeHash: EXPECTED_CODE_HASH, enclavePublicKey: roost.settlePublicKey, allowedRecipients: [rcpt.id] });
+        s.assert('sdk.hatchSyndicate -> API -> chain hatches on chain, with a transaction hash and the round nonce (GAP-016: it used to create an in-memory model syndicate)', hatched.mode === 'chain' && Boolean(hatched.txHash) && typeof hatched.roundNonce === 'string', { actual: hatched });
+        const onChain = await chain.waitFor(() => state(s4), { what: 'syndicate 4 on chain' });
+        s.assert('the chain really has it, with the Roost\'s key', onChain.enclave_public_key === roost.settlePublicKey);
+        const dep = await sdk.deposit(s4, chain.masterId, '0.02');
+        s.assert('sdk.deposit -> API -> chain deposits on chain', dep.status === 'DEPOSITED_ON_CHAIN' && Boolean(dep.txHash), { actual: dep });
         await chain.waitFor(async () => BigInt((await state(s4)).total_escrow) === near('0.02'), { what: 'escrow' });
+        const got = await sdk.getSyndicate(s4);
+        s.assert('sdk.getSyndicate reads the chain: the id, the exact escrow, the nonce and the flyer (it used to 404 for anything on chain)', got.mode === 'chain' && got.id === s4 && got.totalEscrowYocto === yocto('0.02') && got.roundNonce === onChain.round_nonce && got.activeFlyers.includes(chain.masterId), { actual: got });
+        const missing = await fetch(`http://127.0.0.1:${port}/v1/syndicates/${id('nope')}`);
+        s.assert('an id that is not on chain is a 404', missing.status === 404);
+        const tl = await (await fetch(`http://127.0.0.1:${port}/v1/emergency/timelock/${s4}`)).json();
+        s.assert('the timelock view reads the chain: 50 blocks, some elapsed, a real current block', tl.mode === 'chain' && tl.timeoutBlocks === 50 && tl.currentBlock > tl.createdAtBlock && tl.blocksRemaining <= 50, { actual: tl });
         const { agg, st: pre, signed } = await bidAndSign({ syndicateId: s4, bid: '0.02', allocations: [{ recipient: rcpt.id, amount: yocto('0.02') }] });
         const settled = await sdk.settleBatch(s4, { allocations: [[rcpt.id, '0.02']], orderHash: agg.orderHash, nonce: pre.round_nonce, enclaveSignature: signed.signature });
         s.assert('sdk.settleBatch -> API -> chain returns SETTLED_ON_CHAIN', settled.status === 'SETTLED_ON_CHAIN' && Boolean(settled.txHash), { actual: settled });

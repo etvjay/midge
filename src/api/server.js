@@ -77,6 +77,27 @@ export class FlyApiDaemon {
     });
   }
 
+  /** True when this server writes to the chain. In chain mode without write access a write is refused, never answered from the model. */
+  chainWrites() {
+    if (this.mode !== 'chain') return false;
+    if (!this.chainClient?.isConfiguredForWrites()) {
+      const err = new Error('Chain mode needs NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY to send transactions. Start the server with FLY_MODE=model to use the in-memory simulation instead.');
+      err.statusCode = 409;
+      throw err;
+    }
+    return true;
+  }
+
+  /** The chain record in the API's shape. Amounts: totalEscrow in NEAR (a number), totalEscrowYocto exact. */
+  chainRecordToApi(rec) {
+    const yocto = String(rec.total_escrow);
+    return {
+      id: rec.id, type: rec.syndicate_type === 'DarkVault' ? 'DARK_VAULT' : 'FLASH', subAccount: rec.sub_account, status: rec.status, epoch: Number(rec.epoch),
+      totalEscrow: Number(yocto) / 1e24, totalEscrowYocto: yocto, quorumThreshold: rec.quorum_threshold, activeFlyers: rec.flyers, roundNonce: rec.round_nonce,
+      enclavePublicKey: rec.enclave_public_key, timeoutBlocks: Number(rec.timeout_blocks), createdAtBlock: Number(rec.created_at_block), epochStartBlock: Number(rec.epoch_start_block),
+    };
+  }
+
   /** The Roost for one syndicate. Throws a 400 for a missing or malformed id and a 503 when too many are live. */
   roostFor(syndicateId, { create = true } = {}) {
     if (typeof syndicateId !== 'string' || !/^[a-z0-9_-]{3,64}$/.test(syndicateId)) {
@@ -150,9 +171,12 @@ export class FlyApiDaemon {
     res.writeHead(statusCode, headers);
     let payload = data;
     if (data && typeof data === 'object' && !Array.isArray(data)) {
+      // `mode` says what served THIS response: 'chain' only for routes that really talked to the chain, 'model' for
+      // simulations (facilities, MPC, x402, pods, model-mode syndicates), 'off-chain' for the Roost.
+      const served = res.servedBy || this.mode;
       payload = {
-        mode: this.mode,
-        ...(this.mode === 'model' ? { notice: '[MODEL MODE, no chain]' } : {}),
+        mode: served,
+        ...(served === 'model' ? { notice: '[MODEL MODE, no chain]' } : {}),
         ...data,
       };
     }
@@ -163,6 +187,9 @@ export class FlyApiDaemon {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = url.pathname;
     const method = req.method;
+    if (/^\/v1\/(syndicates|emergency)\b/.test(pathname) && !/\/pods$/.test(pathname)) res.servedBy = this.mode;
+    else if (pathname.startsWith('/v1/roost/')) res.servedBy = 'off-chain';
+    else if (/^\/v1\/(facilities|mpc|commerce)\b/.test(pathname) || /\/pods$/.test(pathname)) res.servedBy = 'model';
 
     // CORS preflight
     if (method === 'OPTIONS') {
@@ -275,6 +302,25 @@ export class FlyApiDaemon {
           error: 'quorumThreshold must be a positive integer >= 1.',
         }, req);
       }
+      if (this.chainWrites()) {
+        try {
+          const policy = {
+            allowed_recipients: body.allowedRecipients || [this.chainClient.accountId],
+            max_release_bps_per_epoch: body.maxReleaseBpsPerEpoch || 10000,
+            settle_deadline_block: body.settleDeadlineBlock || 999999999,
+          };
+          const tx = await this.chainClient.hatch({
+            syndicateId: body.id, syndicateType: body.type || 'FLASH', quorumThreshold: body.quorumThreshold || 2,
+            enclavePublicKey: body.enclavePublicKey, expectedCodeHash: body.expectedCodeHash, timeoutBlocks: body.timeoutBlocks || 100, releasePolicy: policy,
+          });
+          let rec = null;
+          for (let i = 0; i < 10 && !rec; i += 1) { rec = await this.chainClient.getSyndicate(body.id).catch(() => null); if (!rec) await new Promise((r) => setTimeout(r, 1000)); }
+          this.events.emit('syndicate_event', { syndicateId: body.id, type: 'hatched', payload: { id: body.id, txHash: tx.txHash } });
+          return this.sendJson(res, 201, { syndicateId: body.id, subAccount: tx.subAccount, type: body.type || 'FLASH', status: rec?.status || 'PENDING', roundNonce: rec?.round_nonce || null, policyHash: tx.policyHash, txHash: tx.txHash, explorerUrl: tx.explorerUrl }, req);
+        } catch (err) {
+          return this.sendJson(res, 400, { error: err.message }, req);
+        }
+      }
       const syn = this.nest.hatch({
         syndicateId: body.id,
         syndicateType: body.type || 'FLASH',
@@ -364,6 +410,12 @@ export class FlyApiDaemon {
 
     if (method === 'GET' && pathname.startsWith('/v1/syndicates/') && !pathname.includes('/pods') && !pathname.includes('/deposit')) {
       const synId = pathname.split('/')[3];
+      if (this.mode === 'chain' && this.chainClient) {
+        let rec = null;
+        try { rec = await this.chainClient.getSyndicate(synId); } catch (err) { return this.sendJson(res, 502, { error: `Could not read the chain: ${err.message}` }, req); }
+        if (!rec) return this.sendJson(res, 404, { error: 'Syndicate not found' }, req);
+        return this.sendJson(res, 200, this.chainRecordToApi(rec), req);
+      }
       const syn = this.nest.syndicates.get(synId);
       if (!syn) return this.sendJson(res, 404, { error: 'Syndicate not found' });
       return this.sendJson(res, 200, {
@@ -382,6 +434,16 @@ export class FlyApiDaemon {
     if (method === 'POST' && pathname.match(/^\/v1\/syndicates\/[^\/]+\/deposit$/)) {
       const synId = pathname.split('/')[3];
       const body = await this.parseBody(req);
+      if (this.chainWrites()) {
+        try {
+          // On chain the depositor is the account this server signs with; a flyerId in the body is not honoured.
+          const dep = await this.chainClient.deposit({ syndicateId: synId, amountNear: String(body.amountNear ?? '0.02'), policyHash: body.policyHash || null });
+          this.events.emit('syndicate_event', { syndicateId: synId, type: 'deposit_received', payload: { flyerId: dep.flyerId, amountNear: dep.amountNear, txHash: dep.txHash } });
+          return this.sendJson(res, 200, dep, req);
+        } catch (err) {
+          return this.sendJson(res, 400, { error: err.message }, req);
+        }
+      }
       const receipt = this.nest.deposit(synId, body.flyerId, body.amountNear);
 
       this.events.emit('syndicate_event', {
@@ -396,13 +458,12 @@ export class FlyApiDaemon {
     if (method === 'POST' && pathname.match(/^\/v1\/syndicates\/[^\/]+\/settle$/)) {
       const synId = pathname.split('/')[3];
       const body = await this.parseBody(req);
-      if (this.mode === 'chain' && this.chainClient?.isConfiguredForWrites()) {
+      if (this.chainWrites()) {
         try {
           const result = await this.chainClient.settleBatch({
             syndicateId: synId,
             allocations: body.allocations || [],
             orderHash: body.orderHash,
-            epoch: body.epoch,
             nonce: body.nonce,
             enclaveSignature: body.enclaveSignature,
           });
@@ -416,13 +477,15 @@ export class FlyApiDaemon {
         status: 'SETTLED_MODEL',
         syndicateId: synId,
         allocations: body.allocations,
+        binding: false,
+        note: 'Model mode acknowledges the request only: no signature or allocation was checked and no state changed. Use chain mode for a binding settlement.',
       });
     }
 
     if (method === 'POST' && pathname.match(/^\/v1\/syndicates\/[^\/]+\/hatch-out$/)) {
       const synId = pathname.split('/')[3];
       const body = await this.parseBody(req);
-      if (this.mode === 'chain' && this.chainClient?.isConfiguredForWrites()) {
+      if (this.chainWrites()) {
         try {
           const result = await this.chainClient.hatchOut({ syndicateId: synId });
           return this.sendJson(res, 200, result);
@@ -444,7 +507,7 @@ export class FlyApiDaemon {
       if (method === 'GET') {
         const pods = this.podsBySyndicate.get(synId) || new Map();
         const list = Array.from(pods.values()).map((p) => p.getPodSummary());
-        return this.sendJson(res, 200, list);
+        return this.sendJson(res, 200, { syndicateId: synId, pods: list }, req);
       }
       if (method === 'POST') {
         const body = await this.parseBody(req);
@@ -599,7 +662,7 @@ export class FlyApiDaemon {
     if (method === 'POST' && pathname === '/v1/emergency/hatch-out') {
       const body = await this.parseBody(req);
       // The block height is never taken from the request: a caller could claim any height and open the timelock early.
-      if (this.mode === 'chain' && this.chainClient?.isConfiguredForWrites()) {
+      if (this.chainWrites()) {
         try {
           return this.sendJson(res, 200, await this.chainClient.hatchOut({ syndicateId: body.syndicateId }), req);
         } catch (err) {
@@ -624,6 +687,12 @@ export class FlyApiDaemon {
 
     if (method === 'GET' && pathname.startsWith('/v1/emergency/timelock/')) {
       const synId = pathname.split('/')[4];
+      if (this.mode === 'chain' && this.chainClient) {
+        const rec = await this.chainClient.getSyndicate(synId).catch(() => null);
+        if (!rec) return this.sendJson(res, 404, { error: 'Syndicate not found' }, req);
+        const now = await this.chainClient.getBlockHeight();
+        return this.sendJson(res, 200, { syndicateId: rec.id, createdAtBlock: Number(rec.created_at_block), timeoutBlocks: Number(rec.timeout_blocks), currentBlock: now, blocksRemaining: Math.max(0, Number(rec.timeout_blocks) - (now - Number(rec.epoch_start_block))) }, req);
+      }
       const syn = this.nest.syndicates.get(synId);
       if (!syn) return this.sendJson(res, 404, { error: 'Syndicate not found' });
       return this.sendJson(res, 200, {

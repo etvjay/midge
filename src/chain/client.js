@@ -196,6 +196,12 @@ export class FlyChainClient {
     return res;
   }
 
+  /** The chain's latest final block height. */
+  async getBlockHeight() {
+    const block = await this.provider.viewBlock({ finality: 'final' });
+    return Number(block.header.height);
+  }
+
   async getSyndicate(syndicateId) {
     return this.callView('get_syndicate', { syndicate_id: syndicateId });
   }

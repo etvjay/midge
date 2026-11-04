@@ -356,7 +356,7 @@ To ensure autonomous agents (such as Claude Code, OpenAI agents, and Codex) can 
 ```
 
 Agents operate in dual modes:
-* **`FLY_MODE=chain`:** Calls live testnet RPC methods via `FlyChainClient`, generating valid cryptographic signatures and broadcasting on-chain transactions.
+* **`FLY_MODE=chain`:** Calls live testnet RPC methods via `FlyChainClient` and broadcasts on-chain transactions. Reads work without credentials. Writes need `NEAR_ACCOUNT_ID` and `NEAR_PRIVATE_KEY` in the environment, or `MIDGE_ENV_FILE=<path to an env file>`; the client no longer reads the repository's `.env` on its own, and without write access a write is refused (HTTP 409 from the API, an error from the MCP server) instead of being answered by the model. The API's hatch, deposit, settle, hatch-out and get-by-id routes, and the MCP's five core tools, are chain-backed in this mode. Facilities, MPC signing, x402 and pods are simulations in every mode and their responses say so.
 * **`FLY_MODE=model`:** Runs an in-process cryptographic state mirror for deterministic offline evaluation, clearly appending `[MODEL MODE, no chain]` notices.
 
 ---

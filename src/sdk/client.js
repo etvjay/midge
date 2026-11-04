@@ -34,7 +34,7 @@ export class FlyClient {
   }
 
   // --- 1. Syndicate Lifecycle ---
-  async hatchSyndicate({ id, syndicateId, type = 'FLASH', quorumThreshold = 3, maxSpendNear = 100, expectedCodeHash, timeoutBlocks = 50 }) {
+  async hatchSyndicate({ id, syndicateId, type = 'FLASH', quorumThreshold = 3, maxSpendNear = 100, expectedCodeHash, timeoutBlocks = 50, enclavePublicKey, allowedRecipients, maxReleaseBpsPerEpoch, settleDeadlineBlock }) {
     const sId = syndicateId || id;
     const res = await this._request('POST', '/v1/syndicates/hatch', {
       id: sId,
@@ -44,6 +44,11 @@ export class FlyClient {
       maxSpendNear,
       expectedCodeHash,
       timeoutBlocks,
+      // chain mode only: the Roost's settlement key (required) and the release policy
+      enclavePublicKey,
+      allowedRecipients,
+      maxReleaseBpsPerEpoch,
+      settleDeadlineBlock,
     });
     return res.data;
   }

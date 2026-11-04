@@ -184,9 +184,8 @@ export default {
         s.assert('the timelock view reports the creation block, the timeout, the model\'s current block and the blocks remaining', tl.json?.timeoutBlocks === 50 && Number.isFinite(tl.json?.createdAtBlock) && tl.json?.currentBlock >= tl.json?.createdAtBlock && tl.json?.blocksRemaining > 0, { actual: tl.json });
         const pod = await raw('POST', `/v1/syndicates/${e2}/pods`, { podId: 'pod-1', podType: 'SCOUT', maxCapitalAllocation: 10 });
         const pods = await raw('GET', `/v1/syndicates/${e2}/pods`);
-        s.assert('a pod can be created and listed', pod.status === 201 && Array.isArray(pods.json) && pods.json.some((p) => p.podId === 'pod-1'), { actual: [pod.status, pods.json] });
-        s.assert('the pods list is a bare array while every other response is an object with a mode field', Array.isArray(pods.json));
-        s.problem('minor', 'GET /v1/syndicates/:id/pods returns a bare array without the "mode" field every other route includes, so a client cannot tell model data from chain data there');
+        s.assert('a pod can be created and listed', pod.status === 201 && Array.isArray(pods.json?.pods) && pods.json.pods.some((p) => p.podId === 'pod-1'), { actual: [pod.status, pods.json] });
+        s.assert('the pods response is an object that says it is the model (it used to be a bare array with no label)', pods.json?.mode === 'model' && /MODEL MODE/.test(pods.json?.notice || ''), { actual: pods.json });
         const unmapped = routes.filter((r) => !sdkViaHttp.has(r.key)).map((r) => r.key);
         s.observe('HTTP routes with no SDK method', unmapped);
         s.problem('minor', `the SDK has no method for ${unmapped.length} HTTP routes: ${unmapped.join('; ')}`);
@@ -238,6 +237,30 @@ export default {
         } finally { await secure.stop(); }
       });
 
+      await ctx.step('chain mode (stub client, no network): each response says what served it, and a write without keys is refused', async (s) => {
+        const rec = { id: 'known-syn', syndicate_type: 'Flash', sub_account: 'known-syn.c.test', status: 'Active', epoch: 1, total_escrow: '20000000000000000000000', quorum_threshold: 1, flyers: ['a.testnet'], round_nonce: 'ab'.repeat(32), enclave_public_key: 'cd'.repeat(32), timeout_blocks: 50, created_at_block: 100, epoch_start_block: 100 };
+        const stub = { accountId: null, isConfiguredForWrites: () => false, listSyndicates: async () => [rec], listSyndicatesByMember: async () => [rec], getSyndicate: async (id) => (id === 'known-syn' ? rec : null), getBlockHeight: async () => 130 };
+        const d = new FlyApiDaemon({ port: 0, mode: 'chain', roostBackend: 'local', chainClient: stub });
+        const { port } = await d.start(); const cb = `http://127.0.0.1:${port}`;
+        const get = async (p, init) => { const r = await fetch(cb + p, init); return { status: r.status, json: await r.json().catch(() => null) }; };
+        try {
+          const list = await get('/v1/syndicates'); s.assert('list is served by the chain', list.json?.mode === 'chain');
+          const one = await get('/v1/syndicates/known-syn');
+          s.assert('get-by-id is served by the chain, in the API shape, with the exact escrow in yocto', one.json?.mode === 'chain' && one.json?.id === 'known-syn' && one.json?.totalEscrow === 0.02 && one.json?.totalEscrowYocto === '20000000000000000000000' && one.json?.roundNonce === rec.round_nonce, { actual: one.json });
+          s.assert('an unknown id is a 404, not an answer from the model', (await get('/v1/syndicates/nope-syn')).status === 404);
+          const tl = await get('/v1/emergency/timelock/known-syn');
+          s.assert('the timelock is read from the chain: 50 blocks from 100, now 130, so 20 remain', tl.json?.mode === 'chain' && tl.json?.blocksRemaining === 20 && tl.json?.currentBlock === 130, { actual: tl.json });
+          const post = (p, body) => get(p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+          const h = await post('/v1/syndicates/hatch', { id: 'new-syn-1', quorumThreshold: 1 });
+          s.assert('hatch without write access is refused with HTTP 409 and instructions (it used to be answered from the model)', h.status === 409 && /NEAR_ACCOUNT_ID/.test(h.json?.error || ''), { actual: [h.status, h.json?.error] });
+          s.assert('so are deposit, settle, hatch-out and the emergency exit', (await Promise.all([post('/v1/syndicates/known-syn/deposit', { amountNear: 1 }), post('/v1/syndicates/known-syn/settle', {}), post('/v1/syndicates/known-syn/hatch-out', {}), post('/v1/emergency/hatch-out', { syndicateId: 'known-syn' })])).every((r) => r.status === 409));
+          const rfq = await post('/v1/facilities/rfq', { borrowerId: 'x.near', requestedAmountUsdc: 1, collateralAsset: 'ETH', collateralAmount: 1, maxAprPercent: 1, durationDays: 1 });
+          s.assert('facilities are labelled model even in chain mode (they never touch the chain)', rfq.json?.mode === 'model' && /MODEL MODE/.test(rfq.json?.notice || ''), { actual: rfq.json?.mode });
+          const sk = await get('/v1/roost/session-key?syndicateId=known-syn');
+          s.assert('the Roost is labelled off-chain, not chain and not model', sk.json?.mode === 'off-chain' && !sk.json?.notice, { actual: sk.json?.mode });
+        } finally { await d.stop(); }
+      });
+
       await ctx.step('one request must not take the server down (found by this experiment)', async (s) => {
         const script = `import { FlyApiDaemon } from ${JSON.stringify(path.join(root, 'src/api/server.js'))};
           const d = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'local' }); const { port } = await d.start();
@@ -275,8 +298,7 @@ export default {
         s.problem('major', 'GAP-015: POST /v1/mpc/sign trusts a haqVerified flag supplied in the request body, so the "no cross-chain signature without a valid attestation" gate is whatever the caller says it is (simulated signing only; no MPC network is called)');
         const syn2 = `gap2-${tag}`; await sdk.hatchSyndicate({ id: syn2, quorumThreshold: 1 }); await sdk.deposit(syn2, 'holder.near', 6);
         const ghost = await raw('POST', '/v1/syndicates/' + syn2 + '/settle', { allocations: [{ recipient: 'x.near', amount: 1 }] });
-        s.assert('GAP-016 (pinned): model-mode settle of an existing syndicate answers SETTLED_MODEL with no signature and no state change', ghost.status === 200 && ghost.json?.status === 'SETTLED_MODEL' && (await raw('GET', '/v1/syndicates/' + syn2)).json?.totalEscrow === 6, { actual: ghost.json?.status });
-        s.problem('minor', 'GAP-016: model-mode /settle acknowledges a request for an existing syndicate with SETTLED_MODEL without checking the allocations or a signature and without changing any state; in chain mode hatch, deposit and get-by-id still use the in-memory model, so one API session mixes chain and model state');
+        s.assert('GAP-016 (fixed): model-mode settle says it is not binding: no signature or allocation was checked and no state changed', ghost.status === 200 && ghost.json?.status === 'SETTLED_MODEL' && ghost.json?.binding === false && /no state changed/.test(ghost.json?.note || '') && (await raw('GET', '/v1/syndicates/' + syn2)).json?.totalEscrow === 6, { actual: ghost.json?.status });
       });
     } finally {
       await ctx.step('stop the daemon', async (s) => { if (daemon) await daemon.stop(); globalThis.fetch = origFetch; s.assert('the daemon stopped', true); }, { always: true });
