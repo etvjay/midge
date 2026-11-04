@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy to lab/lab.config.json. Every field is optional. Nothing here may contain a secret value.",
+  "trackDependencies": ["ethers"],
+  "tools": [{ "name": "docker", "cmd": "docker", "args": ["--version"] }],
+  "pinFiles": ["expected.json"],
+  "secretFiles": { "SERVICE_ADMIN_KEY": "~/.myproject/admin.key" }
+}
