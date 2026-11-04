@@ -68,8 +68,8 @@ export async function runExperiments({ experiments, rootDir, runsDir, repeat = 1
       let steps = 0; let assertions = 0; let failedAssertions = 0; let failedSteps = 0; let skippedSteps = 0; let aborted = false;
       const ctx = {
         id: exp.id, attempt, rootDir, caps, runDir: dir, recorder,
-        async step(name, fn, { critical = false } = {}) {
-          if (aborted) { recorder.event('step.start', { exp: exp.id, step: name, attempt }); recorder.event('skip', { exp: exp.id, step: name, attempt, reason: 'an earlier critical step failed' }); recorder.event('step.end', { exp: exp.id, step: name, attempt, outcome: 'skip', assertions: 0, failed: 0, durationMs: 0 }); skippedSteps += 1; steps += 1; return; }
+        async step(name, fn, { critical = false, always = false } = {}) {
+          if (aborted && !always) { recorder.event('step.start', { exp: exp.id, step: name, attempt }); recorder.event('skip', { exp: exp.id, step: name, attempt, reason: 'an earlier critical step failed' }); recorder.event('step.end', { exp: exp.id, step: name, attempt, outcome: 'skip', assertions: 0, failed: 0, durationMs: 0 }); skippedSteps += 1; steps += 1; return; }
           steps += 1;
           recorder.event('step.start', { exp: exp.id, step: name, attempt });
           const { s, state } = makeStep(recorder, exp.id, name, attempt);

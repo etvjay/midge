@@ -107,6 +107,7 @@ export default {
         make('T-MISSING-CAP', async (c) => { await c.step('a', (x) => x.assert('never runs', true)); }, { requires: ['phala-key-that-does-not-exist'] }),
         make('T-CRITICAL', async (c) => { await c.step('setup', (x) => x.assert('setup fails', false), { critical: true }); await c.step('later', (x) => x.assert('would pass', true)); }),
         make('T-OUTSIDE', async () => { throw new Error('thrown before any step'); }),
+        make('T-ALWAYS', async (c) => { await c.step('setup', (x) => x.assert('setup fails', false), { critical: true }); await c.step('skipped normally', (x) => x.assert('x', true)); await c.step('teardown still runs', (x) => x.assert('cleaned up', true), { always: true }); }),
         make('T-FLAKY', async (c) => { flip += 1; await c.step('a', (x) => x.assert('passes only every other time', flip % 2 === 1)); }),
       ];
       const { dir, summary } = await runExperiments({ experiments: exps, rootDir: ctx.rootDir, runsDir, repeat: 2 });
@@ -118,6 +119,7 @@ export default {
       s.assert('an explicit skip yields PARTIAL, not PASS', v('T-SKIP-STEP') === 'PARTIAL', { actual: v('T-SKIP-STEP') });
       s.assert('a missing capability yields SKIP with the reason recorded', v('T-MISSING-CAP') === 'SKIP' && readEvents(dir).some((e) => e.type === 'exp.end' && e.exp === 'T-MISSING-CAP' && /missing capability/.test(e.reason || '')));
       s.assert('a failed critical step skips the later steps', v('T-CRITICAL') === 'FAIL' && readEvents(dir).some((e) => e.type === 'skip' && e.step === 'later' && /critical/.test(e.reason)));
+      s.assert('a step marked always runs even after a critical failure (teardown must not be skipped)', readEvents(dir).some((e) => e.type === 'assert' && e.exp === 'T-ALWAYS' && e.claim === 'cleaned up') && readEvents(dir).some((e) => e.type === 'skip' && e.exp === 'T-ALWAYS' && e.step === 'skipped normally'));
       s.assert('a result that changes between attempts is reported as FLAKY', v('T-FLAKY') === 'FLAKY', { actual: summary.verdicts['T-FLAKY'] });
       s.assert('an experiment that throws outside any step fails and is recorded as critical', v('T-OUTSIDE') === 'FAIL' && collectProblems(readEvents(dir)).some((p) => p.exp === 'T-OUTSIDE' && p.severity === 'critical'), { actual: v('T-OUTSIDE') });
       const audited = auditRun(dir);
