@@ -14,7 +14,7 @@ import { ConfidentialComputeSyndicate } from '../facilities/compute-syndicate.js
 import { ResilienceEngine } from '../resilience/failure-matrix.js';
 
 export class FlyApiDaemon {
-  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null, roostBackend = null, chainClient = null } = {}) {
+  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null, roostBackend = null, chainClient = null, roostOptions = {}, simulateHaq = false } = {}) {
     this.port = port;
     this.host = host;
     this.allowedOrigins = allowedOrigins;
@@ -33,6 +33,9 @@ export class FlyApiDaemon {
     // aggregating for syndicate B totalled and cleared syndicate A's bids (GAP-014). Backend 'auto' picks model-sealed
     // with a NEARAI_API_KEY, else a local simulation. The hosted Roost is not served by this API: it has its own service.
     this.roostBackend = roostBackend;
+    this.roostOptions = roostOptions;
+    // An operator's explicit, visible choice to pretend the attestation gate passed (demos). Never taken from a request.
+    this.simulateHaq = simulateHaq === true;
     this.roosts = new Map();
     this.maxRoosts = 1000;
     this.farShard = new FarPrivateShardBridge();
@@ -98,6 +101,24 @@ export class FlyApiDaemon {
     };
   }
 
+  /**
+   * Is the attestation gate for this syndicate's Roost satisfied? Decided here, from the Roost this server holds, never
+   * from the request (a caller-supplied haqVerified made the gate whatever the caller said: GAP-015).
+   * Verified means: a model-sealed Roost whose attestation passed every check with the Intel certificate chain required.
+   */
+  async haqFor(subAccount) {
+    if (this.simulateHaq) return { verified: true, basis: 'SIMULATED: this server was started with simulateHaq, an operator choice; nothing was verified' };
+    const synId = String(subAccount || '').split('.')[0];
+    const roost = this.roosts.get(synId);
+    if (!roost) return { verified: false, basis: `no Roost exists for syndicate '${synId}', so there is nothing to verify` };
+    const backend = roost.describe().backend;
+    if (backend !== 'model-sealed') return { verified: false, basis: `the Roost for '${synId}' is a ${backend} Roost, which has no hardware attestation` };
+    if (roost.chain !== 'required') return { verified: false, basis: "the Roost does not require the Intel certificate chain; start the server with roostOptions: { chain: 'required' }" };
+    const att = await roost.ensureAttested().catch((e) => ({ checks: [], error: e.message }));
+    const ok = att.checks.length > 0 && att.checks.every((c) => c.ok);
+    return { verified: ok, basis: ok ? `model-sealed Roost attested with the certificate chain (TCB ${att.tcbStatus})` : `attestation failed: ${att.error || att.checks.filter((c) => !c.ok).map((c) => c.name).join('; ')}` };
+  }
+
   /** The Roost for one syndicate. Throws a 400 for a missing or malformed id and a 503 when too many are live. */
   roostFor(syndicateId, { create = true } = {}) {
     if (typeof syndicateId !== 'string' || !/^[a-z0-9_-]{3,64}$/.test(syndicateId)) {
@@ -108,7 +129,7 @@ export class FlyApiDaemon {
     if (!this.roosts.has(syndicateId)) {
       if (!create) return null;
       if (this.roosts.size >= this.maxRoosts) { const err = new Error('Too many live Roosts'); err.statusCode = 503; throw err; }
-      this.roosts.set(syndicateId, createRoost({ backend: this.roostBackend }));
+      this.roosts.set(syndicateId, createRoost({ backend: this.roostBackend, ...this.roostOptions }));
     }
     return this.roosts.get(syndicateId);
   }
@@ -646,12 +667,21 @@ export class FlyApiDaemon {
     if (method === 'POST' && pathname === '/v1/mpc/sign') {
       const body = await this.parseBody(req);
       // requestThresholdSignature is async: without the await a valid request answered "{}" and a rejected one
-      // (e.g. haqVerified false) became an unhandled rejection that terminated the whole process.
+      // became an unhandled rejection that terminated the whole process.
+      // Only named fields are forwarded. The body used to be passed whole, so a caller chose haqVerified AND simulate
+      // (simulate:false would have asked for a live signature with this server's key).
+      const haq = await this.haqFor(body.syndicateSubAccount);
       try {
-        const sig = await this.mpc.requestThresholdSignature(body);
-        return this.sendJson(res, 200, sig, req);
+        const sig = await this.mpc.requestThresholdSignature({
+          syndicateSubAccount: body.syndicateSubAccount,
+          targetChain: body.targetChain,
+          payloadHash: body.payloadHash,
+          haqVerified: haq.verified,
+          simulate: true,
+        });
+        return this.sendJson(res, 200, { ...sig, haqBasis: haq.basis }, req);
       } catch (err) {
-        if (/MPC REJECT/.test(err.message)) return this.sendJson(res, 403, { error: err.message }, req);
+        if (/MPC REJECT/.test(err.message)) return this.sendJson(res, 403, { error: err.message, haqBasis: haq.basis }, req);
         throw err;
       }
     }
