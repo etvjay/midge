@@ -68,7 +68,10 @@ export async function connect(rootDir, { rpc = process.env.LAB_NEAR_RPC || 'http
     let res; let thrown = null;
     try { res = await account.callFunctionRaw({ contractId, methodName, args, deposit, gas }); } catch (e) { thrown = e; }
     const outcome = res || thrown?.outcome || thrown?.result || null;
-    const hash = res?.transaction?.hash || res?.transaction_outcome?.id || thrown?.transaction?.hash || thrown?.context?.transactionHash || null;
+    // near-api-js puts the hash of a transaction that failed on chain on the error (transactionResult for a contract panic,
+    // txHash for an action error). Without it a rejected attack
+    // was recorded with no hash and so no explorer link (42 rejections in the promoted runs have none).
+    const hash = res?.transaction?.hash || res?.transaction_outcome?.id || thrown?.transactionResult?.transaction?.hash || thrown?.transactionResult?.transaction_outcome?.id || thrown?.txHash || thrown?.transaction?.hash || thrown?.context?.transactionHash || null;
     const failure = res?.status?.Failure || res?.receipts_outcome?.map((r) => r.outcome?.status?.Failure).find(Boolean) || null;
     const ok = !thrown && !failure;
     const error = ok ? null : String(thrown?.message || JSON.stringify(failure) || 'failed').slice(0, 400);
