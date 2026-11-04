@@ -432,6 +432,12 @@ export default {
         const implicit = new FlyChainClient();
         s.assert('GAP-018 (fixed): a client built with no arguments and no environment has no write access, even though the repository has a .env', implicit.isConfiguredForWrites() === false, { actual: implicit.accountId });
       } finally { for (const [k, v] of [['NEAR_ACCOUNT_ID', saved.a], ['NEAR_PRIVATE_KEY', saved.k], ['MIDGE_ENV_FILE', saved.f]]) if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+      const savedC = process.env.COORDINATOR_ID; delete process.env.COORDINATOR_ID;
+      try {
+        s.assert('a client that holds an account defaults to that account\'s own contract, c.<account> (it used to default to the author\'s contract for everyone)', new FlyChainClient({ accountId: 'someone.testnet', privateKey: key.keyPair.toString() }).contractId === 'c.someone.testnet');
+        s.assert('a client with no account (read-only) falls back to the public demonstration contract', new FlyChainClient().contractId === 'c.fly-1793636729.testnet');
+        s.assert('an explicit contractId always wins', new FlyChainClient({ accountId: 'someone.testnet', privateKey: key.keyPair.toString(), contractId: 'other.testnet' }).contractId === 'other.testnet');
+      } finally { if (savedC !== undefined) process.env.COORDINATOR_ID = savedC; }
       const refuses = async (fn) => fn().then(() => false, (e) => e.message);
       s.assert('hatch without an enclave key is refused before anything is sent', /enclavePublicKey/.test(await refuses(() => c.hatch({ syndicateId: 'abc' })) || ''));
       s.assert('hatch with an all-zero enclave key is refused (nobody could ever settle it)', /not all zeros/.test(await refuses(() => c.hatch({ syndicateId: 'abc', enclavePublicKey: '0'.repeat(64) })) || ''));

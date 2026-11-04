@@ -57,7 +57,7 @@ export default {
     await ctx.step('preflight: write access, deployed contract, balances, storage headroom', async (s) => {
       // Write access is passed in explicitly: the chain client no longer reads the repository's .env on its own (GAP-018).
       const env = loadEnvFile(ctx.rootDir);
-      chainClient = new FlyChainClient({ accountId: env.NEAR_ACCOUNT_ID, privateKey: env.NEAR_PRIVATE_KEY });
+      chainClient = new FlyChainClient({ accountId: env.NEAR_ACCOUNT_ID, privateKey: env.NEAR_PRIVATE_KEY, contractId: chain.coordinatorId });
       mcp = new FlyMcpServer({ mode: 'chain', chainClient });
       s.assert('the MCP server is in chain mode and can write', mcp.mode === 'chain' && mcp.chainClient?.isConfiguredForWrites(), { actual: mcp.mode });
       s.assert('the interface account is the lab\'s master account', mcp.chainClient?.accountId === chain.masterId, { actual: mcp.chainClient?.accountId });

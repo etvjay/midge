@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { HostedRoost } from '../../src/roost-service/hosted-roost.js';
 import { sealToModel } from '../../src/enclave/e2ee.js';
 import { near, fmt, sleep, computePolicyHash } from '../lib/near.js';
-import { expectedCodeHash } from '../lib/contract.js';
+import { expectedCodeHash as resolveExpectedCodeHash } from '../lib/contract.js';
 
 /**
  * A full syndicate round on NEAR testnet against a hosted Roost, as a sequence of recorded steps:
@@ -72,7 +72,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     s.assert('the master account can pay for hatching (0.1 NEAR)', have[chain.masterId] > near('0.1'));
     const hash = await chain.codeHash();
     s.observe('deployed code hash', hash);
-    const want = expectedCodeHash(ctx.rootDir);
+    const want = resolveExpectedCodeHash(ctx.rootDir);
     s.assert(`the deployed contract is the build expected from ${want.source}`, hash === want.hash, { expected: want.hash, actual: hash });
     // The contract account pays for its own code and state (1e19 yocto per byte) out of the same balance that holds
     // escrow. When headroom ran out, hatch failed mid-run with "lacks balance for state"; check it up front instead.
