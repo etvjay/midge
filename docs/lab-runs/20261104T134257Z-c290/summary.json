@@ -1,0 +1,39 @@
+{
+  "runId": "20261104T134257Z-c290",
+  "startedAt": "2026-11-04T13:42:57.020Z",
+  "rootHash": "bef1b2862aef66f952c255446a8405c2be2733fa169405f6dd688f9f31cb9957",
+  "verdicts": {
+    "E-LAB-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-SUITE-OFFLINE": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CHECK-FOUNDRY": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-RUST-CONTRACT": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-IFACE-MODEL": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 531,
+  "commit": "6935b3ec12940f7c565c04d36d167e53067245d4"
+}

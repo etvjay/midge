@@ -1,0 +1,76 @@
+
+======================================================
+ [VERIFICATION 10] MODEL-SEALED ROOST (E2EE TO NEAR AI MODEL TEE)
+ Target: bids sealed to an attested key, coordinator holds ciphertext only
+======================================================
+
+[1/8] Attestation of the model key
+  ✓ accepts a model attestation whose quote binds our nonce and the model key (7 checks)
+  ✓ keeps the attested model public key
+  ✓ rejects: nonce missing from the quote
+  ✓ rejects: model key missing from the quote
+  ✓ rejects: quote with the wrong version
+  ✓ rejects: attestation for a different model
+  ✓ rejects: report with no candidates
+
+[2/8] Sealing and aggregation
+  ✓ three sealed bids aggregate to the exact total
+  ✓ every run agrees (3/3)
+  ✓ every response signature verifies against the attested key
+  ✓ queue is cleared after a successful round
+  ✓ the coordinator never held a bid in the clear (marker absent from state and from every request on the wire)
+  ✓ model-sealed round reports its limits honestly
+
+[3/8] Fail-closed behaviour
+  ✓ rejects: runs that disagree
+  ✓   ...and keeps the ciphertext for a retry (runs that disagree)
+  ✓ rejects: a count that does not match the bids submitted
+  ✓   ...and keeps the ciphertext for a retry (a count that does not match the bids submitted)
+  ✓ rejects: a plaintext reply instead of an encrypted one
+  ✓   ...and keeps the ciphertext for a retry (a plaintext reply instead of an encrypted one)
+  ✓ rejects: a tampered encrypted reply
+  ✓   ...and keeps the ciphertext for a retry (a tampered encrypted reply)
+  ✓ rejects: a reply with an extra field (a leaked bid)
+  ✓   ...and keeps the ciphertext for a retry (a reply with an extra field (a leaked bid))
+  ✓ rejects: a reply with extra text around the JSON
+  ✓   ...and keeps the ciphertext for a retry (a reply with extra text around the JSON)
+  ✓ rejects: a signature that does not verify
+  ✓   ...and keeps the ciphertext for a retry (a signature that does not verify)
+  ✓ rejects: a signature from a key that is not the attested model key
+  ✓   ...and keeps the ciphertext for a retry (a signature from a key that is not the attested model key)
+
+[4/8] Key rotation
+  ✓ rejects when the model key changed since bids were sealed
+  ✓ reset() drops stale ciphertext
+
+[5/8] Input validation
+  ✓ rejects non-hex ciphertext
+  ✓ rejects ciphertext that is too short
+  ✓ rejects ciphertext that is too long
+  ✓ rejects a second bid from the same flyer
+  ✓ rejects aggregating an empty round
+  ✓ rejects bids beyond the round capacity
+  ✓ a bid sealed to a different key cannot be used (gateway cannot decrypt it)
+
+[6/8] Scale and backend selection
+  ✓ 50 sealed bids aggregate to the exact total
+  ✓ factory builds the local simulation when asked for it by name
+  ✓ factory builds the model-sealed backend
+  ✓ factory rejects an unknown backend
+  ✓ local backend states plainly that it hides nothing
+
+[7/8] Default backend and member-side key verification
+  ✓ default is model-sealed when a NEAR AI key is configured
+  ✓ default falls back to the local simulation only without a key, and says it fell back
+  ✓ asking for the local simulation by name is not a fallback
+  ✓ a key in the environment selects model-sealed
+  ✓ a member verifies the attestation without an API key
+  ✓ bids sealed by members after their own verification aggregate correctly
+  ✓ a member refuses a key the coordinator asserts but the attestation does not support
+  ✓ a member refuses when the attestation does not verify
+  ✓ a member refuses to treat a local-simulation session as sealed
+
+[8/8] The API key stays out of serialised state
+  ✓ API key is not reachable through JSON
+
+>>> [PASS] MODEL-SEALED ROOST: 53 checks passed against a mock gateway (live behaviour: npm run verify:roost-model).

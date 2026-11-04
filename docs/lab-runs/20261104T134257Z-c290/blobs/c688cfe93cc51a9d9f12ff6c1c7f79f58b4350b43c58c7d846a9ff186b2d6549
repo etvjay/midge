@@ -1,0 +1,22 @@
+======================================================
+ [VERIFICATION 6] OTC BLOCK TRADES & COMPUTE SYNDICATE
+ Target: Confidential Dark Matching & Pooled AI Enclaves
+======================================================
+[1/4] Instantiating OTC Block Trade Facility in Roost TEE...
+  ✓ Sealed Orders Ingested: 1 BUY (otc_f9669edea985732893e7fff4), 1 SELL (otc_d9db6765541114d3a477e388)
+[2/4] Crossing orders at mid-market clearing price ($4.00 / NEAR)...
+  ✓ Matched Volume:    50,000 wNEAR for 200,000 USDC
+  ✓ Clearing Price:    $4.00
+  ✓ Settlement Shard:  FAR_PRIVATE_SHARD_01
+  ✓ MEV Protection:    ZERO_SLIPPAGE_ZERO_FRONT_RUNNING
+
+[3/4] Initializing Confidential AI Compute Syndicate (Use Case B)...
+  ✓ Pooled Compute Pool: 15 NEAR across 3 agents
+[4/4] Executing sealed inference on NEAR AI Cloud (Qwen/Qwen3.6-35B-A3B-FP8)...
+  ✓ Hardware Attested:   YES (Intel TDX)
+  ✓ Model Signer:        0xfdbd7952498b333206f360d71d97a1e0961e8ddf
+  ✓ Privacy Protection:  ZERO_PROMPT_LOGGING_TEE_ISOLATION
+  ✓ Result Digest:       f57ca95bd5b84283d46c2e54...
+
+>>> [PASS] OTC BLOCK TRADES & COMPUTE SYNDICATE VERIFIED (Simulated Facility).
+
