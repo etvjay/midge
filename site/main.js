@@ -62,12 +62,6 @@ function lock(ctx, x, y, s, color, alpha = 1) {
 function tick(ctx, x, y, s, color, alpha = 1) { ctx.save(); ctx.globalAlpha *= alpha; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - s * 0.5, y); ctx.lineTo(x - s * 0.1, y + s * 0.4); ctx.lineTo(x + s * 0.55, y - s * 0.45); ctx.stroke(); ctx.restore(); }
 function cross(ctx, x, y, s, color, alpha = 1) { ctx.save(); ctx.globalAlpha *= alpha; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - s / 2, y - s / 2); ctx.lineTo(x + s / 2, y + s / 2); ctx.moveTo(x + s / 2, y - s / 2); ctx.lineTo(x - s / 2, y + s / 2); ctx.stroke(); ctx.restore(); }
 const quad = (a, c, b, p) => ({ x: (1 - p) * (1 - p) * a.x + 2 * (1 - p) * p * c.x + p * p * b.x, y: (1 - p) * (1 - p) * a.y + 2 * (1 - p) * p * c.y + p * p * b.y });
-function dotField(ctx, w, h, t, { step = 26, alpha = 0.5 } = {}) {
-  ctx.save(); ctx.fillStyle = C.faint; ctx.globalAlpha = alpha;
-  const off = (t * 6) % step;
-  for (let y = step / 2; y < h; y += step) for (let x = step / 2 - off; x < w + step; x += step) ctx.fillRect(x, y, 1.2, 1.2);
-  ctx.restore();
-}
 // A room: the private place a syndicate decides in. Glows while it deliberates.
 function room(ctx, x, y, r, { glow = 0.6, color = C.lake, label = null, alpha = 1, dark = false } = {}) {
   ctx.save(); ctx.globalAlpha *= alpha;
@@ -130,7 +124,6 @@ S.hero = {
     s.base = h - (mobile ? 40 : 56);
   },
   draw(ctx, w, h, t, s) {
-    dotField(ctx, w, h, t, { step: 28, alpha: 0.7 });
     // NEAR: the one contract every room settles to.
     line(ctx, w * 0.04, s.base, w * 0.96, s.base, C.line, 1, 0.8);
     text(ctx, 'NEAR · one contract · every syndicate settles here', w * 0.96, s.base + 16, { size: 11, color: C.ink2, align: 'right', alpha: 0.8 });
@@ -139,7 +132,7 @@ S.hero = {
     for (let k = 0; k < ag.length; k++) { const a = ag[k], b = ag[(k + 1) % ag.length]; line(ctx, a.x, a.y, b.x, b.y, C.glow, 1, 0.22 * ease(seg(t, 2.5, 4)), [3, 5]); }
     for (const [i, rm] of s.rooms.entries()) {
       const born = ease(seg(t, rm.born, rm.born + 0.9)); if (born <= 0) continue;
-      const g = 0.35 + 0.35 * Math.sin(t * 1.3 + rm.ph) + (i === s.agentRooms[0] ? 0.2 : 0);
+      const g = 0.4 + 0.16 * Math.sin(t * 1.1 + rm.ph);
       room(ctx, rm.x, rm.y, rm.r * born, { glow: g * born, alpha: born });
       for (let m = 0; m < rm.n; m++) {
         const a = rm.ph + m * (6.283 / rm.n) + t * rm.sp; const rr = rm.r * 1.55;
@@ -224,11 +217,10 @@ S.room = {
     const kinds = [['NEAR AI Cloud', 'an attested model'], ['Phala confidential machine', 'our own program']]; const kind = kinds[cyc % 2];
     const bids = ['1.20', '0.80', '2.40', '0.50', '1.10'];
     const rx = w * 0.58, ry = h * 0.47, rw = Math.min(w * 0.34, 220), rh = h * 0.46;
-    dotField(ctx, w, h, t, { step: 24, alpha: 0.5 });
     const think = 0.4 + 0.4 * Math.sin(lt * 3) * seg(lt, 3, 3.5) * (1 - seg(lt, 5.4, 5.8));
     glowAt(ctx, rx, ry, rw, 'rgba(124,196,184,0.35)', 0.35 + think);
     box(ctx, rx - rw / 2, ry - rh / 2, rw, rh, { r: 14, stroke: C.lake, fill: '#111a1b', lw: 1.2 });
-    text(ctx, 'THE ROOM · secure hardware (TEE)', rx, ry - rh / 2 - 14, { size: 10, color: C.lake, align: 'center' });
+    text(ctx, 'The room · secure hardware (TEE)', rx, ry - rh / 2 - 14, { size: 10, color: C.lake, align: 'center' });
     const ka = 1 - seg(lt, P - 0.6, P) ;
     text(ctx, kind[0], rx, ry - rh / 2 + 22, { size: 15, color: C.ink, align: 'center', font: SERIF, alpha: ka * ease(seg(lt, 0, 0.5)) });
     text(ctx, kind[1], rx, ry - rh / 2 + 40, { size: 11, color: C.dim, align: 'center', alpha: ka * ease(seg(lt, 0, 0.5)) });
@@ -262,10 +254,9 @@ S.rules = {
     const items = [['alice', '0.40', true, ''], ['thief', '0.40', false, 'not an allowed recipient'], ['bob', '0.30', true, ''], ['alice', '0.40', false, 'replay: signature already used'], ['alice', '9.00', false, 'more than the cap for this round']];
     const D = 1.8; const P = items.length * D + 1; const lt = t % P;
     const wx = w * 0.6; const sx = w * 0.1;
-    dotField(ctx, w, h, t, { step: 24, alpha: 0.4 });
     box(ctx, wx - 3, 40, 6, h - 80, { r: 3, stroke: null, fill: 'rgba(124,196,184,0.5)' });
     glowAt(ctx, wx, h / 2, h * 0.5, 'rgba(124,196,184,0.18)', 1);
-    text(ctx, 'THE RULES · fixed on NEAR', wx, 24, { size: 10, color: C.lake, align: 'center' });
+    text(ctx, 'The rules · fixed on NEAR', wx, 24, { size: 10, color: C.lake, align: 'center' });
     ['pay only: alice, bob', 'at most 20% per round', 'until block 500,000,000'].forEach((r, i) => text(ctx, r, wx + 16, 56 + i * 17, { size: 11, color: C.ink2 }));
     room(ctx, sx, h * 0.55, 18, { glow: 0.5 }); text(ctx, 'the room signs', sx, h * 0.55 + 34, { size: 10, color: C.dim, align: 'center' });
     text(ctx, 'alice', w - 20, h * 0.42, { size: 12, color: C.ink, align: 'right' }); text(ctx, 'bob', w - 20, h * 0.68, { size: 12, color: C.ink, align: 'right' });
@@ -301,7 +292,7 @@ S.exit = {
     ctx.stroke(); ctx.restore();
     // the Nest: the contract holding four members' shares
     const shares = [0.3, 0.2, 0.35, 0.15]; const nw = Math.min(w * 0.5, 280); const nh = 34; let x = nx - nw / 2;
-    text(ctx, 'THE NEST · the contract on NEAR', nx, ny - nh / 2 - 14, { size: 10, color: C.dim, align: 'center' });
+    text(ctx, 'The Nest · the contract on NEAR', nx, ny - nh / 2 - 14, { size: 10, color: C.dim, align: 'center' });
     box(ctx, nx - nw / 2 - 4, ny - nh / 2 - 4, nw + 8, nh + 8, { r: 8, stroke: C.line });
     shares.forEach((s, i) => {
       const sw = nw * s - 3; const mine = i === 2; const cols = [C.blue, '#6f8f7c', C.glow, '#8a7fa8'];
@@ -366,7 +357,6 @@ S.network = {
     const k = easeIO(seg(lt, 0.3, 3.2)); const ox = lerp(-fx, 0, k), oy = lerp(-fy, 0, k);
     const P2 = (rm) => ({ x: cx + (Math.cos(rm.a) * rm.d * M + ox) * z, y: cy + (Math.sin(rm.a) * rm.d * M * 0.82 + oy) * z });
     const ccx = cx + ox * z, ccy = cy + oy * z;
-    dotField(ctx, w, h, t, { step: 22, alpha: 0.4 });
     for (const rm of s.rooms) { const p = P2(rm); line(ctx, ccx, ccy, p.x, p.y, C.line, 1, 0.5 * k + 0.1); }
     const pa = s.agent.map((i) => P2(s.rooms[i]));
     const ax = cx + (w * 0.33 + ox) * z * 0.6, ay = cy - M * 0.36 * z * 0.6 + oy * z * 0.3;
@@ -486,6 +476,13 @@ for (const c of $$('canvas[data-scene]')) { const sc = S[c.dataset.scene]; if (s
 
 // ---------------------------------------------------------------- page behaviour
 const header = $('.site-header');
+const menuBtn = $('.menu-btn'), nav = $('#nav');
+if (menuBtn && nav) {
+  const setOpen = (open) => { nav.classList.toggle('open', open); menuBtn.setAttribute('aria-expanded', String(open)); menuBtn.textContent = open ? 'Close' : 'Menu'; };
+  menuBtn.addEventListener('click', () => setOpen(!nav.classList.contains('open')));
+  nav.addEventListener('click', (e) => { if (e.target.closest('a')) setOpen(false); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && nav.classList.contains('open')) { setOpen(false); menuBtn.focus(); } });
+}
 const darkZones = () => [$('.hero'), $('#proof'), $('.site-footer')];
 const onScroll = () => { const y = 30; const dark = darkZones().some((el) => { const r = el.getBoundingClientRect(); return r.top <= y && r.bottom >= y; }); header.classList.toggle('on-light', !dark); };
 addEventListener('scroll', onScroll, { passive: true }); onScroll();
@@ -511,6 +508,8 @@ async function rpc(method, params) {
   throw last;
 }
 const view = async (method, args = {}) => { const r = await rpc('query', { request_type: 'call_function', finality: 'final', account_id: CONTRACT, method_name: method, args_base64: btoa(JSON.stringify(args)) }); return { value: JSON.parse(new TextDecoder().decode(new Uint8Array(r.result))), block: r.block_height }; };
+const PR = new Intl.PluralRules('en');
+const plural = (n, one, other) => `${n.toLocaleString('en-US')} ${PR.select(n) === 'one' ? one : other}`;
 const short = (s, n = 12) => (s && s.length > n * 2 + 1 ? `${s.slice(0, n)}…${s.slice(-6)}` : s || '');
 const near = (yocto) => { const v = Number(BigInt(yocto || '0') / 10n ** 20n) / 10000; return v.toLocaleString('en-US', { maximumFractionDigits: 4 }); };
 
@@ -535,7 +534,7 @@ function row(list, ok, label, detail) {
     const s = newest[newest.length - 1];
     if (s) {
       const pol = s.release_policy || {};
-      row(list, Boolean(s.policy_hash), `The newest syndicate's rules are on chain`, `${s.id}: ${(pol.allowed_recipients || []).length} allowed recipient(s), at most ${(pol.max_release_bps_per_epoch || 0) / 100}% per round, policy hash ${short(s.policy_hash, 8)}`);
+      row(list, Boolean(s.policy_hash), `The newest syndicate's rules are on chain`, `${s.id}: ${plural((pol.allowed_recipients || []).length, 'allowed recipient', 'allowed recipients')}, at most ${(pol.max_release_bps_per_epoch || 0) / 100}% per round, policy hash ${short(s.policy_hash, 8)}`);
       row(list, true, 'Its exit timer is set', `exit opens ${s.timeout_blocks} blocks after the round starts; epoch ${s.epoch}, nonce ${short(s.round_nonce, 6)}`);
     }
     note.textContent = 'Read just now by your browser. Anyone can make the same calls; the contract\'s rules cannot be changed after a syndicate is created.';
@@ -558,13 +557,14 @@ function row(list, ok, label, detail) {
   const tip = document.createElement('div'); tip.className = 'proof-tip'; document.body.appendChild(tip);
   data.transactions.forEach((tx, i) => {
     const a = document.createElement('a'); a.href = `${NB}/txns/${tx.hash}`; a.target = '_blank'; a.rel = 'noopener'; a.className = `k-${tx.kind}`; a.setAttribute('role', 'listitem');
-    a.setAttribute('aria-label', `${names[tx.kind]}: ${tx.label}${tx.error ? `, refused: ${tx.error}` : ''}. Opens NearBlocks.`);
+    a.setAttribute('aria-label', `Transaction ${i + 1} of ${data.transactions.length}, ${names[tx.kind]}: ${tx.label}${tx.error ? `, refused: ${tx.error}` : ''}, hash ${short(tx.hash, 6)}. Opens NearBlocks.`);
     a.style.transitionDelay = `${Math.min(i * 5, 900)}ms`;
     const show = (ev) => { tip.textContent = `${names[tx.kind]} · ${tx.label}${tx.error ? ` · ${tx.error}` : ''} · ${short(tx.hash, 6)}`; const r = a.getBoundingClientRect(); tip.style.left = `${Math.min(innerWidth - 330, Math.max(8, r.left - 20))}px`; tip.style.top = `${r.bottom + 8}px`; tip.classList.add('on'); };
     a.addEventListener('mouseenter', show); a.addEventListener('focus', show); a.addEventListener('mouseleave', () => tip.classList.remove('on')); a.addEventListener('blur', () => tip.classList.remove('on'));
     grid.appendChild(a);
   });
   io.observe(grid);
+  const skip = $('.proof-skip'); if (skip) skip.textContent = `Skip the ${data.transactions.length} transaction links`;
   const runs = new Set(data.transactions.map((t) => t.run)).size;
   note.textContent = `${data.transactions.length} transactions from ${runs} recorded runs on ${CONTRACT}. Attempts that NEAR refused before they ran (for example a call the key does not allow) never become transactions, so they are not dots; the agent console under Who joins shows them.`;
 

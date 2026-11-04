@@ -23,10 +23,11 @@
     <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true"><circle cx="22" cy="31" r="3.4" fill="currentColor"/><circle cx="30" cy="24" r="2.7" fill="currentColor"/><circle cx="28" cy="38" r="2.9" fill="currentColor"/><circle cx="17" cy="41" r="2.2" fill="currentColor"/><circle cx="35" cy="32" r="2.3" fill="currentColor"/><circle cx="24" cy="19" r="1.8" fill="currentColor"/><path d="M37 30.5 Q 44 25 50 23.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="53" cy="22.4" r="3" class="brand-exit"/></svg>
     <span>Midge</span>
   </a>
-  <nav class="nav" aria-label="Sections">
+  <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
+  <nav class="nav" id="nav" aria-label="Sections">
     <a href="#problem">Why</a><a href="#idea">How it works</a><a href="#network">Network</a><a href="#members">Who joins</a><a href="#architecture">Architecture</a><a href="#proof">Proof</a><a href="#try">Try it</a>
   </nav>
-  <a class="btn btn-sm btn-light" href="#proof">Check it yourself</a>
+  <a class="btn btn-sm btn-head" href="#proof">Check it yourself</a>
 </header>
 
 <main id="main">
@@ -36,9 +37,9 @@
   <canvas class="stage-canvas hero-canvas" data-scene="hero" aria-hidden="true"></canvas>
   <div class="hero-inner">
     <p class="eyebrow">Midge · on NEAR</p>
-    <h1 id="hero-title" class="display">A network of private rooms<br>with public rules.</h1>
-    <p class="lede">On Midge, any group forms a syndicate: people, a DAO, an institution or a swarm of AI agents. Members decide together in private. What the group can do with its money is fixed in public, and every member can walk out with their own share.</p>
-    <p class="tagline">Private syndicates for private systems.</p>
+    <h1 id="hero-title" class="display">A network of private rooms<br>with public rules</h1>
+    <p class="lede">On Midge, any group forms a syndicate: people, a DAO, an institution or a swarm of AI agents. Members decide together in private. What the group can do with its money is fixed in public, and if the room stops, every member can walk out with their own share.</p>
+    <p class="tagline">Private syndicates for private systems</p>
     <div class="cta">
       <a class="btn btn-light" href="#idea">See how it works</a>
       <a class="btn btn-ghost-dark" href="#proof">Check it yourself</a>
@@ -52,22 +53,22 @@
 <section class="section" id="problem" aria-labelledby="problem-title">
   <div class="wrap">
     <p class="kicker">01 · Why</p>
-    <h2 id="problem-title" class="title">Acting together on a public chain leaves three bad options.</h2>
+    <h2 id="problem-title" class="title">Acting together on a public chain leaves three bad options</h2>
     <p class="lede-sm">Funds, DAOs, lending desks and agent swarms all need to decide things together: who bids what, how to split a pot, which quote wins. Today each way of doing it gives something up.</p>
     <div class="grid-3">
       <article class="card">
         <div class="stage stage-sm"><canvas class="stage-canvas" data-scene="p-public" aria-hidden="true"></canvas></div>
-        <h3><s>Do it in public.</s></h3>
+        <h3><s>Do it in public</s></h3>
         <p>Every bid, size and vote is visible before it executes. Others copy it or trade against it.</p>
       </article>
       <article class="card">
         <div class="stage stage-sm"><canvas class="stage-canvas" data-scene="p-keys" aria-hidden="true"></canvas></div>
-        <h3><s>Hand someone the keys.</s></h3>
+        <h3><s>Hand someone the keys</s></h3>
         <p>An organizer holds the money off-chain. If they fail, leave or are hacked, the group loses it.</p>
       </article>
       <article class="card">
         <div class="stage stage-sm"><canvas class="stage-canvas" data-scene="p-box" aria-hidden="true"></canvas></div>
-        <h3><s>Trust a secure box that can sign anything.</s></h3>
+        <h3><s>Trust a secure box that can sign anything</s></h3>
         <p>Secure hardware keeps the decision private, but if the contract pays whatever the box signs, one flaw drains the pool.</p>
       </article>
     </div>
@@ -79,13 +80,13 @@
 <section class="section section-alt" id="idea" aria-labelledby="idea-title">
   <div class="wrap">
     <p class="kicker">02 · How it works</p>
-    <h2 id="idea-title" class="title">Every syndicate is a room, rules and an exit.</h2>
+    <h2 id="idea-title" class="title">Every syndicate is a room, rules and an exit</h2>
     <p class="lede-sm">The same three parts make up every syndicate on the network, whatever the group is doing.</p>
 
     <div class="chapter">
       <div class="chapter-text">
         <p class="step">The room</p>
-        <h3>Members decide in private.</h3>
+        <h3>Members decide in private</h3>
         <p>Each member seals their bid so only the room can open it. The room adds the bids up and lets out only the result. Whoever runs the machine sees sealed data, nothing else.</p>
         <p>The room runs inside secure hardware (a TEE), which keeps what it processes hidden and proves which code it runs. There are two kinds: an attested AI model on <strong>NEAR AI Cloud</strong>, and <strong>our own program on a Phala confidential machine</strong>.</p>
         <p class="badge-row"><span class="badge live">Both live</span></p>
@@ -96,7 +97,7 @@
     <div class="chapter">
       <div class="chapter-text">
         <p class="step">The rules</p>
-        <h3>What the group can do is fixed in public.</h3>
+        <h3>What the group can do is fixed in public</h3>
         <p>When the group forms, its rules go into a contract on NEAR: who may be paid, how much per round, and until when. Every member agrees to exactly those rules when they put money in, and they can never change.</p>
         <p>A payout outside them is refused, even if the room signed it. The same signature can never be used twice.</p>
         <p class="badge-row"><span class="badge live">Live · attacks rejected on chain</span></p>
@@ -107,7 +108,7 @@
     <div class="chapter">
       <div class="chapter-text">
         <p class="step">The exit</p>
-        <h3>Anyone can leave on their own.</h3>
+        <h3>Anyone can leave on their own</h3>
         <p>If the room stops, crashes or disappears, a timer runs. When it ends, any member takes back exactly their own share, straight from the contract, without anyone's permission and without touching anyone else's money.</p>
         <p class="badge-row"><span class="badge live">Live · exact refunds checked</span></p>
       </div>
@@ -120,7 +121,7 @@
 <section class="section" id="syndicates" aria-labelledby="syn-title">
   <div class="wrap">
     <p class="kicker">03 · Syndicates</p>
-    <h2 id="syn-title" class="title">A syndicate can last one task or many rounds.</h2>
+    <h2 id="syn-title" class="title">A syndicate can last one task or many rounds</h2>
     <div class="grid-2">
       <article class="card card-tall">
         <div class="stage stage-md"><canvas class="stage-canvas" data-scene="flash" aria-hidden="true"></canvas></div>
@@ -144,7 +145,7 @@
     <div class="split">
       <div>
         <p class="kicker">04 · The network</p>
-        <h2 id="net-title" class="title">One contract. Many syndicates.</h2>
+        <h2 id="net-title" class="title">One contract. Many syndicates</h2>
         <p class="lede-sm">A single contract on NEAR hosts every syndicate, each with its own rules. Anyone can list them, a member can find all of theirs, and one agent can sit in several at once.</p>
         <p class="stat"><span id="net-count">…</span><span>syndicates on the testnet contract right now</span></p>
         <p class="fine">Today the network is discovery and bookkeeping: syndicates do not yet invite, rate or build on each other.</p>
@@ -158,7 +159,7 @@
 <section class="section" id="systems" aria-labelledby="sys-title">
   <div class="wrap">
     <p class="kicker">05 · Private systems</p>
-    <h2 id="sys-title" class="title">Many kinds of group can run as a syndicate.</h2>
+    <h2 id="sys-title" class="title">Many kinds of group can run as a syndicate</h2>
     <p class="lede-sm">Each one is the same pattern, a room, rules and an exit, with a different job in the room. The badges say what the code does today.</p>
     <div class="grid-5">
       <article class="mini"><div class="stage stage-xs"><canvas class="stage-canvas" data-scene="f-credit" aria-hidden="true"></canvas></div><h3>Credit and repo</h3><p>Lenders send sealed quotes; the best terms win without the others being seen.</p><span class="badge model">Simulation</span></article>
@@ -174,7 +175,7 @@
 <section class="section section-alt" id="members" aria-labelledby="mem-title">
   <div class="wrap">
     <p class="kicker">06 · Who joins</p>
-    <h2 id="mem-title" class="title">A member is any NEAR account.</h2>
+    <h2 id="mem-title" class="title">A member is any NEAR account</h2>
     <p class="lede-sm">The contract does not care what kind of account joins. It applies the same rules to all of them.</p>
     <div class="grid-4">
       <article class="mini"><h3>People</h3><p>A wallet. Today through the command line or the SDK; there is no app yet.</p><span class="badge live">Live</span></article>
@@ -185,7 +186,7 @@
 
     <div class="split split-console">
       <div>
-        <h3 class="h3-lg">A hijacked agent still cannot take the money.</h3>
+        <h3 class="h3-lg">A hijacked agent still cannot take the money</h3>
         <p>An agent can be given a key that does exactly one thing: take its owner's money back out of a syndicate. We handed such an agent a support ticket that told it to send everything to an attacker. Every attempt was refused: eight by NEAR before they ran, because the key does not allow them, and an early exit by the contract. The same transfer from an agent holding a full key went through.</p>
         <p class="badge-row"><span class="badge live">Live · 9 of 9 attempts refused</span></p>
         <p class="fine">This bounds a compromised agent by what its key can do. It does not claim that an AI model resists being misled.</p>
@@ -202,7 +203,7 @@
 <section class="section" id="architecture" aria-labelledby="arch-title">
   <div class="wrap">
     <p class="kicker">07 · Architecture</p>
-    <h2 id="arch-title" class="title">Private work runs inside secure hardware. Every result settles on NEAR.</h2>
+    <h2 id="arch-title" class="title">Private work runs inside secure hardware. Every result settles on NEAR</h2>
     <div class="arch">
       <div class="arch-text">
         <p>Midge's private work runs inside two kinds of secure hardware, on NEAR AI Cloud and in our own program on Phala, and every result is settled and enforced on NEAR.</p>
@@ -225,7 +226,7 @@
     <div class="split">
       <div>
         <p class="kicker">08 · Beyond NEAR</p>
-        <h2 id="bey-title" class="title">One syndicate, addresses on other chains.</h2>
+        <h2 id="bey-title" class="title">One syndicate, addresses on other chains</h2>
         <p class="lede-sm">Through NEAR Chain Signatures, a syndicate's identity on NEAR can control addresses on Bitcoin, Ethereum and Solana, without a bridge or a custodian.</p>
         <p class="badge-row"><span class="badge tested">One signature verified</span><span class="badge planned">Nothing broadcast yet</span></p>
       </div>
@@ -238,11 +239,12 @@
 <section class="section section-dark" id="proof" aria-labelledby="proof-title">
   <div class="wrap">
     <p class="kicker kicker-dark">09 · Proof</p>
-    <h2 id="proof-title" class="title title-dark">Every dot is a real transaction on NEAR testnet.</h2>
+    <h2 id="proof-title" class="title title-dark">Every dot is a real transaction on NEAR testnet</h2>
     <p class="lede-dark">These come from our recorded test runs, whose logs are hash-chained and can be re-verified. Click any dot to open it on NearBlocks.</p>
     <div class="proof-legend" id="proof-legend"></div>
-    <div class="proof-grid" id="proof-grid" role="list"></div>
-    <p class="fine-dark" id="proof-note"></p>
+    <a class="proof-skip" href="#proof-after">Skip the 205 transaction links</a>
+    <div class="proof-grid" id="proof-grid" role="list" aria-label="Recorded testnet transactions"></div>
+    <p class="fine-dark" id="proof-note" tabindex="-1"></p><span id="proof-after"></span>
 
     <div class="grid-2 checks-row">
       <article class="panel" aria-labelledby="lp-title">
@@ -267,7 +269,7 @@
 <section class="section" id="status" aria-labelledby="status-title">
   <div class="wrap">
     <p class="kicker">10 · What runs today</p>
-    <h2 id="status-title" class="title">Live, tested, modelled, planned.</h2>
+    <h2 id="status-title" class="title">Live, tested, modelled, planned</h2>
     <div class="table-wrap">
       <table class="status-table">
         <thead><tr><th scope="col">Part</th><th scope="col">Status</th><th scope="col">Evidence</th></tr></thead>
@@ -294,7 +296,7 @@
 <section class="section section-alt" id="try" aria-labelledby="try-title">
   <div class="wrap">
     <p class="kicker">11 · Try it</p>
-    <h2 id="try-title" class="title">Three ways in.</h2>
+    <h2 id="try-title" class="title">Three ways in</h2>
     <div class="grid-3">
       <article class="card">
         <h3>Check everything, offline</h3>
