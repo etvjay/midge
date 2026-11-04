@@ -182,12 +182,9 @@ export class FlyClient {
   }
 
   // --- 7. Emergency Escape Hatch ---
-  async emergencyHatchOut(syndicateId, flyerId, currentBlock = 2000) {
-    const res = await this._request('POST', '/v1/emergency/hatch-out', {
-      syndicateId,
-      flyerId,
-      currentBlock,
-    });
+  async emergencyHatchOut(syndicateId, flyerId) {
+    // The server uses its own block height; a caller-supplied one would let anyone open the timelock early.
+    const res = await this._request('POST', '/v1/emergency/hatch-out', { syndicateId, flyerId });
     return res.data;
   }
 

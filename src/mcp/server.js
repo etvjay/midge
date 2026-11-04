@@ -282,7 +282,7 @@ export class FlyMcpServer {
           });
         }
         if (this.nestContract) {
-          const res = this.nestContract.hatch(args);
+          const res = this.nestContract.hatch({ ...args, currentBlock: this.nestContract.blockNow?.() });
           return this.formatOutput({
             ...res,
             id: res.id,
@@ -344,7 +344,7 @@ export class FlyMcpServer {
         }
         if (this.nestContract) {
           const flyer = args.flyerId || 'flyer.testnet';
-          const res = this.nestContract.hatchOut(args.syndicateId, 999999, flyer);
+          const res = this.nestContract.hatchOut(args.syndicateId, this.nestContract.blockNow(), flyer);
           return this.formatOutput(res);
         }
         throw new Error('[midge_hatch_out] no contract available');

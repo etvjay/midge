@@ -12,7 +12,11 @@ import { OutLayerPolicyGuard } from '../policies/outlayer.js';
  * 5. Per-user hatch_out refund with epoch-reset timelocks on DarkVault
  */
 export class FlyNestContract {
-  constructor({ contractId = 'fly-coordinator.testnet' } = {}) {
+  constructor({ contractId = 'fly-coordinator.testnet', blockMs = 1200 } = {}) {
+    // The model has no chain, so it keeps its own clock: block 1000 at birth, one block every blockMs (NEAR's ~1.2 s).
+    // Interfaces must use this instead of a block number supplied by the caller, who could claim any height.
+    this.bornAtMs = Date.now();
+    this.blockMs = blockMs;
     this.contractId = contractId;
     this.syndicates = new Map();
   }
@@ -21,6 +25,11 @@ export class FlyNestContract {
    * hatch(): The programmatic syndicate factory.
    * Supports both 'FLASH' (ephemeral single-round) and 'DARK_VAULT' (persistent multi-epoch).
    */
+  /** The model's current block height, from its own clock. */
+  blockNow() {
+    return 1000 + Math.floor((Date.now() - this.bornAtMs) / this.blockMs);
+  }
+
   hatch({
     syndicateId,
     syndicateType = 'FLASH',

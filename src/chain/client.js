@@ -37,12 +37,17 @@ export function bs58encode(buffer) {
   return digits.reverse().map((d) => ALPHABET[d]).join('');
 }
 
-function loadEnv() {
-  const envPath = path.join(rootDir, '.env');
+/**
+ * The repository's .env is NOT read implicitly: a "keyless" run used to send real transactions with the repository's
+ * key because this fallback picked it up (GAP-018). Credentials come from the environment, from constructor
+ * arguments, or from a file named explicitly by MIDGE_ENV_FILE (or the envFile option).
+ */
+function loadEnv(envFile = process.env.MIDGE_ENV_FILE) {
+  if (!envFile) return {};
+  const envPath = path.resolve(envFile);
   if (!fs.existsSync(envPath)) return {};
-  const lines = fs.readFileSync(envPath, 'utf8').split('\n');
   const env = {};
-  for (const line of lines) {
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
     const trimmed = line.trim();
     if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
       const idx = trimmed.indexOf('=');
@@ -82,8 +87,9 @@ export class FlyChainClient {
     contractId = null,
     accountId = null,
     privateKey = null,
+    envFile = null,
   } = {}) {
-    const env = loadEnv();
+    const env = loadEnv(envFile || process.env.MIDGE_ENV_FILE);
     this.networkId = networkId || process.env.NEAR_NETWORK || env.NEAR_NETWORK || 'testnet';
     this.nodeUrl = nodeUrl || process.env.NEAR_RPC_URL || env.NEAR_RPC_URL || 'https://test.rpc.fastnear.com';
     this.contractId =

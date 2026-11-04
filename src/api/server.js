@@ -14,7 +14,7 @@ import { ConfidentialComputeSyndicate } from '../facilities/compute-syndicate.js
 import { ResilienceEngine } from '../resilience/failure-matrix.js';
 
 export class FlyApiDaemon {
-  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null, roostBackend = null } = {}) {
+  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null, roostBackend = null, chainClient = null } = {}) {
     this.port = port;
     this.host = host;
     this.allowedOrigins = allowedOrigins;
@@ -24,7 +24,7 @@ export class FlyApiDaemon {
     this.chainClient = null;
     if (this.mode === 'chain') {
       try {
-        this.chainClient = new FlyChainClient();
+        this.chainClient = chainClient || new FlyChainClient();
       } catch (e) {
         this.mode = 'model';
       }
@@ -262,6 +262,7 @@ export class FlyApiDaemon {
         maxSpendPerFlyer: body.maxSpendNear,
         expectedCodeHash: body.expectedCodeHash || 'mrenclave_code_hash_default',
         timeoutBlocks: body.timeoutBlocks,
+        currentBlock: this.nest.blockNow(),
       });
 
       this.events.emit('syndicate_event', {
@@ -410,8 +411,11 @@ export class FlyApiDaemon {
         }
       }
       const flyer = body.flyerId || 'flyer.testnet';
-      const result = this.nest.hatchOut(synId, 999999, flyer);
-      return this.sendJson(res, 200, result);
+      try {
+        return this.sendJson(res, 200, this.nest.hatchOut(synId, this.nest.blockNow(), flyer), req);
+      } catch (err) {
+        return this.sendJson(res, /LOCKED/.test(err.message) ? 423 : /not found/i.test(err.message) ? 404 : 400, { error: err.message }, req);
+      }
     }
 
     // Pods inside Dark Vaults
@@ -571,8 +575,20 @@ export class FlyApiDaemon {
     // ==========================================
     if (method === 'POST' && pathname === '/v1/emergency/hatch-out') {
       const body = await this.parseBody(req);
-      const currentBlock = body.currentBlock || 2000;
-      const refund = this.nest.hatchOut(body.syndicateId, currentBlock, body.flyerId);
+      // The block height is never taken from the request: a caller could claim any height and open the timelock early.
+      if (this.mode === 'chain' && this.chainClient?.isConfiguredForWrites()) {
+        try {
+          return this.sendJson(res, 200, await this.chainClient.hatchOut({ syndicateId: body.syndicateId }), req);
+        } catch (err) {
+          return this.sendJson(res, 400, { error: err.message }, req);
+        }
+      }
+      let refund;
+      try {
+        refund = this.nest.hatchOut(body.syndicateId, this.nest.blockNow(), body.flyerId);
+      } catch (err) {
+        return this.sendJson(res, /LOCKED/.test(err.message) ? 423 : /not found/i.test(err.message) ? 404 : 400, { error: err.message }, req);
+      }
 
       this.events.emit('syndicate_event', {
         syndicateId: body.syndicateId,
@@ -591,6 +607,8 @@ export class FlyApiDaemon {
         syndicateId: syn.id,
         createdAtBlock: syn.createdAtBlock,
         timeoutBlocks: syn.timeoutBlocks,
+        currentBlock: this.nest.blockNow(),
+        blocksRemaining: Math.max(0, syn.timeoutBlocks - (this.nest.blockNow() - syn.epochStartBlock)),
       });
     }
 

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
-import { connect, fmt, near, sleep } from '../lib/near.js';
+import { connect, fmt, near, sleep, loadEnvFile } from '../lib/near.js';
+import { FlyChainClient } from '../../src/chain/client.js';
 import { EXPECTED_CODE_HASH } from '../flows/chain-round.js';
 import { FlyMcpServer } from '../../src/mcp/server.js';
 import { FlyApiDaemon } from '../../src/api/server.js';
@@ -29,7 +30,7 @@ export default {
     const id = (n) => `ifc-${tag}-${n}`;
     const state = (sid) => chain.view('get_syndicate', { syndicate_id: sid });
     const yocto = (n) => String(near(n));
-    let mcp; let daemon; let sdk;
+    let mcp; let daemon; let sdk; let chainClient;
 
     const call = async (s, tool, args) => {
       try {
@@ -51,7 +52,10 @@ export default {
     const hatchArgs = (sid, extra = {}) => ({ syndicateId: sid, expectedCodeHash: EXPECTED_CODE_HASH, quorumThreshold: 1, enclavePublicKey: roost.settlePublicKey, allowedRecipients: [rcpt.id], timeoutBlocks: 50, ...extra });
 
     await ctx.step('preflight: write access, deployed contract, balances, storage headroom', async (s) => {
-      mcp = new FlyMcpServer({ mode: 'chain' });
+      // Write access is passed in explicitly: the chain client no longer reads the repository's .env on its own (GAP-018).
+      const env = loadEnvFile(ctx.rootDir);
+      chainClient = new FlyChainClient({ accountId: env.NEAR_ACCOUNT_ID, privateKey: env.NEAR_PRIVATE_KEY });
+      mcp = new FlyMcpServer({ mode: 'chain', chainClient });
       s.assert('the MCP server is in chain mode and can write', mcp.mode === 'chain' && mcp.chainClient?.isConfiguredForWrites(), { actual: mcp.mode });
       s.assert('the interface account is the lab\'s master account', mcp.chainClient?.accountId === chain.masterId, { actual: mcp.chainClient?.accountId });
       const hash = await chain.codeHash();
@@ -131,7 +135,7 @@ export default {
 
     try {
       await ctx.step('SDK through the API in chain mode: reads, settle and hatch-out reach the chain', async (s) => {
-        daemon = new FlyApiDaemon({ port: 0, mode: 'chain', roostBackend: 'local' });
+        daemon = new FlyApiDaemon({ port: 0, mode: 'chain', roostBackend: 'local', chainClient });
         const { port } = await daemon.start();
         sdk = new FlyClient({ baseUrl: `http://127.0.0.1:${port}` });
         s.assert('the daemon is in chain mode with write access', daemon.mode === 'chain' && daemon.chainClient?.isConfiguredForWrites());

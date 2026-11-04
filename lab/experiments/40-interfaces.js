@@ -78,7 +78,7 @@ export default {
 
       const synId = `iface-${tag}`;
       await ctx.step('SDK: syndicate lifecycle (hatch, get, list, by member, deposit, settle, hatch-out)', async (s) => {
-        const hatched = await sdk.hatchSyndicate({ id: synId, quorumThreshold: 1, maxSpendNear: 100, timeoutBlocks: 50 });
+        const hatched = await sdk.hatchSyndicate({ id: synId, quorumThreshold: 1, maxSpendNear: 100, timeoutBlocks: 2 });
         s.assert('hatchSyndicate returns the id, a sub-account and an active status', hatched.syndicateId === synId && /ACTIVE/i.test(hatched.status) && hatched.subAccount?.startsWith(synId), { actual: hatched });
         s.assert('a round nonce is issued', typeof hatched.roundNonce === 'string' && hatched.roundNonce.length >= 32);
         const dep = await sdk.deposit(synId, 'alice.near', 5);
@@ -92,6 +92,8 @@ export default {
         const settled = await sdk.settleBatch(synId, { allocations: [{ recipient: 'bob.near', amount: 1 }] });
         s.assert('settleBatch in model mode answers SETTLED_MODEL for an existing syndicate and says so', settled.status === 'SETTLED_MODEL' && settled.mode === 'model', { actual: settled });
         s.assert('settleBatch for a syndicate that does not exist is refused', await sdk.settleBatch('never-hatched-syn', { allocations: [] }).then(() => false, () => true));
+        s.assert('hatchOut before the timelock expires is locked (HTTP 423), not refunded', await sdk.hatchOut(synId, 'alice.near').then(() => false, (e) => /LOCKED/.test(e.message)));
+        await new Promise((r) => setTimeout(r, 3200)); // 2 blocks of 1.2 s on the model's own clock
         const out = await sdk.hatchOut(synId, 'alice.near');
         s.assert('hatchOut refunds the depositor in full', out.refundedTo === 'alice.near' && out.amount === 5 && out.remainingEscrow === 0, { actual: out });
         s.assert('a second hatchOut finds nothing to refund', await sdk.hatchOut(synId, 'alice.near').then(() => false, () => true));
@@ -174,12 +176,12 @@ export default {
         s.assert('requestMpcSignature returns a signature body, not an empty object', Object.keys(sig).filter((k) => !['mode', 'notice'].includes(k)).length > 0, { actual: sig });
         const e2 = `em-${tag}`;
         await sdk.hatchSyndicate({ id: e2, quorumThreshold: 1, timeoutBlocks: 50 }); await sdk.deposit(e2, 'carol.near', 2);
-        const early = await sdk.emergencyHatchOut(e2, 'carol.near', 1).then(() => 'refunded', () => 'locked');
+        const early = await sdk.emergencyHatchOut(e2, 'carol.near').then(() => 'refunded', () => 'locked');
         s.assert('an emergency hatch-out claiming an early block is locked', early === 'locked');
         const hs = await raw('GET', '/v1/health');
         s.assert('/v1/health is the same as /health', hs.status === 200 && hs.json?.status === 'OK');
         const tl = await raw('GET', `/v1/emergency/timelock/${e2}`);
-        s.assert('the timelock view reports the creation block and timeout', tl.json?.timeoutBlocks === 50 && Number.isFinite(tl.json?.createdAtBlock), { actual: tl.json });
+        s.assert('the timelock view reports the creation block, the timeout, the model\'s current block and the blocks remaining', tl.json?.timeoutBlocks === 50 && Number.isFinite(tl.json?.createdAtBlock) && tl.json?.currentBlock >= tl.json?.createdAtBlock && tl.json?.blocksRemaining > 0, { actual: tl.json });
         const pod = await raw('POST', `/v1/syndicates/${e2}/pods`, { podId: 'pod-1', podType: 'SCOUT', maxCapitalAllocation: 10 });
         const pods = await raw('GET', `/v1/syndicates/${e2}/pods`);
         s.assert('a pod can be created and listed', pod.status === 201 && Array.isArray(pods.json) && pods.json.some((p) => p.podId === 'pod-1'), { actual: [pod.status, pods.json] });
@@ -253,8 +255,8 @@ export default {
         const syn = `gap-${tag}`;
         await sdk.hatchSyndicate({ id: syn, quorumThreshold: 1, timeoutBlocks: 50 }); await sdk.deposit(syn, 'victim.near', 4);
         const forced = await raw('POST', '/v1/emergency/hatch-out', { syndicateId: syn, flyerId: 'victim.near', currentBlock: 999999 });
-        s.assert('GAP-013 (pinned): any caller can force another member\'s exit by claiming a high block height', forced.status === 200 && forced.json?.refundedTo === 'victim.near', { actual: forced.status });
-        s.problem('major', 'GAP-013: POST /v1/emergency/hatch-out takes currentBlock and flyerId from the request body, so any caller can open the timelock and force any member out of an active round (model mode only; the contract uses the real block height)');
+        s.assert('GAP-013 (fixed): claiming a high block height does not open the timelock (HTTP 423)', forced.status === 423 && /LOCKED/.test(forced.json?.error || ''), { actual: [forced.status, forced.json?.error] });
+        s.assert('the victim\'s escrow is untouched by the attempt', (await raw('GET', '/v1/syndicates/' + syn)).json?.totalEscrow === 4);
         const sess = await sdk.getSessionKey();
         await raw('POST', '/v1/roost/aggregate', {}); // drain whatever earlier steps left in the shared queue
         await raw('POST', '/v1/roost/intents/sealed', { syndicateId: 'syn-A', flyerId: 'a', cipherTextBase64: EnclaveCrypto.encryptIntent({ amount: 11 }, sess.publicKeyPem) });
@@ -290,6 +292,12 @@ export default {
       const signed = c.signSettlement({ syndicateId: 'syn-x', epoch: 1, nonce: 'abcdef0123456789', allocations: pairs, orderHash: 'ff'.repeat(32), enclavePrivateKey: seed });
       s.assert('signSettlement signs the contract\'s message: contract:syndicate:epoch:nonce:allocationsHash:orderHash', signed.message === `${c.contractId}:syn-x:1:abcdef0123456789:${h}:${'ff'.repeat(32)}`, { actual: signed.message });
       s.assert('and the signature verifies under the matching public key', crypto.verify(null, Buffer.from(signed.message), pub, Buffer.from(signed.signatureHex, 'hex')));
+      const saved = { a: process.env.NEAR_ACCOUNT_ID, k: process.env.NEAR_PRIVATE_KEY, f: process.env.MIDGE_ENV_FILE };
+      delete process.env.NEAR_ACCOUNT_ID; delete process.env.NEAR_PRIVATE_KEY; delete process.env.MIDGE_ENV_FILE;
+      try {
+        const implicit = new FlyChainClient();
+        s.assert('GAP-018 (fixed): a client built with no arguments and no environment has no write access, even though the repository has a .env', implicit.isConfiguredForWrites() === false, { actual: implicit.accountId });
+      } finally { for (const [k, v] of [['NEAR_ACCOUNT_ID', saved.a], ['NEAR_PRIVATE_KEY', saved.k], ['MIDGE_ENV_FILE', saved.f]]) if (v === undefined) delete process.env[k]; else process.env[k] = v; }
       const refuses = async (fn) => fn().then(() => false, (e) => e.message);
       s.assert('hatch without an enclave key is refused before anything is sent', /enclavePublicKey/.test(await refuses(() => c.hatch({ syndicateId: 'abc' })) || ''));
       s.assert('hatch with an all-zero enclave key is refused (nobody could ever settle it)', /not all zeros/.test(await refuses(() => c.hatch({ syndicateId: 'abc', enclavePublicKey: '0'.repeat(64) })) || ''));
@@ -318,8 +326,13 @@ export default {
       s.assert('get_my_syndicates invents nothing for an account in no syndicate', nobodyList.length === 0, { actual: nobodyList });
       const st = await call('midge_settle', { syndicateId: `mcp-${tag}`, allocations: [['recipient.near', '0.04']] });
       s.observe('midge_settle in model mode', st);
-      const ho = await call('midge_hatch_out', { syndicateId: `mcp-${tag}`, flyerId: 'agent.near' }).then((r) => r, (e) => ({ error: e.message }));
-      s.observe('midge_hatch_out in model mode', ho);
+      const ho = await call('midge_hatch_out', { syndicateId: `mcp-${tag}`, flyerId: 'agent.near' }).then((r) => ({ ok: true, r }), (e) => ({ ok: false, e: e.message }));
+      s.assert('midge_hatch_out before the timelock is locked, not refunded (it used to pass block 999999)', ho.ok === false && /LOCKED/.test(ho.e), { actual: ho });
+      await call('midge_hatch_syndicate', { syndicateId: `mcp-fast-${tag}`, expectedCodeHash: 'x', quorumThreshold: 1, timeoutBlocks: 2 });
+      await call('midge_deposit', { syndicateId: `mcp-fast-${tag}`, flyerId: 'agent.near', amountNear: 0.05 });
+      await new Promise((r) => setTimeout(r, 3200));
+      const fast = await call('midge_hatch_out', { syndicateId: `mcp-fast-${tag}`, flyerId: 'agent.near' });
+      s.assert('and succeeds once the model\'s own clock has passed the timeout', fast.status === 'REFUNDED_100_PERCENT' && fast.amount === 0.05, { actual: fast });
 
       const va = await call('midge_verify_haq_attestation', { nonce: 'this-is-not-a-real-nonce' });
       s.assert('verify_haq_attestation never says VALID for a nonce it did not verify against a quote', !/VALID/.test(va.status || '') || /NOT_VALID|INVALID/.test(va.status), { actual: va });
