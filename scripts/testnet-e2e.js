@@ -162,7 +162,24 @@ async function main() {
   }
 
   console.log('\n[2/8] Provisioning Coordinator & Flyer Sub-Accounts...');
-  await ensureSubaccount(coordPrefix, coordinatorId, coordKeys.keyPair, '2.5');
+  // The coordinator account pays for the contract's code at 1e19 yocto per byte, plus state and escrow headroom. A fixed 2.5 NEAR
+  // was enough for an early, smaller contract and made a fresh bootstrap fail at deploy ("lacks balance for state").
+  const wasmFile = path.join(rootDir, 'contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm');
+  if (!fs.existsSync(wasmFile)) throw new Error(`WASM binary not found at ${wasmFile}. Run npm run build:wasm first.`);
+  const coordNeedYocto = BigInt(fs.statSync(wasmFile).size) * 10n ** 19n + 1500000000000000000000000n;
+  const coordNear = (Math.ceil((Number(coordNeedYocto) / 1e24) * 100) / 100).toString();
+  const masterNow = BigInt((await masterAccount.getBalance()).toString());
+  if (masterNow < coordNeedYocto + 1000000000000000000000000n) {
+    throw new Error(`The master account has ${formatNearAmount(masterNow.toString(), 3)} NEAR; funding the coordinator needs about ${coordNear} NEAR plus a margin. Run: node scripts/lab-env.mjs fund --force`);
+  }
+  await ensureSubaccount(coordPrefix, coordinatorId, coordKeys.keyPair, coordNear);
+  {
+    const have = BigInt((await new Account(coordinatorId, provider, new KeyPairSigner(coordKeys.keyPair)).getBalance()).toString());
+    if (have < coordNeedYocto) {
+      console.log(`      Topping up ${coordinatorId} by ${formatNearAmount((coordNeedYocto - have).toString(), 3)} NEAR to cover the contract's storage...`);
+      await masterAccount.transfer({ receiverId: coordinatorId, amount: coordNeedYocto - have });
+    }
+  }
   await ensureSubaccount(flyer1Prefix, flyer1Id, flyer1Keys.keyPair, '0.15');
   await ensureSubaccount(flyer2Prefix, flyer2Id, flyer2Keys.keyPair, '0.15');
   await ensureSubaccount(flyer3Prefix, flyer3Id, flyer3Keys.keyPair, '0.15');
