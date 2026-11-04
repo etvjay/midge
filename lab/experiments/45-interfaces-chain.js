@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { connect, fmt, near, sleep, loadEnvFile } from '../lib/near.js';
 import { FlyChainClient } from '../../src/chain/client.js';
+import { createMembers, teardownMembers, accountExists } from '../lib/members.js';
 import { EXPECTED_CODE_HASH } from '../flows/chain-round.js';
 import { FlyMcpServer } from '../../src/mcp/server.js';
 import { FlyApiDaemon } from '../../src/api/server.js';
@@ -25,7 +26,8 @@ export default {
   async run(ctx) {
     const chain = await connect(ctx.rootDir);
     const tag = Date.now().toString(36);
-    const rcpt = chain.sub('r1');
+    let rcpt = null; // a fresh recipient account, created in the preflight and deleted at the end
+    let countBefore = null;
     const roost = new HostedRoost({ provider });
     const id = (n) => `ifc-${tag}-${n}`;
     const state = (sid) => chain.view('get_syndicate', { syndicate_id: sid });
@@ -66,8 +68,10 @@ export default {
       const acct = await chain.provider.query({ request_type: 'view_account', finality: 'final', account_id: chain.coordinatorId });
       const headroom = BigInt(acct.amount) - BigInt(acct.storage_usage) * 10n ** 19n;
       s.assert('the contract account has at least 0.15 NEAR of storage headroom', headroom > near('0.15'), { actual: fmt(headroom) });
-      const start = await chain.balance(rcpt.account);
-      ctx.__start = { master: bal, rcpt: start };
+      countBefore = Number(await chain.view('get_syndicate_count', {}));
+      [rcpt] = await createMembers(chain, { rootDir: ctx.rootDir, tag: `i${tag.slice(-5)}`, count: 1, fundNear: '0.05', names: ['r'] });
+      s.assert('a fresh recipient account exists', await accountExists(chain, rcpt.id), { actual: rcpt.id });
+      ctx.__start = { master: bal };
     }, { critical: true });
 
     const s1 = id(1);
@@ -180,17 +184,15 @@ export default {
         s.assert('the chain shows the escrow refunded', Boolean(refunded));
       });
     } finally {
-      await ctx.step('stop the daemon and return the recipient\'s funds to the interface account', async (s) => {
+      await ctx.step('teardown: stop the daemon, prune the run\'s syndicates, compact the master\'s index, delete the recipient', async (s) => {
         if (daemon) await daemon.stop();
-        const got = (await chain.balance(rcpt.account)) - ctx.__start.rcpt;
-        s.observe('recipient gained (NEAR)', fmt(got));
-        if (got > near('0.02')) {
-          const back = got - near('0.01');
-          let hash = null; let error = null;
-          try { const r = await rcpt.account.transfer({ receiverId: chain.masterId, amount: back }); hash = r.transaction?.hash || r.transaction_outcome?.id; } catch (e) { error = e.message.slice(0, 200); }
-          s.evidence('tx', { label: `return ${fmt(back)} NEAR to ${chain.masterId}`, hash, ok: !error, explorer: hash ? chain.explorer(hash) : null, error });
-          s.assert('the funds were returned so the experiment can be repeated', !error, { actual: error });
-        }
+        const ids = [1, 2, 3, 4, 5].map((n) => id(n));
+        const rep = await teardownMembers(chain, { rootDir: ctx.rootDir, members: rcpt ? [rcpt] : [], pruneIds: ids });
+        const compact = await chain.send(chain.master, 'compact_member_index', { account_id: chain.masterId }, { gas: 30000000000000n, label: 'compact master index' });
+        s.observe('teardown', { pruned: rep.pruned.length, notPruned: rep.notPruned.map((x) => x.id), deleted: rep.deleted, masterIndexCompacted: compact.ok });
+        s.assert('every syndicate the run created was pruned', rep.notPruned.length === 0 && rep.pruned.length === ids.length, { actual: rep.notPruned });
+        s.assert('the recipient account was deleted and no longer exists', rep.failed.length === 0 && rcpt && !(await accountExists(chain, rcpt.id)), { actual: rep.failed });
+        s.assert('the contract holds exactly as many records as before the run', Number(await chain.view('get_syndicate_count', {})) === countBefore, { expected: countBefore });
         const end = await chain.balance(chain.master);
         s.observe('interface account net change (NEAR)', fmt(end - ctx.__start.master, 5));
         s.assert('an attempt cost the interface account less than 0.12 NEAR', ctx.__start.master - end < near('0.12'), { actual: fmt(ctx.__start.master - end, 5) });

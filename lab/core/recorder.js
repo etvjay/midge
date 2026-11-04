@@ -41,7 +41,7 @@ export class Recorder {
     for (const k of Object.keys(fields)) if (RESERVED.has(k)) throw new Error(`event field "${k}" is reserved by the recorder (it would corrupt the hash chain); rename it`);
     const body = this.redact({ seq: this.seq, ts: this.now().toISOString(), type, ...fields, chain_prev: this.prev });
     const hash = sha256(this.prev + canonical(body));
-    fs.appendFileSync(this.file, JSON.stringify({ ...body, chain_hash: hash }) + '\n');
+    fs.appendFileSync(this.file, JSON.stringify({ ...body, chain_hash: hash }, (_k, v) => (typeof v === 'bigint' ? `${v}n` : v)) + '\n');
     this.prev = hash;
     this.seq += 1;
     this.counts[type] = (this.counts[type] || 0) + 1;
@@ -50,7 +50,7 @@ export class Recorder {
 
   /** Store a large value content-addressed under blobs/ and return its reference. */
   blob(value, label = 'blob') {
-    const data = Buffer.isBuffer(value) ? value : Buffer.from(typeof value === 'string' ? value : JSON.stringify(value));
+    const data = Buffer.isBuffer(value) ? value : Buffer.from(typeof value === 'string' ? value : JSON.stringify(value, (_k, v) => (typeof v === 'bigint' ? `${v}n` : v)));
     const digest = sha256(data);
     const text = this.redact(data.toString('utf8'));
     fs.writeFileSync(path.join(this.dir, 'blobs', digest), text);

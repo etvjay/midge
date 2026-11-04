@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
-import { connect } from '../lib/near.js';
+import { connect, fmt, near } from '../lib/near.js';
+import { createMembers, teardownMembers, accountExists } from '../lib/members.js';
 import { chainRoundFlow } from '../flows/chain-round.js';
 import { HostedRoost } from '../../src/roost-service/hosted-roost.js';
 import { createRoostServer } from '../../src/roost-service/server.js';
@@ -30,7 +31,33 @@ export default {
       const coordinator = new HostedRoostClient({ baseUrl: base, adminKey });
       const session = await member.getSession();
       ctx.recorder.event('note', { exp: ctx.id, text: `local hosted Roost on ${base}; simulated=${session.simulated}; settle key ${session.settlePublicKey.slice(0, 16)}…` });
-      await chainRoundFlow(ctx, { chain, roost: { member, coordinator, session }, runTag: Date.now().toString(36) });
+      const tag = Date.now().toString(36);
+      let members = null; let flow = null; let countBefore = null; let masterBefore = null;
+      try {
+        await ctx.step('create fresh member accounts for this run (three flyers and a recipient)', async (s) => {
+          countBefore = Number(await chain.view('get_syndicate_count', {}));
+          masterBefore = await chain.balance(chain.master);
+          const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `l${tag.slice(-5)}`, count: 4, fundNear: '0.15', names: ['a', 'b', 'c', 'r'] });
+          members = { flyers: made.slice(0, 3), recipient: made[3] };
+          s.assert('four accounts exist and are funded', (await Promise.all(made.map((m) => accountExists(chain, m.id)))).every(Boolean));
+          s.observe('accounts', made.map((m) => m.id));
+        }, { critical: true });
+        flow = await chainRoundFlow(ctx, { chain, roost: { member, coordinator, session }, runTag: tag, members });
+      } finally {
+        await ctx.step('teardown: prune the finished syndicates, compact the indexes, delete the accounts back into the master', async (s) => {
+          if (!members) { s.assert('nothing to tear down (no accounts were created)', true); return; }
+          const rep = await teardownMembers(chain, { rootDir: ctx.rootDir, members: [...members.flyers, members.recipient], pruneIds: flow?.syndicates || [] });
+          s.observe('teardown', { pruned: rep.pruned.length, notPruned: rep.notPruned, compacted: rep.compacted, deleted: rep.deleted.length, failed: rep.failed });
+          s.assert('every syndicate the run created was pruned (all were Settled or AbortedRefunded)', rep.notPruned.length === 0 && rep.pruned.length === (flow?.syndicates || []).length, { actual: rep });
+          s.assert('all four accounts were deleted', rep.deleted.length === 4 && rep.failed.length === 0, { actual: rep.failed });
+          s.assert('none of them exists any more', (await Promise.all([...members.flyers, members.recipient].map((m) => accountExists(chain, m.id)))).every((x) => !x));
+          const countAfter = Number(await chain.view('get_syndicate_count', {}));
+          s.assert('the contract holds exactly as many syndicate records as before the run (the run left no state behind)', countAfter === countBefore, { expected: countBefore, actual: countAfter });
+          const cost = masterBefore - (await chain.balance(chain.master));
+          s.observe('net cost to the master account (NEAR)', fmt(cost, 5));
+          s.assert('the whole run cost the master account less than 0.05 NEAR net', cost < near('0.05'), { actual: fmt(cost, 5) });
+        }, { always: true });
+      }
     } finally { server.close(); }
   },
 };

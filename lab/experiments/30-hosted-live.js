@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { connect } from '../lib/near.js';
+import { connect, fmt, near } from '../lib/near.js';
+import { createMembers, teardownMembers, accountExists } from '../lib/members.js';
 import { deployRoost, listCvms, startVerifier, HOURLY_USD } from '../lib/phala.js';
 import { chainRoundFlow } from '../flows/chain-round.js';
 import { HostedRoostClient } from '../../src/roost-service/client.js';
@@ -76,7 +77,24 @@ export default {
         s.assert('the settlement key the contract will trust equals the attested settlement key', session.settlePublicKey === attested.settlePublicKey, { expected: attested.settlePublicKey, actual: session.settlePublicKey });
         s.assert('the session says it is not simulated', session.simulated === false);
       });
-      await chainRoundFlow(ctx, { chain, roost: { member, coordinator, session }, expectedCodeHash: derivedHash(verification), runTag: `hw${Date.now().toString(36)}` });
+      const tag = Date.now().toString(36);
+      let members = null; let flow = null; let countBefore = null;
+      try {
+        await ctx.step('create fresh member accounts for this run (three flyers and a recipient)', async (st) => {
+          countBefore = Number(await chain.view('get_syndicate_count', {}));
+          const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `h${tag.slice(-5)}`, count: 4, fundNear: '0.15', names: ['a', 'b', 'c', 'r'] });
+          members = { flyers: made.slice(0, 3), recipient: made[3] };
+          st.assert('four accounts exist and are funded', (await Promise.all(made.map((m) => accountExists(chain, m.id)))).every(Boolean));
+        }, { critical: true });
+        flow = await chainRoundFlow(ctx, { chain, roost: { member, coordinator, session }, expectedCodeHash: derivedHash(verification), runTag: `hw${tag}`, members });
+      } finally {
+        await ctx.step('teardown of the chain side: prune the syndicates, compact the indexes, delete the accounts', async (st) => {
+          if (!members) { st.assert('nothing to tear down', true); return; }
+          const rep = await teardownMembers(chain, { rootDir: ctx.rootDir, members: [...members.flyers, members.recipient], pruneIds: flow?.syndicates || [] });
+          st.assert('every syndicate was pruned and every account deleted', rep.notPruned.length === 0 && rep.failed.length === 0 && rep.deleted.length === 4, { actual: rep });
+          st.assert('the contract holds exactly as many records as before the run', Number(await chain.view('get_syndicate_count', {})) === countBefore, { expected: countBefore });
+        }, { always: true });
+      }
     } finally {
       await ctx.step('teardown: delete the VM and prove the account is empty', async (s) => {
         if (verifier) await verifier.stop();

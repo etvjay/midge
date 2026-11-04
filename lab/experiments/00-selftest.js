@@ -68,6 +68,22 @@ export default {
       s.assert('so is a field called type', rejectedType);
     });
 
+    await ctx.step('evidence containing a BigInt is recorded and verifies (it used to crash the run)', async (s) => {
+      // Regression: a teardown report with a BigInt amount made JSON.stringify throw while writing the event, so the
+      // step failed on the harness instead of on the system under test.
+      const dir = tmp();
+      const r = new Recorder({ dir });
+      r.event('run.start', {});
+      let threw = null;
+      try { r.event('evidence', { kind: 'balance', yocto: 10n ** 24n }); } catch (e) { threw = e.message; }
+      s.assert('writing an event with a BigInt does not throw', threw === null, { actual: threw });
+      const prev = r.rootHash;
+      r.event('run.end', { rootHashOfPrevious: prev });
+      fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify({ rootHash: r.rootHash }));
+      s.assert('the log still verifies', verifyRunDir(dir).ok, { actual: verifyRunDir(dir).problems });
+      s.assert('the BigInt is stored as a string with an n suffix', JSON.parse(lines(dir)[1]).yocto === '1000000000000000000000000n', { actual: JSON.parse(lines(dir)[1]).yocto });
+    });
+
     await ctx.step('an untouched log verifies as intact', async (s) => {
       const dir = miniRun();
       const v = verifyRunDir(dir);

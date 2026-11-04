@@ -15,11 +15,14 @@ import { near, fmt, sleep, computePolicyHash } from '../lib/near.js';
 export const EXPECTED_CODE_HASH = 'Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9';
 const fakeProvider = { simulated: true, attest: async () => Buffer.from('rogue-no-hardware'), info: async () => ({}) };
 
-export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = null, runTag }) {
+export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = null, runTag, members = null }) {
   const { member, coordinator, session } = roost; // member: no admin key; coordinator: has it
-  const F = ['f1', 'f2', 'f3'].map((p) => chain.sub(p));
+  // With `members` ({ flyers: [3], recipient }) the run uses fresh accounts and the caller removes them afterwards, so no
+  // long-lived account accumulates state. Without it, the old fixed accounts f1..f3 and r1 are used and their funds returned.
+  const F = members ? members.flyers : ['f1', 'f2', 'f3'].map((p) => chain.sub(p));
+  const createdSyndicates = [];
   const coord = chain.sub('c');
-  const rcpt = chain.sub('r1');
+  const rcpt = members ? members.recipient : chain.sub('r1');
   const intentKey = session.intentPublicKey;
   const synId = (n) => `lab-${runTag}-${n}`;
   const policy = (deadline = 500000000) => ({ allowed_recipients: [rcpt.id], max_release_bps_per_epoch: 10000, settle_deadline_block: deadline });
@@ -28,6 +31,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   const bal = (acc) => chain.balance(acc);
 
   async function hatch(id, { timeoutBlocks = 50, pol = policy(), payout = rcpt.id } = {}) {
+    createdSyndicates.push(id);
     return chain.send(coord.account, 'hatch', {
       syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1,
       enclave_public_key: session.settlePublicKey,
@@ -58,7 +62,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   await ctx.step('preflight: accounts, balances and deployed contract', async (s) => {
     const have = {};
     for (const a of [chain.master, ...F.map((f) => f.account), rcpt.account]) { try { have[a.accountId] = await bal(a); } catch { have[a.accountId] = null; } }
-    if (have[rcpt.id] === null) {
+    if (have[rcpt.id] === null && !members) {
       const r = await chain.master.createSubAccount({ accountOrPrefix: 'r1', publicKey: rcpt.key.keyPair.getPublicKey(), nearToTransfer: near('0.05') });
       s.evidence('tx', { label: 'create recipient account r1', hash: r.transaction?.hash || r.transaction_outcome?.id, explorer: chain.explorer(r.transaction?.hash || r.transaction_outcome?.id) });
       have[rcpt.id] = await bal(rcpt.account);
@@ -235,17 +239,19 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     s.note('Balance deltas were rejected as evidence here: gas refunds from earlier transactions land after a reading is taken and made a correct refund look like a double payment. The receipts above are authoritative.');
   });
 
-  await ctx.step('return the funds: the recipient pays the members back so the experiment can be repeated', async (s) => {
-    // Round 1 took 0.02 from each of f1, f2, f3, round 2 took 0.02 from f1 and f2, and round 4 took 0.03 from f1; all of it went to the recipient.
-    const back = [[F[0], '0.07'], [F[1], '0.04'], [F[2], '0.02']];
-    for (const [f, amt] of back) {
-      let ok = true; let hash = null; let error = null;
-      try { const r = await rcpt.account.transfer({ receiverId: f.id, amount: near(amt) }); hash = r.transaction?.hash || r.transaction_outcome?.id; } catch (e) { ok = false; error = e.message.slice(0, 200); }
-      chain.ledger.push({ label: `return ${amt} NEAR to ${f.id}`, method: 'transfer', from: rcpt.id, ok, hash, explorer: hash ? chain.explorer(hash) : null, error, gasTGas: 0 });
-      s.evidence('tx', { label: `return ${amt} NEAR to ${f.id}`, hash, ok, explorer: hash ? chain.explorer(hash) : null, error });
-      s.assert(`returned ${amt} NEAR to ${f.id}`, ok, { actual: error });
-    }
-  });
+  if (!members) {
+    await ctx.step('return the funds: the recipient pays the members back so the experiment can be repeated', async (s) => {
+      // Round 1 took 0.02 from each of f1, f2, f3, round 2 took 0.02 from f1 and f2, and round 4 took 0.03 from f1; all of it went to the recipient.
+      const back = [[F[0], '0.07'], [F[1], '0.04'], [F[2], '0.02']];
+      for (const [f, amt] of back) {
+        let ok = true; let hash = null; let error = null;
+        try { const r = await rcpt.account.transfer({ receiverId: f.id, amount: near(amt) }); hash = r.transaction?.hash || r.transaction_outcome?.id; } catch (e) { ok = false; error = e.message.slice(0, 200); }
+        chain.ledger.push({ label: `return ${amt} NEAR to ${f.id}`, method: 'transfer', from: rcpt.id, ok, hash, explorer: hash ? chain.explorer(hash) : null, error, gasTGas: 0 });
+        s.evidence('tx', { label: `return ${amt} NEAR to ${f.id}`, hash, ok, explorer: hash ? chain.explorer(hash) : null, error });
+        s.assert(`returned ${amt} NEAR to ${f.id}`, ok, { actual: error });
+      }
+    });
+  }
 
   await ctx.step('ledger: every transaction, and what the experiment cost', async (s) => {
     const sent = chain.ledger.length; const failed = chain.ledger.filter((t) => !t.ok);
@@ -257,5 +263,6 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     s.observe('net NEAR spent across all accounts (gas and storage)', fmt(spent, 5));
     s.assert('the whole experiment cost less than 0.02 NEAR net (measured previously: about 0.002)', spent < near('0.02'), { actual: fmt(spent, 5) });
   });
+  out.syndicates = createdSyndicates;
   return out;
 }

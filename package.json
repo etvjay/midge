@@ -39,7 +39,8 @@
     "baseline": "node scripts/baseline.js",
     "security:review": "node scripts/security-review.js",
     "check:foundry": "node scripts/check-foundry.js",
-    "review:argon": "node scripts/argon-review.js"
+    "review:argon": "node scripts/argon-review.js",
+    "lab:env": "node scripts/lab-env.mjs"
   },
   "keywords": [
     "near",
