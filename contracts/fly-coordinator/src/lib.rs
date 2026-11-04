@@ -628,10 +628,22 @@ impl FlyCoordinator {
 
         if syn.total_escrow.as_yoctonear() == 0 {
             syn.status = SyndicateStatus::Settled;
-        } else if syn.syndicate_type == SyndicateType::DarkVault {
-            syn.epoch += 1;
-            syn.epoch_start_block = env::block_height();
-            let next_seed = format!("{}:{}:{}", syn.id, syn.epoch, env::block_height());
+        } else {
+            // Escrow remains, so the syndicate stays open for another round. The signature binds the round
+            // nonce, so the nonce must change after EVERY settlement that leaves escrow behind, for both
+            // types. Rotating it only for DarkVault let anyone replay a partial Flash settlement until the
+            // escrow was drained. Only DarkVault starts a new epoch (and restarts the hatch_out timer).
+            if syn.syndicate_type == SyndicateType::DarkVault {
+                syn.epoch += 1;
+                syn.epoch_start_block = env::block_height();
+            }
+            let next_seed = format!(
+                "{}:{}:{}:{}",
+                syn.id,
+                syn.epoch,
+                env::block_height(),
+                syn.settled_batches.len()
+            );
             syn.round_nonce = hex::encode(env::sha256(next_seed.as_bytes()));
         }
 

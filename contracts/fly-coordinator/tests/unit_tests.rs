@@ -1988,3 +1988,152 @@ fn test_settle_batch_50_flyers_gas_budget() {
     assert_eq!(syn_final.active_flyer_count, 0);
     assert_eq!(syn_final.total_escrow.as_yoctonear(), 0);
 }
+
+// ---- Regression: a partial Flash settlement must not be replayable --------------------------------
+// Found 2026-11-04: round_nonce was rotated only for DarkVault, so one Roost signature for 3 NEAR could be
+// replayed by anyone until the escrow was drained (10 -> 7 -> 4 -> 1). The signature binds the nonce, so
+// rotating it after every settlement that leaves escrow behind makes the old signature unusable.
+
+/// Hatches a FLASH syndicate with 10 NEAR escrow and settles 3 NEAR once; returns the state needed to replay.
+fn partially_settled_flash(
+    id: &str,
+) -> (
+    FlyCoordinator,
+    String,
+    String,
+    Vec<Allocation>,
+    String,
+    AccountId,
+) {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner.clone(), NearToken::from_near(1), 100).build());
+    let mut contract = FlyCoordinator::new();
+    let (enclave_pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", id, 1, "", "", "");
+    let syn_id = contract.hatch(
+        id.to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        enclave_pk,
+        "hash".to_string(),
+        Some(30),
+        None,
+        None,
+    );
+    let p_hash = contract.get_policy_hash(syn_id.clone());
+    let f1: AccountId = "flyer1.near".parse().unwrap();
+    testing_env!(get_context(f1, NearToken::from_near(10), 105).build());
+    contract.deposit(syn_id.clone(), p_hash);
+
+    let syn = contract.get_syndicate(syn_id.clone()).unwrap();
+    let allocations = vec![Allocation {
+        recipient: syn.payout_recipient.clone(),
+        amount: NearToken::from_near(3),
+    }];
+    let alloc_hash = compute_allocations_hash(&allocations);
+    let (_, sig) = make_enclave_key_and_signature(
+        "fly-coordinator.testnet",
+        &syn_id,
+        1,
+        &syn.round_nonce,
+        &alloc_hash,
+        "order_hash",
+    );
+    testing_env!(get_context(owner.clone(), NearToken::from_near(0), 110).build());
+    contract.settle_batch(
+        syn_id.clone(),
+        syn.round_nonce.clone(),
+        "order_hash".to_string(),
+        allocations.clone(),
+        sig.clone(),
+    );
+    let selfid: AccountId = "fly-coordinator.testnet".parse().unwrap();
+    testing_env_with_promise_results(
+        get_context(selfid, NearToken::from_near(0), 111).build(),
+        PromiseResult::Successful(vec![]),
+    );
+    assert!(contract.on_settlement_payout(
+        syn_id.clone(),
+        allocations.clone(),
+        NearToken::from_near(3),
+        alloc_hash,
+        "order_hash".to_string(),
+    ));
+    (contract, syn_id, syn.round_nonce, allocations, sig, owner)
+}
+
+#[test]
+#[should_panic(expected = "Nonce mismatch")]
+fn test_partial_flash_settlement_cannot_be_replayed() {
+    let (mut contract, syn_id, old_nonce, allocations, sig, owner) =
+        partially_settled_flash("replay-swarm");
+    assert_eq!(
+        contract
+            .get_syndicate(syn_id.clone())
+            .unwrap()
+            .total_escrow
+            .as_near(),
+        7
+    );
+    testing_env!(get_context(owner, NearToken::from_near(0), 120).build());
+    // Exactly what the first call sent, byte for byte.
+    contract.settle_batch(
+        syn_id,
+        old_nonce,
+        "order_hash".to_string(),
+        allocations,
+        sig,
+    );
+}
+
+#[test]
+fn test_partial_flash_settlement_rotates_nonce_but_keeps_epoch_and_timer() {
+    let (contract, syn_id, old_nonce, _, _, _) = partially_settled_flash("rotate-swarm");
+    let syn = contract.get_syndicate(syn_id).unwrap();
+    assert_ne!(
+        syn.round_nonce, old_nonce,
+        "nonce must change after a partial settlement"
+    );
+    assert_eq!(syn.epoch, 1, "a Flash syndicate stays in epoch 1");
+    assert_eq!(
+        syn.epoch_start_block, 100,
+        "the hatch_out timer must not restart for Flash"
+    );
+    assert_eq!(syn.status, SyndicateStatus::Active);
+}
+
+#[test]
+fn test_partial_flash_settlement_allows_a_fresh_signature_on_the_new_nonce() {
+    let (mut contract, syn_id, _, _, _, owner) = partially_settled_flash("next-swarm");
+    let syn = contract.get_syndicate(syn_id.clone()).unwrap();
+    let allocations = vec![Allocation {
+        recipient: syn.payout_recipient.clone(),
+        amount: NearToken::from_near(2),
+    }];
+    let alloc_hash = compute_allocations_hash(&allocations);
+    let (_, sig) = make_enclave_key_and_signature(
+        "fly-coordinator.testnet",
+        &syn_id,
+        1,
+        &syn.round_nonce,
+        &alloc_hash,
+        "order_hash_2",
+    );
+    testing_env!(get_context(owner, NearToken::from_near(0), 121).build());
+    contract.settle_batch(
+        syn_id.clone(),
+        syn.round_nonce,
+        "order_hash_2".to_string(),
+        allocations,
+        sig,
+    );
+    assert_eq!(
+        contract
+            .get_syndicate(syn_id)
+            .unwrap()
+            .total_escrow
+            .as_near(),
+        5
+    );
+}
