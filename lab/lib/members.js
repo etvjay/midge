@@ -30,25 +30,50 @@ export async function createMembers(chain, { rootDir, tag, count, fundNear = '0.
     const h = memberHandle(chain, id);
     await chain.master.createSubAccount({ accountOrPrefix: prefix, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near(fundNear) });
     const led = readLedger(rootDir); led.accounts.push({ id, createdAt: new Date().toISOString(), tag }); writeLedger(rootDir, led);
+    // A new account is not visible to every RPC read for a block or two. Return only when it is, so callers can rely on it.
+    let seen = false;
+    for (let i = 0; i < 20 && !seen; i += 1) { seen = await accountExists(chain, id); if (!seen) await sleep(1500); }
+    if (!seen) throw new Error(`account ${id} did not become visible within 30 s of creation`);
     out.push(h);
   }
   return out;
 }
 
 /**
- * Remove accounts: compact each one's index, then delete it into the master. Prune the given syndicates first (they must
- * be finished) so the index entries can go. Returns what happened per account, never throws.
+ * Remove accounts without stranding anything. First any member still holding escrow in an unfinished syndicate exits it
+ * with hatch_out (retrying while the timelock runs out); then the finished syndicates are pruned; each account's index is
+ * compacted; and an account is deleted only if no unfinished syndicate still lists it. One that cannot be cleared is KEPT
+ * (and stays in the ledger for `lab-env cleanup`), because deleting its account would lock its escrow in the contract for
+ * good. Returns what happened per account, never throws.
  */
-export async function teardownMembers(chain, { rootDir, members, pruneIds = [] }) {
-  const report = { pruned: [], notPruned: [], compacted: 0, deleted: [], failed: [], returned: 0n };
+export async function teardownMembers(chain, { rootDir, members, pruneIds = [], exitWaitMs = 60000 }) {
+  const report = { exited: [], pruned: [], notPruned: [], compacted: 0, deleted: [], kept: [], failed: [], returned: 0n };
   const caller = chain.master;
+  const finished = (rec) => !rec || /^(Settled|AbortedRefunded)$/.test(String(rec.status));
+  const t0 = Date.now();
   for (const sid of pruneIds) {
+    let rec = await chain.view('get_syndicate', { syndicate_id: sid }).catch(() => null);
+    while (!finished(rec) && Date.now() - t0 < exitWaitMs) {
+      for (const m of members.filter((x) => (rec.flyers || []).includes(x.id))) {
+        const r = await chain.send(m.account, 'hatch_out', { syndicate_id: sid }, { gas: 60000000000000n, label: `exit ${sid} as ${m.id}` });
+        if (r.ok) report.exited.push({ syndicate: sid, member: m.id });
+      }
+      await sleep(4000);
+      rec = await chain.view('get_syndicate', { syndicate_id: sid }).catch(() => null);
+    }
+  }
+  const stillOpen = new Set();
+  for (const sid of pruneIds) {
+    const rec = await chain.view('get_syndicate', { syndicate_id: sid }).catch(() => null);
+    if (!rec) continue;
+    if (!finished(rec)) { for (const f of rec.flyers || []) stillOpen.add(f); }
     const r = await chain.send(caller, 'prune_syndicate', { syndicate_id: sid }, { gas: 30000000000000n, label: `prune ${sid}` });
-    (r.ok ? report.pruned : report.notPruned).push(r.ok ? sid : { id: sid, error: r.error });
+    (r.ok ? report.pruned : report.notPruned).push(r.ok ? sid : { id: sid, error: String(r.error).slice(0, 160) });
   }
   for (const m of members) {
     const c = await chain.send(m.account, 'compact_member_index', { account_id: m.id }, { gas: 30000000000000n, label: `compact ${m.id}` });
     if (c.ok) report.compacted += 1;
+    if (stillOpen.has(m.id)) { report.kept.push(m.id); continue; }
     try {
       const before = BigInt((await m.account.getBalance()).toString());
       await m.account.deleteAccount(chain.masterId);
@@ -57,6 +82,7 @@ export async function teardownMembers(chain, { rootDir, members, pruneIds = [] }
   }
   const led = readLedger(rootDir); const gone = new Set(report.deleted);
   led.accounts = led.accounts.filter((a) => !gone.has(a.id)); writeLedger(rootDir, led);
+  report.returned = String(report.returned);
   return report;
 }
 
