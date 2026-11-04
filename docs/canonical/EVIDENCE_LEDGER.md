@@ -111,3 +111,14 @@ npm run verify:testnet   # Re-run live testnet deployment & settlement
 npm run verify:mpc       # Re-run live Chain Signatures MPC threshold call
 npm run verify:tee       # Re-run live TEE Intel TDX DCAP-QVL verification
 ```
+
+
+---
+
+## Added 2026-11-04: Roost evidence
+
+| Claim | Evidence | Command | Limits |
+|---|---|---|---|
+| **CLM-ROOST-MODEL-01** Bids sealed to a NEAR AI Cloud model's attested key; coordinator holds ciphertext only; fail closed unless three runs agree | `docs/canonical/roost-model-evidence.json` (8 of 8 live rounds exact: 3, 10, 25 and 50 bids and four prompt-injection attempts, receipts verified); offline suite `verifications/09-model-sealed-roost.js` (53 checks) | `npm run verify:roost-model` (needs `NEARAI_API_KEY`), `npm run verify:roost-sealed` | A language model does the sum; one model on one date; the model TEE is NEAR's, not ours |
+| **CLM-ROOST-HOSTED-01** Hosted Roost with exact arithmetic, attested keys and bounded single-use settlement signing | `verifications/10-hosted-roost.js` (53 checks, stable over 200 runs); locally run dstack simulator and official `dstack-verifier` rejecting the simulator's patched quote | `npm run verify:roost-hosted`, `npm run verify:hosted-attestation` | Never run on a real TDX VM; image digest and compose hash not yet pinned from a real deploy |
+| **Contract deployer key** `c.fly-1793636729.testnet` has one full-access key | On-chain `view_access_key_list` (2026-11-04) | RPC `query` `view_access_key_list` | The final submission instance must have its keys deleted; this one is replaceable by its deployer |
