@@ -14,12 +14,12 @@ import { sealBidForRoost } from '../src/enclave/member.js';
  * `npm run verify:roost-model`, which needs a NEAR AI Cloud API key.
  */
 
-const MODEL = 'Qwen/Qwen3.6-35B-A3B-FP8';
+export const MODEL = 'Qwen/Qwen3.6-35B-A3B-FP8';
 const MARKER = 'SEALED-BID-MARKER-5521';
 const sha256Hex = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const hex = (u) => Buffer.from(u).toString('hex');
 
-function startMockGateway() {
+export function startMockGateway() {
   const state = { seed: crypto.randomBytes(32), mode: {}, wireBodies: [], receipts: new Map(), calls: 0 };
   const keys = () => ({
     pub: hex(ed25519.getPublicKey(state.seed)),

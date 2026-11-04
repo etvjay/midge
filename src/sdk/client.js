@@ -33,6 +33,60 @@ export class FlyClient {
     return { status: res.status, headers: res.headers, data };
   }
 
+  async health() {
+    const res = await this._request('GET', '/v1/health');
+    return res.data;
+  }
+
+  /**
+   * Server-sent events as an async iterator of { event, data }. Break out of the loop (or pass an AbortSignal) to close
+   * the connection. The first event is "connected".
+   */
+  async *_stream(path, { signal } = {}) {
+    const controller = new AbortController();
+    if (signal) signal.addEventListener('abort', () => controller.abort(), { once: true });
+    const res = await this.fetch(`${this.baseUrl}${path}`, {
+      headers: { Accept: 'text/event-stream', ...(this.apiKey ? { 'X-Midge-Api-Key': this.apiKey } : {}) },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}: ${res.statusText}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf('\n\n')) >= 0) {
+          const block = buf.slice(0, i);
+          buf = buf.slice(i + 2);
+          const event = block.match(/^event: (.*)$/m)?.[1];
+          const raw = block.match(/^data: (.*)$/m)?.[1];
+          if (!event) continue;
+          let data = null;
+          try { data = raw === undefined ? null : JSON.parse(raw); } catch { data = raw; }
+          yield { event, data };
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') throw err;
+    } finally {
+      controller.abort();
+    }
+  }
+
+  /** Events for one syndicate: hatched, deposit_received, sealed_intent_received, hatch_out_refund. */
+  streamSyndicate(syndicateId, options) {
+    return this._stream(`/v1/stream/syndicate/${encodeURIComponent(syndicateId)}`, options);
+  }
+
+  /** Health ticks and actions for one RFQ loan. */
+  streamRfqLoan(loanId, options) {
+    return this._stream(`/v1/stream/facilities/rfq/${encodeURIComponent(loanId)}`, options);
+  }
+
   // --- 1. Syndicate Lifecycle ---
   async hatchSyndicate({ id, syndicateId, type = 'FLASH', quorumThreshold = 3, maxSpendNear = 100, expectedCodeHash, timeoutBlocks = 50, enclavePublicKey, allowedRecipients, maxReleaseBpsPerEpoch, settleDeadlineBlock }) {
     const sId = syndicateId || id;
@@ -92,6 +146,23 @@ export class FlyClient {
     const res = await this._request('POST', `/v1/syndicates/${syndicateId}/hatch-out`, {
       flyerId,
     });
+    return res.data;
+  }
+
+  /** Timelock state: creation block, timeout, the current block and the blocks remaining before hatch_out opens. */
+  async getTimelock(syndicateId) {
+    const res = await this._request('GET', `/v1/emergency/timelock/${encodeURIComponent(syndicateId)}`);
+    return res.data;
+  }
+
+  /** Pods inside a syndicate (a model: nothing on chain enforces a pod's quota). */
+  async listPods(syndicateId) {
+    const res = await this._request('GET', `/v1/syndicates/${encodeURIComponent(syndicateId)}/pods`);
+    return res.data;
+  }
+
+  async createPod(syndicateId, { podId, podType = 'EXECUTION', maxCapitalAllocation } = {}) {
+    const res = await this._request('POST', `/v1/syndicates/${encodeURIComponent(syndicateId)}/pods`, { podId, podType, maxCapitalAllocation });
     return res.data;
   }
 

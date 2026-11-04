@@ -57,7 +57,9 @@ export class FlyApiDaemon {
         try {
           await this.handleRequest(req, res);
         } catch (err) {
-          const code = err.statusCode || 500;
+          // A rule the caller broke is a 4xx, not a server fault: an unknown id is 404, a refused early exit 423, a
+          // contract-style REJECT 400. Anything else stays 500.
+          const code = err.statusCode || (/not found/i.test(err.message) ? 404 : /LOCKED/.test(err.message) ? 423 : /\bREJECT\b/.test(err.message) ? 400 : 500);
           this.sendJson(res, code, { error: err.message }, req);
         }
       });
