@@ -4,7 +4,9 @@ import path from 'node:path';
 import { bs58encode } from '../../src/chain/client.js';
 
 /** The contract build the lab's own deployment was written against. Changes with any contract change. */
-export const PINNED_CODE_HASH = 'Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9';
+// 9y8w4PU5... deployed 2026-11-05 (GAP-022 fix). The previous deployment, Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9, is what every
+// run recorded before that date cites; it is rebuilt by checking out commit 0557027 or earlier.
+export const PINNED_CODE_HASH = '9y8w4PU57V5GNd463J8DGa33xeZx8329MQdTFsbTHWJm';
 
 /**
  * Which code hash should the deployed contract have? In order: LAB_EXPECTED_CODE_HASH; the wasm built from this checkout

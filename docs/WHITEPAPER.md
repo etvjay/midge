@@ -8,7 +8,7 @@
 **Publication Date:** November 2026  
 **Reference Implementations:**  
 - NEAR L1 Coordinator: [`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet)  
-- Code Hash: `Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9`  
+- Code Hash: `9y8w4PU57V5GNd463J8DGa33xeZx8329MQdTFsbTHWJm`  
 - SHA-256 WASM: `ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1`  
 
 ---
