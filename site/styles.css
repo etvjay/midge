@@ -212,7 +212,7 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 .proof-legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
 .proof-skip { display: inline-block; margin-top: 16px; font: 400 var(--t-12) var(--mono); color: var(--d-2); }
 .proof-skip:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-.proof-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16px, 1fr)); gap: 4px; margin-top: 20px; }
+.proof-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); gap: 4px; margin-top: 20px; }
 .proof-grid a { aspect-ratio: 1; border-radius: 2px; display: block; opacity: 0; transform: scale(0.4); transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
 .proof-grid.in a { opacity: 1; transform: none; }
 .proof-grid a:hover, .proof-grid a:focus-visible { outline: 2px solid var(--d-1); outline-offset: 1px; }
