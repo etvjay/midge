@@ -106,6 +106,7 @@ class Stage {
 
 // ---------------------------------------------------------------- scenes
 const S = {};
+const ROOM = { pinned: null, shown: null, onShow: null };
 
 // 0. Hero: a field of rooms, each glowing while it deliberates; flyers orbit and travel; one agent sits in three.
 S.hero = {
@@ -214,7 +215,8 @@ S.room = {
   still: 6.4,
   draw(ctx, w, h, t) {
     const P = 9; const lt = t % P; const cyc = Math.floor(t / P);
-    const kinds = [['NEAR AI Cloud', 'an attested model'], ['Phala confidential machine', 'our own program']]; const kind = kinds[cyc % 2];
+    const kinds = [['NEAR AI Cloud', 'an attested model'], ['Phala confidential machine', 'our own program']];
+    const ki = ROOM.pinned ?? cyc % 2; const kind = kinds[ki]; if (ROOM.shown !== ki) { ROOM.shown = ki; ROOM.onShow && ROOM.onShow(ki); }
     const bids = ['1.20', '0.80', '2.40', '0.50', '1.10'];
     const rx = w * 0.58, ry = h * 0.47, rw = Math.min(w * 0.34, 220), rh = h * 0.46;
     const think = 0.4 + 0.4 * Math.sin(lt * 3) * seg(lt, 3, 3.5) * (1 - seg(lt, 5.4, 5.8));
@@ -499,6 +501,55 @@ for (const k of $$('.kicker')) {
 }
 
 const live = $('#live');
+
+// ---------------------------------------------------------------- the room switch (one indicator moving between the two kinds)
+(function roomSwitch() {
+  const sw = $('.kind-switch'); if (!sw) return;
+  const ind = $('.kind-ind', sw); const btns = $$('button', sw);
+  const place = (i) => { const b = btns[i]; const W = ind.offsetWidth; const l = b.offsetLeft - 4; ind.style.setProperty('--l', `${l}px`); ind.style.setProperty('--r', `${W - l - b.offsetWidth}px`); btns.forEach((x, k) => x.classList.toggle('now', k === i)); };
+  ROOM.onShow = (i) => place(i);
+  btns.forEach((b, i) => b.addEventListener('click', () => {
+    const again = ROOM.pinned === i; ROOM.pinned = again ? null : i; sw.classList.toggle('pinned', !again);
+    btns.forEach((x, k) => x.setAttribute('aria-pressed', String(!again && k === i)));
+    place(again ? (ROOM.shown ?? 0) : i);
+    const st = $('canvas[data-scene="room"]').__stage; if (st) { st.t0 = null; st.lastT = 0; if (REDUCE) st.draw(S.room.still); }
+    live.textContent = again ? 'The room alternates between both kinds' : `Showing the room as ${b.textContent}`;
+  }));
+  requestAnimationFrame(() => place(ROOM.shown ?? 0)); addEventListener('resize', () => place(ROOM.pinned ?? ROOM.shown ?? 0));
+})();
+
+// ---------------------------------------------------------------- technical drawings: inline the SVG, then draw it in
+for (const d of $$('.drawing')) {
+  const w = $('.wire', d);
+  fetch(w.dataset.src).then((r) => r.text()).then((t) => { w.innerHTML = t; $$('path', w).forEach((p) => p.setAttribute('pathLength', '1')); const svg = $('svg', w); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); io.observe(d); }).catch(() => {});
+}
+
+// ---------------------------------------------------------------- headline: words rise in, 30 ms apart, the whole line within 500 ms
+(function words() {
+  const h = $('#hero-title'); if (!h || REDUCE) return;
+  h.setAttribute('aria-label', h.textContent.replace(/\s+/g, ' ').trim());
+  let i = 0; const parts = [];
+  for (const n of [...h.childNodes]) {
+    if (n.nodeType !== 3) { parts.push(n); continue; }
+    for (const word of n.nodeValue.split(/(\s+)/)) {
+      if (!word) continue;
+      if (/^\s+$/.test(word)) { parts.push(document.createTextNode(' ')); continue; }
+      const w = document.createElement('span'); w.className = 'w'; w.setAttribute('aria-hidden', 'true');
+      const s = document.createElement('span'); s.textContent = word; s.style.setProperty('--d', `${120 + i++ * 30}ms`); w.appendChild(s); parts.push(w);
+    }
+  }
+  h.replaceChildren(...parts); h.classList.add('reveal-words');
+})();
+
+// ---------------------------------------------------------------- section jumps: crossfade with View Transitions where supported
+for (const a of $$('a[href^="#"]:not(.skip):not(.proof-skip)')) {
+  a.addEventListener('click', (e) => {
+    const id = a.getAttribute('href').slice(1); const el = id && document.getElementById(id);
+    if (!el || REDUCE || !document.startViewTransition || e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    document.startViewTransition(() => { el.scrollIntoView({ behavior: 'instant', block: 'start' }); history.pushState(null, '', `#${id}`); });
+  });
+}
 for (const b of $$('button.copy')) b.addEventListener('click', async () => { const o = b.dataset.label || b.textContent; b.dataset.label = o; try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; live.textContent = 'Copied to clipboard'; } catch { b.textContent = 'Select and copy'; } setTimeout(() => { b.textContent = o; }, 1400); });
 
 // ---------------------------------------------------------------- live reads from NEAR testnet (public RPC, no server of ours)

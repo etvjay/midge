@@ -85,10 +85,16 @@
 
     <div class="chapter">
       <div class="chapter-text">
+        <img class="plate" src="img/plate-room.webp" width="480" height="360" alt="A sealed glass room: a faceted cage around a glowing core" loading="lazy" decoding="async">
         <p class="step">The room</p>
         <h3>Members decide in private</h3>
         <p>Each member seals their bid so only the room can open it. The room adds the bids up and lets out only the result. Whoever runs the machine sees sealed data, nothing else.</p>
         <p>The room runs inside secure hardware (a TEE), which keeps what it processes hidden and proves which code it runs. There are two kinds: an attested AI model on <strong>NEAR AI Cloud</strong>, and <strong>our own program on a Phala confidential machine</strong>.</p>
+        <div class="kind-switch" role="group" aria-label="Show the room as">
+          <span class="kind-ind" aria-hidden="true"></span>
+          <button type="button" data-kind="0" aria-pressed="false">NEAR AI Cloud</button>
+          <button type="button" data-kind="1" aria-pressed="false">Our program on Phala</button>
+        </div>
         <p class="badge-row"><span class="badge live">Both live</span></p>
       </div>
       <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="room" aria-hidden="true"></canvas></div><figcaption class="stage-cap">Bids are sealed as they enter. Only the total leaves.</figcaption></figure>
@@ -96,6 +102,7 @@
 
     <div class="chapter">
       <div class="chapter-text">
+        <img class="plate" src="img/plate-rules.webp" width="480" height="360" alt="The Nest under a glass cover: every member's share is visible and none can be touched" loading="lazy" decoding="async">
         <p class="step">The rules</p>
         <h3>What the group can do is fixed in public</h3>
         <p>When the group forms, its rules go into a contract on NEAR: who may be paid, how much per round, and until when. Every member agrees to exactly those rules when they put money in, and they can never change.</p>
@@ -107,6 +114,7 @@
 
     <div class="chapter">
       <div class="chapter-text">
+        <img class="plate" src="img/plate-exit.webp" width="480" height="360" alt="The Nest with one member's share lifted out of it" loading="lazy" decoding="async">
         <p class="step">The exit</p>
         <h3>Anyone can leave on their own</h3>
         <p>If the room stops, crashes or disappears, a timer runs. When it ends, any member takes back exactly their own share, straight from the contract, without anyone's permission and without touching anyone else's money.</p>
@@ -216,6 +224,38 @@
         <p class="fine">The NEAR AI and Phala parts are each proven live, and NEAR AI's answer has been settled on NEAR through a Roost running locally. A single run with the Roost on Phala and the model on NEAR AI has not been recorded yet.</p>
       </div>
       <figure class="stage-fig"><div class="stage stage-xl"><canvas class="stage-canvas" data-scene="arch" aria-hidden="true"></canvas></div><figcaption class="stage-cap">A proposal travels from the model to our program and then to NEAR. A dishonest one is stopped: Phala will not sign more than the total, and NEAR will not pay outside the rules.</figcaption></figure>
+    </div>
+    <div class="drawings">
+      <h3 class="drawings-title">The three parts, drawn</h3>
+      <div class="grid-3">
+        <figure class="drawing">
+          <div class="wire-box">
+            <div class="wire" data-src="img/wire-room.svg" role="img" aria-label="Line drawing of the room: a faceted cage around a core"></div>
+            <span class="callout" style="left:50%;top:50%" aria-hidden="true">1</span>
+            <span class="callout" style="left:71%;top:31%" aria-hidden="true">2</span>
+            <span class="callout" style="left:26%;top:66%" aria-hidden="true">3</span>
+          </div>
+          <figcaption><strong>The room</strong> Members seal their bids to it. Only the result leaves.<ol class="key"><li>the private decision</li><li>secure hardware (TEE)</li><li>bids are sealed to it</li></ol></figcaption>
+        </figure>
+        <figure class="drawing">
+          <div class="wire-box">
+            <div class="wire" data-src="img/wire-tee.svg" role="img" aria-label="Line drawing of a secure enclosure: a sealed housing with a lid and pins"></div>
+            <span class="callout" style="left:50%;top:44%" aria-hidden="true">1</span>
+            <span class="callout" style="left:24%;top:55%" aria-hidden="true">2</span>
+            <span class="callout" style="left:65%;top:74%" aria-hidden="true">3</span>
+          </div>
+          <figcaption><strong>The enclosure</strong> Our program on Phala, or the model on NEAR AI Cloud. Anyone can check which code runs inside.<ol class="key"><li>attested code</li><li>in: sealed bids · out: one signed result</li><li>the keys never leave</li></ol></figcaption>
+        </figure>
+        <figure class="drawing">
+          <div class="wire-box">
+            <div class="wire" data-src="img/wire-nest.svg" role="img" aria-label="Line drawing of the Nest: a slab holding four members' shares"></div>
+            <span class="callout" style="left:35%;top:36%" aria-hidden="true">1</span>
+            <span class="callout" style="left:59%;top:49%" aria-hidden="true">2</span>
+            <span class="callout" style="left:20%;top:47%" aria-hidden="true">3</span>
+          </div>
+          <figcaption><strong>The Nest</strong> The contract on NEAR. It pays only inside the rules, and gives each member back their own share.<ol class="key"><li>each member's share</li><li>the exit returns exactly this</li><li>rules fixed when the group forms</li></ol></figcaption>
+        </figure>
+      </div>
     </div>
   </div>
 </section>
