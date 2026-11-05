@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-04T20:45:09.596Z",
+ "generatedAt": "2026-11-05T03:19:08.397Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 38,
   "deposit": 71,
-  "settled": 43,
+  "settled": 45,
   "exit": 13,
   "other": 33,
-  "rejected": 7
+  "rejected": 8
  },
  "security": {
   "run": "20261104T203550Z-7bae",
@@ -1816,6 +1816,33 @@
    "kind": "other",
    "exp": "E-SECURITY-FCKEY-01",
    "run": "20261104T203550Z-7bae",
+   "error": null
+  },
+  {
+   "hash": "4roKauYHdJ1jAYBHNARLUUwkMQJA5mZ8zL56p2nTbDWw",
+   "label": "settle_batch cmb-mw2z62x5-1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-COMBINED-LIVE-01",
+   "run": "20261105T031634Z-e166",
+   "error": null
+  },
+  {
+   "hash": "GAYD3eLmdHFzotxeBpRWeB7Nfy2SgHme4y7CvhykRcNx",
+   "label": "OUTSIDE-POLICY settle_batch cmb-mw2z62x5-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-COMBINED-LIVE-01",
+   "run": "20261105T031634Z-e166",
+   "error": "Smart contract panicked: panicked at src/lib.rs:557:13: [Settle REJECT] Recipient thief62x5.fly-1793636729.testnet is not in allowed_recipie"
+  },
+  {
+   "hash": "Ar9aAFNQwCeYeKscqWKSaFMCSnbsVMbA4K8h2RkCKkiZ",
+   "label": "settle_batch cmb-mw2z62x5-2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-COMBINED-LIVE-01",
+   "run": "20261105T031634Z-e166",
    "error": null
   },
   {

@@ -51,6 +51,8 @@
 - **Do:** `node lab/run.js --only E-ADVISOR-LIVE-01`
 - **See:** the Roost totals two sealed bids exactly (0.06 NEAR) and tells the attested NEAR AI model only that total and three recipient ids. The model answers 0.03 / 0.02 / 0.01. The Roost signs within the total, the contract pays exactly those amounts, and the allocations hash the contract logged matches the model's signed, decrypted answer. Then the same machinery with a lying advisor: a split above the total is refused by the Roost, a payment to someone outside the policy is refused by the contract, and an unreachable model simply settles on the exact rule.
 - **Say:** "The model advises. It can make a bad split. It cannot make a bigger payout or pay someone outside the policy."
+- **Do (all three together):** `node lab/run.js --only E-COMBINED-LIVE-01`
+- **See:** a real Phala TDX VM is deployed and its attestation verified; members seal bids to it; it totals 0.06 NEAR; the attested NEAR AI model is told only that total and proposes 0.03 / 0.02 / 0.01; the VM signs within the total; the contract pays exactly that. Then a 0.06 proposal against a 0.04 total is refused by the VM, a signed payout to an account outside the policy is refused by the contract, and the VM is deleted. Recorded: run `20261105T031634Z-e166`, settlement `4roKauYHdJ1jAYBHNARLUUwkMQJA5mZ8zL56p2nTbDWw`; `node scripts/verify-advice.mjs docs/lab-runs/20261105T031634Z-e166` re-checks that the payout is the model's attested answer.
 
 ---
 

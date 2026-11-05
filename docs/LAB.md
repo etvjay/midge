@@ -48,7 +48,7 @@ node lab/run.js --tier testnet                       # E-CHAIN-ROUND-LOCAL (~0.0
 | offline | nothing | `E-LAB-01` (self-test), `E-SUITE-OFFLINE` (10 suites), `E-CHECK-FOUNDRY`, `E-RUST-CONTRACT`, `E-IFACE-MODEL` (every route, SDK method and MCP tool) | free |
 | testnet | NEAR key in `.env`, network | `E-CHAIN-ROUND-LOCAL` (about 0.034 NEAR net per attempt), `E-IFACE-CHAIN` (MCP, SDK and API against the real contract; about 0.066), `E-SECURITY-FCKEY-01` (a compromised agent bounded by a function-call key; about 0.025). Measured as the net change in the master account. | small |
 | cloud | NEAR AI key, network, `dcap-qvl` | `E-MODEL-SEALED-LIVE-01` (a few cents of inference); `E-ADVISOR-LIVE-01` (the advisor with the real contract; also needs a NEAR key, about 0.05 NEAR) | cents |
-| hardware | Phala key, NEAR key, Docker, `dcap-qvl` | `E-HOSTED-LIVE-01` | about $0.002 (a VM for ~2 min) |
+| hardware | Phala key, NEAR key, Docker, `dcap-qvl` (and a NEAR AI key for the combined run) | `E-HOSTED-LIVE-01`; `E-COMBINED-LIVE-01` (the Roost on a real TDX VM, the NEAR AI model proposing the split, the contract settling, in one round) | about $0.002 each (a VM for ~2-3 min) plus a few cents of inference |
 
 An experiment whose requirements are missing is skipped and recorded as skipped, not passed. There is no sandbox tier.
 

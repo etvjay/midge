@@ -48,3 +48,7 @@ The user asked for a simpler page that is easier to grasp, without the status ba
 - **Plain words:** no TEE, attestation, nonce, policy hash or hatch_out on the page or in the stages; the technical terms stay in the docs.
 - **No status badges.** Honesty is carried by one plain list in the proof section, "What works today": running on testnet, built but not yet live, next. The one-line note under "Who uses it" says the lending, trading and AI examples are simulations.
 - **The hero is a rendered image** (Blender, Cycles), so it always loads; the live three.js scene fades in over it where the device can run it (not under reduced motion, software WebGL, Save-Data or under 4 GB). The console says why when the live scene is off.
+
+## Update 2026-11-05: the combined run passed
+
+`E-COMBINED-LIVE-01` (run `20261105T031634Z-e166`, PASS, log intact): the Roost on a real Phala TDX VM, the attested NEAR AI model proposing the split, and the NEAR contract settling it, in one round, with the over-the-total and outside-the-policy attacks refused at the VM and the contract. VM cost $0.0019. The site now lists it under "Running on testnet".
