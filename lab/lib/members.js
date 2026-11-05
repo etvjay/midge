@@ -71,6 +71,16 @@ export async function teardownMembers(chain, { rootDir, members, pruneIds = [], 
     (r.ok ? report.pruned : report.notPruned).push(r.ok ? sid : { id: sid, error: String(r.error).slice(0, 160) });
   }
   for (const m of members) {
+    // Never delete an account that still has money in an unfinished syndicate, whatever the caller passed as pruneIds:
+    // the contract is asked directly. (`lab-env cleanup` passes no pruneIds; it deleted such an account on 2026-11-05,
+    // and the escrow had to be recovered by recreating the account from its derived key.) Try to exit first.
+    let open = await openEscrows(chain, m.id);
+    for (const o of open) {
+      const r = await chain.send(m.account, 'hatch_out', { syndicate_id: o.id }, { gas: 60000000000000n, label: `exit ${o.id} as ${m.id}` });
+      if (r.ok) report.exited.push({ syndicate: o.id, member: m.id });
+    }
+    if (open.length) { await sleep(4000); open = await openEscrows(chain, m.id); }
+    if (open.length) { stillOpen.add(m.id); report.openEscrow = [...(report.openEscrow || []), ...open.map((o) => ({ member: m.id, syndicate: o.id, escrow: String(o.escrow) }))]; }
     const c = await chain.send(m.account, 'compact_member_index', { account_id: m.id }, { gas: 30000000000000n, label: `compact ${m.id}` });
     if (c.ok) report.compacted += 1;
     if (stillOpen.has(m.id)) { report.kept.push(m.id); continue; }
@@ -84,6 +94,21 @@ export async function teardownMembers(chain, { rootDir, members, pruneIds = [], 
   led.accounts = led.accounts.filter((a) => !gone.has(a.id)); writeLedger(rootDir, led);
   report.returned = String(report.returned);
   return report;
+}
+
+/** Unfinished syndicates in which `id` still has escrow, read from the contract (not from what a caller remembers). */
+export async function openEscrows(chain, id) {
+  const out = [];
+  for (let from = 0; ; from += 50) {
+    const page = await chain.view('list_syndicates_by_member', { account_id: id, from_index: from, limit: 50 }).catch(() => []);
+    for (const s of page) {
+      if (/^(Settled|AbortedRefunded)$/.test(String(s.status))) continue;
+      const e = BigInt(await chain.view('get_escrow', { syndicate_id: s.id, account_id: id }).catch(() => '0'));
+      if (e > 0n) out.push({ id: s.id, escrow: e });
+    }
+    if (page.length < 50) break;
+  }
+  return out;
 }
 
 /** Everything the ledger still lists: accounts left behind by a crashed run. */
