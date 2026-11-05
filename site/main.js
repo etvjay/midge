@@ -525,8 +525,8 @@ for (const d of $$('.drawing')) {
 }
 
 // ---------------------------------------------------------------- headline: words rise in, 30 ms apart, the whole line within 500 ms
-(function words() {
-  const h = $('#hero-title'); if (!h || REDUCE) return;
+for (const h of REDUCE ? [] : $$('.section .title')) splitWords(h);
+function splitWords(h) {
   h.setAttribute('aria-label', h.textContent.replace(/\s+/g, ' ').trim());
   let i = 0; const parts = [];
   for (const n of [...h.childNodes]) {
@@ -535,11 +535,11 @@ for (const d of $$('.drawing')) {
       if (!word) continue;
       if (/^\s+$/.test(word)) { parts.push(document.createTextNode(' ')); continue; }
       const w = document.createElement('span'); w.className = 'w'; w.setAttribute('aria-hidden', 'true');
-      const s = document.createElement('span'); s.textContent = word; s.style.setProperty('--d', `${120 + i++ * 30}ms`); w.appendChild(s); parts.push(w);
+      const s = document.createElement('span'); s.textContent = word; s.style.setProperty('--d', `${Math.min(i++ * 30, 220)}ms`); w.appendChild(s); parts.push(w);
     }
   }
   h.replaceChildren(...parts); h.classList.add('reveal-words');
-})();
+}
 
 // ---------------------------------------------------------------- section jumps: crossfade with View Transitions where supported
 for (const a of $$('a[href^="#"]:not(.skip):not(.proof-skip)')) {
@@ -603,8 +603,9 @@ function row(list, ok, label, detail) {
 // ---------------------------------------------------------------- proof grid and the agent console (recorded runs)
 (async function proof() {
   const grid = $('#proof-grid'), legend = $('#proof-legend'), note = $('#proof-note');
+  await new Promise((go) => { const o = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { o.disconnect(); go(); } }, { rootMargin: '1200px 0px' }); o.observe($('#members')); o.observe($('#proof')); });
   let data;
-  try { data = await (await fetch('data/proof.json', { cache: 'no-store' })).json(); } catch { note.textContent = 'Could not load the recorded transactions.'; return; }
+  try { data = await (await fetch('data/proof.json')).json(); } catch { note.textContent = 'Could not load the recorded transactions.'; return; }
   const names = { deposit: 'Deposit', hatch: 'Syndicate created', settled: 'Settled payout', exit: 'Exit (hatch_out)', rejected: 'Attack refused by the contract', other: 'Other call' };
   for (const k of ['deposit', 'hatch', 'settled', 'exit', 'rejected', 'other']) { if (!data.counts[k]) continue; const s = document.createElement('span'); s.innerHTML = `<i class="k-${k}"></i>`; s.append(`${names[k]} · ${data.counts[k]}`); legend.appendChild(s); }
   const tip = document.createElement('div'); tip.className = 'proof-tip'; document.body.appendChild(tip);
@@ -674,10 +675,14 @@ function row(list, ok, label, detail) {
 })();
 
 // ---------------------------------------------------------------- 3D moments (three.js), progressive enhancement
-if (!REDUCE) {
-  const go = () => import('./scene3d.js').then(({ boot }) => boot({ hosts: [
+// Skipped under reduced motion, with Save-Data on, or on devices reporting under 4 GB of memory (?3d forces it).
+const LIGHT = !new URLSearchParams(location.search).has('3d') && ((navigator.connection && navigator.connection.saveData) || (navigator.deviceMemory && navigator.deviceMemory < 4));
+if (!REDUCE && !LIGHT) {
+  const models = Object.fromEntries(['room', 'nest', 'tee'].map((n) => [n, fetch(`models/${n}.glb`).then((r) => { if (!r.ok) throw new Error(`${n}.glb ${r.status}`); return r.arrayBuffer(); })]));
+  const go = () => import('./scene3d.js').then(({ boot }) => boot({ models, hosts: [
     { el: $('.hero'), kind: 'hero', fallback: $('canvas[data-scene="hero"]') },
     { el: $('canvas[data-scene="arch"]').parentElement, kind: 'arch', fallback: $('canvas[data-scene="arch"]') },
-  ] })).then((r) => { document.documentElement.dataset.webgl = r && r.ok ? 'on' : 'off'; }).catch(() => { document.documentElement.dataset.webgl = 'off'; });
-  if (document.readyState === 'complete') setTimeout(go, 200); else addEventListener('load', () => setTimeout(go, 200), { once: true });
+  ] })).then((r) => { document.documentElement.dataset.webgl = r && r.ok ? 'on' : 'off'; if (r && !r.ok) document.documentElement.dataset.webglReason = r.reason; }).catch(() => { document.documentElement.dataset.webgl = 'off'; });
+  const afterPaint = () => requestAnimationFrame(() => setTimeout(go, 0));
+  if (document.readyState === 'complete') afterPaint(); else addEventListener('load', afterPaint, { once: true });
 }

@@ -246,24 +246,39 @@ function archScene(models, host) {
 }
 
 // ---------------------------------------------------------------- boot
-export async function boot({ hosts }) {
-  const probe = document.createElement('canvas');
-  if (!probe.getContext('webgl2')) return { ok: false, reason: 'no WebGL 2' };
+// Give the page a frame between heavy steps, so scrolling and input stay responsive while the 3D starts.
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+
+export async function boot({ hosts, models: buffers }) {
+  if (!('WebGL2RenderingContext' in window)) return { ok: false, reason: 'no WebGL 2' };
   const loader = new GLTFLoader(); const base = new URL('models/', document.baseURI);
-  const load = (n) => loader.loadAsync(new URL(`${n}.glb`, base).href).then((g) => g.scene);
+  // models arrive as ArrayBuffers fetched in parallel with this module (main.js); fall back to loading them here
+  const load = (n) => (buffers && buffers[n] ? buffers[n].then((buf) => loader.parseAsync(buf, base.href)) : loader.loadAsync(new URL(`${n}.glb`, base).href)).then((g) => g.scene);
   const [room, nest, tee] = await Promise.all(['room', 'nest', 'tee'].map(load));
   const models = { room, nest, tee };
-  const renderer = makeRenderer();
+  await nextFrame();
+  let renderer; try { renderer = makeRenderer(); } catch (e) { return { ok: false, reason: String(e) }; }
+  // Software WebGL (no usable GPU: blocklisted drivers, VMs) compiles these shaders for seconds and freezes the page.
+  // Keep the 2D scenes instead. ?3d in the URL forces the 3D, for testing.
+  const force = new URLSearchParams(location.search).has('3d');
+  const info = renderer.getContext().getExtension('WEBGL_debug_renderer_info');
+  const gpu = info ? String(renderer.getContext().getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+  if (!force && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(gpu)) { renderer.dispose(); renderer.forceContextLoss(); return { ok: false, reason: `software renderer (${gpu})` }; }
+  await nextFrame();
   const pm = new PMREMGenerator(renderer); ENV = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose();
+  await nextFrame();
   const stages = hosts.map(({ el, kind, fallback }) => {
     const s = (kind === 'hero' ? heroScene : archScene)(models, el);
     return { el, fallback, ...s, visible: false, t0: null };
   });
+  // compile every shader before the first frame, using parallel compilation where the driver offers it
+  for (const s of stages) { await nextFrame(); if (renderer.compileAsync) await renderer.compileAsync(s.scene, s.camera).catch(() => {}); }
   let active = null;
   const pick = () => { const vis = stages.filter((s) => s.visible); return vis.sort((a, b) => b.ratio - a.ratio)[0] || null; };
   const io = new IntersectionObserver((es) => { for (const e of es) { const s = stages.find((x) => x.el === e.target); if (s) { s.visible = e.isIntersecting; s.ratio = e.intersectionRatio; } } active = pick(); }, { threshold: [0, 0.1, 0.3, 0.6, 1] });
   // take over each stage: hide its 2D fallback, keep it available if WebGL is lost
-  for (const s of stages) { if (s.fallback) { s.fallback.__stage && (s.fallback.__stage.off = true); s.fallback.style.visibility = 'hidden'; } io.observe(s.el); }
+  for (const s of stages) io.observe(s.el);
+  const takeOver = (s) => { if (s.took) return; s.took = true; requestAnimationFrame(() => { renderer.domElement.classList.add('ready'); setTimeout(() => { if (s.fallback) { if (s.fallback.__stage) s.fallback.__stage.off = true; s.fallback.style.visibility = 'hidden'; } }, 650); }); };
   renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); for (const s of stages) { if (s.fallback) { s.fallback.style.visibility = ''; if (s.fallback.__stage) { s.fallback.__stage.off = false; s.fallback.__stage.start(); } } s.labels.show(false); } renderer.setAnimationLoop(null); renderer.domElement.remove(); });
   const start = performance.now();
   renderer.setAnimationLoop(() => {
@@ -272,7 +287,7 @@ export async function boot({ hosts }) {
     if (renderer.domElement.parentElement !== s.el) { s.el.insertBefore(renderer.domElement, s.labels.layer); }
     if (!fit(renderer, s.el, s.camera)) return;
     const t = (performance.now() - start) / 1000;
-    s.update(t); renderer.render(s.scene, s.camera); s.labels.update(s.camera);
+    s.update(t); renderer.render(s.scene, s.camera); s.labels.update(s.camera); takeOver(s);
     for (const o of stages) o.labels.show(o === s);
   });
   return { ok: true, renderer };

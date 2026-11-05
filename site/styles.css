@@ -102,11 +102,9 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 .chain-chip { display: inline-flex; align-items: center; gap: 8px; font: 400 var(--t-12) var(--mono); color: var(--d-2); border: 1px solid var(--d-line); border-radius: 999px; padding: 4px 12px; }
 .chain-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--d-3); }
 .chain-chip.ok .dot { background: var(--d-lake); }
-.hero-inner > * { opacity: 0; transform: translateY(12px); animation: rise 800ms var(--ease) forwards; }
-.hero-inner > h1.reveal-words { opacity: 1; transform: none; animation: none; }
-.hero-inner > *:nth-child(2) { animation-delay: 80ms; } .hero-inner > *:nth-child(3) { animation-delay: 160ms; }
-.hero-inner > *:nth-child(4) { animation-delay: 240ms; } .hero-inner > *:nth-child(5) { animation-delay: 320ms; } .hero-inner > *:nth-child(6) { animation-delay: 400ms; }
-@keyframes rise { to { opacity: 1; transform: none; } }
+/* the hero copy is visible at first paint; only the live chip and the scroll cue arrive a moment later */
+.hero .fine-dark, .scroll-cue { opacity: 0; animation: rise 400ms var(--ease) 200ms forwards; }
+@keyframes rise { to { opacity: 1; } }
 
 /* ---------- sections ---------- */
 .section { padding: clamp(80px, 11vw, 144px) 0; }
@@ -258,7 +256,7 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
   .reveal-words .w > span, .callout { animation: none !important; transform: none !important; opacity: 1 !important; transition: none !important; }
   .wire path { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; transition: none !important; }
   .kind-ind { transition: none !important; }
-  .hero-inner > *, .reveal, .status-table tbody tr, .proof-grid a { animation: none !important; opacity: 1 !important; transform: none !important; transition: none !important; }
+  .hero .fine-dark, .scroll-cue, .reveal, .status-table tbody tr, .proof-grid a { animation: none !important; opacity: 1 !important; transform: none !important; transition: none !important; }
 }
 @media (max-width: 760px) {
   .hero::after { background: linear-gradient(0deg, rgba(15, 20, 22, 0.92) 0%, rgba(15, 20, 22, 0.72) 60%, rgba(15, 20, 22, 0.56) 100%); }
@@ -302,14 +300,17 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 
 /* ---------- headline reveal: words rise in, 30 ms apart ---------- */
 .reveal-words .w { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.1em; margin-bottom: -0.1em; }
-.reveal-words .w > span { display: inline-block; transform: translateY(108%); animation: word-up 280ms var(--ease) forwards; animation-delay: var(--d, 0ms); }
+.reveal-words .w > span { display: inline-block; transform: translateY(108%); }
+.reveal-words.in .w > span { animation: word-up 280ms var(--ease) forwards; animation-delay: var(--d, 0ms); }
+.title.reveal-words.reveal { opacity: 1; transform: none; }
 @keyframes word-up { to { transform: none; } }
 
 /* ---------- section jumps: a 220 ms crossfade (View Transitions where supported) ---------- */
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 220ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
 
 /* ---------- 3D labels (three.js stages) ---------- */
-.webgl { z-index: -1; }
+.webgl { z-index: -1; opacity: 0; transition: opacity 600ms var(--ease); }
+.webgl.ready { opacity: 1; }
 .stage .webgl { z-index: 0; }
 .labels3d { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
 .hero .labels3d { z-index: -1; }
