@@ -39,3 +39,12 @@ The source text is `docs/canonical/WHAT_IS_MIDGE.md`. This file records what was
 - **Test environment order:** explainer first, then the live explorer (reading the contract from the browser via public RPC, which allows cross-origin requests), then the in-browser playground (labelled a simulation).
 - **The site can change later:** it is static files, so sections are edited and redeployed as evidence changes.
 - The AGENTS.md "UI freeze" is overridden for this work by the user's instruction.
+
+## Revision 2026-11-05: simpler
+
+The user asked for a simpler page that is easier to grasp, without the status badges.
+
+- **Eight sections instead of twelve:** hero, the problem, how it works (room, rules, exit), who uses it (members, uses, one-off or ongoing, the live network), AI agents, under the hood (the architecture flow and the three pieces drawn), proof, try it. Syndicates, network, private systems and who joins were merged; "Beyond NEAR" became one line under "Next".
+- **Plain words:** no TEE, attestation, nonce, policy hash or hatch_out on the page or in the stages; the technical terms stay in the docs.
+- **No status badges.** Honesty is carried by one plain list in the proof section, "What works today": running on testnet, built but not yet live, next. The one-line note under "Who uses it" says the lending, trading and AI examples are simulations.
+- **The hero is a rendered image** (Blender, Cycles), so it always loads; the live three.js scene fades in over it where the device can run it (not under reduced motion, software WebGL, Save-Data or under 4 GB). The console says why when the live scene is off.

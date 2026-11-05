@@ -105,7 +105,7 @@ function heroScene(models, host) {
   const nest = flat(dress(models.nest.clone(true), { nest_slab: M.slab, nest_share: (o) => new MeshStandardMaterial({ color: o.material.color, metalness: 0.2, roughness: 0.5, emissive: o.material.color, emissiveIntensity: 0.12 }) }));
   nest.position.set(MOBILE ? 0 : 4.5, MOBILE ? -3.6 : -3.0, -3.2); nest.scale.set(MOBILE ? 1.1 : 1.45, 0.35, 1.2); world.add(nest);
   const nestTop = nest.position.y + 0.12;
-  const nestLabel = labels.add('NEAR · one contract, every syndicate settles here', 'dim'); nestLabel.pos.copy(nest.position).add(new Vector3(-1.6, -0.45, 1.1));
+  const nestLabel = labels.add('NEAR · one contract for every group', 'dim'); nestLabel.pos.copy(nest.position).add(new Vector3(-1.6, -0.45, 1.1));
   // settlement beams (room -> Nest)
   const beams = rooms.map((rm) => {
     const geo = new BufferGeometry().setAttribute('position', new Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
@@ -122,8 +122,8 @@ function heroScene(models, host) {
     const geo = new BufferGeometry().setFromPoints([a.g.position, b.g.position]);
     const l = new Line(geo, new LineDashedMaterial({ color: C.glow, dashSize: 0.12, gapSize: 0.12, transparent: true, opacity: 0 })); l.computeLineDistances(); world.add(l); return l;
   });
-  const agentLabel = labels.add('one agent · three syndicates', 'glow');
-  const roomLabel = labels.add('a syndicate: members deciding in a private room', 'lake');
+  const agentLabel = labels.add('one member, three groups', 'glow');
+  const roomLabel = labels.add('a group deciding in its private room', 'lake');
   // travellers between rooms (members joining another syndicate)
   const trav = Array.from({ length: MOBILE ? 3 : 6 }, () => ({ a: Math.floor(r() * N), b: Math.floor(r() * N), off: r() * 6, dur: 2.6 + r() * 1.6 }));
 
@@ -192,9 +192,9 @@ function archScene(models, host) {
   nest.position.set(0.4, -2.2, 0.6); nest.scale.set(1.15, 0.8, 1.1); scene.add(nest);
   const phalaLid = phala.getObjectByName('tee_lid'), aiLid = ai.getObjectByName('tee_lid'); const nestSlab = nest.getObjectByName('nest_slab');
   const L = {
-    ai: labels.add('NEAR AI Cloud · TEE', 'blue'),
-    ph: labels.add('Our program on Phala · TEE', 'lake'),
-    nr: labels.add('NEAR L1 · the contract', 'ink'),
+    ai: labels.add('NEAR AI Cloud', 'blue'),
+    ph: labels.add('Our program on Phala', 'lake'),
+    nr: labels.add('NEAR · the contract', 'ink'),
     mem: labels.add('members', 'dim'), alice: labels.add('alice', 'ink'), bob: labels.add('bob', 'ink'), mal: labels.add('mallory', 'deny'),
     state: labels.add('', 'state'), msg: labels.add('', 'msg'),
   };
@@ -230,11 +230,11 @@ function archScene(models, host) {
       else if (lt >= 2.9 && lt < 4.6) msg = 'only the total goes to the model';
       else if (lt >= 4.6 && lt < 6) msg = `the model proposes: ${props[v]}`;
       const chk = seg(lt, 6, 6.4);
-      if (v === 1 && chk > 0) { msg = '8.00 is more than the 6.00 in the room · Phala does not sign'; bad = chk * (1 - seg(lt, 9.5, 11)); flash(phalaLid.material, C.deny, bad); }
+      if (v === 1 && chk > 0) { msg = 'asks for 8.00 but only 6.00 is in the room · Phala refuses to sign'; bad = chk * (1 - seg(lt, 9.5, 11)); flash(phalaLid.material, C.deny, bad); }
       else flash(phalaLid.material, C.lake, (lt > 0.5 && lt < 2.8) || (lt > 6 && lt < 7.4) ? 0.6 : 0);
       flash(aiLid.material, C.blue, lt > 3.2 && lt < 5.6 ? 0.6 : 0);
       if (v !== 1) {
-        if (chk > 0 && lt < 7.2) msg = 'fits the total · signed inside the TEE';
+        if (chk > 0 && lt < 7.2) msg = 'fits the total · Phala signs';
         along(signed, P.ph, P.nr, seg(lt, 7.2, 8.2), 0.2);
         const fin = seg(lt, 8.2, 8.6);
         if (v === 0) { if (fin > 0) msg = 'within the rules · NEAR pays alice and bob'; along(pays[0], P.nr, recip.alice, seg(lt, 8.4, 9.6), 0.5); along(pays[1], P.nr, recip.bob, seg(lt, 8.5, 9.7), 0.5); flash(nestSlab.material, C.lake, fin * (1 - seg(lt, 9.6, 10.6)) * 0.5); }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Midge, private syndicates for private systems</title>
-<meta name="description" content="Midge is a network of private rooms with public rules on NEAR. People, DAOs, institutions and AI agents form syndicates, decide together inside secure hardware, and settle on NEAR under rules no one can change. A NEAR HACKATHON prototype on testnet. No token.">
+<meta name="description" content="Midge is a network of private rooms with public rules on NEAR. Groups decide together in private, their money follows rules no one can change, and each member can take their own share back. A prototype on NEAR testnet. No token.">
 <meta name="theme-color" content="#0f1416">
 <meta property="og:title" content="Midge, private syndicates for private systems">
 <meta property="og:description" content="A network of private rooms with public rules, on NEAR. A NEAR HACKATHON prototype on testnet. No token.">
@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400&family=Newsreader:wght@300;400&display=swap">
 <link rel="stylesheet" href="styles.css">
+<link rel="preload" href="img/hero.webp" as="image" fetchpriority="high">
 <link rel="modulepreload" href="scene3d.js">
 </head>
 <body>
@@ -26,208 +27,163 @@
   </a>
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
   <nav class="nav" id="nav" aria-label="Sections">
-    <a href="#problem">Why</a><a href="#idea">How it works</a><a href="#network">Network</a><a href="#members">Who joins</a><a href="#architecture">Architecture</a><a href="#proof">Proof</a><a href="#try">Try it</a>
+    <a href="#problem">The problem</a><a href="#idea">How it works</a><a href="#network">Who uses it</a><a href="#members">AI agents</a><a href="#architecture">Under the hood</a><a href="#proof">Proof</a><a href="#try">Try it</a>
   </nav>
   <a class="btn btn-sm btn-head" href="#proof">Check it yourself</a>
 </header>
 
 <main id="main">
 
-<!-- 0 · HERO -->
+<!-- HERO -->
 <section class="hero" id="hero" aria-labelledby="hero-title">
-  <canvas class="stage-canvas hero-canvas" data-scene="hero" aria-hidden="true"></canvas>
+  <img class="hero-img" src="img/hero.webp" width="1920" height="1080" alt="" fetchpriority="high" decoding="async">
   <div class="hero-inner">
     <p class="eyebrow">Midge · on NEAR</p>
     <h1 id="hero-title" class="display">A network of private rooms <br>with public rules</h1>
-    <p class="lede">On Midge, any group forms a syndicate: people, a DAO, an institution or a swarm of AI agents. Members decide together in private. What the group can do with its money is fixed in public, and if the room stops, every member can walk out with their own share.</p>
+    <p class="lede">Groups decide together in private. Their money follows rules that everyone can see and no one can change. If anything goes wrong, each member takes their own share back.</p>
     <p class="tagline">Private syndicates for private systems</p>
     <div class="cta">
-      <a class="btn btn-light" href="#idea">See how it works</a>
+      <a class="btn btn-light btn-magnet" href="#idea"><span>See how it works</span></a>
       <a class="btn btn-ghost-dark" href="#proof">Check it yourself</a>
     </div>
-    <p class="fine-dark">Live on NEAR testnet. A prototype with no token. <span class="chain-chip" id="chip"><span class="dot"></span><span id="chip-text">Reading the contract…</span></span></p>
+    <p class="fine-dark">A working prototype on NEAR testnet. No token. <span class="chain-chip" id="chip"><span class="dot"></span><span id="chip-text">Reading the contract…</span></span></p>
   </div>
   <p class="scroll-cue" aria-hidden="true">Scroll</p>
 </section>
 
-<!-- 1 · PROBLEM -->
+<!-- 01 THE PROBLEM -->
 <section class="section" id="problem" aria-labelledby="problem-title">
   <div class="wrap">
-    <p class="kicker">01 · Why</p>
-    <h2 id="problem-title" class="title">Acting together on a public chain leaves three bad options</h2>
-    <p class="lede-sm">Funds, DAOs, lending desks and agent swarms all need to decide things together: who bids what, how to split a pot, which quote wins. Today each way of doing it gives something up.</p>
+    <p class="kicker">01 · The problem</p>
+    <h2 id="problem-title" class="title">Deciding together with money on the line is hard</h2>
+    <p class="lede-sm">A fund splitting a pot, a DAO picking a quote, a team of AI agents buying together. Today there are three ways to do it, and each one breaks something.</p>
     <div class="grid-3">
       <article class="card">
         <div class="stage stage-sm"><canvas class="stage-canvas" data-scene="p-public" aria-hidden="true"></canvas></div>
         <h3><s>Do it in public</s></h3>
-        <p>Every bid, size and vote is visible before it executes. Others copy it or trade against it.</p>
+        <p>Everyone sees your bids before they happen, and trades against you.</p>
       </article>
       <article class="card">
         <div class="stage stage-sm"><canvas class="stage-canvas" data-scene="p-keys" aria-hidden="true"></canvas></div>
-        <h3><s>Hand someone the keys</s></h3>
-        <p>An organizer holds the money off-chain. If they fail, leave or are hacked, the group loses it.</p>
+        <h3><s>Trust an organizer</s></h3>
+        <p>One person holds the money. If they vanish or get hacked, it is gone.</p>
       </article>
       <article class="card">
         <div class="stage stage-sm"><canvas class="stage-canvas" data-scene="p-box" aria-hidden="true"></canvas></div>
-        <h3><s>Trust a secure box that can sign anything</s></h3>
-        <p>Secure hardware keeps the decision private, but if the contract pays whatever the box signs, one flaw drains the pool.</p>
+        <h3><s>Trust a black box</s></h3>
+        <p>Secure hardware keeps things private, but if it can pay out anything, one bug empties the pot.</p>
       </article>
     </div>
-    <p class="answer">Midge keeps all three properties at once: the decision stays private, nobody holds the money, and nobody can trap it.</p>
+    <p class="answer">Midge gives you all three at once: decisions stay private, no one holds the money, and no one can lock it up.</p>
   </div>
 </section>
 
-<!-- 2 · THE PATTERN -->
+<!-- 02 HOW IT WORKS -->
 <section class="section section-alt" id="idea" aria-labelledby="idea-title">
   <div class="wrap">
     <p class="kicker">02 · How it works</p>
-    <h2 id="idea-title" class="title">Every syndicate is a room, rules and an exit</h2>
-    <p class="lede-sm">The same three parts make up every syndicate on the network, whatever the group is doing.</p>
+    <h2 id="idea-title" class="title">Every group gets a room, rules and an exit</h2>
+    <p class="lede-sm">A group on Midge is called a syndicate. Every syndicate is built from the same three things.</p>
+    <span class="steps-rail" aria-hidden="true"><span class="rail-fill"></span><i style="top:0%">1</i><i style="top:50%">2</i><i style="top:100%">3</i></span>
 
     <div class="chapter">
       <div class="chapter-text">
         <img class="plate" src="img/plate-room.webp" width="480" height="360" alt="A sealed glass room: a faceted cage around a glowing core" loading="lazy" decoding="async">
-        <p class="step">The room</p>
+        <p class="step">1 · The room</p>
         <h3>Members decide in private</h3>
-        <p>Each member seals their bid so only the room can open it. The room adds the bids up and lets out only the result. Whoever runs the machine sees sealed data, nothing else.</p>
-        <p>The room runs inside secure hardware (a TEE), which keeps what it processes hidden and proves which code it runs. There are two kinds: an attested AI model on <strong>NEAR AI Cloud</strong>, and <strong>our own program on a Phala confidential machine</strong>.</p>
+        <p>Each member seals their bid so only the room can open it. The room adds them up and lets out just the result. Even the people running the machine see nothing.</p>
+        <p>The room runs on secure hardware that proves which code it is running. There are two ways to run it:</p>
         <div class="kind-switch" role="group" aria-label="Show the room as">
           <span class="kind-ind" aria-hidden="true"></span>
-          <button type="button" data-kind="0" aria-pressed="false">NEAR AI Cloud</button>
+          <button type="button" data-kind="0" aria-pressed="false">An AI model on NEAR AI Cloud</button>
           <button type="button" data-kind="1" aria-pressed="false">Our program on Phala</button>
         </div>
-        <p class="badge-row"><span class="badge live">Both live</span></p>
       </div>
-      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="room" aria-hidden="true"></canvas></div><figcaption class="stage-cap">Bids are sealed as they enter. Only the total leaves.</figcaption></figure>
+      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="room" aria-hidden="true"></canvas></div><figcaption class="stage-cap">Bids are sealed on the way in. Only the total comes out.</figcaption></figure>
     </div>
 
     <div class="chapter">
       <div class="chapter-text">
         <img class="plate" src="img/plate-rules.webp" width="480" height="360" alt="The Nest under a glass cover: every member's share is visible and none can be touched" loading="lazy" decoding="async">
-        <p class="step">The rules</p>
-        <h3>What the group can do is fixed in public</h3>
-        <p>When the group forms, its rules go into a contract on NEAR: who may be paid, how much per round, and until when. Every member agrees to exactly those rules when they put money in, and they can never change.</p>
-        <p>A payout outside them is refused, even if the room signed it. The same signature can never be used twice.</p>
-        <p class="badge-row"><span class="badge live">Live · attacks rejected on chain</span></p>
+        <p class="step">2 · The rules</p>
+        <h3>The rules are public and can't change</h3>
+        <p>When the group starts, its rules go into a contract on NEAR: who can be paid, how much, and until when. Everyone agrees to them when they put money in.</p>
+        <p>Any payment that breaks the rules is refused, even if the room approved it.</p>
       </div>
-      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="rules" aria-hidden="true"></canvas></div><figcaption class="stage-cap">Allowed payouts pass. A thief, a replay and an over-the-cap payout are refused.</figcaption></figure>
+      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="rules" aria-hidden="true"></canvas></div><figcaption class="stage-cap">Allowed payments go through. A thief, a copied payment and an oversized one are refused.</figcaption></figure>
     </div>
 
     <div class="chapter">
       <div class="chapter-text">
         <img class="plate" src="img/plate-exit.webp" width="480" height="360" alt="The Nest with one member's share lifted out of it" loading="lazy" decoding="async">
-        <p class="step">The exit</p>
-        <h3>Anyone can leave on their own</h3>
-        <p>If the room stops, crashes or disappears, a timer runs. When it ends, any member takes back exactly their own share, straight from the contract, without anyone's permission and without touching anyone else's money.</p>
-        <p class="badge-row"><span class="badge live">Live · exact refunds checked</span></p>
+        <p class="step">3 · The exit</p>
+        <h3>Anyone can leave with their share</h3>
+        <p>If the room stops working, a timer starts. When it runs out, any member can take back exactly what they put in, on their own, without asking anyone.</p>
       </div>
-      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="exit" aria-hidden="true"></canvas></div><figcaption class="stage-cap">The room goes quiet. After the timeout a member walks out with their share.</figcaption></figure>
+      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="exit" aria-hidden="true"></canvas></div><figcaption class="stage-cap">The room goes quiet. After the timer, a member walks out with their share.</figcaption></figure>
     </div>
   </div>
 </section>
 
-<!-- 3 · SYNDICATES -->
-<section class="section" id="syndicates" aria-labelledby="syn-title">
-  <div class="wrap">
-    <p class="kicker">03 · Syndicates</p>
-    <h2 id="syn-title" class="title">A syndicate can last one task or many rounds</h2>
-    <div class="grid-2">
-      <article class="card card-tall">
-        <div class="stage stage-md"><canvas class="stage-canvas" data-scene="flash" aria-hidden="true"></canvas></div>
-        <h3>Flash</h3>
-        <p>Forms for one task, such as a block trade or one shared purchase, settles once and dissolves.</p>
-        <p class="badge-row"><span class="badge live">Live on testnet</span></p>
-      </article>
-      <article class="card card-tall">
-        <div class="stage stage-md"><canvas class="stage-canvas" data-scene="vault" aria-hidden="true"></canvas></div>
-        <h3>Dark Vault</h3>
-        <p>Persists across rounds. Each round starts with a fresh nonce and restarts the exit timer. Pods, smaller groups inside a vault with their own limits, are a model for now.</p>
-        <p class="badge-row"><span class="badge tested">Contract tested · not run live</span><span class="badge model">Pods: model</span></p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<!-- 4 · NETWORK -->
-<section class="section section-alt" id="network" aria-labelledby="net-title">
+<!-- 03 WHO USES IT -->
+<section class="section" id="network" aria-labelledby="net-title">
   <div class="wrap">
     <div class="split">
       <div>
-        <p class="kicker">04 · The network</p>
-        <h2 id="net-title" class="title">One contract. Many syndicates</h2>
-        <p class="lede-sm">A single contract on NEAR hosts every syndicate, each with its own rules. Anyone can list them, a member can find all of theirs, and one agent can sit in several at once.</p>
-        <p class="stat"><span id="net-count">…</span><span>syndicates on the testnet contract right now</span></p>
-        <p class="fine">Today the network is discovery and bookkeeping: syndicates do not yet invite, rate or build on each other.</p>
+        <p class="kicker">03 · Who uses it</p>
+        <h2 id="net-title" class="title">Any group, on one shared network</h2>
+        <p class="lede-sm">People, DAOs, companies and AI agents all join the same way, with a NEAR account. One contract on NEAR holds every syndicate, so groups are easy to find, and one member can be in several at once.</p>
+        <p class="stat"><span id="net-count">…</span><span>syndicates on the network right now</span></p>
       </div>
-      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="network" aria-hidden="true"></canvas></div><figcaption class="stage-cap">The highlighted agent belongs to three syndicates.</figcaption></figure>
+      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="network" aria-hidden="true"></canvas></div><figcaption class="stage-cap">One contract, many syndicates. The orange member is in three of them.</figcaption></figure>
     </div>
+    <div class="grid-4 uses">
+      <article class="mini"><h3>Lending</h3><p>Lenders send sealed offers. The best terms win, and the others stay private.</p></article>
+      <article class="mini"><h3>Big trades</h3><p>Two desks swap a large order without showing its size to the market.</p></article>
+      <article class="mini"><h3>Shared AI</h3><p>Members pool credits and run a private request on an AI model.</p></article>
+      <article class="mini"><h3>Investing together</h3><p>Backers agree on a round and invest from one shared address.</p></article>
+    </div>
+    <p class="fine">A syndicate can be one-off (Flash: one task, then it closes) or ongoing (Dark Vault: many rounds). The lending, trading and AI examples run as simulations today; see what works today below.</p>
   </div>
 </section>
 
-<!-- 5 · PRIVATE SYSTEMS -->
-<section class="section" id="systems" aria-labelledby="sys-title">
-  <div class="wrap">
-    <p class="kicker">05 · Private systems</p>
-    <h2 id="sys-title" class="title">Many kinds of group can run as a syndicate</h2>
-    <p class="lede-sm">Each one is the same pattern, a room, rules and an exit, with a different job in the room. The badges say what the code does today.</p>
-    <div class="grid-5">
-      <article class="mini"><div class="stage stage-xs"><canvas class="stage-canvas" data-scene="f-credit" aria-hidden="true"></canvas></div><h3>Credit and repo</h3><p>Lenders send sealed quotes; the best terms win without the others being seen.</p><span class="badge model">Simulation</span></article>
-      <article class="mini"><div class="stage stage-xs"><canvas class="stage-canvas" data-scene="f-block" aria-hidden="true"></canvas></div><h3>Block trades</h3><p>Two desks cross a large trade at a reference price without showing size.</p><span class="badge model">Simulation</span></article>
-      <article class="mini"><div class="stage stage-xs"><canvas class="stage-canvas" data-scene="f-compute" aria-hidden="true"></canvas></div><h3>Shared AI compute</h3><p>Members pool credits and run a private prompt on an attested model.</p><span class="badge model">Simulation</span></article>
-      <article class="mini"><div class="stage stage-xs"><canvas class="stage-canvas" data-scene="f-payroll" aria-hidden="true"></canvas></div><h3>Payroll</h3><p>Pay contributors from one syndicate. Hiding who earned what needs a private settlement layer we do not have yet.</p><span class="badge planned">Planned</span></article>
-      <article class="mini"><div class="stage stage-xs"><canvas class="stage-canvas" data-scene="f-angel" aria-hidden="true"></canvas></div><h3>Angel rounds</h3><p>Backers size a round together and invest from one shared address.</p><span class="badge planned">Planned</span></article>
-    </div>
-  </div>
-</section>
-
-<!-- 6 · WHO JOINS -->
+<!-- 04 AI AGENTS -->
 <section class="section section-alt" id="members" aria-labelledby="mem-title">
   <div class="wrap">
-    <p class="kicker">06 · Who joins</p>
-    <h2 id="mem-title" class="title">A member is any NEAR account</h2>
-    <p class="lede-sm">The contract does not care what kind of account joins. It applies the same rules to all of them.</p>
-    <div class="grid-4">
-      <article class="mini"><h3>People</h3><p>A wallet. Today through the command line or the SDK; there is no app yet.</p><span class="badge live">Live</span></article>
-      <article class="mini"><h3>DAOs</h3><p>A DAO's contract can join and deposit through a proposal.</p><span class="badge untested">Supported · not yet run</span></article>
-      <article class="mini"><h3>Institutions</h3><p>Their own account and keys, with the same rules and the same exit.</p><span class="badge live">Live</span></article>
-      <article class="mini"><h3>AI agents</h3><p>Ten MCP tools, an SDK and an HTTP API with live streams. Every route and tool is tested.</p><span class="badge live">Live</span></article>
-    </div>
-
     <div class="split split-console">
       <div>
-        <h3 class="h3-lg">A hijacked agent still cannot take the money</h3>
-        <p>An agent can be given a key that does exactly one thing: take its owner's money back out of a syndicate. We handed such an agent a support ticket that told it to send everything to an attacker. Every attempt was refused: eight by NEAR before they ran, because the key does not allow them, and an early exit by the contract. The same transfer from an agent holding a full key went through.</p>
-        <p class="badge-row"><span class="badge live">Live · 9 of 9 attempts refused</span></p>
-        <p class="fine">This bounds a compromised agent by what its key can do. It does not claim that an AI model resists being misled.</p>
+        <p class="kicker">04 · AI agents</p>
+        <h2 id="mem-title" class="title">A hijacked AI agent still can't take the money</h2>
+        <p class="lede-sm">An agent can be given a key that does one thing only: take its owner's money back out. We tricked such an agent into trying to send everything to a thief. Every attempt was refused.</p>
+        <p class="fine">Agents connect through MCP tools, an SDK or an HTTP API. The key limits what a fooled agent can do; it does not stop the agent from being fooled.</p>
       </div>
-      <div class="console" id="console" aria-label="Recorded attempts by an agent holding a scoped key">
-        <div class="console-bar"><span></span><span></span><span></span><em>agent · scoped key (hatch_out only)</em></div>
+      <div class="console" id="console" aria-label="Recorded attempts by an agent holding a limited key">
+        <div class="console-bar"><span></span><span></span><span></span><em>agent · limited key (can only withdraw)</em></div>
         <pre class="console-body" id="console-body"></pre>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 7 · ARCHITECTURE ACROSS TEES -->
+<!-- 05 UNDER THE HOOD -->
 <section class="section" id="architecture" aria-labelledby="arch-title">
   <div class="wrap">
-    <p class="kicker">07 · Architecture</p>
-    <h2 id="arch-title" class="title">Private work runs inside secure hardware. Every result settles on NEAR</h2>
+    <p class="kicker">05 · Under the hood</p>
+    <h2 id="arch-title" class="title">Private work in secure hardware. Final say on NEAR</h2>
     <div class="arch">
       <div class="arch-text">
-        <p>Midge's private work runs inside two kinds of secure hardware, on NEAR AI Cloud and in our own program on Phala, and every result is settled and enforced on NEAR.</p>
+        <p>Three systems work together, and each one checks the one before it.</p>
         <dl class="roles">
-          <div><dt>NEAR AI Cloud</dt><dd>An attested AI model helps the group decide, for example how to split an amount. It only sees what it is given, never an individual bid.</dd></div>
-          <div><dt>Our program on Phala</dt><dd>The group's sealed bids are opened and added up exactly, and the settlement is signed only if it fits the total. The keys stay inside.</dd></div>
-          <div><dt>NEAR</dt><dd>The contract settles the result and checks it against the group's rules. Anything outside them is refused, and any member can take their share back if the private side stops.</dd></div>
+          <div><dt>NEAR AI Cloud</dt><dd>An AI model helps the group decide, for example how to split the money. It only sees the total, never anyone's bid.</dd></div>
+          <div><dt>Our program on Phala</dt><dd>Opens the sealed bids, adds them up exactly, and signs the result only if it fits.</dd></div>
+          <div><dt>NEAR</dt><dd>The contract pays out only within the rules, and runs the exit.</dd></div>
         </dl>
-        <p class="badge-row"><span class="badge live">Each part live</span><span class="badge pending">All three in one run: pending</span></p>
-        <p class="fine">The NEAR AI and Phala parts are each proven live, and NEAR AI's answer has been settled on NEAR through a Roost running locally. A single run with the Roost on Phala and the model on NEAR AI has not been recorded yet.</p>
       </div>
-      <figure class="stage-fig"><div class="stage stage-xl"><canvas class="stage-canvas" data-scene="arch" aria-hidden="true"></canvas></div><figcaption class="stage-cap">A proposal travels from the model to our program and then to NEAR. A dishonest one is stopped: Phala will not sign more than the total, and NEAR will not pay outside the rules.</figcaption></figure>
+      <figure class="stage-fig"><div class="stage stage-xl"><canvas class="stage-canvas" data-scene="arch" aria-hidden="true"></canvas></div><figcaption class="stage-cap">A bad answer gets stopped: Phala won't sign more than the total, and NEAR won't pay anyone outside the rules.</figcaption></figure>
     </div>
     <div class="drawings">
-      <h3 class="drawings-title">The three parts, drawn</h3>
+      <h3 class="drawings-title">The three pieces, up close</h3>
+      <p class="lede-sm">What a syndicate is physically made of: a room where members decide, the secure hardware that runs it, and the contract that holds the money.</p>
       <div class="grid-3">
         <figure class="drawing">
           <div class="wire-box">
@@ -236,119 +192,87 @@
             <span class="callout" style="left:71%;top:31%" aria-hidden="true">2</span>
             <span class="callout" style="left:26%;top:66%" aria-hidden="true">3</span>
           </div>
-          <figcaption><strong>The room</strong> Members seal their bids to it. Only the result leaves.<ol class="key"><li>the private decision</li><li>secure hardware (TEE)</li><li>bids are sealed to it</li></ol></figcaption>
+          <figcaption><strong>The room</strong> Where the group decides.<ol class="key"><li>the decision happens here</li><li>the secure boundary</li><li>bids are sealed to it</li></ol></figcaption>
         </figure>
         <figure class="drawing">
           <div class="wire-box">
-            <div class="wire" data-src="img/wire-tee.svg" role="img" aria-label="Line drawing of a secure enclosure: a sealed housing with a lid and pins"></div>
+            <div class="wire" data-src="img/wire-tee.svg" role="img" aria-label="Line drawing of the secure hardware: a sealed housing with a lid and pins"></div>
             <span class="callout" style="left:50%;top:44%" aria-hidden="true">1</span>
             <span class="callout" style="left:24%;top:55%" aria-hidden="true">2</span>
             <span class="callout" style="left:65%;top:74%" aria-hidden="true">3</span>
           </div>
-          <figcaption><strong>The enclosure</strong> Our program on Phala, or the model on NEAR AI Cloud. Anyone can check which code runs inside.<ol class="key"><li>attested code</li><li>in: sealed bids · out: one signed result</li><li>the keys never leave</li></ol></figcaption>
+          <figcaption><strong>The secure hardware</strong> What runs the room: NEAR AI Cloud or Phala.<ol class="key"><li>its code can be checked by anyone</li><li>sealed bids in, one signed result out</li><li>its keys never leave</li></ol></figcaption>
         </figure>
         <figure class="drawing">
           <div class="wire-box">
-            <div class="wire" data-src="img/wire-nest.svg" role="img" aria-label="Line drawing of the Nest: a slab holding four members' shares"></div>
+            <div class="wire" data-src="img/wire-nest.svg" role="img" aria-label="Line drawing of the contract: a slab holding four members' shares"></div>
             <span class="callout" style="left:35%;top:36%" aria-hidden="true">1</span>
             <span class="callout" style="left:59%;top:49%" aria-hidden="true">2</span>
             <span class="callout" style="left:20%;top:47%" aria-hidden="true">3</span>
           </div>
-          <figcaption><strong>The Nest</strong> The contract on NEAR. It pays only inside the rules, and gives each member back their own share.<ol class="key"><li>each member's share</li><li>the exit returns exactly this</li><li>rules fixed when the group forms</li></ol></figcaption>
+          <figcaption><strong>The contract (the Nest)</strong> Where the money sits, on NEAR.<ol class="key"><li>each member's share</li><li>what the exit gives back</li><li>rules set when the group starts</li></ol></figcaption>
         </figure>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 8 · BEYOND NEAR -->
-<section class="section section-alt" id="beyond" aria-labelledby="bey-title">
-  <div class="wrap">
-    <div class="split">
-      <div>
-        <p class="kicker">08 · Beyond NEAR</p>
-        <h2 id="bey-title" class="title">One syndicate, addresses on other chains</h2>
-        <p class="lede-sm">Through NEAR Chain Signatures, a syndicate's identity on NEAR can control addresses on Bitcoin, Ethereum and Solana, without a bridge or a custodian.</p>
-        <p class="badge-row"><span class="badge tested">One signature verified</span><span class="badge planned">Nothing broadcast yet</span></p>
-      </div>
-      <div class="stage stage-lg"><canvas class="stage-canvas" data-scene="beyond" aria-hidden="true"></canvas></div>
-    </div>
-  </div>
-</section>
-
-<!-- 9 · PROOF -->
+<!-- 06 PROOF -->
 <section class="section section-dark" id="proof" aria-labelledby="proof-title">
   <div class="wrap">
-    <p class="kicker kicker-dark">09 · Proof</p>
-    <h2 id="proof-title" class="title title-dark">Every dot is a real transaction on NEAR testnet</h2>
-    <p class="lede-dark">These come from our recorded test runs, whose logs are hash-chained and can be re-verified. Click any dot to open it on NearBlocks.</p>
+    <p class="kicker kicker-dark">06 · Proof</p>
+    <h2 id="proof-title" class="title title-dark">Every dot is a real transaction</h2>
+    <p class="lede-dark">From our test runs on NEAR testnet. Click any dot to see it on NearBlocks, the public explorer.</p>
     <div class="proof-legend" id="proof-legend"></div>
-    <a class="proof-skip" href="#proof-after">Skip the 205 transaction links</a>
+    <a class="proof-skip" href="#proof-after">Skip the transaction links</a>
     <div class="proof-grid" id="proof-grid" role="list" aria-label="Recorded testnet transactions"></div>
     <p class="fine-dark" id="proof-note" tabindex="-1"></p><span id="proof-after"></span>
 
     <div class="grid-2 checks-row">
       <article class="panel" aria-labelledby="lp-title">
-        <h3 id="lp-title">Check the AI's secure hardware, from your browser</h3>
-        <p class="panel-sub">Asks NEAR AI Cloud for a fresh attestation with a random number your browser picks, and checks it here.</p>
-        <div class="panel-actions"><button class="btn btn-sm btn-light" id="lp-run" type="button">Run the check</button><button class="btn btn-sm btn-ghost-dark" id="lp-replay" type="button">Try a replayed report</button></div>
+        <h3 id="lp-title">Check the AI's secure hardware</h3>
+        <p class="panel-sub">Your browser asks NEAR AI Cloud to prove what it is running, using a random number it picks, and checks the answer.</p>
+        <div class="panel-actions"><button class="btn btn-sm btn-light" id="lp-run" type="button">Run the check</button><button class="btn btn-sm btn-ghost-dark" id="lp-replay" type="button">Try a fake replay</button></div>
         <ul class="lp-list" id="lp-list"></ul>
         <p class="panel-note" id="lp-note"></p>
       </article>
       <article class="panel" aria-labelledby="chain-title">
-        <h3 id="chain-title">Read the contract, from your browser</h3>
-        <p class="panel-sub">Straight from a public NEAR RPC. No server of ours in between.</p>
+        <h3 id="chain-title">Read the contract yourself</h3>
+        <p class="panel-sub">Straight from NEAR, with no server of ours in between.</p>
         <ul class="lp-list" id="chain-list"></ul>
         <p class="panel-note" id="chain-note"></p>
       </article>
+    </div>
+
+    <div class="today" id="status">
+      <h3 class="today-title">What works today</h3>
+      <div class="grid-3">
+        <div><h4>Running on testnet</h4><ul><li>The contract: rules, payouts and the exit</li><li>The room on NEAR AI Cloud, and on Phala</li><li>The AI model proposing the split</li><li>Limited keys for AI agents</li><li>SDK, API and MCP tools</li></ul></div>
+        <div><h4>Built, not yet live</h4><ul><li>NEAR AI and Phala together in one run</li><li>Ongoing syndicates (Dark Vault), tested in the contract</li><li>Lending, big trades and shared AI, as simulations</li></ul></div>
+        <div><h4>Next</h4><ul><li>A playground in your browser</li><li>Payroll and investing together</li><li>Paying out on Bitcoin, Ethereum and Solana</li></ul></div>
+      </div>
+      <p class="fine-dark">Testnet only, no audit yet. All test accounts were ours. Deposits and balances are public on NEAR; what stays private is what members bid and decide.</p>
     </div>
     <p class="live" id="live" aria-live="polite"></p>
   </div>
 </section>
 
-<!-- 10 · STATUS -->
-<section class="section" id="status" aria-labelledby="status-title">
-  <div class="wrap">
-    <p class="kicker">10 · What runs today</p>
-    <h2 id="status-title" class="title">Live, tested, modelled, planned</h2>
-    <div class="table-wrap">
-      <table class="status-table">
-        <thead><tr><th scope="col">Part</th><th scope="col">Status</th><th scope="col">Evidence</th></tr></thead>
-        <tbody>
-          <tr><td>Contract on NEAR: rules, settlement, replay protection</td><td><span class="badge live">Live</span></td><td>Attacks rejected on chain; 53 contract tests</td></tr>
-          <tr><td>The exit (hatch_out)</td><td><span class="badge live">Live</span></td><td>Exact refunds read from transaction receipts</td></tr>
-          <tr><td>Room on NEAR AI Cloud (attested model)</td><td><span class="badge live">Live</span></td><td>8 of 8 rounds exact, including injection attempts</td></tr>
-          <tr><td>Room as our program on Phala (Intel TDX)</td><td><span class="badge live">Live</span></td><td>Attestation passed the official verifier; a full round on testnet</td></tr>
-          <tr><td>NEAR AI proposes, the room bounds, NEAR settles</td><td><span class="badge live">Live</span></td><td>The model's signed answer matches what the contract paid</td></tr>
-          <tr><td>Phala room and NEAR AI model in one run</td><td><span class="badge pending">Pending</span></td><td>Each proven separately</td></tr>
-          <tr><td>Interfaces: SDK, HTTP API, streams, MCP tools</td><td><span class="badge live">Live</span></td><td>Every route, method and tool exercised</td></tr>
-          <tr><td>Scoped agent keys</td><td><span class="badge live">Live</span></td><td>9 of 9 injected attempts refused; the same transfer with a full key succeeds</td></tr>
-          <tr><td>Dark Vault rounds</td><td><span class="badge tested">Tested</span></td><td>Contract test; never run live</td></tr>
-          <tr><td>Pods, credit, block trades, compute, pay-per-request</td><td><span class="badge model">Model</span></td><td>Simulations in JavaScript</td></tr>
-          <tr><td>Payroll, angel rounds, broadcasts on other chains</td><td><span class="badge planned">Planned</span></td><td>Not built</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="fine">Testnet only. One operator ran every account in our tests, so they show the system working, not independent users. The contract has not had a third-party audit. Deposits and balances are public on NEAR; what stays private is what the members bid and decide.</p>
-  </div>
-</section>
-
-<!-- 11 · TRY IT -->
+<!-- 07 TRY IT -->
 <section class="section section-alt" id="try" aria-labelledby="try-title">
   <div class="wrap">
-    <p class="kicker">11 · Try it</p>
+    <p class="kicker">07 · Try it</p>
     <h2 id="try-title" class="title">Three ways in</h2>
     <div class="grid-3">
       <article class="card">
         <h3>Check everything, offline</h3>
-        <p>One command runs every check in the repository: the contract tests, every interface and the recorded evidence. No keys, no money.</p>
+        <p>One command runs every test and check. No keys, no money.</p>
         <div class="cmd"><code>git clone https://github.com/etvjay/midge &amp;&amp; cd midge
 npm install &amp;&amp; npm run verify</code><button class="copy" type="button" data-copy="git clone https://github.com/etvjay/midge && cd midge
 npm install && npm run verify">Copy</button></div>
       </article>
       <article class="card">
-        <h3>Run your own copy on testnet</h3>
-        <p>Creates a free testnet account from NEAR's testnet helper, builds and deploys your own copy of the contract (the build reproduces our code hash), then runs real rounds and attacks against it. Needs Node and Rust; costs only free testnet NEAR.</p>
+        <h3>Run your own copy</h3>
+        <p>Make a free testnet account, deploy your own contract and run real rounds and attacks against it.</p>
         <div class="cmd"><code>node scripts/setup-testnet-account.js
 npm run build:wasm
 node scripts/lab-env.mjs bootstrap
@@ -359,10 +283,9 @@ node lab/run.js --tier testnet">Copy</button></div>
         <p class="fine"><a href="https://github.com/etvjay/midge/blob/master/docs/LAB.md">The step-by-step guide</a></p>
       </article>
       <article class="card">
-        <h3>Explore the live contract</h3>
-        <p>The newest syndicates on the testnet contract, read from your browser:</p>
+        <h3>Look at the live network</h3>
+        <p>The newest syndicates, read from NEAR by your browser:</p>
         <ul class="recent" id="recent"><li>Reading…</li></ul>
-        <p class="fine">A playground that runs a syndicate in your browser is in progress.</p>
       </article>
     </div>
   </div>
