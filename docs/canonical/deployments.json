@@ -1,0 +1,21 @@
+{
+  "contract": "c.fly-1793636729.testnet",
+  "note": "Every code hash this contract has run, oldest first. Evidence recorded while a deployment was current cites that deployment's hash; scripts/verify-onchain.js checks that the chain matches the LAST entry and that the evidence cites an entry in this list.",
+  "deployments": [
+    {
+      "codeHash": "Gh8NAA2e78ETMMAWvExPnYfuKtRe2wQT2FHJ2RRXcPR9",
+      "from": "2026-11-02",
+      "until": "2026-11-05T03:55Z",
+      "gitRebuild": "contracts/fly-coordinator at commit 0557027 or earlier",
+      "reason": "First deployment used by every recorded run up to 2026-11-05 03:54 UTC.",
+      "knownDefect": "GAP-022: compute_pro_rata_deductions overflowed u128 for realistic amounts, so a partial settlement charged one member the whole payout."
+    },
+    {
+      "codeHash": "9y8w4PU57V5GNd463J8DGa33xeZx8329MQdTFsbTHWJm",
+      "from": "2026-11-05T03:55Z",
+      "deployTx": "2fys41cS2cjo6TzAWx4X8ehu3pNXfH4jwXm7198WnK3C",
+      "gitCommit": "68d6b9d",
+      "reason": "GAP-022 fix: exact 256-bit multiply-then-divide in the pro-rata deduction. State unchanged (15 syndicates intact across the deploy)."
+    }
+  ]
+}

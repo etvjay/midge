@@ -50,10 +50,22 @@ async function main() {
   const contractCode = await provider.viewContractCode({ contractId: coordinatorId });
   console.log(`      On-Chain Code Hash : ${contractCode.hash}`);
   console.log(`      Evidence Code Hash  : ${expectedCodeHash}`);
-  if (contractCode.hash !== expectedCodeHash) {
-    throw new Error(`Code hash mismatch: expected ${expectedCodeHash}, got ${contractCode.hash}`);
+  // The contract has been deployed more than once (docs/canonical/deployments.json). The chain must match the latest
+  // deployment, and the evidence must cite a deployment that is on record (it may be an earlier one: evidence records
+  // the code that was live when it was produced, and is not rewritten when the contract is upgraded).
+  const history = JSON.parse(fs.readFileSync(path.join(rootDir, 'docs/canonical/deployments.json'), 'utf8')).deployments;
+  const latest = history[history.length - 1].codeHash;
+  if (contractCode.hash !== latest) {
+    throw new Error(`Code hash mismatch: on chain ${contractCode.hash}, latest recorded deployment ${latest}`);
   }
-  console.log('      ✓ Contract code hash strictly matches reproducible build.');
+  const cited = history.find((d) => d.codeHash === expectedCodeHash);
+  if (!cited) {
+    throw new Error(`The evidence cites code hash ${expectedCodeHash}, which is not in docs/canonical/deployments.json`);
+  }
+  console.log(`      ✓ The chain runs the latest recorded deployment (${latest.slice(0, 8)}…).`);
+  console.log(cited.codeHash === latest
+    ? '      ✓ The evidence was produced by this deployment.'
+    : `      ✓ The evidence was produced by the earlier deployment ${cited.codeHash.slice(0, 8)}…${cited.knownDefect ? ` (known defect: ${cited.knownDefect.split(':')[0]})` : ''}; its transactions are re-checked below.`);
 
   // 2. Query view methods: list_syndicates
   console.log('\n[3/4] Verifying Multi-Syndicate Discovery via list_syndicates view call...');
