@@ -1,16 +1,16 @@
 {
- "generatedAt": "2026-11-05T03:19:08.397Z",
+ "generatedAt": "2026-11-05T04:05:03.474Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
-  "hatch": 38,
-  "deposit": 71,
-  "settled": 45,
-  "exit": 13,
-  "other": 33,
-  "rejected": 8
+  "hatch": 42,
+  "deposit": 78,
+  "settled": 49,
+  "exit": 25,
+  "other": 34,
+  "rejected": 16
  },
  "security": {
-  "run": "20261104T203550Z-7bae",
+  "run": "20261105T035644Z-7c1d",
   "attempts": [
    {
     "label": "send NEAR to the attacker (a Transfer of 0.01, well inside the 0.05 allowance, so only the key's permissions can refuse it)",
@@ -59,7 +59,7 @@
    }
   ],
   "exit": {
-   "hash": "DHL24tA8meZAN6i7KnifqjHNQhNLZbSTe2rc4beQi5Y7"
+   "hash": "fmJfG3xCdFjKyx3GiQHkmpGwySgLbuGC2VWaATjEZ3Q"
   }
  },
  "transactions": [
@@ -1843,6 +1843,330 @@
    "kind": "settled",
    "exp": "E-COMBINED-LIVE-01",
    "run": "20261105T031634Z-e166",
+   "error": null
+  },
+  {
+   "hash": "8QZd9He6fJoKsCd4c14oNctzo5kFE8etrnQwmegTBdgy",
+   "label": "OUTSIDE-POLICY settle cmp-mw2zxw34-c",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T033904Z-0c2a",
+   "error": "Smart contract panicked: panicked at src/lib.rs:557:13: [Settle REJECT] Recipient mtxw34.fly-1793636729.testnet is not in allowed_recipients"
+  },
+  {
+   "hash": "BkEeJzmPmgjV9wGUw3n7nvAnYDTdDCYbFrT1J37uakN2",
+   "label": "exit cmp-mw2zxw34-c as a",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T033904Z-0c2a",
+   "error": ""
+  },
+  {
+   "hash": "sJmEK9aR9KtFuT1Kj2PHJWE7VHQEz4PZjEJmNpDDrtQ",
+   "label": "exit cmp-mw2zxw34-c as b",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T033904Z-0c2a",
+   "error": null
+  },
+  {
+   "hash": "3gzipYBeUZBMFZdJrS7YUufqNRqyzsU8fwCLEujSS77u",
+   "label": "exit cmp-mw2zxw34-c as c",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T033904Z-0c2a",
+   "error": null
+  },
+  {
+   "hash": "Ct8H3n9LW8nGpH3mpbeB1Ut85PxkpT1fnDJPzHZEAgEv",
+   "label": "exit cmp-mw2zxw34-c as d",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T033904Z-0c2a",
+   "error": null
+  },
+  {
+   "hash": "7AC9jvHgy7FpNKJeDxZzgmXGnHojhx5m2qq1VnJxw8py",
+   "label": "OUTSIDE-POLICY settle cmp-mw30hds7-c",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035414Z-7a52",
+   "error": "Smart contract panicked: panicked at src/lib.rs:585:13: [Settle REJECT] Recipient mthds7.fly-1793636729.testnet is not in allowed_recipients"
+  },
+  {
+   "hash": "7KJJ2EJqjxvwR1veUDjefdzHQR54h1tTn7fRnRbWxuwn",
+   "label": "exit cmp-mw30hds7-c as a",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035414Z-7a52",
+   "error": null
+  },
+  {
+   "hash": "8iwaSozpnAxnbLPQzcNGfbg3n7beMm9y3AGe6Rn2KWUQ",
+   "label": "exit cmp-mw30hds7-c as b",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035414Z-7a52",
+   "error": null
+  },
+  {
+   "hash": "99Uc37G9Zh5eHJeUgVjTayCvahDZUmAcVkaE1qv3XYux",
+   "label": "exit cmp-mw30hds7-c as c",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035414Z-7a52",
+   "error": null
+  },
+  {
+   "hash": "6T8Ezwtofyf1K9x1YXWxkb5sM4H6PRD2mCMiTYMyTTSC",
+   "label": "exit cmp-mw30hds7-c as d",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035414Z-7a52",
+   "error": null
+  },
+  {
+   "hash": "24Gtr8g4finjP5vF1hauzN3A4YGumYPLAqRyynwSkwsC",
+   "label": "hatch lab-mw30klm2-1",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "AGWkEEx2tzmSB4HPrgiYmuBLuuiRMtAAt7KxsagWoW3r",
+   "label": "deposit l0klm2a.fly-1793636729.testnet -> lab-mw30klm2-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "Cs6ncbV9Hfimhq2WYtiYzgy62vf3fQJ3HtbkLoetsQZe",
+   "label": "deposit l0klm2b.fly-1793636729.testnet -> lab-mw30klm2-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "5mjwGmug7rh1GnYbVE2L3zRVonYpcDRwq7JJUpQ7PTJQ",
+   "label": "deposit l0klm2c.fly-1793636729.testnet -> lab-mw30klm2-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "N3bGDkJoqpPznFAVfKD1DkRYkvs7vQFAKvuJdRAB2Li",
+   "label": "settle_batch lab-mw30klm2-1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "4WPQfgtZsJt1wJJ4VM8qRgnKuz7A1r53g4gEXU1F4vA2",
+   "label": "REPLAY settle_batch lab-mw30klm2-1",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": "Smart contract panicked: panicked at src/lib.rs:533:9: assertion `left == right` failed: [HAQ REJECT] Syndicate is not active. left: Settled"
+  },
+  {
+   "hash": "BWAckTUwmqvAB1wyf6GrRd4kgji2maeRMXrSW7uVyQ41",
+   "label": "hatch lab-mw30klm2-2",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "FMXFh6zu6vcWWsSUz2FBwQP37HkrQt4KxwQFBNzKU6nB",
+   "label": "deposit l0klm2a.fly-1793636729.testnet -> lab-mw30klm2-2",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "FMi3gLZUF3HZzJik4qgSs2B8yMYEimnh57JLuWE2FKyn",
+   "label": "deposit l0klm2b.fly-1793636729.testnet -> lab-mw30klm2-2",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "3gW41Caz1wK4cCDFpixTJ3KweM6qpF7ZGxm6ARB1CmPk",
+   "label": "settle_batch lab-mw30klm2-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": "Smart contract panicked: panicked at src/lib.rs:585:13: [Settle REJECT] Recipient thief-mw30klm2.testnet is not in allowed_recipients whitel"
+  },
+  {
+   "hash": "CzW61xgyezPtWKWGS1r7UV5CKpFRr4dNNCpmFrvRU1rY",
+   "label": "settle_batch lab-mw30klm2-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": "Smart contract panicked: panicked at src/lib.rs:643:9: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "4BETpGubRQkaYrQzwpXwhD2h9HaMtPh11PvNiMoB8t7Z",
+   "label": "settle_batch lab-mw30klm2-2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "81jRqbu7ohhX4Pv73NN6mTZ9aSjF7L5VA8psEm1SGfA3",
+   "label": "hatch lab-mw30klm2-4",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "DwQc21o5PaEo7GMnwRxWbj7RdeSmMti5pkRF46Vh3XA9",
+   "label": "deposit l0klm2a.fly-1793636729.testnet -> lab-mw30klm2-4",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "DM9zJKq1fWeun222ztRJvQLPBHdzUn2itqhYsTM3n76V",
+   "label": "settle_batch lab-mw30klm2-4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "G9MtkebfXrTbgZovR7tAbXZQdHiGW7f7uEW3Jf9kQcj7",
+   "label": "REPLAY settle_batch lab-mw30klm2-4 (partial)",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": "Smart contract panicked: panicked at src/lib.rs:553:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "HbnT5SY9r9ncJVu9EKwtuCMchKB6wi9M7mCbfucXKdLg",
+   "label": "settle_batch lab-mw30klm2-4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "4F1W9P5P25Z51z3iqgwgcGpcDVM4dHGMujxEBoEbyZAz",
+   "label": "hatch lab-mw30klm2-3",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "AnsgKQkq3u3B2ayq1axC4ci3efHWgCxfDLA2hJSLZwMw",
+   "label": "deposit l0klm2b.fly-1793636729.testnet -> lab-mw30klm2-3",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "7Lgz93Nk4Bh7qUxRk4qFC2VUMeurxaBBL2CHa8bMDXyX",
+   "label": "hatch_out lab-mw30klm2-3",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "fmJfG3xCdFjKyx3GiQHkmpGwySgLbuGC2VWaATjEZ3Q",
+   "label": "exit",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-SECURITY-FCKEY-01",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "9e3gCkauTPJ7BoZBGboAv97wRM58dHMWBz8N5MnsP7e6",
+   "label": "OUTSIDE-POLICY settle cmp-mw30rz5m-c",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035644Z-7c1d",
+   "error": "Smart contract panicked: panicked at src/lib.rs:585:13: [Settle REJECT] Recipient mtrz5m.fly-1793636729.testnet is not in allowed_recipients"
+  },
+  {
+   "hash": "BN6JGpqc5ZJdG68wP6jBQDHPwpitv3ckPTfJffMz3Xbu",
+   "label": "exit cmp-mw30rz5m-c as a",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "CoxfmsP2WkxgEgjHGbCCoGsFGwYLFS6sLaNRcs6WKsJY",
+   "label": "exit cmp-mw30rz5m-c as b",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "5xVir9Tvvc9fdBBEhcJxqySNzMwMZnfmXc7SqJRrFx2a",
+   "label": "exit cmp-mw30rz5m-c as c",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "9Wi3dqtahf58XaE4ZmbGwBVWkz8bxviAweZ6zN5oTNxb",
+   "label": "exit cmp-mw30rz5m-c as d",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261105T035644Z-7c1d",
    "error": null
   },
   {
