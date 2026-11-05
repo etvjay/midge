@@ -1,0 +1,15 @@
+{
+  "runId": "20261105T033904Z-0c2a",
+  "startedAt": "2026-11-05T03:39:04.452Z",
+  "rootHash": "448dc98eb7715011b71c0811458509c53e735c2028cc34285bce90b3322b08c5",
+  "verdicts": {
+    "E-CMP-INVEST-01": {
+      "attempts": [
+        "FAIL"
+      ],
+      "verdict": "FAIL"
+    }
+  },
+  "events": 79,
+  "commit": "4514a5d2ff9174a85a37f5d486b2b4f24986ce7a"
+}
