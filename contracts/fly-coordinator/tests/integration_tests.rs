@@ -463,6 +463,7 @@ fn test_integration_settlement_failure_callback_rollback() {
     let rollback_ok = contract.on_settlement_payout(
         syn_id.clone(),
         allocations,
+        vec![],
         NearToken::from_near(40),
         alloc_hash,
         order_hash,

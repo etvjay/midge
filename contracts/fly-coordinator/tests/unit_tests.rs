@@ -2,7 +2,8 @@
 
 use ed25519_dalek::{Signer, SigningKey};
 use fly_coordinator::{
-    compute_allocations_hash, Allocation, FlyCoordinator, ReleasePolicy, SyndicateStatus,
+    compute_allocations_hash, compute_charges_hash, Allocation, Charge, FlyCoordinator,
+    ReleasePolicy, SyndicateStatus,
 };
 use near_sdk::test_utils::testing_env_with_promise_results;
 use near_sdk::test_utils::VMContextBuilder;
@@ -1072,6 +1073,7 @@ fn test_on_settlement_payout_success_cleans_up_flyer_storage() {
     let success = contract.on_settlement_payout(
         syn_id.clone(),
         allocations,
+        vec![],
         NearToken::from_near(25),
         alloc_hash,
         "order_hash".to_string(),
@@ -1152,6 +1154,7 @@ fn test_on_settlement_payout_failure_reverts_state() {
     let ok = contract.on_settlement_payout(
         syn_id.clone(),
         allocations,
+        vec![],
         NearToken::from_near(20),
         alloc_hash,
         "order_hash".to_string(),
@@ -1325,6 +1328,7 @@ fn test_on_settlement_payout_rejects_external_caller() {
     let mut contract = FlyCoordinator::new();
     contract.on_settlement_payout(
         "syn-1".to_string(),
+        vec![],
         vec![],
         NearToken::from_near(10),
         "hash".to_string(),
@@ -1549,6 +1553,7 @@ fn test_nep297_events_emission() {
     contract.on_settlement_payout(
         "syn-event".to_string(),
         allocations,
+        vec![],
         NearToken::from_near(5),
         alloc_hash,
         order_hash,
@@ -1977,6 +1982,7 @@ fn test_settle_batch_50_flyers_gas_budget() {
     let success = contract.on_settlement_payout(
         syn_id.clone(),
         allocations,
+        vec![],
         NearToken::from_near(50),
         alloc_hash,
         "order_gas_50".to_string(),
@@ -2056,6 +2062,7 @@ fn partially_settled_flash(
     assert!(contract.on_settlement_payout(
         syn_id.clone(),
         allocations.clone(),
+        vec![],
         NearToken::from_near(3),
         alloc_hash,
         "order_hash".to_string(),
@@ -2197,6 +2204,7 @@ fn settled_flash(
     assert!(contract.on_settlement_payout(
         syn_id.clone(),
         allocations.clone(),
+        vec![],
         NearToken::from_near(10),
         alloc_hash,
         "order_hash".to_string(),
@@ -2412,4 +2420,254 @@ fn mul_div_floor_is_exact_across_the_u128_range() {
     );
     // the quotient does not fit in u128: saturates instead of wrapping
     assert_eq!(mul_div_floor(u128::MAX, u128::MAX, 1), u128::MAX);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// settle_batch_charged: the room names how much each member pays toward a payout (auctions, per-member investing)
+// ---------------------------------------------------------------------------------------------------------------
+
+fn sign_charged(
+    syndicate_id: &str,
+    epoch: u64,
+    nonce: &str,
+    allocations_hash: &str,
+    charges_hash: &str,
+    order_hash: &str,
+) -> String {
+    let signing_key = SigningKey::from_bytes(&[42u8; 32]);
+    let message = format!(
+        "fly-coordinator.testnet:{}:{}:{}:{}:{}:{}",
+        syndicate_id, epoch, nonce, allocations_hash, charges_hash, order_hash
+    );
+    hex::encode(signing_key.sign(message.as_bytes()).to_bytes())
+}
+
+/// Three members each deposit 10 NEAR into a syndicate whose only allowed recipient is r.near.
+fn charged_setup(id: &str) -> (FlyCoordinator, String, String, [AccountId; 3]) {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner, NearToken::from_near(1), 100).build());
+    let mut contract = FlyCoordinator::new();
+    let (pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", id, 1, "", "", "");
+    let syn_id = contract.hatch(
+        id.to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        pk,
+        "hash".to_string(),
+        Some(30),
+        Some("r.near".parse().unwrap()),
+        None,
+    );
+    let p_hash = contract.get_policy_hash(syn_id.clone());
+    let members: [AccountId; 3] = [
+        "a.near".parse().unwrap(),
+        "b.near".parse().unwrap(),
+        "c.near".parse().unwrap(),
+    ];
+    for (i, m) in members.iter().enumerate() {
+        testing_env!(get_context(m.clone(), NearToken::from_near(10), 105 + i as u64).build());
+        contract.deposit(syn_id.clone(), p_hash.clone());
+    }
+    let nonce = contract.get_syndicate(syn_id.clone()).unwrap().round_nonce;
+    (contract, syn_id, nonce, members)
+}
+
+fn pay_r(amount_near: u128) -> Vec<Allocation> {
+    vec![Allocation {
+        recipient: "r.near".parse().unwrap(),
+        amount: NearToken::from_near(amount_near),
+    }]
+}
+
+fn charge(member: &AccountId, near: u128) -> Charge {
+    Charge {
+        member: member.clone(),
+        amount: NearToken::from_near(near),
+    }
+}
+
+fn settle_charged_as_owner(
+    contract: &mut FlyCoordinator,
+    syn_id: &str,
+    nonce: &str,
+    allocations: Vec<Allocation>,
+    charges: Vec<Charge>,
+    sign_over: &[Charge],
+) {
+    let sig = sign_charged(
+        syn_id,
+        1,
+        nonce,
+        &compute_allocations_hash(&allocations),
+        &compute_charges_hash(sign_over),
+        "order",
+    );
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 120).build());
+    contract.settle_batch_charged(
+        syn_id.to_string(),
+        nonce.to_string(),
+        "order".to_string(),
+        allocations,
+        charges,
+        sig,
+    );
+}
+
+#[test]
+fn charged_settlement_charges_each_member_their_own_amount() {
+    let (mut c, id, nonce, m) = charged_setup("chg-ok");
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+    testing_env_with_promise_results(
+        get_context(
+            "fly-coordinator.testnet".parse().unwrap(),
+            NearToken::from_near(0),
+            121,
+        )
+        .build(),
+        PromiseResult::Successful(vec![]),
+    );
+    assert!(c.on_settlement_payout(
+        id.clone(),
+        pay_r(12),
+        charges,
+        NearToken::from_near(12),
+        compute_allocations_hash(&pay_r(12)),
+        "order".to_string(),
+    ));
+    // each member paid exactly their own charge, not a third of 12
+    assert_eq!(
+        c.get_escrow(id.clone(), m[0].clone()),
+        NearToken::from_near(8)
+    );
+    assert_eq!(
+        c.get_escrow(id.clone(), m[1].clone()),
+        NearToken::from_near(6)
+    );
+    assert_eq!(
+        c.get_escrow(id.clone(), m[2].clone()),
+        NearToken::from_near(4)
+    );
+    let syn = c.get_syndicate(id).unwrap();
+    assert_eq!(syn.total_escrow, NearToken::from_near(18));
+    assert_eq!(syn.status, SyndicateStatus::Active);
+}
+
+#[test]
+#[should_panic(expected = "exceeds that member's escrow")]
+fn charged_settlement_rejects_a_charge_above_the_members_deposit() {
+    let (mut c, id, nonce, m) = charged_setup("chg-over");
+    let charges = vec![charge(&m[0], 11), charge(&m[1], 1)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+}
+
+#[test]
+#[should_panic(expected = "Charges must sum to exactly the payout")]
+fn charged_settlement_rejects_charges_that_do_not_sum_to_the_payout() {
+    let (mut c, id, nonce, m) = charged_setup("chg-sum");
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+}
+
+#[test]
+#[should_panic(expected = "Duplicate member in charges")]
+fn charged_settlement_rejects_a_member_charged_twice() {
+    let (mut c, id, nonce, m) = charged_setup("chg-dup");
+    let charges = vec![charge(&m[0], 6), charge(&m[0], 6)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+}
+
+#[test]
+#[should_panic(expected = "exceeds that member's escrow")]
+fn charged_settlement_rejects_charging_someone_who_never_deposited() {
+    let (mut c, id, nonce, _m) = charged_setup("chg-ghost");
+    let ghost: AccountId = "ghost.near".parse().unwrap();
+    let charges = vec![charge(&ghost, 12)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+}
+
+#[test]
+#[should_panic(expected = "Invalid enclave Ed25519 signature")]
+fn charged_settlement_rejects_charges_other_than_the_ones_signed() {
+    let (mut c, id, nonce, m) = charged_setup("chg-tamper");
+    let signed = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    let submitted = vec![charge(&m[0], 6), charge(&m[1], 4), charge(&m[2], 2)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), submitted, &signed);
+}
+
+#[test]
+#[should_panic(expected = "Invalid enclave Ed25519 signature")]
+fn a_plain_settlement_signature_cannot_authorise_a_charged_settlement() {
+    let (mut c, id, nonce, m) = charged_setup("chg-xsig1");
+    let allocations = pay_r(12);
+    let (_, plain_sig) = make_enclave_key_and_signature(
+        "fly-coordinator.testnet",
+        &id,
+        1,
+        &nonce,
+        &compute_allocations_hash(&allocations),
+        "order",
+    );
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 120).build());
+    c.settle_batch_charged(
+        id,
+        nonce,
+        "order".to_string(),
+        allocations,
+        vec![charge(&m[0], 6), charge(&m[1], 6)],
+        plain_sig,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Invalid enclave Ed25519 signature")]
+fn a_charged_settlement_signature_cannot_authorise_a_plain_settlement() {
+    let (mut c, id, nonce, m) = charged_setup("chg-xsig2");
+    let allocations = pay_r(12);
+    let charges = vec![charge(&m[0], 12)];
+    let charged_sig = sign_charged(
+        &id,
+        1,
+        &nonce,
+        &compute_allocations_hash(&allocations),
+        &compute_charges_hash(&charges),
+        "order",
+    );
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 120).build());
+    c.settle_batch(id, nonce, "order".to_string(), allocations, charged_sig);
+}
+
+#[test]
+fn a_failed_charged_payout_leaves_every_members_escrow_untouched() {
+    let (mut c, id, nonce, m) = charged_setup("chg-fail");
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+    testing_env_with_promise_results(
+        get_context(
+            "fly-coordinator.testnet".parse().unwrap(),
+            NearToken::from_near(0),
+            121,
+        )
+        .build(),
+        PromiseResult::Failed,
+    );
+    assert!(!c.on_settlement_payout(
+        id.clone(),
+        pay_r(12),
+        charges,
+        NearToken::from_near(12),
+        compute_allocations_hash(&pay_r(12)),
+        "order".to_string(),
+    ));
+    for member in &m {
+        assert_eq!(
+            c.get_escrow(id.clone(), member.clone()),
+            NearToken::from_near(10)
+        );
+    }
+    assert_eq!(
+        c.get_syndicate(id).unwrap().total_escrow,
+        NearToken::from_near(30)
+    );
 }

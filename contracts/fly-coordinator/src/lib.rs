@@ -29,6 +29,15 @@ pub struct Allocation {
     pub amount: NearToken,
 }
 
+/// How much of a settlement one member funds. Used by `settle_batch_charged`, where the room names who pays what
+/// (an auction winner pays price x quantity; a loser pays nothing), instead of the equal-by-deposit split.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct Charge {
+    pub member: AccountId,
+    pub amount: NearToken,
+}
+
 #[near(serializers = [borsh, json])]
 #[derive(Clone, PartialEq, Debug)]
 pub struct ReleasePolicy {
@@ -174,6 +183,18 @@ pub fn compute_allocations_hash(allocations: &[Allocation]) -> String {
         .collect::<Vec<_>>()
         .join(",");
     hex::encode(env::sha256(alloc_str.as_bytes()))
+}
+
+/// Canonical SHA-256 hash of the charges, sorted by member: "member:amount" joined by ",".
+pub fn compute_charges_hash(charges: &[Charge]) -> String {
+    let mut sorted = charges.to_vec();
+    sorted.sort_by(|a, b| a.member.cmp(&b.member));
+    let s = sorted
+        .iter()
+        .map(|c| format!("{}:{}", c.member, c.amount.as_yoctonear()))
+        .collect::<Vec<_>>()
+        .join(",");
+    hex::encode(env::sha256(s.as_bytes()))
 }
 
 #[near(serializers = [borsh, json])]
@@ -525,6 +546,54 @@ impl FlyCoordinator {
         allocations: Vec<Allocation>,
         enclave_signature: String,
     ) {
+        self.settle_inner(
+            syndicate_id,
+            attestation_nonce,
+            aggregate_order_hash,
+            allocations,
+            Vec::new(),
+            enclave_signature,
+        );
+    }
+
+    /// settle_batch_charged(): like settle_batch, but the room also names how much EACH MEMBER pays toward the payout,
+    /// signed together with the allocations. The contract requires: every charged member is a depositor with at least
+    /// that much escrow, no member twice, every amount positive, and the charges sum to exactly the payout. A member can
+    /// therefore never be charged more than they deposited, and the signature covers who pays what.
+    /// The signed message has one more field than settle_batch's (the charges hash), so a signature for one entry point
+    /// cannot be replayed on the other.
+    pub fn settle_batch_charged(
+        &mut self,
+        syndicate_id: String,
+        attestation_nonce: String,
+        aggregate_order_hash: String,
+        allocations: Vec<Allocation>,
+        charges: Vec<Charge>,
+        enclave_signature: String,
+    ) {
+        assert!(
+            !charges.is_empty(),
+            "[Settle REJECT] Charges list cannot be empty."
+        );
+        self.settle_inner(
+            syndicate_id,
+            attestation_nonce,
+            aggregate_order_hash,
+            allocations,
+            charges,
+            enclave_signature,
+        );
+    }
+
+    fn settle_inner(
+        &mut self,
+        syndicate_id: String,
+        attestation_nonce: String,
+        aggregate_order_hash: String,
+        allocations: Vec<Allocation>,
+        charges: Vec<Charge>,
+        enclave_signature: String,
+    ) {
         let syn = self
             .syndicates
             .get_mut(&syndicate_id)
@@ -607,6 +676,44 @@ impl FlyCoordinator {
             "[Settle REJECT] Allocation sum exceeds max_release_bps_per_epoch cap."
         );
 
+        // 4b. Validate charges (only for settle_batch_charged)
+        if !charges.is_empty() {
+            assert!(
+                charges.len() <= MAX_FLYERS_PER_SYNDICATE as usize,
+                "[Settle REJECT] Too many charges."
+            );
+            let mut seen_members: Vec<AccountId> = Vec::new();
+            let mut charged_total: u128 = 0;
+            for c in &charges {
+                assert!(
+                    !seen_members.contains(&c.member),
+                    "[Settle REJECT] Duplicate member in charges."
+                );
+                seen_members.push(c.member.clone());
+                assert!(
+                    c.amount.as_yoctonear() > 0,
+                    "[Settle REJECT] Charge amount must be positive."
+                );
+                let held = self
+                    .escrows
+                    .get(&(syn.id.clone(), c.member.clone()))
+                    .copied()
+                    .unwrap_or_else(|| NearToken::from_yoctonear(0));
+                assert!(
+                    c.amount.as_yoctonear() <= held.as_yoctonear(),
+                    "[Settle REJECT] Charge for {} exceeds that member's escrow.",
+                    c.member
+                );
+                charged_total = charged_total
+                    .checked_add(c.amount.as_yoctonear())
+                    .unwrap_or_else(|| env::panic_str("[Settle REJECT] Charges overflow"));
+            }
+            assert_eq!(
+                charged_total, total_payout_yocto,
+                "[Settle REJECT] Charges must sum to exactly the payout."
+            );
+        }
+
         // 5. Canonical allocations hash
         let allocations_hash = compute_allocations_hash(&allocations);
 
@@ -631,15 +738,28 @@ impl FlyCoordinator {
         let mut pk_arr = [0u8; 32];
         pk_arr.copy_from_slice(&pk_bytes);
 
-        let message = format!(
-            "{}:{}:{}:{}:{}:{}",
-            env::current_account_id(),
-            syn.id,
-            syn.epoch,
-            syn.round_nonce,
-            allocations_hash,
-            aggregate_order_hash
-        );
+        let message = if charges.is_empty() {
+            format!(
+                "{}:{}:{}:{}:{}:{}",
+                env::current_account_id(),
+                syn.id,
+                syn.epoch,
+                syn.round_nonce,
+                allocations_hash,
+                aggregate_order_hash
+            )
+        } else {
+            format!(
+                "{}:{}:{}:{}:{}:{}:{}",
+                env::current_account_id(),
+                syn.id,
+                syn.epoch,
+                syn.round_nonce,
+                allocations_hash,
+                compute_charges_hash(&charges),
+                aggregate_order_hash
+            )
+        };
         assert!(
             env::ed25519_verify(&sig_arr, message.as_bytes(), &pk_arr),
             "[HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
@@ -692,6 +812,7 @@ impl FlyCoordinator {
                     .on_settlement_payout(
                         syn.id.clone(),
                         allocations,
+                        charges,
                         NearToken::from_yoctonear(total_payout_yocto),
                         allocations_hash,
                         aggregate_order_hash,
@@ -779,6 +900,7 @@ impl FlyCoordinator {
         &mut self,
         syndicate_id: String,
         allocations: Vec<Allocation>,
+        charges: Vec<Charge>,
         total_payout: NearToken,
         allocations_hash: String,
         order_hash: String,
@@ -812,34 +934,44 @@ impl FlyCoordinator {
 
             if succeeded_yocto > 0 {
                 // Deduct flyer balances pro-rata for the succeeded payout portion (OO-008, CA-004)
-                let flyer_balances: Vec<(AccountId, u128)> = syn
-                    .flyers
-                    .iter()
-                    .map(|f| {
-                        let key = (syn.id.clone(), f.clone());
-                        let b = self
-                            .escrows
-                            .get(&key)
-                            .copied()
-                            .unwrap_or_else(|| NearToken::from_yoctonear(0))
-                            .as_yoctonear();
-                        (f.clone(), b)
-                    })
-                    .collect();
+                let deductions = if charges.is_empty() {
+                    let flyer_balances: Vec<(AccountId, u128)> = syn
+                        .flyers
+                        .iter()
+                        .map(|f| {
+                            let key = (syn.id.clone(), f.clone());
+                            let b = self
+                                .escrows
+                                .get(&key)
+                                .copied()
+                                .unwrap_or_else(|| NearToken::from_yoctonear(0))
+                                .as_yoctonear();
+                            (f.clone(), b)
+                        })
+                        .collect();
 
-                let deductions_base = syn
-                    .total_escrow
-                    .as_yoctonear()
-                    .saturating_add(total_payout_yocto);
-                let deductions = compute_pro_rata_deductions(
-                    &flyer_balances,
-                    succeeded_yocto,
-                    if deductions_base > 0 {
-                        deductions_base
-                    } else {
-                        1
-                    },
-                );
+                    let deductions_base = syn
+                        .total_escrow
+                        .as_yoctonear()
+                        .saturating_add(total_payout_yocto);
+                    compute_pro_rata_deductions(
+                        &flyer_balances,
+                        succeeded_yocto,
+                        if deductions_base > 0 {
+                            deductions_base
+                        } else {
+                            1
+                        },
+                    )
+                } else {
+                    // Charged settlement: each named member pays their own charge. If only part of the payout landed,
+                    // each charge is scaled by the share that landed (exact, with the dust to the largest charge).
+                    let named: Vec<(AccountId, u128)> = charges
+                        .iter()
+                        .map(|c| (c.member.clone(), c.amount.as_yoctonear()))
+                        .collect();
+                    compute_pro_rata_deductions(&named, succeeded_yocto, total_payout_yocto.max(1))
+                };
 
                 for (flyer, deduction) in deductions {
                     let key = (syn.id.clone(), flyer.clone());
