@@ -93,6 +93,34 @@ impl ReleasePolicy {
     }
 }
 
+/// floor(a * b / c) computed exactly through a 256-bit intermediate, so that it cannot overflow or clamp.
+/// A balance of 0.05 NEAR times a payout of 0.10 NEAR is 5e45 yocto-squared, far above u128::MAX (3.4e38); the previous
+/// `saturating_mul` clamped it, which made every member's share ~1.7e15 yocto and charged the whole payout to one member.
+/// Returns u128::MAX if the true result does not fit (it cannot when a <= c, which is how it is used).
+pub fn mul_div_floor(a: u128, b: u128, c: u128) -> u128 {
+    assert!(c != 0, "division by zero");
+    const M: u128 = (1u128 << 64) - 1;
+    let (a0, a1, b0, b1) = (a & M, a >> 64, b & M, b >> 64);
+    let (p00, p01, p10, p11) = (a0 * b0, a0 * b1, a1 * b0, a1 * b1);
+    let mid = (p00 >> 64) + (p01 & M) + (p10 & M);
+    let lo = (p00 & M) | (mid << 64);
+    let hi = p11 + (p01 >> 64) + (p10 >> 64) + (mid >> 64);
+    if hi >= c {
+        return u128::MAX;
+    }
+    // restoring long division of the 256-bit value (hi, lo) by c; hi < c keeps the remainder below c throughout
+    let (mut rem, mut q) = (hi, 0u128);
+    for i in (0..128).rev() {
+        let carry = rem >> 127;
+        rem = (rem << 1) | ((lo >> i) & 1);
+        if carry == 1 || rem >= c {
+            rem = rem.wrapping_sub(c);
+            q |= 1u128 << i;
+        }
+    }
+    q
+}
+
 /// Pure domain function calculating pro-rata deductions across flyers with exact remainder dust conservation (OO-008, CA-004).
 /// Returns a list of (flyer, deduction_yocto) such that sum(deductions) == total_payout_yocto.
 pub fn compute_pro_rata_deductions(
@@ -118,7 +146,7 @@ pub fn compute_pro_rata_deductions(
             max_balance = *balance;
             max_balance_idx = idx;
         }
-        let share = (*balance).saturating_mul(total_payout_yocto) / total_escrow_yocto;
+        let share = mul_div_floor(*balance, total_payout_yocto, total_escrow_yocto);
         let clamped_share = share.min(*balance);
         sum_deducted = sum_deducted.saturating_add(clamped_share);
         deductions.push((account.clone(), clamped_share));

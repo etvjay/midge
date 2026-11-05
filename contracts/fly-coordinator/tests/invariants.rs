@@ -321,6 +321,39 @@ proptest! {
         }
     }
 
+    // Real deposits are 1e22 yocto and up (0.01 NEAR = 1e22), so balance * payout is 1e44 and more, far above u128::MAX (3.4e38).
+    // The earlier range above (up to 1e7 yocto) never reached the overflow; this one does. Found 2026-11-05 by a testnet run in
+    // which four members deposited 0.05 NEAR each, 0.10 was paid out, and one member was charged 0.05 while the others were not.
+    #[test]
+    fn prop_pro_rata_deductions_at_near_scale(
+        balances in prop::collection::vec(10_000_000_000_000_000_000u128..100_000_000_000_000_000_000_000_000u128, 1..10),
+        payout_fraction in 1..100u32,
+    ) {
+        let total_escrow: u128 = balances.iter().sum();
+        let payout = total_escrow / 100 * (payout_fraction as u128);
+
+        let flyer_balances: Vec<(AccountId, u128)> = balances
+            .iter()
+            .enumerate()
+            .map(|(i, &b)| (format!("f{:02}.near", i).parse().unwrap(), b))
+            .collect();
+
+        let deductions = fly_coordinator::compute_pro_rata_deductions(&flyer_balances, payout, total_escrow);
+
+        let total_deducted: u128 = deductions.iter().map(|(_, d)| *d).sum();
+        prop_assert_eq!(total_deducted, payout, "Sum of deductions must equal payout exactly!");
+
+        for (i, (_, deduction)) in deductions.iter().enumerate() {
+            prop_assert!(*deduction <= balances[i], "Deduction {} exceeds balance {}", deduction, balances[i]);
+            // Each member bears their proportional share, within one yocto of rounding per other member (dust goes to the largest).
+            let exact_floor = ((balances[i] as f64) * (payout as f64) / (total_escrow as f64)) as u128;
+            let slack = exact_floor / 1_000_000 + balances.len() as u128 + 1;
+            if balances[i] != *balances.iter().max().unwrap() {
+                prop_assert!(*deduction + slack >= exact_floor && *deduction <= exact_floor + slack, "member {} deduction {} is not close to its proportional share {}", i, deduction, exact_floor);
+            }
+        }
+    }
+
     #[test]
     fn prop_release_policy_canonical_order_independence(
         bps in 1..=10_000u16,
