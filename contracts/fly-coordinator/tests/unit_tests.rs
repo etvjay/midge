@@ -2370,16 +2370,24 @@ fn test_compact_member_index_drops_ids_of_pruned_syndicates() {
     );
 }
 
-
 /// The case from the 2026-11-05 testnet run: four members deposit 0.05 NEAR each, 0.10 NEAR is paid out.
 /// Each must bear 0.025 NEAR. With balance * payout overflowing u128, one member was charged 0.05 and the others ~0.
 #[test]
 fn pro_rata_deductions_four_equal_deposits_of_005_near_partial_payout_of_010() {
     let near = |x: u128| x * 10u128.pow(22); // x hundredths of a NEAR
-    let balances: Vec<(AccountId, u128)> = ["a", "b", "c", "d"].iter().map(|n| (format!("{}.near", n).parse().unwrap(), near(5))).collect();
+    let balances: Vec<(AccountId, u128)> = ["a", "b", "c", "d"]
+        .iter()
+        .map(|n| (format!("{}.near", n).parse().unwrap(), near(5)))
+        .collect();
     let deductions = fly_coordinator::compute_pro_rata_deductions(&balances, near(10), near(20));
     for (who, d) in &deductions {
-        assert_eq!(*d, near(10) / 4, "{} must bear exactly a quarter of the 0.10 payout, got {} yocto", who, d);
+        assert_eq!(
+            *d,
+            near(10) / 4,
+            "{} must bear exactly a quarter of the 0.10 payout, got {} yocto",
+            who,
+            d
+        );
     }
     assert_eq!(deductions.iter().map(|(_, d)| *d).sum::<u128>(), near(10));
 }
@@ -2392,10 +2400,16 @@ fn mul_div_floor_is_exact_across_the_u128_range() {
     let near = |x: u128| x * 10u128.pow(22);
     assert_eq!(mul_div_floor(near(5), near(10), near(20)), near(10) / 4);
     // a * b = 2^200 exactly, divided by 2^100 = 2^100
-    assert_eq!(mul_div_floor(1u128 << 100, 1u128 << 100, 1u128 << 100), 1u128 << 100);
+    assert_eq!(
+        mul_div_floor(1u128 << 100, 1u128 << 100, 1u128 << 100),
+        1u128 << 100
+    );
     assert_eq!(mul_div_floor(u128::MAX, u128::MAX, u128::MAX), u128::MAX);
     assert_eq!(mul_div_floor(u128::MAX, 1, u128::MAX), 1);
-    assert_eq!(mul_div_floor(u128::MAX - 1, u128::MAX, u128::MAX), u128::MAX - 1);
+    assert_eq!(
+        mul_div_floor(u128::MAX - 1, u128::MAX, u128::MAX),
+        u128::MAX - 1
+    );
     // the quotient does not fit in u128: saturates instead of wrapping
     assert_eq!(mul_div_floor(u128::MAX, u128::MAX, 1), u128::MAX);
 }
