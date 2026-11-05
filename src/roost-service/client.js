@@ -25,4 +25,5 @@ export class HostedRoostClient {
   submitSealedIntent({ flyerId, cipherTextHex }) { return this.#call('POST', '/intents', { flyerId, cipherTextHex }); }
   aggregate({ roundId } = {}) { return this.#call('POST', '/aggregate', { roundId }, true); }
   signSettlement(params) { return this.#call('POST', '/settle', params, true); }
+  runAuction(params) { return this.#call('POST', '/auction', params, true); }
 }

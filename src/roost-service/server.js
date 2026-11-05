@@ -60,6 +60,11 @@ export function createRoostServer({ roost, adminKey }) {
         const body = await readJson(req);
         return send(res, 200, roost.submitSealedIntent({ flyerId: body.flyerId, cipherTextHex: body.cipherTextHex }));
       }
+      if (req.method === 'POST' && url.pathname === '/auction') {
+        if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
+        const body = await readJson(req);
+        return send(res, 200, roost.runAuction({ format: body.format, lotUnits: body.lotUnits, reserve: body.reserve, seller: body.seller, roundId: body.roundId }));
+      }
       if (req.method === 'POST' && (url.pathname === '/aggregate' || url.pathname === '/settle')) {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
         const body = await readJson(req);

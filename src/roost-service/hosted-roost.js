@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { generateClientKey, openFromModel } from '../enclave/e2ee.js';
 import { RoostAggregationError } from '../enclave/errors.js';
+import { clearAuction, FORMATS } from './auction-programs.js';
 
 /**
  * HostedRoost: the Roost as ordinary deterministic code, meant to run inside a dstack confidential VM.
@@ -51,6 +52,16 @@ export function computeAllocationsHash(allocations) {
   const sorted = [...allocations].sort((a, b) => (a.recipient < b.recipient ? -1 : a.recipient > b.recipient ? 1 : 0));
   return sha256Hex(sorted.map((a) => `${a.recipient}:${a.amount}`).join(','));
 }
+
+/** Contract-compatible charges hash: members sorted byte-wise, "member:amount" joined by commas (see compute_charges_hash). */
+export function computeChargesHash(charges) {
+  const sorted = [...charges].sort((a, b) => (a.member < b.member ? -1 : a.member > b.member ? 1 : 0));
+  return sha256Hex(sorted.map((c) => `${c.member}:${c.amount}`).join(','));
+}
+
+const YOCTO_PER_MICRO = 10n ** 18n;
+const sameAllocations = (a, b) => a.length === b.length && [...a].sort((x, y) => (x.recipient < y.recipient ? -1 : 1)).every((x, i) => { const y = [...b].sort((p, q) => (p.recipient < q.recipient ? -1 : 1))[i]; return x.recipient === y.recipient && String(x.amount) === String(y.amount); });
+const sameCharges = (a, b) => a.length === b.length && [...a].sort((x, y) => (x.member < y.member ? -1 : 1)).every((x, i) => { const y = [...b].sort((p, q) => (p.member < q.member ? -1 : 1))[i]; return x.member === y.member && String(x.amount) === String(y.amount); });
 
 export class HostedRoost {
   #intentSecret;
@@ -171,14 +182,64 @@ export class HostedRoost {
   }
 
   /**
+   * Run an auction on the sealed bids. Each bid decrypts to { price, quantity }: price per unit in NEAR (up to 6 places) and
+   * whole units (default 1). The outcome (who wins, at what price, who pays what) is computed here by the rules in
+   * auction-programs.js; what the Roost will later sign is exactly that outcome and nothing else.
+   * A bid that cannot be decrypted or is malformed is excluded and its flyerId reported, never its content.
+   * `flyerId` must be the NEAR account that deposited: bids are not yet authenticated to the account (see GAP-023).
+   */
+  runAuction({ format, lotUnits = 1, reserve = '0', seller, roundId = '' } = {}) {
+    if (!FORMATS.includes(format)) throw new RoostAggregationError(`format must be one of ${FORMATS.join(', ')}`);
+    if (typeof seller !== 'string' || seller.length === 0 || seller.includes(':') || seller.includes(',')) throw new RoostAggregationError('seller must be a plain account id');
+    const reserveMicro = toMicro(reserve);
+    if (reserveMicro === null) throw new RoostAggregationError('reserve must be a decimal with at most 6 places');
+    if (!Number.isSafeInteger(lotUnits) || lotUnits < 1 || lotUnits > 1_000_000) throw new RoostAggregationError('lotUnits must be an integer from 1 to 1,000,000');
+    if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run an auction on an empty sealed bid queue');
+    const bids = []; const excluded = [];
+    this.sealedIntents.forEach((intent, order) => {
+      try {
+        const payload = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret));
+        const priceMicro = toMicro(payload?.price);
+        const quantity = payload?.quantity === undefined ? 1 : Number(payload.quantity);
+        if (priceMicro === null || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 1_000_000) throw new Error('malformed');
+        bids.push({ flyerId: intent.flyerId, priceMicro, quantity, order });
+      } catch { excluded.push(intent.flyerId); }
+    });
+    if (bids.length === 0) throw new RoostAggregationError('no valid bids in this round');
+    const outcome = clearAuction({ format, bids, lotUnits, reserveMicro });
+    this.sealedIntents = []; // plaintext never outlives this call
+    const pub = {
+      format, lotUnits, reserve: formatMicro(reserveMicro), sold: outcome.sold, bidsReceived: outcome.bidsReceived, bidsEligible: outcome.bidsEligible, excludedFlyers: excluded,
+      clearingPrice: outcome.sold ? formatMicro(outcome.clearingPriceMicro) : null,
+      fills: outcome.fills.map((f) => ({ member: f.flyerId, units: f.units, pays: formatMicro(f.payMicro) })),
+      proceeds: formatMicro(outcome.proceedsMicro),
+      executionModel: 'HOSTED_SEALED_AUCTION', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted',
+    };
+    if (!outcome.sold) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
+    const allocations = [{ recipient: seller, amount: String(outcome.proceedsMicro * YOCTO_PER_MICRO) }];
+    const charges = outcome.fills.map((f) => ({ member: f.flyerId, amount: String(f.payMicro * YOCTO_PER_MICRO) }));
+    const bound = Object.fromEntries(outcome.fills.map((f) => [f.flyerId, f.bidMicro * YOCTO_PER_MICRO]));
+    const orderHash = sha256Hex(`midge-auction-v1:${roundId}:${format}:${lotUnits}:${formatMicro(reserveMicro)}:${seller}:${JSON.stringify(pub.fills)}:${pub.clearingPrice}:${excluded.length}:${crypto.randomBytes(16).toString('hex')}`);
+    this.aggregate = { orderHash, totalMicro: outcome.proceedsMicro, signed: false, program: { allocations, charges, bound } };
+    return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
    * Sign the Nest's settlement message, but only for allocations supported by our own aggregate, and once.
    * Amounts are yoctoNEAR strings; a bid unit is one NEAR, so the aggregate bounds the payout.
    */
-  signSettlement({ contractId, syndicateId, epoch, roundNonce, allocations, orderHash }) {
+  signSettlement({ contractId, syndicateId, epoch, roundNonce, allocations, orderHash, charges }) {
     const agg = this.aggregate;
     if (!agg) throw new RoostAggregationError('no aggregate to settle; run a round first');
     if (orderHash !== agg.orderHash) throw new RoostAggregationError('orderHash does not match the current aggregate');
     if (agg.signed) throw new RoostAggregationError('this aggregate has already been signed once');
+    if (agg.program && charges === undefined) throw new RoostAggregationError('this aggregate is an auction outcome; it can only be settled with its charges');
+    if (charges !== undefined) {
+      if (!agg.program) throw new RoostAggregationError('charges can only be signed for an auction outcome this Roost computed');
+      if (!Array.isArray(charges) || !sameCharges(charges, agg.program.charges)) throw new RoostAggregationError('charges do not match the auction outcome');
+      if (!Array.isArray(allocations) || !sameAllocations(allocations, agg.program.allocations)) throw new RoostAggregationError('allocations do not match the auction outcome');
+      for (const c of charges) if (BigInt(c.amount) > agg.program.bound[c.member]) throw new RoostAggregationError(`charge for ${c.member} exceeds what that member bid`);
+    }
     for (const [name, v] of Object.entries({ contractId, syndicateId, roundNonce })) {
       if (typeof v !== 'string' || v.length === 0 || v.includes(':')) throw new RoostAggregationError(`${name} must be a non-empty string without ':'`);
     }
@@ -196,7 +257,9 @@ export class HostedRoost {
     const maxPayout = agg.totalMicro * 10n ** 18n; // micro-NEAR to yoctoNEAR
     if (sum > maxPayout) throw new RoostAggregationError('allocations exceed what the sealed bids support');
     const allocationsHash = computeAllocationsHash(allocations);
-    const message = `${contractId}:${syndicateId}:${epoch}:${roundNonce}:${allocationsHash}:${agg.orderHash}`;
+    const message = charges === undefined
+      ? `${contractId}:${syndicateId}:${epoch}:${roundNonce}:${allocationsHash}:${agg.orderHash}`
+      : `${contractId}:${syndicateId}:${epoch}:${roundNonce}:${allocationsHash}:${computeChargesHash(charges)}:${agg.orderHash}`;
     const signature = crypto.sign(null, Buffer.from(message, 'utf8'), this.#settleKey).toString('hex');
     agg.signed = true;
     return { message, signature, allocationsHash, orderHash: agg.orderHash, settlePublicKey: this.settlePublicKey };

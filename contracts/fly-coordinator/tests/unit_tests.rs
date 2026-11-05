@@ -2671,3 +2671,23 @@ fn a_failed_charged_payout_leaves_every_members_escrow_untouched() {
         NearToken::from_near(30)
     );
 }
+
+/// Cross-language vector: the Roost (JavaScript) computes this same value in lab/experiments/72-auction-programs.js.
+/// If the two ever disagree, every charged settlement signature would be rejected by the contract.
+#[test]
+fn charges_hash_matches_the_roosts_javascript_implementation() {
+    let charges = vec![
+        Charge {
+            member: "b.near".parse().unwrap(),
+            amount: NearToken::from_near(4),
+        },
+        Charge {
+            member: "a.near".parse().unwrap(),
+            amount: NearToken::from_near(2),
+        },
+    ];
+    assert_eq!(
+        compute_charges_hash(&charges),
+        "277962d41d643c5f0b7aaf5616124070cdb5f906d57e7a5ab0f6906f9c7e8be9"
+    );
+}
