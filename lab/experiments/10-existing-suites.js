@@ -50,7 +50,8 @@ export default [
         const results = [...r.out.matchAll(/test result: (\w+)\. (\d+) passed; (\d+) failed/g)];
         const total = results.reduce((a, m) => a + Number(m[2]), 0); const failed = results.reduce((a, m) => a + Number(m[3]), 0);
         s.assert('no Rust test failed', failed === 0, { actual: failed });
-        s.assert('the expected number of Rust tests ran (53: 43 unit, 6 integration, 4 invariant)', total === 53, { expected: 53, actual: total });
+        // A pinned count on purpose: it catches tests being deleted. Raised 53 -> 66 on 2026-11-07 for the pro-rata overflow fix (GAP-022), the charged settlement and the cross-language hash vector.
+        s.assert('the expected number of Rust tests ran (66: 55 unit, 6 integration, 5 invariant)', total === 66, { expected: 66, actual: total });
       });
     },
   },
