@@ -37,7 +37,7 @@ export default {
   async run(ctx) {
     await ctx.step('describe: one program, the host\'s keys', async (s) => {
       const host = mkHost(); const svc = new RoomService({ host }); const d = svc.describe();
-      s.assert('exactly one program, ballot', d.programs.length === 1 && d.programs[0].id === 'ballot', { actual: d.programs.map((p) => p.id) });
+      s.assert('ballot is listed first (slice 1 had it alone; slice 2 adds six more, checked in E-ROOMSERVICE-02)', d.programs[0].id === 'ballot', { actual: d.programs.map((p) => p.id) });
       s.assert('it lists its parameters', ['options', 'roll', 'share', 'quorumBps', 'rule'].every((k) => k in d.programs[0].params), { actual: Object.keys(d.programs[0].params || {}) });
       s.assert('it reports the host\'s settlement and sealing keys', d.settlePublicKey === host.settlePublicKey && d.intentPublicKey === host.intentPublicKey);
     });
@@ -161,7 +161,7 @@ export default {
       const host = mkHost();
       const echo = { id: 'echo', summary: 'test program', params: { word: { type: 'string', required: true } }, validate: (p) => typeof p.word === 'string', run: () => ({ outcome: { word: 'hi' }, orderHash: null, allocations: [], charges: [] }) };
       const svc = new RoomService({ host, programs: [...RoomService.defaultPrograms, echo] });
-      s.assert('it is listed beside ballot', JSON.stringify(svc.describe().programs.map((p) => p.id)) === JSON.stringify(['ballot', 'echo']));
+      s.assert('it is listed after the built-in programs', svc.describe().programs.map((p) => p.id).at(-1) === 'echo' && svc.describe().programs.length === RoomService.defaultPrograms.length + 1);
       svc.open(ROUND);
       await svc.submit(input(host, 'm1.near', { choice: 'A' }));
       const r = await svc.run({ program: 'echo', params: { word: 'x' }, round: ROUND });
