@@ -421,6 +421,51 @@ export class HostedRoost {
   }
 
   /**
+   * Two-sided request for quote. The taker seals one signed request { side: 'buy'|'sell', units, limit, salt }; each maker in
+   * `makers` seals a signed two-way quote { bid, ask }, so a maker never learns which way the taker trades or how much. A buy goes
+   * to the lowest ask at or under the limit, a sell to the highest bid at or over it ('first' pays the winner's own quote, 'second'
+   * the runner-up's). On a buy the taker is charged and the winning maker paid; on a sell the winning maker is charged and the
+   * taker paid. The settlement reveals who pays whom and the notional, not the units or the price per unit: the order hash carries
+   * the taker's secret salt so an observer cannot recover them by trying every pair. Only the cash leg moves.
+   */
+  runRfq({ taker, makers, pricing = 'first', roundId = '' } = {}) {
+    if (!this.requireSignedInputs) throw new RoostAggregationError('an RFQ is only run on a host that requires signed inputs');
+    if (!isAccountId(taker)) throw new RoostAggregationError('taker must be a plain account id');
+    if (!Array.isArray(makers) || makers.length < 1 || makers.length > 7 || new Set(makers).size !== makers.length || !makers.every(isAccountId) || makers.includes(taker)) throw new RoostAggregationError('makers must list 1 to 7 distinct plain account ids, not including the taker');
+    const mine = this.sealedIntents.find((i) => i.flyerId === taker);
+    if (!mine) throw new RoostAggregationError('no request was sealed by the taker');
+    let req;
+    try { req = JSON.parse(openFromModel(mine.cipherTextHex, this.#intentSecret)); } catch { throw new RoostAggregationError('the taker\'s request could not be read'); }
+    if (req?.side !== 'buy' && req?.side !== 'sell') throw new RoostAggregationError("the request's side must be 'buy' or 'sell'");
+    if (!Number.isSafeInteger(req.units) || req.units < 1 || req.units > 1_000_000) throw new RoostAggregationError('units must be an integer from 1 to 1,000,000');
+    const limitMicro = toMicro(req.limit);
+    if (limitMicro === null || limitMicro === 0n) throw new RoostAggregationError('limit must be a positive decimal with at most 6 places');
+    if (typeof req.salt !== 'string' || req.salt.length < 16) throw new RoostAggregationError('the request needs a secret salt of 16 or more characters (the order hash would otherwise be guessable)');
+    const makerSet = new Set(makers); const quotes = []; const unreadable = []; const outsiders = [];
+    this.#inRoundOrder().forEach((intent, order) => {
+      if (intent.flyerId === taker) return;
+      if (!makerSet.has(intent.flyerId)) { outsiders.push(intent.flyerId); return; }
+      try {
+        const b = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); const bid = toMicro(b?.bid); const ask = toMicro(b?.ask);
+        if (bid === null || ask === null || bid === 0n || ask === 0n || bid > ask) throw new Error('malformed or crossed');
+        quotes.push({ flyerId: intent.flyerId, valueMicro: req.side === 'buy' ? ask : bid, order });
+      } catch { unreadable.push(intent.flyerId); }
+    });
+    const out = clearBestQuote({ direction: req.side === 'buy' ? 'lowest' : 'highest', quotes, limitMicro, pricing });
+    this.sealedIntents = [];
+    const pub = { shape: 'rfq', pricing, taker, won: out.won, winner: out.winner, quotesReceived: out.quotesReceived, quotesEligible: out.quotesEligible, outsiders, unreadable, executionModel: 'HOSTED_SEALED_RFQ', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    if (!out.won) { this.aggregate = null; return { outcome: pub, terms: null, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
+    const costMicro = BigInt(req.units) * out.priceMicro; const amount = String(costMicro * YOCTO_PER_MICRO);
+    let allocations; let charges; let bound;
+    if (req.side === 'buy') { allocations = [{ recipient: out.winner, amount }]; charges = [{ member: taker, amount }]; bound = { [taker]: BigInt(req.units) * limitMicro * YOCTO_PER_MICRO }; }
+    else { allocations = [{ recipient: taker, amount }]; charges = [{ member: out.winner, amount }]; bound = { [out.winner]: BigInt(req.units) * out.winnerQuoteMicro * YOCTO_PER_MICRO }; }
+    const orderHash = sha256Hex(`midge-rfq-v1:${roundId}:${req.side}:${taker}:${out.winner}:${out.priceMicro}:${req.units}:${req.salt}`);
+    this.aggregate = { orderHash, totalMicro: costMicro, signed: false, program: { allocations, charges, bound } };
+    const terms = { side: req.side, units: req.units, price: formatMicro(out.priceMicro), notional: formatMicro(costMicro) };
+    return { outcome: pub, terms, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
    * Run a pay run. The employer seals one signed input { lines: [{ payee, person, invoiceId, period, gross, tax, benefits,
    * payeeKey }] }; any other sealed input is ignored. Each person is paid their net, the tax and benefits providers their totals,
    * and the employer is charged the gross total. The host signs a receipt per line, puts the receipt hashes under a Merkle
