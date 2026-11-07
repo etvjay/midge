@@ -1,0 +1,748 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Midge rooms API",
+    "version": "1.0.0",
+    "description": "One door for every kind of room. Open a round, let members submit sealed inputs, run the room, and receive the finished contract call. The room signs only what it computed."
+  },
+  "paths": {
+    "/v1/rooms": {
+      "get": {
+        "summary": "Describe the rooms available, their parameters and the room's public keys",
+        "operationId": "describeRooms",
+        "responses": {
+          "200": {
+            "description": "What this room can do, and its public keys.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Description"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/v1/rooms/openapi.json": {
+      "get": {
+        "summary": "This API's OpenAPI document",
+        "operationId": "openapi",
+        "responses": {
+          "200": {
+            "description": "This document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/v1/rooms/round": {
+      "post": {
+        "summary": "Open a round (coordinator only); signed inputs are bound to it",
+        "operationId": "openRound",
+        "security": [
+          {
+            "coordinatorKey": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Round"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The round is open.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Round"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/v1/rooms/inputs": {
+      "post": {
+        "summary": "Submit one sealed, signed input to the open round",
+        "operationId": "submitInput",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The input was accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InputAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
+    "/v1/rooms/run": {
+      "post": {
+        "summary": "Run a room and receive the outcome and the finished contract call (coordinator only)",
+        "operationId": "runRoom",
+        "security": [
+          {
+            "coordinatorKey": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The outcome, and the finished contract call when the room decided something.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "coordinatorKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Roost-Admin-Key",
+        "description": "The coordinator's key. Opening a round and running a room need it."
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "The same coordinator key as a Bearer token."
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid parameters or body (INVALID_PARAMS).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "TooLarge": {
+        "description": "The body is over the size limit.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorised": {
+        "description": "The coordinator key is missing or wrong (NOT_AUTHORISED).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "The input is not validly signed for this round (NOT_AUTHORISED).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Unknown program (UNKNOWN_PROGRAM), or unknown route (NOT_FOUND).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "ROUND_NOT_OPEN, NO_INPUTS or ALREADY_SIGNED.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests (RATE_LIMITED); see Retry-After.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Internal": {
+        "description": "Unexpected failure (INTERNAL); the body never carries internal detail.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error",
+          "code"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "INVALID_PARAMS",
+              "UNKNOWN_PROGRAM",
+              "ROUND_NOT_OPEN",
+              "NO_INPUTS",
+              "ALREADY_SIGNED",
+              "NOT_AUTHORISED",
+              "INTERNAL",
+              "NOT_FOUND",
+              "METHOD_NOT_ALLOWED",
+              "RATE_LIMITED"
+            ]
+          }
+        }
+      },
+      "Round": {
+        "type": "object",
+        "required": [
+          "contractId",
+          "syndicateId",
+          "epoch",
+          "roundNonce"
+        ],
+        "properties": {
+          "contractId": {
+            "type": "string"
+          },
+          "syndicateId": {
+            "type": "string"
+          },
+          "epoch": {
+            "type": "integer"
+          },
+          "roundNonce": {
+            "type": "string"
+          }
+        }
+      },
+      "SignedInput": {
+        "type": "object",
+        "required": [
+          "flyerId",
+          "cipherTextHex"
+        ],
+        "description": "A member's input, sealed to the room's key and signed with the member's NEAR key for the open round. The secret key never reaches this API.",
+        "properties": {
+          "flyerId": {
+            "type": "string"
+          },
+          "cipherTextHex": {
+            "type": "string"
+          },
+          "publicKey": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "InputAccepted": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "replaced": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Description": {
+        "type": "object",
+        "properties": {
+          "settlePublicKey": {
+            "type": "string"
+          },
+          "intentPublicKey": {
+            "type": "string"
+          },
+          "simulated": {
+            "type": "boolean"
+          },
+          "requiresSignedInputs": {
+            "type": "boolean"
+          },
+          "programs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "needsSignedInputs": {
+                  "type": "boolean"
+                },
+                "params": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RunRequest": {
+        "type": "object",
+        "required": [
+          "program",
+          "round"
+        ],
+        "properties": {
+          "program": {
+            "type": "string",
+            "enum": [
+              "ballot",
+              "pool",
+              "auction",
+              "quote",
+              "cross",
+              "rfq",
+              "payrun"
+            ]
+          },
+          "params": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Params_ballot"
+              },
+              {
+                "$ref": "#/components/schemas/Params_pool"
+              },
+              {
+                "$ref": "#/components/schemas/Params_auction"
+              },
+              {
+                "$ref": "#/components/schemas/Params_quote"
+              },
+              {
+                "$ref": "#/components/schemas/Params_cross"
+              },
+              {
+                "$ref": "#/components/schemas/Params_rfq"
+              },
+              {
+                "$ref": "#/components/schemas/Params_payrun"
+              }
+            ]
+          },
+          "round": {
+            "$ref": "#/components/schemas/Round"
+          },
+          "includeConfidential": {
+            "type": "boolean",
+            "default": false,
+            "description": "Ask for plain detail meant only for the parties to a trade (for example an RFQ's units and price). Needs the coordinator key."
+          }
+        }
+      },
+      "RunResult": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "object"
+          },
+          "orderHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "settlement": {
+            "type": "object",
+            "nullable": true,
+            "description": "The contract call, ready to send: a method and its arguments, including the room's signature. Null when the room decided nothing.",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "settle_batch",
+                  "settle_batch_charged"
+                ]
+              },
+              "args": {
+                "type": "object"
+              }
+            }
+          },
+          "statements": {
+            "type": "object",
+            "description": "Pay run only: receipts, each sealed to its reader."
+          },
+          "confidential": {
+            "type": "object"
+          }
+        }
+      },
+      "Params_ballot": {
+        "type": "object",
+        "description": "A sealed vote among a named roll; the winning option's recipient is paid the pool, each voter is charged one share. Decides nothing on a tie or a missed quorum.",
+        "properties": {
+          "options": {
+            "type": "object",
+            "description": "option id -> recipient account (2 to 8 options)"
+          },
+          "roll": {
+            "type": "array",
+            "items": {},
+            "description": "the accounts allowed to vote (1 to 50)"
+          },
+          "share": {
+            "type": "string",
+            "description": "what each voter puts in, in NEAR, up to 6 decimals"
+          },
+          "quorumBps": {
+            "type": "integer",
+            "description": "turnout needed, in basis points of the roll",
+            "default": 5000
+          },
+          "rule": {
+            "type": "string",
+            "enum": [
+              "majority",
+              "plurality"
+            ],
+            "default": "majority"
+          }
+        },
+        "required": [
+          "options",
+          "roll",
+          "share"
+        ],
+        "additionalProperties": false,
+        "x-needs-signed-inputs": true
+      },
+      "Params_pool": {
+        "type": "object",
+        "description": "Members seal how much they put in; the room totals the sealed amounts and pays the total to one recipient, charging each member their own amount (up to an optional cap).",
+        "properties": {
+          "recipient": {
+            "type": "string",
+            "description": "the account paid the total"
+          },
+          "min": {
+            "type": "string",
+            "description": "the least total worth paying",
+            "default": "0"
+          },
+          "cap": {
+            "type": "string",
+            "description": "the most the pool will take",
+            "default": null,
+            "nullable": true
+          }
+        },
+        "required": [
+          "recipient"
+        ],
+        "additionalProperties": false
+      },
+      "Params_auction": {
+        "type": "object",
+        "description": "A sealed auction: first-price, second-price or uniform-price. The seller is paid; each winner is charged what the format says, never more than they bid.",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "first-price",
+              "second-price",
+              "uniform"
+            ]
+          },
+          "seller": {
+            "type": "string"
+          },
+          "lotUnits": {
+            "type": "integer",
+            "default": 1
+          },
+          "reserve": {
+            "type": "string",
+            "default": "0"
+          }
+        },
+        "required": [
+          "format",
+          "seller"
+        ],
+        "additionalProperties": false
+      },
+      "Params_quote": {
+        "type": "object",
+        "description": "Sealed best quote: the lowest rate (lending) or lowest price (buying) at or under the limit wins and is paid by the counterparty. Decides nothing if no quote is eligible.",
+        "properties": {
+          "shape": {
+            "type": "string",
+            "enum": [
+              "lend",
+              "buy"
+            ]
+          },
+          "pricing": {
+            "type": "string",
+            "enum": [
+              "first",
+              "second"
+            ],
+            "default": "first"
+          },
+          "counterparty": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string",
+            "description": "lend: the amount borrowed"
+          },
+          "units": {
+            "type": "integer",
+            "description": "buy: how many units"
+          },
+          "limit": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "lend: the highest rate in basis points; buy: the highest price"
+          }
+        },
+        "required": [
+          "shape",
+          "counterparty",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "Params_cross": {
+        "type": "object",
+        "description": "A sealed block trade: buy and sell orders cross at a public reference price, matched pro rata on the long side. Only the cash leg settles.",
+        "properties": {
+          "referencePrice": {
+            "type": "string"
+          },
+          "maxUnits": {
+            "type": "integer",
+            "default": null,
+            "nullable": true
+          }
+        },
+        "required": [
+          "referencePrice"
+        ],
+        "additionalProperties": false
+      },
+      "Params_rfq": {
+        "type": "object",
+        "description": "A two-sided request for quote: one taker seals a side, units and limit; each maker seals a bid and an ask. The best eligible quote wins. Only the cash leg settles.",
+        "properties": {
+          "taker": {
+            "type": "string"
+          },
+          "makers": {
+            "type": "array",
+            "items": {},
+            "description": "1 to 7 maker accounts"
+          },
+          "pricing": {
+            "type": "string",
+            "enum": [
+              "first",
+              "second"
+            ],
+            "default": "first"
+          }
+        },
+        "required": [
+          "taker",
+          "makers"
+        ],
+        "additionalProperties": false,
+        "x-needs-signed-inputs": true
+      },
+      "Params_payrun": {
+        "type": "object",
+        "description": "A sealed pay run: the employer seals the lines; the room pays each person their net, the tax and benefits addresses their totals, and returns signed receipts sealed to each payee, the employer and the auditor.",
+        "properties": {
+          "employer": {
+            "type": "string"
+          },
+          "taxAddress": {
+            "type": "string"
+          },
+          "benefitsAddress": {
+            "type": "string"
+          },
+          "employerKeyHex": {
+            "type": "string"
+          },
+          "auditorKeyHex": {
+            "type": "string"
+          },
+          "runId": {
+            "type": "string",
+            "default": "run"
+          }
+        },
+        "required": [
+          "employer",
+          "taxAddress",
+          "benefitsAddress",
+          "employerKeyHex",
+          "auditorKeyHex"
+        ],
+        "additionalProperties": false,
+        "x-needs-signed-inputs": true
+      }
+    }
+  }
+}

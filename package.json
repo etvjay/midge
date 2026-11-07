@@ -43,7 +43,8 @@
     "lab:env": "node scripts/lab-env.mjs",
     "build:site": "node scripts/build-site-data.mjs && node scripts/build-site-3d.mjs",
     "build:wasm:market": "cd contracts/public-market && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",
-    "build:wasm:baseline": "cd contracts/public-auction && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release"
+    "build:wasm:baseline": "cd contracts/public-auction && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",
+    "build:openapi": "node scripts/build-openapi.mjs"
   },
   "keywords": [
     "near",
