@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T134236Z-af24",
+  "startedAt": "2026-11-07T13:42:36.936Z",
+  "rootHash": "439e14630f71c0466a53cceae207b56559cca66212314f5165e73dbec5b39334",
+  "verdicts": {
+    "E-ONGOING-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 118,
+  "commit": "327e604e12d44d00bb114641cfd12c1bd40d2d51"
+}
