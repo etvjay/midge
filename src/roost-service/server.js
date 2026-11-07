@@ -93,6 +93,11 @@ export function createRoostServer({ roost, adminKey }) {
         const body = await readJson(req);
         return send(res, 200, roost.runBallot({ options: body.options, roll: body.roll, share: body.share, quorumBps: body.quorumBps, rule: body.rule, roundId: body.roundId }));
       }
+      if (req.method === 'POST' && url.pathname === '/payrun') {
+        if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
+        const body = await readJson(req);
+        return send(res, 200, roost.runPayrun({ employer: body.employer, taxAddress: body.taxAddress, benefitsAddress: body.benefitsAddress, employerKeyHex: body.employerKeyHex, auditorKeyHex: body.auditorKeyHex, runId: body.runId }));
+      }
       if (req.method === 'POST' && url.pathname === '/cross') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
         const body = await readJson(req);

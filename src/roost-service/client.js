@@ -30,6 +30,7 @@ export class HostedRoostClient {
   runQuote(params) { return this.#call('POST', '/quote', params, true); }
   runCross(params) { return this.#call('POST', '/cross', params, true); }
   runBallot(params) { return this.#call('POST', '/ballot', params, true); }
+  runPayrun(params) { return this.#call('POST', '/payrun', params, true); }
   openRound(params) { return this.#call('POST', '/round', params, true); }
   inputDigests() { return this.#call('GET', '/digests', undefined, true); }
   excludeMembers(members) { return this.#call('POST', '/exclude', { members }, true); }

@@ -1,10 +1,12 @@
 import crypto from 'node:crypto';
-import { generateClientKey, openFromModel } from '../enclave/e2ee.js';
+import { generateClientKey, openFromModel, sealToModel } from '../enclave/e2ee.js';
 import { RoostAggregationError } from '../enclave/errors.js';
 import { clearAuction, FORMATS } from './auction-programs.js';
 import { clearPool } from './pool-program.js';
 import { clearBestQuote, clearCross } from './quote-programs.js';
 import { clearBallot } from './ballot-program.js';
+import { buildPayrun, fmtMicro } from './payrun-program.js';
+import { leafHash, merkleRoot, merkleProof, payrunOrderHash, receiptSigningMessage } from './receipts.js';
 import { inputMessage, verifyNearSignature, isAccountId } from './signed-input.js';
 
 /**
@@ -416,6 +418,43 @@ export class HostedRoost {
     const orderHash = sha256Hex(`midge-ballot-v1:${roundId}:${rule}:${out.winner}:${recipient}:${poolMicro}:${[...roll].sort().join(',')}:${this.#orderSalt()}`);
     this.aggregate = { orderHash, totalMicro: poolMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
+   * Run a pay run. The employer seals one signed input { lines: [{ payee, person, invoiceId, period, gross, tax, benefits,
+   * payeeKey }] }; any other sealed input is ignored. Each person is paid their net, the tax and benefits providers their totals,
+   * and the employer is charged the gross total. The host signs a receipt per line, puts the receipt hashes under a Merkle
+   * root that the order hash commits to, and encrypts each statement to its owner's key: a person gets their own receipt and
+   * proof, the employer every line, the auditor totals only. Every payment's address and amount is public once settled; this
+   * hides who a payee is (a one-time address only the room can map to a person), and adds a private paper trail.
+   */
+  runPayrun({ employer, taxAddress, benefitsAddress, employerKeyHex, auditorKeyHex, runId = 'run' } = {}) {
+    if (!this.requireSignedInputs) throw new RoostAggregationError('a pay run is only run on a host that requires signed inputs');
+    if (!isAccountId(employer)) throw new RoostAggregationError('employer must be a plain account id');
+    for (const [k, v] of Object.entries({ employerKeyHex, auditorKeyHex })) if (!/^[0-9a-f]{64}$/i.test(String(v))) throw new RoostAggregationError(`${k} must be a 32-byte hex public key`);
+    if (!/^[A-Za-z0-9._-]{1,64}$/.test(String(runId))) throw new RoostAggregationError('runId must be 1 to 64 plain characters');
+    const mine = this.sealedIntents.find((i) => i.flyerId === employer);
+    if (!mine) throw new RoostAggregationError('no pay run was sealed by the employer');
+    const ignored = this.sealedIntents.filter((i) => i.flyerId !== employer).map((i) => i.flyerId);
+    let body;
+    try { body = JSON.parse(openFromModel(mine.cipherTextHex, this.#intentSecret)); } catch { throw new RoostAggregationError('the employer\'s pay run could not be read'); }
+    let built;
+    try { built = buildPayrun({ lines: body?.lines, taxAddress, benefitsAddress, runId }); } catch (e) { throw new RoostAggregationError(e.message); }
+    const leaves = built.receipts.map((r) => leafHash(r));
+    const root = merkleRoot(leaves);
+    const sign = (leaf) => crypto.sign(null, Buffer.from(receiptSigningMessage(leaf), 'utf8'), this.#settleKey).toString('hex');
+    const withProof = (i) => ({ receipt: built.receipts[i], signature: sign(leaves[i]), proof: merkleProof(leaves, i), receiptsRoot: root, runId, hostSettlePublicKey: this.settlePublicKey });
+    const statements = { payees: {}, employer: null, auditor: null };
+    built.receipts.forEach((r, i) => { if (r.kind === 'pay') statements.payees[r.payee] = { cipherHex: sealToModel(JSON.stringify(withProof(i)), built.payeeKeys[i]) }; });
+    statements.employer = { cipherHex: sealToModel(JSON.stringify({ runId, receiptsRoot: root, lines: built.receipts.map((_, i) => withProof(i)) }), employerKeyHex) };
+    statements.auditor = { cipherHex: sealToModel(JSON.stringify({ runId, receiptsRoot: root, ...built.totals }), auditorKeyHex) };
+    this.sealedIntents = [];
+    const orderHash = payrunOrderHash(runId, root);
+    const charges = [{ member: employer, amount: String(built.grossMicro * YOCTO_PER_MICRO) }];
+    const bound = { [employer]: built.grossMicro * YOCTO_PER_MICRO };
+    this.aggregate = { orderHash, totalMicro: built.grossMicro, signed: false, program: { allocations: built.allocations, charges, bound } };
+    const outcome = { shape: 'payrun', runId, receiptsRoot: root, lines: built.totals.headcount, recipients: built.allocations.length, gross: fmtMicro(built.grossMicro), ignored, executionModel: 'HOSTED_SEALED_PAYRUN', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    return { outcome, orderHash, allocations: built.allocations, charges, statements, receiptsRoot: root, settlePublicKey: this.settlePublicKey };
   }
 
   /**
