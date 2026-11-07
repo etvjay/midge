@@ -48,6 +48,13 @@
       "deployTx": "DPbQ2944vhcHRF16EkML5djiYvvZ3oW1giNsZFaEAhUe",
       "gitCommit": "953fba4",
       "reason": "GAP-024 fix: the release cap is cumulative over a time window of twice the exit timer (cap x (escrow at the window start + deposits since)); a failed payout gives its allowance back; a Dark Vault's epoch and exit timer advance with a new window, not with every settlement; get_release_window view; the window lives under its own storage key. State unchanged: 15 syndicates intact across the deploy. Deployed by scripts/deploy-contract.mjs."
+    },
+    {
+      "codeHash": "9xpdwMCAw5rej5LgYbEtWYrBc5a8iZLF4uUEdqR8PRuw",
+      "from": "2026-11-07T14:25Z",
+      "deployTx": "Eh8ZpeoKzGZtXxUX2B3EerXyBs7ALN6Dt7siQ1LvKYY3",
+      "gitCommit": "c028f28",
+      "reason": "GAP-025 fix: the exit timer is part of the policy hash depositors consent to (version 2, for new groups); a timer below 10 blocks is refused at hatch; get_policy_terms view. The 15 earlier groups are intact (checked against a pre-deploy snapshot) and keep the version-1 hash. Deployed by scripts/deploy-contract.mjs."
     }
   ]
 }

@@ -36,7 +36,7 @@ In part A, each round waited for the previous window and opened its own, so the 
 
 ## The limit, in real time
 
-The cap is paced by time: at most its share of what the group holds per release window, and a window is twice the group's exit timer. In real time that is only as strict as the timer the group chose. Measured on testnet with a 24-block timer (a 27-second window), a stand-in for a compromised host was refused a second payout straight after the first and could still release about 90% in nine windows, roughly four minutes. With a one-hour timer the same release would take about 18 hours, and members would wait up to an hour to exit. The timer must be chosen on purpose; the contract accepts any timer of one block or more and it is not part of the policy hash depositors consent to (GAP-025).
+The cap is paced by time: at most its share of what the group holds per release window, and a window is twice the group's exit timer. In real time that is only as strict as the timer the group chose. Measured on testnet with a 24-block timer (a 27-second window), a stand-in for a compromised host was refused a second payout straight after the first and could still release about 90% in nine windows, roughly four minutes. With a one-hour timer the same release would take about 18 hours, and members would wait up to an hour to exit. The timer must be chosen on purpose. Since the GAP-025 fix (2026-11-07) the timer is part of the rules depositors agree to and the contract refuses a timer under 10 blocks (about 6 seconds, a sanity floor and not a recommendation). Groups opened before that fix keep the old rules, so their timers were never agreed to; the contract marks them (`get_policy_terms`).
 
 ## What this does not show
 
