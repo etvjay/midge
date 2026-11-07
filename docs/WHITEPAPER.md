@@ -241,13 +241,13 @@ Institutional funds frequently execute multi-million dollar block trades that wo
 3. **Atomic Clearing:** The TEE dispatches the batch settlement proof to NEAR L1, swapping assets simultaneously across both escrows. The trade executes with zero front-running, zero sandwich exploitation, and zero pre-trade market impact.
 
 ### 3.3 Facility C: Payroll with Private Payees and Private Receipts
-*(Corrected 2026-11-07. An earlier version of this section said individual allocations stay shielded inside the enclave and that observers see only that the organisation disbursed funds. That is not true: a settlement is a public NEAR transfer to each recipient, so every payment's address and amount is visible on a block explorer. This facility is designed, not built.)*
+*(Corrected 2026-11-07. An earlier version of this section said individual allocations stay shielded inside the enclave and that observers see only that the organisation disbursed funds. That is not true: a settlement is a public NEAR transfer to each recipient, so every payment's address and amount is visible on a block explorer. The facility has since been built and run on testnet against a public pay run, on a local host; see `docs/lab/PAYROLL_RESULTS.md`, including the result that stable distinct salaries let an observer link the same person across months by amount.)*
 
 Autonomous AI agent organisations and decentralised enterprises must operate on-chain, but a salary sheet tied to names on a public explorer damages retention and competitive positioning. What Midge can offer is **private who, with private receipts**, not confidential amounts:
 1. The organisation opens a room for each pay run and deposits the run's funds.
 2. Each person gives a fresh one-time payout address for the run. Only the room knows which person owns which address, so a stranger sees amounts going to addresses they cannot name.
 3. The host issues each payee a signed, encrypted receipt (invoice id, period, gross, deductions, net) and gives an auditor only category totals. The root of all receipts is recorded in the settlement's signed order hash, so anyone can check that a receipt belongs to the run without seeing the others.
-4. **Limits:** the amounts are public. One settlement pays at most 8 recipients, so a larger payroll is several settlements. A dishonest host could issue a wrong receipt (two hosts reduce that). Nothing here has been built or run.
+4. **Limits:** the amounts are public, and stable distinct salaries let an observer link the same person across pay runs by amount. One settlement pays at most 8 recipients, so a larger payroll is several settlements. A dishonest host could issue a wrong receipt (two hosts reduce that).
 
 ### 3.4 Facility D: Stealth Angel Syndicates and Early-Stage Seeding
 Angel collectives, venture syndicates, and AI investment swarms frequently want to co-invest in early-stage rounds without publishing individual check sizes or revealing backer identities to competitors.

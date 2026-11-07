@@ -32,6 +32,10 @@ A ballot program: the options are fixed recipients set when the room opens; memb
 
 Run on 2026-11-07: see `VOTE_RESULTS.md` (`E-CMP-VOTE-01` PASS). The multisig baseline (item 0) is built and was used in that run.
 
+## 2b. Payroll: done
+
+Run on 2026-11-07: see `PAYROLL_RESULTS.md` (`E-CMP-PAYROLL-01` PASS), including the expected weakness that stable distinct salaries link a person across months by amount.
+
 ## 2. Payroll, invoicing, receipts and accounting views
 
 The settlement publishes who is paid and how much, so the amounts cannot be hidden from the chain. What can be hidden is **who the payee is**, and what can be added is **a private paper trail**:
