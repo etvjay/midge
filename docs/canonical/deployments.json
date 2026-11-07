@@ -39,7 +39,15 @@
       "from": "2026-11-07T09:58Z",
       "deployTx": "ErUzdM1R4wH6yPeVTw4W98JRDdi5NZ6S5cWH3TRT233",
       "gitCommit": "1b087d7",
-      "reason": "GAP-008 fix: the payout's follow-up step is given 25 TGas + 1 TGas per member (cap 100); each settlement records its pending follow-up; recover_stuck_settlement lets anyone finish a stuck payout 100 blocks after it started; get_pending_settlement view. State unchanged: 15 syndicates intact across the deploy. Deployed by scripts/deploy-contract.mjs."
+      "reason": "GAP-008 fix: the payout's follow-up step is given 25 TGas + 1 TGas per member (cap 100); each settlement records its pending follow-up; recover_stuck_settlement lets anyone finish a stuck payout 100 blocks after it started; get_pending_settlement view. State unchanged: 15 syndicates intact across the deploy. Deployed by scripts/deploy-contract.mjs.",
+      "until": "2026-11-07T13:50Z"
+    },
+    {
+      "codeHash": "DNZDmhLRfSubVSfNoHtAjRZaPLCpvchTSqeqJgxa4si1",
+      "from": "2026-11-07T13:50Z",
+      "deployTx": "DPbQ2944vhcHRF16EkML5djiYvvZ3oW1giNsZFaEAhUe",
+      "gitCommit": "953fba4",
+      "reason": "GAP-024 fix: the release cap is cumulative over a time window of twice the exit timer (cap x (escrow at the window start + deposits since)); a failed payout gives its allowance back; a Dark Vault's epoch and exit timer advance with a new window, not with every settlement; get_release_window view; the window lives under its own storage key. State unchanged: 15 syndicates intact across the deploy. Deployed by scripts/deploy-contract.mjs."
     }
   ]
 }
