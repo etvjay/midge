@@ -3795,3 +3795,50 @@ fn the_hash_does_not_depend_on_the_order_or_repetition_of_recipients() {
         b.compute_hash_with_timeout(30)
     );
 }
+
+// ---- Audit run-1 fixes: each test was written to fail before its fix ----
+
+#[test]
+#[should_panic(expected = "[Settle REJECT] Invalid order hash")]
+fn order_hash_may_not_contain_the_message_separator() {
+    // A charged message is `..:allocs:charges:order`; an uncharged one is `..:allocs:order`. An uncharged order hash
+    // of "<charges_hash>:<order>" would let a charged signature verify as an uncharged settlement.
+    let (mut c, id, nonce, _m) = charged_setup("ord-colon");
+    let allocations = pay_r(3);
+    let sig = sign_charged(&id, 1, &nonce, &compute_allocations_hash(&allocations), "", "x:y");
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 120).build());
+    c.settle_batch(id.clone(), nonce.clone(), "x:y".to_string(), allocations, sig);
+}
+
+#[test]
+fn a_member_drained_to_zero_who_deposits_again_is_not_listed_twice() {
+    let (mut c, id, nonce, m) = charged_setup("dup-flyer");
+    let before = c.get_syndicate(id.clone()).unwrap();
+    assert_eq!(before.flyers.len() as u32, before.active_flyer_count);
+    // m[0] pays everything they deposited
+    let charges = vec![charge(&m[0], 10), charge(&m[1], 0), charge(&m[2], 0)];
+    let charges: Vec<Charge> = charges.into_iter().filter(|c| c.amount.as_yoctonear() > 0).collect();
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(10), charges.clone(), &charges);
+    testing_env_with_promise_results(
+        get_context("fly-coordinator.testnet".parse().unwrap(), NearToken::from_near(0), 121).build(),
+        PromiseResult::Successful(vec![]),
+    );
+    assert!(c.on_settlement_payout(
+        id.clone(),
+        pay_r(10),
+        charges,
+        NearToken::from_near(10),
+        compute_allocations_hash(&pay_r(10)),
+        "order".to_string(),
+    ));
+    assert_eq!(c.get_syndicate(id.clone()).unwrap().status, SyndicateStatus::Active);
+    let ph = c.get_policy_hash(id.clone());
+    testing_env!(get_context(m[0].clone(), NearToken::from_near(1), 130).build());
+    c.deposit(id.clone(), ph);
+    let after = c.get_syndicate(id.clone()).unwrap();
+    let mut seen = after.flyers.clone();
+    seen.sort();
+    seen.dedup();
+    assert_eq!(seen.len(), after.flyers.len(), "flyers must be unique");
+    assert_eq!(after.active_flyer_count as usize, after.flyers.len());
+}

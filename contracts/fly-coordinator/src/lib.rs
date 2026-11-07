@@ -688,7 +688,8 @@ impl FlyCoordinator {
 
         // If this is a new flyer, check max capacity
         // If this flyer currently has 0 balance, count as an active flyer
-        if current_balance.as_yoctonear() == 0 {
+        // A member drained to zero by a charged settlement stays listed, so a later deposit must not list them again.
+        if current_balance.as_yoctonear() == 0 && !syn.flyers.contains(&caller) {
             assert!(
                 syn.active_flyer_count < MAX_FLYERS_PER_SYNDICATE,
                 "[Deposit REJECT] Maximum 50 flyers reached for this syndicate."
@@ -853,6 +854,13 @@ impl FlyCoordinator {
         assert!(
             !syn.is_settling,
             "[Settle REJECT] Settlement is already in flight."
+        );
+
+        // The signed message joins its fields with ':'. An order hash holding one could make a charged signature
+        // verify as an uncharged settlement, so the separator is not allowed inside it.
+        assert!(
+            !aggregate_order_hash.contains(':') && aggregate_order_hash.len() <= 256,
+            "[Settle REJECT] Invalid order hash"
         );
 
         // 1. Enforce settle deadline
