@@ -16,7 +16,7 @@
 | **Group** | The people, companies or AI agents acting together | syndicate (`get_syndicate`, `hatch`), swarm, pod | the club that owns the room |
 | **Room** | The private place where members' sealed inputs are opened and the result is worked out | the Roost | the closed-door meeting |
 | **Host** | The secure hardware and program that runs a room: our program on Phala, or an attested AI model on NEAR AI Cloud | Roost backend (`hosted`, `model-sealed`) | the building the meeting is held in |
-| **Rules** | The NEAR contract: who can be paid, how much, until when; it refuses anything else | the Nest, `fly-coordinator`, the release policy | the posted budget limits |
+| **Rules** | The NEAR contract: who can be paid, how much per payment, until when; it refuses anything else (it does not yet limit how many payments in a row) | the Nest, `fly-coordinator`, the release policy | the posted budget limits |
 | **Member** | Anyone with a NEAR account who puts money in and takes part | flyer | an attendee |
 | **Sealed input** | A bid, ballot or amount encrypted so only the room can read it, and signed by the member | sealed intent, sealed bid | a signed envelope only the room can open |
 | **Round** | One cycle: sealed inputs, a result, a settlement | epoch, round nonce | one agenda item |
@@ -51,4 +51,5 @@ One pattern (a private room, public rules, an exit) serves several kinds of grou
 2. A claim says what ran, where, and what did not (a local host is not hardware; one operator is not independent users).
 3. Deposits and balances are public on NEAR. What stays private is what members bid, vote or decide.
 4. Every new term gets a layman line next to it.
-5. Payroll and anything like it is "private who, with private receipts". A payment is a public NEAR transfer, so its amount is public; never write "confidential amounts" or "shielded allocations".
+5. The release cap is **per settlement**, not per period: never write "at most X% per epoch" or imply the cap bounds how fast funds can leave.
+6. Payroll and anything like it is "private who, with private receipts". A payment is a public NEAR transfer, so its amount is public; never write "confidential amounts" or "shielded allocations".

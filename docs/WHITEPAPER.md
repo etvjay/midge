@@ -63,7 +63,7 @@ Existing attempts to introduce privacy into decentralized finance introduce cata
 Midge breaks this trilemma by unbundling **coordination** from **custody**:
 * **Where the money lives:** Capital stays on NEAR L1 in an auditable, immutable smart contract escrow (`FlyCoordinator`).
 * **Where the thinking happens:** Negotiations, voting, order weights, and credit covenants happen in confidential TEE memory (Intel TDX on NEAR AI Cloud).
-* **Why the thinker cannot steal:** The TEE has zero discretionary withdrawal authority. It can only propose settlements strictly bounded by on-chain `ReleasePolicy` constraints (whitelisted recipients, maximum basis points per epoch, and hard block deadlines).
+* **Why the thinker cannot steal:** The TEE has zero discretionary withdrawal authority. It can only propose settlements strictly bounded by on-chain `ReleasePolicy` constraints (whitelisted recipients, a maximum share of the escrow per settlement, and hard block deadlines). The per-settlement cap does not bound how fast a compromised host can release funds in succession; see GAP-024.
 * **Why failure does not trap capital:** If the TEE stops signing, any individual depositor invokes the sovereign escape hatch (`hatch_out`) directly on L1, reclaiming their exact escrow balance after a timelock without operator assistance.
 
 ---
@@ -128,7 +128,7 @@ pub struct ReleasePolicy {
 }
 ```
 * **Recipient Allowlist (`allowed_recipients`):** A strictly enforced list of NEAR accounts eligible to receive payout distributions. Any attempt to route funds to an unlisted account results in immediate on-chain panic and state reversion.
-* **Epoch Rate Limiter (`max_release_bps_per_epoch`):** The maximum percentage (in basis points, where 10,000 = 100%) of the syndicate's escrow that can be released within a single epoch.
+* **Epoch Rate Limiter (`max_release_bps_per_epoch`):** The maximum percentage (in basis points, where 10,000 = 100%) of the syndicate's escrow that can be released by a single settlement. *(Corrected 2026-11-07: an earlier version said "within a single epoch". Measured on testnet (E-ONGOING-01): the cap is a share of the group's escrow at the moment of each settlement, and an epoch advances with each settlement rather than with time, so a compromised host can make several payments in a row, each within the cap. Three in a row released 57.8% of a group against a stated 25%. Gap GAP-024.)*
 * **Settlement Deadline (`settle_deadline_block`):** A fixed block height beyond which the enclave cannot authorize settlements, protecting depositors from stale authorizations.
 
 Depositors explicitly consent to this policy when funding the escrow. The contract computes a cryptographic SHA-256 policy digest:
