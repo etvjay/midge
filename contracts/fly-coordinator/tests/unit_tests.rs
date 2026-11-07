@@ -2998,3 +2998,348 @@ fn a_pruned_two_room_syndicate_forgets_its_second_key() {
     c.prune_syndicate(id.clone());
     assert_eq!(c.get_second_enclave_key(id), None);
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// The exit rule (docs/lab/TWO_ROOM_SPEC.md): the release policy limits what the room can pay out, never what a member
+// can take back of their own deposit
+// ---------------------------------------------------------------------------------------------------------------
+
+#[test]
+fn exit_is_not_limited_by_the_release_policy_deadline_or_recipient_list() {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner, NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let (pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", "exit-policy", 1, "", "", "");
+    let allowed: AccountId = "treasury.near".parse().unwrap();
+    let policy = ReleasePolicy {
+        allowed_recipients: vec![allowed.clone()],
+        max_release_bps_per_epoch: 100, // 1%
+        settle_deadline_block: 150,
+    };
+    let id = c.hatch(
+        "exit-policy".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        pk,
+        "hash".to_string(),
+        Some(30),
+        Some(allowed),
+        Some(policy),
+    );
+    let p_hash = c.get_policy_hash(id.clone());
+    let m: AccountId = "member.near".parse().unwrap(); // not on the recipient list
+    testing_env!(get_context(m.clone(), NearToken::from_near(10), 105).build());
+    c.deposit(id.clone(), p_hash);
+    // block 400: far past the settle deadline (150) and the exit timer (100 + 30)
+    testing_env!(get_context(m.clone(), NearToken::from_near(0), 400).build());
+    let _ = c.hatch_out(id.clone());
+    assert_eq!(c.get_escrow(id.clone(), m).as_yoctonear(), 0);
+    assert_eq!(
+        c.get_syndicate(id).unwrap().status,
+        SyndicateStatus::AbortedRefunded
+    );
+}
+
+#[test]
+fn after_a_charged_settlement_exit_returns_the_deposit_less_the_members_own_charge() {
+    let (mut c, id, nonce, m) = charged_setup("exit-after-charge");
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+    testing_env_with_promise_results(
+        get_context(
+            "fly-coordinator.testnet".parse().unwrap(),
+            NearToken::from_near(0),
+            121,
+        )
+        .build(),
+        PromiseResult::Successful(vec![]),
+    );
+    assert!(c.on_settlement_payout(
+        id.clone(),
+        pay_r(12),
+        charges,
+        NearToken::from_near(12),
+        compute_allocations_hash(&pay_r(12)),
+        "order".to_string(),
+    ));
+    // before exiting, each member's escrow is exactly deposit less their own charge
+    assert_eq!(
+        c.get_escrow(id.clone(), m[0].clone()),
+        NearToken::from_near(8)
+    );
+    assert_eq!(
+        c.get_escrow(id.clone(), m[1].clone()),
+        NearToken::from_near(6)
+    );
+    assert_eq!(
+        c.get_escrow(id.clone(), m[2].clone()),
+        NearToken::from_near(4)
+    );
+    // the exit pays out that escrow and no more, and cannot be repeated
+    testing_env!(get_context(m[1].clone(), NearToken::from_near(0), 400).build());
+    let before_total = c.get_syndicate(id.clone()).unwrap().total_escrow;
+    let _ = c.hatch_out(id.clone());
+    assert_eq!(c.get_escrow(id.clone(), m[1].clone()).as_yoctonear(), 0);
+    assert_eq!(
+        before_total.as_yoctonear()
+            - c.get_syndicate(id.clone())
+                .unwrap()
+                .total_escrow
+                .as_yoctonear(),
+        NearToken::from_near(6).as_yoctonear()
+    );
+    // the other two are untouched by b's exit
+    assert_eq!(
+        c.get_escrow(id.clone(), m[0].clone()),
+        NearToken::from_near(8)
+    );
+    assert_eq!(c.get_escrow(id, m[2].clone()), NearToken::from_near(4));
+}
+
+#[test]
+#[should_panic(expected = "in flight")]
+fn exit_is_refused_while_a_settlement_is_in_flight_so_a_late_signature_cannot_race_a_refund() {
+    let (mut c, id, nonce, m) = charged_setup("exit-race");
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+    // the callback has not run: the settlement is in flight
+    assert!(c.get_syndicate(id.clone()).unwrap().is_settling);
+    testing_env!(get_context(m[0].clone(), NearToken::from_near(0), 400).build());
+    let _ = c.hatch_out(id);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// GAP-008: a payout whose follow-up step never runs must not block exits and settlements for ever
+// ---------------------------------------------------------------------------------------------------------------
+
+/// Settle (charged, 12 of 30 deposited) at block 120 and leave the callback unrun: the settlement is "stuck".
+fn stuck_after_charged_settlement(id: &str) -> (FlyCoordinator, String, [AccountId; 3]) {
+    let (mut c, id, nonce, m) = charged_setup(id);
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    settle_charged_as_owner(
+        &mut c,
+        &id,
+        &nonce,
+        pay_r(12),
+        charges,
+        &[charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)],
+    );
+    assert!(c.get_syndicate(id.clone()).unwrap().is_settling);
+    (c, id, m)
+}
+
+fn run_the_callback(c: &mut FlyCoordinator, id: &str, m: &[AccountId; 3], block: u64) -> bool {
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    testing_env_with_promise_results(
+        get_context(
+            "fly-coordinator.testnet".parse().unwrap(),
+            NearToken::from_near(0),
+            block,
+        )
+        .build(),
+        PromiseResult::Successful(vec![]),
+    );
+    c.on_settlement_payout(
+        id.to_string(),
+        pay_r(12),
+        charges,
+        NearToken::from_near(12),
+        compute_allocations_hash(&pay_r(12)),
+        "order".to_string(),
+    )
+}
+
+#[test]
+fn a_settlement_in_flight_records_when_it_started() {
+    let (c, id, _) = stuck_after_charged_settlement("stuck-rec");
+    let pending = c.get_pending_settlement(id).expect("a pending record");
+    assert_eq!(pending.since_block, 120);
+    assert_eq!(pending.total_payout, NearToken::from_near(12));
+}
+
+#[test]
+fn a_finished_settlement_leaves_no_pending_record() {
+    let (mut c, id, m) = stuck_after_charged_settlement("stuck-done");
+    assert!(run_the_callback(&mut c, &id, &m, 121));
+    assert!(c.get_pending_settlement(id).is_none());
+}
+
+#[test]
+#[should_panic(expected = "not stuck yet")]
+fn a_stuck_settlement_cannot_be_recovered_too_early() {
+    let (mut c, id, _) = stuck_after_charged_settlement("stuck-early");
+    testing_env!(get_context(
+        "anyone.near".parse().unwrap(),
+        NearToken::from_near(0),
+        120 + 99
+    )
+    .build());
+    c.recover_stuck_settlement(id);
+}
+
+#[test]
+fn anyone_can_recover_a_stuck_settlement_and_it_settles_the_books_as_if_the_payout_landed() {
+    let (mut c, id, m) = stuck_after_charged_settlement("stuck-ok");
+    // a member who is not the owner, not the coordinator, does it themselves
+    testing_env!(get_context(m[2].clone(), NearToken::from_near(0), 120 + 100).build());
+    c.recover_stuck_settlement(id.clone());
+    let syn = c.get_syndicate(id.clone()).unwrap();
+    assert!(!syn.is_settling);
+    assert_eq!(syn.status, SyndicateStatus::Active);
+    // exactly what the callback would have done: each member paid only their own charge
+    assert_eq!(
+        c.get_escrow(id.clone(), m[0].clone()),
+        NearToken::from_near(8)
+    );
+    assert_eq!(
+        c.get_escrow(id.clone(), m[1].clone()),
+        NearToken::from_near(6)
+    );
+    assert_eq!(
+        c.get_escrow(id.clone(), m[2].clone()),
+        NearToken::from_near(4)
+    );
+    assert_eq!(syn.total_escrow, NearToken::from_near(18));
+    assert!(c.get_pending_settlement(id).is_none());
+}
+
+#[test]
+fn after_recovery_members_can_exit_and_the_books_balance() {
+    let (mut c, id, m) = stuck_after_charged_settlement("stuck-exit");
+    testing_env!(get_context(m[0].clone(), NearToken::from_near(0), 120 + 100).build());
+    c.recover_stuck_settlement(id.clone());
+    testing_env!(get_context(m[1].clone(), NearToken::from_near(0), 400).build());
+    let _ = c.hatch_out(id.clone());
+    assert_eq!(c.get_escrow(id.clone(), m[1].clone()).as_yoctonear(), 0);
+    let total_before = NearToken::from_near(18).as_yoctonear();
+    assert_eq!(
+        total_before - c.get_syndicate(id).unwrap().total_escrow.as_yoctonear(),
+        NearToken::from_near(6).as_yoctonear()
+    );
+}
+
+#[test]
+#[should_panic(expected = "No settlement is in flight")]
+fn recovery_is_refused_when_nothing_is_in_flight() {
+    let (mut c, id, nonce, _) = charged_setup("stuck-none");
+    let _ = nonce;
+    testing_env!(get_context("anyone.near".parse().unwrap(), NearToken::from_near(0), 500).build());
+    c.recover_stuck_settlement(id);
+}
+
+#[test]
+#[should_panic(expected = "No settlement is in flight")]
+fn recovery_is_refused_after_the_callback_already_ran() {
+    let (mut c, id, m) = stuck_after_charged_settlement("stuck-late-rec");
+    assert!(run_the_callback(&mut c, &id, &m, 121));
+    testing_env!(get_context("anyone.near".parse().unwrap(), NearToken::from_near(0), 500).build());
+    c.recover_stuck_settlement(id);
+}
+
+#[test]
+fn a_late_callback_after_recovery_changes_nothing() {
+    let (mut c, id, m) = stuck_after_charged_settlement("stuck-late-cb");
+    testing_env!(get_context(m[0].clone(), NearToken::from_near(0), 120 + 100).build());
+    c.recover_stuck_settlement(id.clone());
+    let before = (
+        c.get_escrow(id.clone(), m[0].clone()),
+        c.get_escrow(id.clone(), m[1].clone()),
+        c.get_escrow(id.clone(), m[2].clone()),
+        c.get_syndicate(id.clone()).unwrap().total_escrow,
+    );
+    // the callback finally arrives: it must not deduct a second time
+    let ok = run_the_callback(&mut c, &id, &m, 300);
+    assert!(ok);
+    let after = (
+        c.get_escrow(id.clone(), m[0].clone()),
+        c.get_escrow(id.clone(), m[1].clone()),
+        c.get_escrow(id.clone(), m[2].clone()),
+        c.get_syndicate(id).unwrap().total_escrow,
+    );
+    assert_eq!(before, after);
+}
+
+#[test]
+#[should_panic(expected = "in flight")]
+fn exit_stays_refused_until_the_stuck_settlement_is_recovered() {
+    let (mut c, id, m) = stuck_after_charged_settlement("stuck-exit-wait");
+    testing_env!(get_context(m[0].clone(), NearToken::from_near(0), 400).build());
+    let _ = c.hatch_out(id);
+}
+
+#[test]
+fn the_follow_up_step_is_given_gas_in_proportion_to_the_members() {
+    use near_sdk::test_utils::get_created_receipts;
+    use near_sdk::Gas;
+    let callback_gas = || -> u64 {
+        let receipts = get_created_receipts();
+        let mut gas = 0u64;
+        for r in receipts {
+            for a in r.actions {
+                if let near_sdk::mock::MockAction::FunctionCallWeight {
+                    method_name,
+                    prepaid_gas,
+                    ..
+                } = a
+                {
+                    if method_name == b"on_settlement_payout" {
+                        gas = prepaid_gas.as_gas();
+                    }
+                }
+            }
+        }
+        gas
+    };
+    // three members
+    let (_c, _id, _) = stuck_after_charged_settlement("gas-3");
+    let small = callback_gas();
+    assert!(
+        small >= Gas::from_tgas(25).as_gas(),
+        "never less than before: {small}"
+    );
+    // fifty members
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner.clone(), NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let id = c.hatch(
+        "gas-50".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        room_pk(ROOM_A),
+        "hash".to_string(),
+        Some(30),
+        Some("r.near".parse().unwrap()),
+        None,
+    );
+    let p_hash = c.get_policy_hash(id.clone());
+    let mut members = Vec::new();
+    for i in 0..50 {
+        let f: AccountId = format!("m{i}.near").parse().unwrap();
+        testing_env!(get_context(f.clone(), NearToken::from_near(1), 105 + i).build());
+        c.deposit(id.clone(), p_hash.clone());
+        members.push(f);
+    }
+    let nonce = c.get_syndicate(id.clone()).unwrap().round_nonce;
+    let alloc = pay_r(10);
+    let msg = plain_msg(&id, &nonce, &alloc, "order");
+    testing_env!(get_context(owner, NearToken::from_near(0), 200).build());
+    c.settle_batch(
+        id,
+        nonce,
+        "order".to_string(),
+        alloc,
+        room_sign(ROOM_A, &msg),
+    );
+    let big = callback_gas();
+    assert!(
+        big >= Gas::from_tgas(60).as_gas(),
+        "50 members need at least 60 TGas for the follow-up step, got {big}"
+    );
+    assert!(
+        big < Gas::from_tgas(150).as_gas(),
+        "but not so much that a normal 150 TGas call cannot afford it: {big}"
+    );
+}

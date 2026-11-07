@@ -276,6 +276,31 @@ pub struct FlyCoordinator {
     pub member_syndicates: LookupMap<AccountId, Vec<String>>,
 }
 
+/// A payout whose follow-up step has not run for this many blocks may be settled by anyone (GAP-008).
+pub const STUCK_SETTLEMENT_BLOCKS: u64 = 100;
+/// Gas given to the follow-up step: a base plus a little per member, so a 50-member settlement cannot starve it.
+const CALLBACK_BASE_TGAS: u64 = 25;
+const CALLBACK_PER_MEMBER_TGAS: u64 = 1;
+const CALLBACK_MAX_TGAS: u64 = 100;
+
+/// What a settlement in flight still has to do, kept until its follow-up step finishes or someone recovers it.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct PendingSettlement {
+    pub since_block: u64,
+    pub allocations: Vec<Allocation>,
+    pub charges: Vec<Charge>,
+    pub total_payout: NearToken,
+    pub allocations_hash: String,
+    pub order_hash: String,
+}
+
+fn pending_slot(syndicate_id: &str) -> Vec<u8> {
+    let mut k = b"p:".to_vec();
+    k.extend_from_slice(syndicate_id.as_bytes());
+    k
+}
+
 /// Raw storage key for a two-room syndicate's second room key.
 fn second_key_slot(syndicate_id: &str) -> Vec<u8> {
     let mut k = b"k2:".to_vec();
@@ -984,10 +1009,30 @@ impl FlyCoordinator {
             };
         }
 
+        // Remember what the follow-up step must do, so a payout whose follow-up never runs can be finished by anyone
+        // after STUCK_SETTLEMENT_BLOCKS instead of blocking exits and settlements for ever (GAP-008).
+        let pending = PendingSettlement {
+            since_block: env::block_height(),
+            allocations: allocations.clone(),
+            charges: charges.clone(),
+            total_payout: NearToken::from_yoctonear(total_payout_yocto),
+            allocations_hash: allocations_hash.clone(),
+            order_hash: aggregate_order_hash.clone(),
+        };
+        env::storage_write(
+            &pending_slot(&syn.id),
+            &near_sdk::borsh::to_vec(&pending).unwrap_or_else(|_| {
+                env::panic_str("[Settle REJECT] Could not record the settlement")
+            }),
+        );
+        let members = (syn.flyers.len().max(charges.len())) as u64;
+        let callback_tgas =
+            (CALLBACK_BASE_TGAS + CALLBACK_PER_MEMBER_TGAS * members).min(CALLBACK_MAX_TGAS);
+
         if let Some(promise) = transfer_promise {
             let _ = promise.then(
                 Self::ext(env::current_account_id())
-                    .with_static_gas(Gas::from_tgas(25))
+                    .with_static_gas(Gas::from_tgas(callback_tgas))
                     .on_settlement_payout(
                         syn.id.clone(),
                         allocations,
@@ -1105,6 +1150,39 @@ impl FlyCoordinator {
             }
         }
 
+        // If someone already finished this settlement (recover_stuck_settlement), the late follow-up must change nothing.
+        let in_flight = self
+            .syndicates
+            .get(&syndicate_id)
+            .map(|syn| syn.is_settling)
+            .unwrap_or(false);
+        let has_pending = env::storage_read(&pending_slot(&syndicate_id)).is_some();
+        if !in_flight && !has_pending {
+            return true;
+        }
+        env::storage_remove(&pending_slot(&syndicate_id));
+        self.finish_settlement(
+            syndicate_id,
+            charges,
+            total_payout,
+            failed_yocto,
+            allocations_hash,
+            order_hash,
+        )
+    }
+
+    /// Applies the books for a settlement: deducts each member's share of what landed, restores what failed, clears the
+    /// in-flight mark. Called by the follow-up step with the real outcome, and by recover_stuck_settlement assuming the
+    /// payout landed (the only assumption that can never let members withdraw money that has already left).
+    fn finish_settlement(
+        &mut self,
+        syndicate_id: String,
+        charges: Vec<Charge>,
+        total_payout: NearToken,
+        failed_yocto: u128,
+        allocations_hash: String,
+        order_hash: String,
+    ) -> bool {
         let total_payout_yocto = total_payout.as_yoctonear();
         let succeeded_yocto = total_payout_yocto.saturating_sub(failed_yocto);
 
@@ -1206,6 +1284,48 @@ impl FlyCoordinator {
         }
 
         true
+    }
+
+    /// recover_stuck_settlement(): finishes a settlement whose follow-up step never ran (it ran out of gas or was lost).
+    /// Anyone may call it once STUCK_SETTLEMENT_BLOCKS have passed since the settlement started. It assumes the payout
+    /// landed: the members are charged exactly as the follow-up step would have charged them. Assuming the payout failed
+    /// instead could let members withdraw money that has already left the contract, which also holds other groups' funds.
+    /// If a transfer really did fail, that part stays in the contract and is not credited back to the members.
+    pub fn recover_stuck_settlement(&mut self, syndicate_id: String) {
+        let raw = env::storage_read(&pending_slot(&syndicate_id)).unwrap_or_else(|| {
+            env::panic_str("[Recover REJECT] No settlement is in flight for this syndicate.")
+        });
+        let pending: PendingSettlement = near_sdk::borsh::from_slice(&raw).unwrap_or_else(|_| {
+            env::panic_str("[Recover REJECT] The pending record is unreadable.")
+        });
+        let ready_at = pending.since_block.saturating_add(STUCK_SETTLEMENT_BLOCKS);
+        assert!(
+            env::block_height() >= ready_at,
+            "[Recover REJECT] The settlement is not stuck yet: it can be recovered from block {}.",
+            ready_at
+        );
+        env::storage_remove(&pending_slot(&syndicate_id));
+        env::log_str(&format!(
+            "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"settlement_recovered\",\"data\":[{{\"syndicate_id\":\"{}\",\"started_at_block\":{},\"recovered_at_block\":{},\"total_payout\":\"{}\"}}]}}",
+            syndicate_id,
+            pending.since_block,
+            env::block_height(),
+            pending.total_payout.as_yoctonear()
+        ));
+        self.finish_settlement(
+            syndicate_id,
+            pending.charges,
+            pending.total_payout,
+            0,
+            pending.allocations_hash,
+            pending.order_hash,
+        );
+    }
+
+    /// The settlement waiting for its follow-up step, if any.
+    pub fn get_pending_settlement(&self, syndicate_id: String) -> Option<PendingSettlement> {
+        env::storage_read(&pending_slot(&syndicate_id))
+            .and_then(|raw| near_sdk::borsh::from_slice(&raw).ok())
     }
 
     /// Callback for escape hatch refund payout transfer failure handling.
