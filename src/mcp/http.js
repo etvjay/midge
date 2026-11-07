@@ -1,13 +1,13 @@
 /**
  * Streamable-HTTP endpoint for the MCP server: POST /mcp with a JSON-RPC message (or a batch), answered as JSON. Notifications get
  * 202. It uses the same dispatcher as the stdio binary. The coordinator key (X-Roost-Admin-Key, or a Bearer token) marks the caller
- * as the coordinator; without it, tools that open or run a round are refused with HTTP 401. A browser request whose Origin is not
+ * as the coordinator; without it, every tool except the short public list (PUBLIC_OVER_HTTP) is refused with HTTP 401. A browser request whose Origin is not
  * on the allow-list is refused (DNS-rebinding guard); requests with no Origin (agents, servers) are fine.
  */
 import crypto from 'node:crypto';
 import { createRateLimiter } from '../roost-service/rate-limit.js';
 import { createClientResolver } from '../roost-service/client-id.js';
-import { COORDINATOR_ONLY } from './rooms-tools.js';
+import { PUBLIC_OVER_HTTP } from './rooms-tools.js';
 
 const safeEqual = (a, b) => crypto.timingSafeEqual(crypto.createHash('sha256').update(String(a)).digest(), crypto.createHash('sha256').update(String(b)).digest());
 
@@ -42,7 +42,7 @@ export function createMcpHttpHandler(rpc, { adminKey, path = '/mcp', maxBody = 2
     try { payload = JSON.parse(text); } catch { return rpcError(400, -32700, 'Parse error', 'INVALID_PARAMS'); }
     const coordinator = isCoordinator(req);
     const messages = Array.isArray(payload) ? payload : [payload];
-    const needsKey = messages.find((m) => m && m.method === 'tools/call' && COORDINATOR_ONLY.has(m.params?.name));
+    const needsKey = messages.find((m) => m && m.method === 'tools/call' && !PUBLIC_OVER_HTTP.has(m.params?.name));
     if (needsKey && !coordinator) return send(401, { jsonrpc: '2.0', id: needsKey.id ?? null, error: { code: -32001, message: `[${needsKey.params.name}] this tool needs the coordinator key`, data: { code: 'NOT_AUTHORISED' } } });
     const out = await rpc.handleAny(payload, { coordinator });
     return out === null ? send(202, null) : send(200, out);

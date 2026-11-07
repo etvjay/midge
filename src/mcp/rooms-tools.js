@@ -48,3 +48,9 @@ export const ROOM_TOOLS = [
 
 export const ROOM_TOOL_NAMES = new Set(ROOM_TOOLS.map((t) => t.name));
 export const COORDINATOR_ONLY = new Set(['midge_open_room_round', 'midge_run_room']);
+
+/**
+ * Tools anyone may call over HTTP: they read, or they hand in a member's own signed input. Every other tool, including any added
+ * later, needs the coordinator key, because the chain-writing tools act as the server's NEAR account.
+ */
+export const PUBLIC_OVER_HTTP = new Set(['midge_describe_rooms', 'midge_submit_room_input', 'midge_list_syndicates', 'midge_verify_haq_attestation']);
