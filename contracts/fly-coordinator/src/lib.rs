@@ -283,6 +283,37 @@ const CALLBACK_BASE_TGAS: u64 = 25;
 const CALLBACK_PER_MEMBER_TGAS: u64 = 1;
 const CALLBACK_MAX_TGAS: u64 = 100;
 
+/// How much has been released since a time window opened (GAP-024). A window lasts twice the exit timer. Within it the release
+/// cap is cumulative: everything released must stay within cap x (escrow at the window's start + deposits since).
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReleaseWindow {
+    pub start_block: u64,
+    pub start_escrow: NearToken,
+    pub released: NearToken,
+    pub ends_at_block: u64,
+}
+
+fn window_slot(syndicate_id: &str) -> Vec<u8> {
+    let mut k = b"w:".to_vec();
+    k.extend_from_slice(syndicate_id.as_bytes());
+    k
+}
+
+fn read_window(syndicate_id: &str) -> Option<ReleaseWindow> {
+    env::storage_read(&window_slot(syndicate_id))
+        .and_then(|raw| near_sdk::borsh::from_slice(&raw).ok())
+}
+
+fn write_window(syndicate_id: &str, w: &ReleaseWindow) {
+    env::storage_write(
+        &window_slot(syndicate_id),
+        &near_sdk::borsh::to_vec(w).unwrap_or_else(|_| {
+            env::panic_str("[Settle REJECT] Could not record the release window")
+        }),
+    );
+}
+
 /// What a settlement in flight still has to do, kept until its follow-up step finishes or someone recovers it.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
@@ -637,6 +668,10 @@ impl FlyCoordinator {
 
         self.escrows.insert(escrow_key, new_balance);
         syn.total_escrow = syn.total_escrow.saturating_add(attached);
+        if let Some(mut w) = read_window(&syndicate_id) {
+            w.start_escrow = w.start_escrow.saturating_add(attached);
+            write_window(&syndicate_id, &w);
+        }
 
         // NEP-297 standard event (API-008: syndicate_deposited)
         env::log_str(&format!(
@@ -837,10 +872,29 @@ impl FlyCoordinator {
             "[Settle REJECT] Allocation sum exceeds total escrow."
         );
 
-        let max_allowed = syn.release_policy.calculate_max_payout(syn.total_escrow);
+        // GAP-024: the cap bounds the pace of release, not just each settlement. A window opens at the first settlement and lasts
+        // twice the exit timer; within it the total released may not exceed cap x (escrow at the start + deposits since).
+        let now = env::block_height();
+        let (mut window, opens_new_window) = match read_window(&syndicate_id) {
+            Some(w) if now < w.ends_at_block => (w, false),
+            _ => (
+                ReleaseWindow {
+                    start_block: now,
+                    start_escrow: syn.total_escrow,
+                    released: NearToken::from_yoctonear(0),
+                    ends_at_block: now.saturating_add(syn.timeout_blocks.saturating_mul(2)),
+                },
+                true,
+            ),
+        };
+        let allowance = syn.release_policy.calculate_max_payout(window.start_escrow);
         assert!(
-            total_payout_yocto <= max_allowed.as_yoctonear(),
-            "[Settle REJECT] Allocation sum exceeds max_release_bps_per_epoch cap."
+            window
+                .released
+                .as_yoctonear()
+                .saturating_add(total_payout_yocto)
+                <= allowance.as_yoctonear(),
+            "[Settle REJECT] Allocation sum exceeds max_release_bps_per_epoch cap. (cumulative release in this window would exceed it)"
         );
 
         // 4b. Validate charges (only for settle_batch_charged)
@@ -977,6 +1031,10 @@ impl FlyCoordinator {
             .total_settled_payouts
             .saturating_add(NearToken::from_yoctonear(total_payout_yocto));
         syn.is_settling = true;
+        window.released = window
+            .released
+            .saturating_add(NearToken::from_yoctonear(total_payout_yocto));
+        write_window(&syndicate_id, &window);
 
         if syn.total_escrow.as_yoctonear() == 0 {
             syn.status = SyndicateStatus::Settled;
@@ -985,7 +1043,9 @@ impl FlyCoordinator {
             // nonce, so the nonce must change after EVERY settlement that leaves escrow behind, for both
             // types. Rotating it only for DarkVault let anyone replay a partial Flash settlement until the
             // escrow was drained. Only DarkVault starts a new epoch (and restarts the hatch_out timer).
-            if syn.syndicate_type == SyndicateType::DarkVault {
+            // The epoch and the exit timer advance with a new TIME WINDOW, not with every settlement: a host that settles often
+            // must not be able to keep members out (GAP-024).
+            if syn.syndicate_type == SyndicateType::DarkVault && opens_new_window {
                 syn.epoch += 1;
                 syn.epoch_start_block = env::block_height();
             }
@@ -1248,6 +1308,13 @@ impl FlyCoordinator {
             }
 
             if failed_yocto > 0 {
+                // The failed part was not released: give its allowance back (GAP-024)
+                if let Some(mut w) = read_window(&syndicate_id) {
+                    w.released = NearToken::from_yoctonear(
+                        w.released.as_yoctonear().saturating_sub(failed_yocto),
+                    );
+                    write_window(&syndicate_id, &w);
+                }
                 // Restore failed payout portion to syndicate total_escrow and revert Settled status
                 syn.total_escrow = syn
                     .total_escrow
@@ -1394,6 +1461,11 @@ impl FlyCoordinator {
             .unwrap_or_else(|| NearToken::from_yoctonear(0))
     }
 
+    /// The current release window, if a settlement has opened one.
+    pub fn get_release_window(&self, syndicate_id: String) -> Option<ReleaseWindow> {
+        read_window(&syndicate_id)
+    }
+
     /// The second room's public key, if this is a two-room syndicate.
     pub fn get_second_enclave_key(&self, syndicate_id: String) -> Option<String> {
         env::storage_read(&second_key_slot(&syndicate_id))
@@ -1439,6 +1511,7 @@ impl FlyCoordinator {
 
         self.syndicates.remove(&syndicate_id);
         env::storage_remove(&second_key_slot(&syndicate_id));
+        env::storage_remove(&window_slot(&syndicate_id));
         if let Some(ids) = self.member_syndicates.get(&owner).cloned() {
             let kept: Vec<String> = ids.into_iter().filter(|id| id != &syndicate_id).collect();
             self.member_syndicates.insert(owner, kept);

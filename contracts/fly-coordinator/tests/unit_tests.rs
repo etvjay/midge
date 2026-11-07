@@ -3343,3 +3343,288 @@ fn the_follow_up_step_is_given_gas_in_proportion_to_the_members() {
         "but not so much that a normal 150 TGas call cannot afford it: {big}"
     );
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// GAP-024: the release cap bounds the pace of release over a time window, and settlements cannot keep members out
+// ---------------------------------------------------------------------------------------------------------------
+
+/// A vault of four members with 10 NEAR each (40 in all), the given kind and cap, a 30-block exit timer (so a 60-block window).
+fn windowed(id: &str, kind: &str, cap_bps: u16) -> (FlyCoordinator, String, [AccountId; 4]) {
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let policy = ReleasePolicy {
+        allowed_recipients: vec!["r.near".parse().unwrap()],
+        max_release_bps_per_epoch: cap_bps,
+        settle_deadline_block: 1_000_000,
+    };
+    let sid = c.hatch(
+        id.to_string(),
+        Some(kind.to_string()),
+        Some(1),
+        Some(100),
+        room_pk(ROOM_A),
+        "hash".to_string(),
+        Some(30),
+        Some("r.near".parse().unwrap()),
+        Some(policy),
+    );
+    let ph = c.get_policy_hash(sid.clone());
+    let members: [AccountId; 4] = [
+        "m1.near".parse().unwrap(),
+        "m2.near".parse().unwrap(),
+        "m3.near".parse().unwrap(),
+        "m4.near".parse().unwrap(),
+    ];
+    for (i, m) in members.iter().enumerate() {
+        testing_env!(get_context(m.clone(), NearToken::from_near(10), 105 + i as u64).build());
+        c.deposit(sid.clone(), ph.clone());
+    }
+    (c, sid, members)
+}
+
+/// Settle `milli` milliNEAR to r.near, charged to `from`, at `block`; then let the payout land (or fail).
+fn settle_window(
+    c: &mut FlyCoordinator,
+    id: &str,
+    block: u64,
+    milli: u128,
+    from: &AccountId,
+    lands: bool,
+) {
+    let st = c.get_syndicate(id.to_string()).unwrap();
+    let amount = NearToken::from_millinear(milli);
+    let alloc = vec![Allocation {
+        recipient: "r.near".parse().unwrap(),
+        amount,
+    }];
+    let charges = vec![Charge {
+        member: from.clone(),
+        amount,
+    }];
+    let msg = format!(
+        "fly-coordinator.testnet:{}:{}:{}:{}:{}:order",
+        id,
+        st.epoch,
+        st.round_nonce,
+        compute_allocations_hash(&alloc),
+        compute_charges_hash(&charges)
+    );
+    testing_env!(get_context(
+        "alice.near".parse().unwrap(),
+        NearToken::from_near(0),
+        block
+    )
+    .build());
+    c.settle_batch_charged(
+        id.to_string(),
+        st.round_nonce.clone(),
+        "order".to_string(),
+        alloc.clone(),
+        charges.clone(),
+        room_sign(ROOM_A, &msg),
+    );
+    testing_env_with_promise_results(
+        get_context(
+            "fly-coordinator.testnet".parse().unwrap(),
+            NearToken::from_near(0),
+            block + 1,
+        )
+        .build(),
+        if lands {
+            PromiseResult::Successful(vec![])
+        } else {
+            PromiseResult::Failed
+        },
+    );
+    c.on_settlement_payout(
+        id.to_string(),
+        alloc.clone(),
+        charges,
+        amount,
+        compute_allocations_hash(&alloc),
+        "order".to_string(),
+    );
+}
+
+#[test]
+fn the_window_records_what_has_been_released_since_it_opened() {
+    let (mut c, id, m) = windowed("win-view", "FLASH", 2500);
+    assert!(c.get_release_window(id.clone()).is_none());
+    settle_window(&mut c, &id, 120, 6_000, &m[0], true);
+    let w = c.get_release_window(id).unwrap();
+    assert_eq!(w.start_block, 120);
+    assert_eq!(w.start_escrow, NearToken::from_near(40));
+    assert_eq!(w.released, NearToken::from_near(6));
+    assert_eq!(w.ends_at_block, 120 + 60);
+}
+
+#[test]
+fn two_settlements_that_together_stay_within_the_cap_are_both_allowed() {
+    let (mut c, id, m) = windowed("win-ok", "FLASH", 2500); // 25% of 40 = 10
+    settle_window(&mut c, &id, 120, 6_000, &m[0], true);
+    settle_window(&mut c, &id, 122, 4_000, &m[1], true);
+    assert_eq!(
+        c.get_release_window(id).unwrap().released,
+        NearToken::from_near(10)
+    );
+}
+
+#[test]
+#[should_panic(expected = "cumulative release in this window")]
+fn a_third_settlement_that_takes_the_window_over_the_cap_is_refused() {
+    let (mut c, id, m) = windowed("win-over", "FLASH", 2500);
+    settle_window(&mut c, &id, 120, 6_000, &m[0], true);
+    settle_window(&mut c, &id, 122, 4_000, &m[1], true);
+    settle_window(&mut c, &id, 124, 1, &m[2], true); // one milliNEAR over
+}
+
+#[test]
+#[should_panic(expected = "cumulative release in this window")]
+fn the_back_to_back_drain_measured_on_testnet_is_now_refused() {
+    // E-ONGOING-01: 25% of the current escrow each time (10, then 7.5) released 57.8% of the group. Now the second is refused.
+    let (mut c, id, m) = windowed("win-drain", "DARK_VAULT", 2500);
+    settle_window(&mut c, &id, 120, 10_000, &m[0], true);
+    settle_window(&mut c, &id, 121, 7_500, &m[1], true);
+}
+
+#[test]
+#[should_panic(expected = "cumulative release in this window")]
+fn the_allowance_does_not_return_inside_the_same_window() {
+    let (mut c, id, m) = windowed("win-same", "FLASH", 2500);
+    settle_window(&mut c, &id, 120, 10_000, &m[0], true);
+    settle_window(&mut c, &id, 179, 1_000, &m[1], true); // still inside 120 + 60
+}
+
+#[test]
+fn the_allowance_returns_in_a_new_window_sized_to_the_escrow_then() {
+    let (mut c, id, m) = windowed("win-new", "FLASH", 2500);
+    settle_window(&mut c, &id, 120, 10_000, &m[0], true); // escrow now 30
+    settle_window(&mut c, &id, 180, 7_500, &m[1], true); // a new window: 25% of 30
+    let w = c.get_release_window(id).unwrap();
+    assert_eq!(
+        (w.start_block, w.start_escrow, w.released),
+        (
+            180,
+            NearToken::from_near(30),
+            NearToken::from_millinear(7_500)
+        )
+    );
+}
+
+#[test]
+#[should_panic(expected = "cumulative release in this window")]
+fn a_new_window_is_still_capped_against_the_escrow_then() {
+    let (mut c, id, m) = windowed("win-new-cap", "FLASH", 2500);
+    settle_window(&mut c, &id, 120, 10_000, &m[0], true);
+    settle_window(&mut c, &id, 180, 7_501, &m[1], true); // 25% of 30 is 7.5
+}
+
+#[test]
+fn in_a_dark_vault_the_epoch_and_the_exit_timer_advance_with_the_window_not_with_each_settlement() {
+    let (mut c, id, m) = windowed("dv-win", "DARK_VAULT", 5000);
+    settle_window(&mut c, &id, 120, 5_000, &m[0], true);
+    let s1 = c.get_syndicate(id.clone()).unwrap();
+    assert_eq!((s1.epoch, s1.epoch_start_block), (2, 120));
+    settle_window(&mut c, &id, 130, 5_000, &m[1], true); // same window
+    let s2 = c.get_syndicate(id.clone()).unwrap();
+    assert_eq!(
+        (s2.epoch, s2.epoch_start_block),
+        (2, 120),
+        "a settlement inside the window must not restart the exit timer"
+    );
+    settle_window(&mut c, &id, 180, 5_000, &m[2], true); // a new window
+    let s3 = c.get_syndicate(id).unwrap();
+    assert_eq!((s3.epoch, s3.epoch_start_block), (3, 180));
+}
+
+#[test]
+fn a_settlement_inside_the_window_cannot_keep_members_out() {
+    let (mut c, id, m) = windowed("dv-exit", "DARK_VAULT", 5000);
+    settle_window(&mut c, &id, 120, 5_000, &m[0], true);
+    settle_window(&mut c, &id, 130, 5_000, &m[1], true); // under the old rule this restarted the timer to 130
+    testing_env!(get_context(m[3].clone(), NearToken::from_near(0), 150).build()); // 120 + 30
+    let _ = c.hatch_out(id.clone());
+    assert_eq!(c.get_escrow(id, m[3].clone()).as_yoctonear(), 0);
+}
+
+#[test]
+#[should_panic(expected = "LOCKED")]
+fn a_new_window_in_a_dark_vault_locks_exits_again_for_a_timer() {
+    let (mut c, id, m) = windowed("dv-relock", "DARK_VAULT", 5000);
+    settle_window(&mut c, &id, 120, 5_000, &m[0], true);
+    settle_window(&mut c, &id, 180, 5_000, &m[1], true); // a new window and a new epoch at 180
+    testing_env!(get_context(m[3].clone(), NearToken::from_near(0), 190).build()); // 10 blocks in: locked
+    let _ = c.hatch_out(id);
+}
+
+#[test]
+fn a_flash_keeps_its_epoch_and_exit_timer_whatever_the_windows() {
+    let (mut c, id, m) = windowed("flash-win", "FLASH", 5000);
+    settle_window(&mut c, &id, 120, 5_000, &m[0], true);
+    settle_window(&mut c, &id, 200, 5_000, &m[1], true); // a second window
+    let s = c.get_syndicate(id).unwrap();
+    assert_eq!((s.epoch, s.epoch_start_block), (1, 100));
+}
+
+#[test]
+fn a_deposit_inside_the_window_raises_the_allowance() {
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let policy = ReleasePolicy {
+        allowed_recipients: vec!["r.near".parse().unwrap()],
+        max_release_bps_per_epoch: 10_000,
+        settle_deadline_block: 1_000_000,
+    };
+    let id = c.hatch(
+        "win-dep".into(),
+        Some("FLASH".into()),
+        Some(1),
+        Some(100),
+        room_pk(ROOM_A),
+        "hash".into(),
+        Some(30),
+        Some("r.near".parse().unwrap()),
+        Some(policy),
+    );
+    let ph = c.get_policy_hash(id.clone());
+    let a: AccountId = "m1.near".parse().unwrap();
+    let b: AccountId = "m2.near".parse().unwrap();
+    testing_env!(get_context(a.clone(), NearToken::from_near(10), 105).build());
+    c.deposit(id.clone(), ph.clone());
+    settle_window(&mut c, &id, 120, 4_000, &a, true); // the window opens with 10 NEAR
+    testing_env!(get_context(b.clone(), NearToken::from_near(10), 125).build());
+    c.deposit(id.clone(), ph);
+    settle_window(&mut c, &id, 130, 10_000, &b, true);
+    settle_window(&mut c, &id, 135, 6_000, &a, true); // 4 + 10 + 6 = 20 = 10 at the start + the 10 deposited since
+    assert_eq!(
+        c.get_release_window(id).unwrap().released,
+        NearToken::from_near(20)
+    );
+}
+
+#[test]
+fn a_payout_that_fails_gives_its_allowance_back() {
+    let (mut c, id, m) = windowed("win-fail", "FLASH", 2500);
+    settle_window(&mut c, &id, 120, 10_000, &m[0], false); // the transfer failed
+    assert_eq!(
+        c.get_release_window(id.clone()).unwrap().released,
+        NearToken::from_near(0)
+    );
+    settle_window(&mut c, &id, 125, 10_000, &m[1], true); // so the full allowance is still there
+    assert_eq!(
+        c.get_release_window(id).unwrap().released,
+        NearToken::from_near(10)
+    );
+}
+
+#[test]
+fn pruning_a_group_forgets_its_window() {
+    let (mut c, id, m) = windowed("win-prune", "FLASH", 10_000);
+    for (i, who) in m.iter().enumerate() {
+        settle_window(&mut c, &id, 120 + 4 * i as u64, 10_000, who, true);
+    }
+    assert!(c.get_release_window(id.clone()).is_some());
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 200).build());
+    c.prune_syndicate(id.clone());
+    assert!(c.get_release_window(id).is_none());
+}
