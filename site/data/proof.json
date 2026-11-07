@@ -1,10 +1,10 @@
 {
- "generatedAt": "2026-11-07T09:52:09.780Z",
+ "generatedAt": "2026-11-07T10:02:20.348Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 61,
+  "settled": 63,
   "exit": 25,
   "other": 37,
   "rejected": 27
@@ -2401,6 +2401,24 @@
    "kind": "settled",
    "exp": "E-CALLBACK-GAS-01",
    "run": "20261107T094616Z-259e",
+   "error": null
+  },
+  {
+   "hash": "CqQvTveUcTzFFAu2S2uQsvEti8kjEZ7vZA9FVwpzuurW",
+   "label": "settle_batch gas4-mw68aueh (4 members)",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CALLBACK-GAS-01",
+   "run": "20261107T095624Z-72b5",
+   "error": null
+  },
+  {
+   "hash": "66Ha1EnwecKNvtrRPmRniYzhSS6wtruCjPnFZmcvRMBK",
+   "label": "settle_batch gas20-mw68aueh (20 members)",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CALLBACK-GAS-01",
+   "run": "20261107T095624Z-72b5",
    "error": null
   },
   {

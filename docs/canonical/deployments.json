@@ -31,7 +31,15 @@
       "from": "2026-11-07T09:25Z",
       "deployTx": "GxUNHwwM1JrdM5wj4i7qkqr9wqN1cVMVKbZTMnzVj16g",
       "gitCommit": "20c6763",
-      "reason": "Adds two-room agreement: hatch_two_room, settle_batch_two_room, settle_batch_charged_two_room and get_second_enclave_key. Existing entry points unchanged. State unchanged: 15 syndicates intact across the deploy. Deployed by scripts/deploy-contract.mjs."
+      "reason": "Adds two-room agreement: hatch_two_room, settle_batch_two_room, settle_batch_charged_two_room and get_second_enclave_key. Existing entry points unchanged. State unchanged: 15 syndicates intact across the deploy. Deployed by scripts/deploy-contract.mjs.",
+      "until": "2026-11-07T09:58Z"
+    },
+    {
+      "codeHash": "6Jt4kSPXvzeoYBrqx3P576BJt5d1fxpHqiGSMtiDYX2n",
+      "from": "2026-11-07T09:58Z",
+      "deployTx": "ErUzdM1R4wH6yPeVTw4W98JRDdi5NZ6S5cWH3TRT233",
+      "gitCommit": "1b087d7",
+      "reason": "GAP-008 fix: the payout's follow-up step is given 25 TGas + 1 TGas per member (cap 100); each settlement records its pending follow-up; recover_stuck_settlement lets anyone finish a stuck payout 100 blocks after it started; get_pending_settlement view. State unchanged: 15 syndicates intact across the deploy. Deployed by scripts/deploy-contract.mjs."
     }
   ]
 }

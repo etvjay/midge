@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T095624Z-72b5",
+  "startedAt": "2026-11-07T09:56:24.408Z",
+  "rootHash": "adeaf921f184d70a86ed8cfa54cee42410ac5458362e8add345a1caaba85998f",
+  "verdicts": {
+    "E-CALLBACK-GAS-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 48,
+  "commit": "8e4ef1c75f9d190bab755c9f86c65a5ffa8cb748"
+}

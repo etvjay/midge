@@ -50,6 +50,16 @@ export default {
       s.assert('it reported success (not a failed payout)', Boolean(cb) && cb.outcome.logs.some((l) => /syndicate_settled/.test(l)));
       const burnt = Number(BigInt(cb.outcome.gas_burnt)) / 1e12;
       const afterPending = await chain.view('get_pending_settlement', { syndicate_id: id }).catch(() => 'n/a');
+      // the gas actually allotted to the follow-up step, read from the settlement's own receipts
+      const allotted = (() => { for (const r of status?.receipts || []) for (const act of r.receipt?.Action?.actions || []) if (act.FunctionCall?.method_name === 'on_settlement_payout') return Number(BigInt(act.FunctionCall.gas)) / 1e12; return null; })();
+      s.assert('the allotted gas for the follow-up step could be read from the receipts', allotted !== null);
+      s.assert('the follow-up step burnt less than it was allotted (it did not run out)', allotted !== null && burnt < allotted, { burnt, allotted });
+      if (afterPending !== 'n/a') {
+        // NOTE: the call attaches 250 TGas and unused gas also flows to the follow-up step, so this holds trivially and is NOT a test of the floor (25 + 1 per member), which only the unit test shows.
+        s.assert(`on the fixed contract the follow-up step is allotted 25 TGas + 1 per member (>= ${25 + count} TGas for ${count} members)`, allotted !== null && allotted >= 25 + count - 0.001, { allotted });
+        s.assert('and the pending record is gone once the follow-up step has run', afterPending === null, { afterPending });
+      }
+      s.evidence('allotment', { members: count, allottedTGas: allotted });
       s.evidence('callback', { members: count, callbackBurntTGas: burnt, pendingAfter: afterPending });
       return { id, members, burnt };
     }
