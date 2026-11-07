@@ -3882,3 +3882,19 @@ fn a_late_callback_from_a_recovered_settlement_cannot_finish_the_next_one() {
     assert!(a.get_pending_settlement(id.clone()).is_some(), "B's record must survive");
     assert_eq!(a.get_escrow(id, m[0].clone()), escrow_before);
 }
+
+#[test]
+#[should_panic(expected = "exceeds max_release_bps_per_epoch cap")]
+fn a_deposit_that_has_left_does_not_raise_the_release_cap() {
+    // 4 members x 10 NEAR = 40 NEAR, cap 20% => 8 NEAR per window.
+    let (mut c, id, m) = windowed("cap-base", "FLASH", 2_000);
+    settle_window(&mut c, &id, 200, 1_000, &m[0], true); // 1 NEAR released, window opens at 200
+    // m[1] adds 90 NEAR (100 is the per-member limit), then takes everything back out (the exit timer has run)
+    let ph = c.get_policy_hash(id.clone());
+    testing_env!(get_context(m[1].clone(), NearToken::from_near(90), 210).build());
+    c.deposit(id.clone(), ph);
+    testing_env!(get_context(m[1].clone(), NearToken::from_near(0), 215).build());
+    let _ = c.hatch_out(id.clone());
+    // 7.5 more makes 8.5 released against the 30 NEAR that actually remain (cap 6): it must be refused
+    settle_window(&mut c, &id, 220, 7_500, &m[2], true);
+}

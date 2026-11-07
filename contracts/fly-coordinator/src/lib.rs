@@ -1208,6 +1208,11 @@ impl FlyCoordinator {
         syn.total_escrow = syn.total_escrow.saturating_sub(flyer_balance);
         syn.active_flyer_count = syn.active_flyer_count.saturating_sub(1);
         syn.flyers.retain(|f| f != &caller);
+        // What leaves no longer backs the release cap, or a deposit that comes straight back out would inflate it.
+        if let Some(mut w) = read_window(&syndicate_id) {
+            w.start_escrow = w.start_escrow.saturating_sub(flyer_balance);
+            write_window(&syndicate_id, &w);
+        }
 
         if syn.total_escrow.as_yoctonear() == 0 {
             syn.status = SyndicateStatus::AbortedRefunded;
@@ -1497,6 +1502,11 @@ impl FlyCoordinator {
                 }
             }
 
+            // The transfer failed and the money is back in escrow, so it backs the release cap again.
+            if let Some(mut w) = read_window(&syndicate_id) {
+                w.start_escrow = w.start_escrow.saturating_add(refund_amount);
+                write_window(&syndicate_id, &w);
+            }
             self.escrows
                 .insert(escrow_key, current.saturating_add(refund_amount));
 
