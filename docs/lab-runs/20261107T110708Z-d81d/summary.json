@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T110708Z-d81d",
+  "startedAt": "2026-11-07T11:07:08.354Z",
+  "rootHash": "f1ada44f7fafd038c0f55b8c2c2290405c46b7b41f0e02f592ff3fb6f411a0cb",
+  "verdicts": {
+    "E-CMP-CROSS-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 91,
+  "commit": "f8a5475ba2978a25489bd44c3edd50297114071b"
+}

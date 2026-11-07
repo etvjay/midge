@@ -1,12 +1,12 @@
 {
- "generatedAt": "2026-11-07T10:03:36.390Z",
+ "generatedAt": "2026-11-07T11:10:50.017Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 63,
+  "settled": 67,
   "exit": 25,
-  "other": 37,
+  "other": 39,
   "rejected": 27
  },
  "security": {
@@ -2419,6 +2419,60 @@
    "kind": "settled",
    "exp": "E-CALLBACK-GAS-01",
    "run": "20261107T095624Z-72b5",
+   "error": null
+  },
+  {
+   "hash": "7GNttPTHAps5wQqfgT5NPbTVRbJuH4gJmgAtmjqBJxNn",
+   "label": "settle_batch_charged qt-mw6aerka-fp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-QUOTE-01",
+   "run": "20261107T105526Z-7aa0",
+   "error": null
+  },
+  {
+   "hash": "8aJRwzdpLbTtvAUSEnV8jdf6XmaXopy2sNzBsaZHe9uu",
+   "label": "settle_batch_charged qt-mw6aerka-sp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-QUOTE-01",
+   "run": "20261107T105526Z-7aa0",
+   "error": null
+  },
+  {
+   "hash": "HZ7dg9oAJaMLNZee5qL5PLtzBa2W1HhFQWYNhpVNqPRD",
+   "label": "cross book",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-CROSS-01",
+   "run": "20261107T110304Z-2d88",
+   "error": null
+  },
+  {
+   "hash": "4gav4NcrxKufPFxZSKYz4Z7cKgeLf21zEmX3RghXHUvP",
+   "label": "settle_batch_charged cross-mw6aoktk-sealed",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-CROSS-01",
+   "run": "20261107T110304Z-2d88",
+   "error": null
+  },
+  {
+   "hash": "96L9GVMFFSKprQ85rNa2BCHcoGc2rQK6wGWXiJp29yze",
+   "label": "cross book",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-CROSS-01",
+   "run": "20261107T110708Z-d81d",
+   "error": null
+  },
+  {
+   "hash": "GeSoWvKFMqfHjaAvZ5gRKaF6XRBFXHahZWjRmMjYkQra",
+   "label": "settle_batch_charged cross-mw6att22-sealed",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-CROSS-01",
+   "run": "20261107T110708Z-d81d",
    "error": null
   },
   {
