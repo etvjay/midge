@@ -3898,3 +3898,23 @@ fn a_deposit_that_has_left_does_not_raise_the_release_cap() {
     // 7.5 more makes 8.5 released against the 30 NEAR that actually remain (cap 6): it must be refused
     settle_window(&mut c, &id, 220, 7_500, &m[2], true);
 }
+
+#[test]
+#[should_panic(expected = "[Hatch REJECT] expected_code_hash is too long")]
+fn hatch_refuses_an_oversized_code_hash() {
+    // The flat storage deposit pays for a small record only; a caller-sized string would be paid for by the pooled balance.
+    let (pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "big-hash", 1, "", "", "");
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    c.hatch(
+        "big-hash".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        pk,
+        "a".repeat(129),
+        Some(30),
+        Some("r.near".parse().unwrap()),
+        None,
+    );
+}

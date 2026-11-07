@@ -495,6 +495,12 @@ impl FlyCoordinator {
             "[Hatch REJECT] Syndicate ID must only contain lowercase alphanumeric, '-' or '_' characters."
         );
 
+        // The flat storage deposit pays for a small record. Bound the one caller-sized string so it stays that way.
+        assert!(
+            expected_code_hash.len() <= 128,
+            "[Hatch REJECT] expected_code_hash is too long (128 bytes at most)."
+        );
+
         // 3. Prevent duplicate hatching
         assert!(
             !self.syndicates.contains_key(&syndicate_id),
