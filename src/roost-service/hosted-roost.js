@@ -4,6 +4,7 @@ import { RoostAggregationError } from '../enclave/errors.js';
 import { clearAuction, FORMATS } from './auction-programs.js';
 import { clearPool } from './pool-program.js';
 import { clearBestQuote, clearCross } from './quote-programs.js';
+import { clearBallot } from './ballot-program.js';
 import { inputMessage, verifyNearSignature, isAccountId } from './signed-input.js';
 
 /**
@@ -379,6 +380,41 @@ export class HostedRoost {
     }
     const orderHash = sha256Hex(`midge-quote-v1:${roundId}:${shape}:${pricing}:${counterparty}:${out.winner}:${out.priceMicro}:${payMicro}:${this.#orderSalt()}`);
     this.aggregate = { orderHash, totalMicro: payMicro, signed: false, program: { allocations, charges, bound } };
+    return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
+   * Count sealed ballots. Each input is { choice } (an option id or 'abstain'), signed by a roll member; a later signed ballot
+   * replaces an earlier one. `options` maps option ids to the recipients the rules allow; `roll` lists the members; `share` is
+   * what each member contributes to the pool. If a strict winner emerges under the quorum and the rule, the whole pool
+   * (share x roll size) is paid to that option's recipient, charged equally to the whole roll. The published outcome names the
+   * winner or the reason nothing was decided, never a tally or a turnout. Refuses to run on a host that accepts unsigned inputs.
+   */
+  runBallot({ options, roll, share, quorumBps = 5000, rule = 'majority', roundId = '' } = {}) {
+    if (!this.requireSignedInputs) throw new RoostAggregationError('a ballot is only counted on a host that requires signed inputs');
+    if (!options || typeof options !== 'object') throw new RoostAggregationError('options must map option ids to recipients');
+    const ids = Object.keys(options);
+    if (ids.length < 2 || ids.length > 8) throw new RoostAggregationError('a ballot needs 2 to 8 options');
+    for (const [k, v] of Object.entries(options)) if (!/^[A-Za-z0-9_-]{1,32}$/.test(k) || k === 'abstain' || !isAccountId(v)) throw new RoostAggregationError('each option needs a plain id (not abstain) and a recipient account');
+    if (!Array.isArray(roll) || roll.length < 1 || roll.length > 50 || new Set(roll).size !== roll.length || !roll.every(isAccountId)) throw new RoostAggregationError('roll must list 1 to 50 distinct accounts');
+    const shareMicro = toMicro(share);
+    if (shareMicro === null || shareMicro === 0n) throw new RoostAggregationError('share must be a positive decimal with at most 6 places');
+    if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot count an empty ballot box');
+    const ballots = []; const unreadable = [];
+    this.#inRoundOrder().forEach((intent, order) => {
+      try { const b = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); if (typeof b?.choice !== 'string') throw new Error('malformed'); ballots.push({ flyerId: intent.flyerId, choice: b.choice, order }); } catch { unreadable.push(intent.flyerId); }
+    });
+    const out = clearBallot({ options: ids, roll, ballots, quorumBps, rule });
+    this.sealedIntents = [];
+    const recipient = out.decided ? options[out.winner] : null;
+    const pub = { shape: 'ballot', rule, decided: out.decided, winner: out.winner, recipient, reason: out.reason, quorumMet: out.quorumMet, outsiders: out.outsiders, unreadable, executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    if (!out.decided) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
+    const poolMicro = shareMicro * BigInt(roll.length);
+    const allocations = [{ recipient, amount: String(poolMicro * YOCTO_PER_MICRO) }];
+    const charges = roll.map((m) => ({ member: m, amount: String(shareMicro * YOCTO_PER_MICRO) }));
+    const bound = Object.fromEntries(roll.map((m) => [m, shareMicro * YOCTO_PER_MICRO]));
+    const orderHash = sha256Hex(`midge-ballot-v1:${roundId}:${rule}:${out.winner}:${recipient}:${poolMicro}:${[...roll].sort().join(',')}:${this.#orderSalt()}`);
+    this.aggregate = { orderHash, totalMicro: poolMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
 
