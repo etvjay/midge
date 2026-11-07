@@ -3,6 +3,7 @@ import { generateClientKey, openFromModel } from '../enclave/e2ee.js';
 import { RoostAggregationError } from '../enclave/errors.js';
 import { clearAuction, FORMATS } from './auction-programs.js';
 import { clearPool } from './pool-program.js';
+import { inputMessage, verifyNearSignature, isAccountId } from './signed-input.js';
 
 /**
  * HostedRoost: the Roost as ordinary deterministic code, meant to run inside a dstack confidential VM.
@@ -68,9 +69,14 @@ export class HostedRoost {
   #intentSecret;
   #settleKey;
 
-  constructor({ provider, maxIntents = 50 } = {}) {
+  constructor({ provider, maxIntents = 50, requireSignedInputs = false, accountKeyCheck = null } = {}) {
     if (!provider) throw new Error('HostedRoost needs an attestation provider');
+    if (requireSignedInputs && typeof accountKeyCheck !== 'function') throw new Error('requireSignedInputs needs an accountKeyCheck(accountId, publicKey) that asks the chain');
     this.provider = provider;
+    this.requireSignedInputs = Boolean(requireSignedInputs);
+    this.accountKeyCheck = accountKeyCheck;
+    this.round = null; // { contractId, syndicateId, epoch, roundNonce }: what inputs must be signed for
+    this.lastSeq = new Map(); // account -> highest accepted sequence number this round
     this.maxIntents = maxIntents;
     const intent = generateClientKey();
     this.intentPublicKey = intent.publicKeyHex;
@@ -129,7 +135,41 @@ export class HostedRoost {
     };
   }
 
+  /** Fix the round that inputs must be signed for, and clear everything from any earlier round. */
+  openRound({ contractId, syndicateId, epoch, roundNonce }) {
+    for (const [k, v] of Object.entries({ contractId, syndicateId, roundNonce })) if (typeof v !== 'string' || v.length === 0 || v.includes(':')) throw new RoostAggregationError(`${k} must be a non-empty string without ':'`);
+    if (!Number.isSafeInteger(epoch) || epoch < 0) throw new RoostAggregationError('epoch must be a non-negative integer');
+    this.round = { contractId, syndicateId, epoch, roundNonce };
+    this.sealedIntents = []; this.lastSeq = new Map(); this.aggregate = null;
+    return { ...this.round };
+  }
+
+  /**
+   * A sealed input signed by the NEAR key of the account it names, for the open round. A newer sequence number from the same
+   * account replaces its older input (and goes to the back of the line); an equal or lower one is refused.
+   */
+  async submitSignedIntent({ flyerId, cipherTextHex, publicKey, signature, seq }) {
+    if (!this.round) throw new RoostAggregationError('no open round: call openRound first');
+    if (!isAccountId(flyerId)) throw new RoostAggregationError('flyerId must be a NEAR account id');
+    if (!Number.isSafeInteger(seq) || seq < 1) throw new RoostAggregationError('seq must be a positive integer');
+    if (typeof cipherTextHex !== 'string' || !/^[0-9a-f]+$/i.test(cipherTextHex) || cipherTextHex.length % 2 !== 0) throw new RoostAggregationError('cipherTextHex must be an even-length hex string');
+    const bytes = cipherTextHex.length / 2;
+    if (bytes < MIN_CIPHERTEXT_BYTES || bytes > MAX_CIPHERTEXT_BYTES) throw new RoostAggregationError(`sealed bid must be ${MIN_CIPHERTEXT_BYTES} to ${MAX_CIPHERTEXT_BYTES} bytes`);
+    if (!verifyNearSignature(publicKey, inputMessage({ ...this.round, flyerId, seq, cipherTextHex }), signature)) throw new RoostAggregationError('bad signature for this input and this round');
+    let belongs = false;
+    try { belongs = await this.accountKeyCheck(flyerId, publicKey); } catch { throw new RoostAggregationError(`could not check that ${publicKey} is a key of ${flyerId}`); }
+    if (!belongs) throw new RoostAggregationError(`${publicKey} is not a key of ${flyerId}`);
+    if (seq <= (this.lastSeq.get(flyerId) ?? 0)) throw new RoostAggregationError(`sequence ${seq} is not newer than the one already accepted for ${flyerId}`);
+    const replacing = this.sealedIntents.some((i) => i.flyerId === flyerId);
+    if (!replacing && this.sealedIntents.length >= this.maxIntents) throw new RoostAggregationError(`round is full (${this.maxIntents} bids)`);
+    this.sealedIntents = this.sealedIntents.filter((i) => i.flyerId !== flyerId);
+    this.sealedIntents.push({ flyerId, cipherTextHex });
+    this.lastSeq.set(flyerId, seq);
+    return { status: 'SEALED_TO_ROOST_KEY', count: this.sealedIntents.length, bytes, replaced: replacing };
+  }
+
   submitSealedIntent({ flyerId, cipherTextHex, cipherText }) {
+    if (this.requireSignedInputs) throw new RoostAggregationError('this Roost only accepts signed inputs: use submitSignedIntent');
     cipherTextHex = cipherTextHex ?? cipherText;
     if (typeof flyerId !== 'string' || flyerId.length === 0 || flyerId.length > 128) throw new RoostAggregationError('flyerId is required');
     if (typeof cipherTextHex !== 'string' || !/^[0-9a-f]+$/i.test(cipherTextHex) || cipherTextHex.length % 2 !== 0) {
@@ -258,6 +298,7 @@ export class HostedRoost {
   signSettlement({ contractId, syndicateId, epoch, roundNonce, allocations, orderHash, charges }) {
     const agg = this.aggregate;
     if (!agg) throw new RoostAggregationError('no aggregate to settle; run a round first');
+    if (this.round && (contractId !== this.round.contractId || syndicateId !== this.round.syndicateId || epoch !== this.round.epoch || roundNonce !== this.round.roundNonce)) throw new RoostAggregationError('this is not the open round: contract, syndicate, epoch and nonce must match the round the inputs were signed for');
     if (orderHash !== agg.orderHash) throw new RoostAggregationError('orderHash does not match the current aggregate');
     if (agg.signed) throw new RoostAggregationError('this aggregate has already been signed once');
     if (agg.program && charges === undefined) throw new RoostAggregationError('this aggregate is an auction outcome; it can only be settled with its charges');

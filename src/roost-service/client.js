@@ -27,4 +27,6 @@ export class HostedRoostClient {
   signSettlement(params) { return this.#call('POST', '/settle', params, true); }
   runAuction(params) { return this.#call('POST', '/auction', params, true); }
   runPool(params) { return this.#call('POST', '/pool', params, true); }
+  openRound(params) { return this.#call('POST', '/round', params, true); }
+  submitSignedIntent(params) { return this.#call('POST', '/signed-intents', params); }
 }

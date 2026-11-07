@@ -56,6 +56,15 @@ export function createRoostServer({ roost, adminKey }) {
         if (!/^[0-9a-f]{64}$/i.test(nonce)) return send(res, 400, { error: 'nonce must be 32 bytes of hex' });
         return send(res, 200, await roost.getAttestationBundle(nonce));
       }
+      if (req.method === 'POST' && url.pathname === '/round') {
+        if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
+        const body = await readJson(req);
+        return send(res, 200, roost.openRound({ contractId: body.contractId, syndicateId: body.syndicateId, epoch: body.epoch, roundNonce: body.roundNonce }));
+      }
+      if (req.method === 'POST' && url.pathname === '/signed-intents') {
+        const body = await readJson(req);
+        return send(res, 200, await roost.submitSignedIntent({ flyerId: body.flyerId, cipherTextHex: body.cipherTextHex, publicKey: body.publicKey, signature: body.signature, seq: body.seq }));
+      }
       if (req.method === 'POST' && url.pathname === '/intents') {
         const body = await readJson(req);
         return send(res, 200, roost.submitSealedIntent({ flyerId: body.flyerId, cipherTextHex: body.cipherTextHex }));
