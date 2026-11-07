@@ -341,6 +341,7 @@ export class HostedRoost {
    */
   runQuote({ shape, pricing = 'first', counterparty, amount = null, units = null, limit, roundId = '' } = {}) {
     if (shape !== 'lend' && shape !== 'buy') throw new RoostAggregationError("shape must be 'lend' or 'buy'");
+    if (pricing !== 'first' && pricing !== 'second') throw new RoostAggregationError("pricing must be 'first' or 'second'");
     if (typeof counterparty !== 'string' || counterparty.length === 0 || counterparty.includes(':') || counterparty.includes(',')) throw new RoostAggregationError('counterparty must be a plain account id');
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run a quote round on an empty sealed queue');
     let limitMicro; let fixedMicro;
@@ -431,6 +432,7 @@ export class HostedRoost {
   runRfq({ taker, makers, pricing = 'first', roundId = '' } = {}) {
     if (!this.requireSignedInputs) throw new RoostAggregationError('an RFQ is only run on a host that requires signed inputs');
     if (!isAccountId(taker)) throw new RoostAggregationError('taker must be a plain account id');
+    if (pricing !== 'first' && pricing !== 'second') throw new RoostAggregationError("pricing must be 'first' or 'second'");
     if (!Array.isArray(makers) || makers.length < 1 || makers.length > 7 || new Set(makers).size !== makers.length || !makers.every(isAccountId) || makers.includes(taker)) throw new RoostAggregationError('makers must list 1 to 7 distinct plain account ids, not including the taker');
     const mine = this.sealedIntents.find((i) => i.flyerId === taker);
     if (!mine) throw new RoostAggregationError('no request was sealed by the taker');

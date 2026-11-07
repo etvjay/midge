@@ -32,6 +32,7 @@ const digest = (v) => crypto.createHash('sha256').update(canonical(v)).digest('h
 /** The vote room: the host's own runBallot, with its parameters checked and defaulted here. */
 const ballot = {
   id: 'ballot',
+  needsSignedInputs: true,
   summary: 'A sealed vote among a named roll; the winning option\'s recipient is paid the pool, each voter is charged one share. Decides nothing on a tie or a missed quorum.',
   params: {
     options: { type: 'object', required: true, description: 'option id -> recipient account (2 to 8 options)' },
@@ -54,8 +55,45 @@ const ballot = {
   run: (host, p) => host.runBallot({ options: p.options, roll: p.roll, share: p.share, quorumBps: p.quorumBps, rule: p.rule }),
 };
 
+/** A plain pass-through entry: the host's own run method owns every value rule; the service adds only the contract call around it. */
+const hostProgram = (id, summary, params, call, extra = {}) => ({
+  id, summary, params, needsSignedInputs: false, normalise: (p) => ({ ...p }), validate: () => true, run: call, ...extra,
+});
+
+const pool = hostProgram('pool',
+  'Members seal how much they put in; the room totals the sealed amounts and pays the total to one recipient, charging each member their own amount (up to an optional cap).',
+  { recipient: { type: 'string', required: true, description: 'the account paid the total' }, min: { type: 'string', required: false, default: '0', description: 'the least total worth paying' }, cap: { type: 'string', required: false, default: null, description: 'the most the pool will take' } },
+  (h, p) => h.runPool(p));
+
+const auction = hostProgram('auction',
+  'A sealed auction: first-price, second-price or uniform-price. The seller is paid; each winner is charged what the format says, never more than they bid.',
+  { format: { type: 'string', required: true, enum: ['first-price', 'second-price', 'uniform'] }, seller: { type: 'string', required: true }, lotUnits: { type: 'integer', required: false, default: 1 }, reserve: { type: 'string', required: false, default: '0' } },
+  (h, p) => h.runAuction(p));
+
+const quote = hostProgram('quote',
+  'Sealed best quote: the lowest rate (lending) or lowest price (buying) at or under the limit wins and is paid by the counterparty. Decides nothing if no quote is eligible.',
+  { shape: { type: 'string', required: true, enum: ['lend', 'buy'] }, pricing: { type: 'string', required: false, default: 'first', enum: ['first', 'second'] }, counterparty: { type: 'string', required: true }, amount: { type: 'string', required: false, description: 'lend: the amount borrowed' }, units: { type: 'integer', required: false, description: 'buy: how many units' }, limit: { type: ['string', 'integer'], required: true, description: 'lend: the highest rate in basis points; buy: the highest price' } },
+  (h, p) => h.runQuote(p));
+
+const cross = hostProgram('cross',
+  'A sealed block trade: buy and sell orders cross at a public reference price, matched pro rata on the long side. Only the cash leg settles.',
+  { referencePrice: { type: 'string', required: true }, maxUnits: { type: 'integer', required: false, default: null } },
+  (h, p) => h.runCross(p));
+
+const rfq = hostProgram('rfq',
+  'A two-sided request for quote: one taker seals a side, units and limit; each maker seals a bid and an ask. The best eligible quote wins. Only the cash leg settles.',
+  { taker: { type: 'string', required: true }, makers: { type: 'array', required: true, description: '1 to 7 maker accounts' }, pricing: { type: 'string', required: false, default: 'first', enum: ['first', 'second'] } },
+  (h, p) => h.runRfq(p),
+  { needsSignedInputs: true, confidential: ['terms'] });
+
+const payrun = hostProgram('payrun',
+  'A sealed pay run: the employer seals the lines; the room pays each person their net, the tax and benefits addresses their totals, and returns signed receipts sealed to each payee, the employer and the auditor.',
+  { employer: { type: 'string', required: true }, taxAddress: { type: 'string', required: true }, benefitsAddress: { type: 'string', required: true }, employerKeyHex: { type: 'string', required: true }, auditorKeyHex: { type: 'string', required: true }, runId: { type: 'string', required: false, default: 'run' } },
+  (h, p) => h.runPayrun(p),
+  { needsSignedInputs: true, sealed: ['statements'] });
+
 export class RoomService {
-  static defaultPrograms = Object.freeze([ballot]);
+  static defaultPrograms = Object.freeze([ballot, pool, auction, quote, cross, rfq, payrun]);
 
   #host;
   #programs;
@@ -74,7 +112,7 @@ export class RoomService {
       intentPublicKey: h.intentPublicKey,
       simulated: Boolean(h.provider?.simulated),
       requiresSignedInputs: Boolean(h.requireSignedInputs),
-      programs: [...this.#programs.values()].map((p) => ({ id: p.id, summary: p.summary, params: p.params })),
+      programs: [...this.#programs.values()].map((p) => ({ id: p.id, summary: p.summary, needsSignedInputs: Boolean(p.needsSignedInputs), params: p.params })),
     };
   }
 
@@ -103,14 +141,15 @@ export class RoomService {
     }
   }
 
-  async run({ program, params = {}, round } = {}) {
+  async run({ program, params = {}, round, includeConfidential = false } = {}) {
     const h = this.#host;
     const prog = this.#programs.get(program);
     if (!prog) throw new RoomError('UNKNOWN_PROGRAM', `unknown program "${program}"; available: ${[...this.#programs.keys()].join(', ')}`);
     if (!h.round || !sameRound(h.round, round)) throw new RoomError('ROUND_NOT_OPEN', 'that round is not the open round');
+    if (prog.needsSignedInputs && !h.requireSignedInputs) throw new RoomError('NOT_AUTHORISED', `"${program}" needs signed inputs and this room does not require them`);
     const normal = prog.normalise ? prog.normalise(params) : { ...params };
     const key = digest({ program, params: normal });
-    if (this.#last && this.#last.key === key) return this.#last.result; // an identical retry: same answer, no second signature
+    if (this.#last && this.#last.key === key) return this.#shape(this.#last, includeConfidential); // an identical retry: same answer, no second signature
     if (this.#last?.signed) throw new RoomError('ALREADY_SIGNED', 'this round has already been settled; repeat the same call to read the result, or open a new round');
     if (!prog.validate(normal)) throw new RoomError('INVALID_PARAMS', `parameters for "${program}" are missing or out of range`);
     if (h.sealedIntents.length === 0) throw new RoomError('NO_INPUTS', 'no inputs have been submitted this round');
@@ -137,8 +176,15 @@ export class RoomService {
       };
     }
     const result = { outcome: ran.outcome, orderHash: ran.orderHash ?? null, settlement };
-    this.#last = { key, result, signed: settlement !== null };
-    return result;
+    for (const k of prog.sealed ?? []) if (ran[k] !== undefined) result[k] = ran[k]; // already encrypted to its readers, safe to return
+    const confidential = Object.fromEntries((prog.confidential ?? []).filter((k) => ran[k] !== undefined && ran[k] !== null).map((k) => [k, ran[k]]));
+    this.#last = { key, result, confidential, signed: settlement !== null };
+    return this.#shape(this.#last, includeConfidential);
+  }
+
+  /** Plain detail only the caller who asks for it receives (an RFQ's units and price): left out of every default result. */
+  #shape(last, include) {
+    return include && Object.keys(last.confidential).length > 0 ? { ...last.result, confidential: last.confidential } : last.result;
   }
 
   #translate(e, fallback) {
