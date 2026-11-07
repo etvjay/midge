@@ -45,7 +45,7 @@ The docs call this *constrained arbitration with independent recovery*. Money is
 ## Where the architecture falls short of the idea
 
 1. **The room does one thing.** It sums bids and, with the advisor, proposes a split. It cannot run a negotiation, a vote or a margin check.
-2. **A rule is only recipients, a per-settlement cap and a deadline.** (The cap was long described as per epoch; E-ONGOING-01 showed it bounds each settlement, not the pace.) That is far from "any private system".
+2. **A rule is only recipients, a release cap paced over windows of twice the exit timer, and a deadline.** (The cap was long described as per epoch but bounded each settlement; fixed as GAP-024. It is only as strict as the timer a group chooses.) That is far from "any private system".
 3. **Facilities are not part of the architecture.** The contract knows two syndicate types. "Private credit" and "block trade" exist only as models, so the network does not yet host different kinds of system.
 4. **Pods are a model and the Dark Vault lifecycle has not run live.** A pod's capital cap is a number nothing enforces.
 5. **The network is thin.** Nothing lets one syndicate invite another, carry reputation or compose with others.

@@ -109,7 +109,7 @@
         <p class="step">2 · The rules</p>
         <h3>The rules are public and can't change</h3>
         <p>When the group starts, its rules go into a contract on NEAR: who can be paid, how much, and until when. Everyone agrees to them when they put money in.</p>
-        <p class="fine">One limit to know: "how much" caps each payment as a share of what the group holds at that moment. We measured a stand-in for a compromised host making three payments in a row, each within the limit, and releasing 58% of a group against a stated 25%. Pacing the payments is not yet enforced.</p>
+        <p class="fine">One limit to know: "how much" is paced by time. A group may release at most that share of what it holds per release window, and a window is twice the group's exit timer. We first measured a stand-in for a compromised host releasing 58% of a group in three payments against a stated 25%; that is fixed, and a second payout straight after the first is now refused. But the limit is only as strict as the timer: with the 27-second window we tested, about 90% could still leave in roughly four minutes; with a one-hour timer it would take about 18 hours, and members would wait up to an hour to exit. A group must choose its timer on purpose.</p>
         <p>Any payment that breaks the rules is refused, even if the room approved it.</p>
       </div>
       <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="rules" aria-hidden="true"></canvas></div><figcaption class="stage-cap">Allowed payments go through. A thief, a copied payment and an oversized one are refused.</figcaption></figure>
