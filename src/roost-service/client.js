@@ -26,4 +26,5 @@ export class HostedRoostClient {
   aggregate({ roundId } = {}) { return this.#call('POST', '/aggregate', { roundId }, true); }
   signSettlement(params) { return this.#call('POST', '/settle', params, true); }
   runAuction(params) { return this.#call('POST', '/auction', params, true); }
+  runPool(params) { return this.#call('POST', '/pool', params, true); }
 }

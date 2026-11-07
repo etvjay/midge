@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { generateClientKey, openFromModel } from '../enclave/e2ee.js';
 import { RoostAggregationError } from '../enclave/errors.js';
 import { clearAuction, FORMATS } from './auction-programs.js';
+import { clearPool } from './pool-program.js';
 
 /**
  * HostedRoost: the Roost as ordinary deterministic code, meant to run inside a dstack confidential VM.
@@ -221,6 +222,32 @@ export class HostedRoost {
     const bound = Object.fromEntries(outcome.fills.map((f) => [f.flyerId, f.bidMicro * YOCTO_PER_MICRO]));
     const orderHash = sha256Hex(`midge-auction-v1:${roundId}:${format}:${lotUnits}:${formatMicro(reserveMicro)}:${seller}:${JSON.stringify(pub.fills)}:${pub.clearingPrice}:${excluded.length}:${crypto.randomBytes(16).toString('hex')}`);
     this.aggregate = { orderHash, totalMicro: outcome.proceedsMicro, signed: false, program: { allocations, charges, bound } };
+    return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
+   * Run a pooled round: each sealed bid decrypts to { amount } (NEAR, up to 6 places); the total goes to `recipient` and each
+   * member is charged exactly their own amount. Settled with settle_batch_charged. A bid that cannot be read, or is under
+   * `min` or over the `cap`, is left out and its flyerId reported, never its content.
+   */
+  runPool({ recipient, min = '0', cap = null, roundId = '' } = {}) {
+    if (typeof recipient !== 'string' || recipient.length === 0 || recipient.includes(':') || recipient.includes(',')) throw new RoostAggregationError('recipient must be a plain account id');
+    const minMicro = toMicro(min); const capMicro = cap === null ? null : toMicro(cap);
+    if (minMicro === null || (cap !== null && capMicro === null)) throw new RoostAggregationError('min and cap must be decimals with at most 6 places');
+    if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run a pool on an empty sealed bid queue');
+    const bids = []; const unreadable = [];
+    this.sealedIntents.forEach((intent, order) => {
+      try { const payload = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); const amountMicro = toMicro(payload?.amount); if (amountMicro === null) throw new Error('malformed'); bids.push({ flyerId: intent.flyerId, amountMicro, order }); } catch { unreadable.push(intent.flyerId); }
+    });
+    const out = clearPool({ bids, minMicro, capMicro });
+    this.sealedIntents = [];
+    const pub = { format: 'pool', recipient, sold: out.sold, members: out.contributions.length, total: formatMicro(out.totalMicro), leftOut: [...unreadable, ...out.leftOut], executionModel: 'HOSTED_SEALED_POOL', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    if (!out.sold) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
+    const allocations = [{ recipient, amount: String(out.totalMicro * YOCTO_PER_MICRO) }];
+    const charges = out.contributions.map((c) => ({ member: c.flyerId, amount: String(c.amountMicro * YOCTO_PER_MICRO) }));
+    const bound = Object.fromEntries(out.contributions.map((c) => [c.flyerId, c.amountMicro * YOCTO_PER_MICRO]));
+    const orderHash = sha256Hex(`midge-pool-v1:${roundId}:${recipient}:${pub.total}:${out.contributions.length}:${pub.leftOut.length}:${crypto.randomBytes(16).toString('hex')}`);
+    this.aggregate = { orderHash, totalMicro: out.totalMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
 
