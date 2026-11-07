@@ -3628,3 +3628,170 @@ fn pruning_a_group_forgets_its_window() {
     c.prune_syndicate(id.clone());
     assert!(c.get_release_window(id).is_none());
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// GAP-025: the exit timer is part of what depositors consent to, and absurdly short timers are refused
+// ---------------------------------------------------------------------------------------------------------------
+
+fn policy_for_timer() -> ReleasePolicy {
+    ReleasePolicy {
+        allowed_recipients: vec!["r.near".parse().unwrap()],
+        max_release_bps_per_epoch: 2500,
+        settle_deadline_block: 1_000_000,
+    }
+}
+
+fn hatch_with_timer(c: &mut FlyCoordinator, id: &str, timer: u64) -> String {
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(1), 100).build());
+    c.hatch(
+        id.to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(100),
+        room_pk(ROOM_A),
+        "hash".to_string(),
+        Some(timer),
+        Some("r.near".parse().unwrap()),
+        Some(policy_for_timer()),
+    )
+}
+
+#[test]
+fn a_new_groups_hash_covers_the_exit_timer() {
+    let mut c = FlyCoordinator::new();
+    let id = hatch_with_timer(&mut c, "timer-hash", 30);
+    assert_eq!(
+        c.get_policy_hash(id).unwrap(),
+        policy_for_timer().compute_hash_with_timeout(30)
+    );
+}
+
+#[test]
+fn two_groups_that_differ_only_in_the_timer_have_different_hashes() {
+    let mut c = FlyCoordinator::new();
+    let a = hatch_with_timer(&mut c, "timer-a", 30);
+    let b = hatch_with_timer(&mut c, "timer-b", 31);
+    assert_ne!(c.get_policy_hash(a), c.get_policy_hash(b));
+    assert_ne!(
+        policy_for_timer().compute_hash_with_timeout(30),
+        policy_for_timer().compute_hash()
+    );
+}
+
+#[test]
+#[should_panic(expected = "Policy hash mismatch")]
+fn a_deposit_with_a_hash_that_omits_the_timer_is_refused() {
+    let mut c = FlyCoordinator::new();
+    let id = hatch_with_timer(&mut c, "timer-old-hash", 30);
+    testing_env!(get_context("m1.near".parse().unwrap(), NearToken::from_near(1), 105).build());
+    c.deposit(id, Some(policy_for_timer().compute_hash())); // the old formula: recipients, cap, deadline only
+}
+
+#[test]
+#[should_panic(expected = "Policy hash mismatch")]
+fn a_deposit_that_assumed_a_different_timer_is_refused() {
+    let mut c = FlyCoordinator::new();
+    let id = hatch_with_timer(&mut c, "timer-assumed", 30);
+    testing_env!(get_context("m1.near".parse().unwrap(), NearToken::from_near(1), 105).build());
+    c.deposit(id, Some(policy_for_timer().compute_hash_with_timeout(300))); // the depositor expected a 300-block timer
+}
+
+#[test]
+fn a_deposit_that_names_the_real_timer_is_accepted() {
+    let mut c = FlyCoordinator::new();
+    let id = hatch_with_timer(&mut c, "timer-ok", 30);
+    testing_env!(get_context("m1.near".parse().unwrap(), NearToken::from_near(1), 105).build());
+    c.deposit(
+        id.clone(),
+        Some(policy_for_timer().compute_hash_with_timeout(30)),
+    );
+    assert_eq!(
+        c.get_escrow(id, "m1.near".parse().unwrap()),
+        NearToken::from_near(1)
+    );
+}
+
+#[test]
+#[should_panic(expected = "at least 10")]
+fn a_timer_below_the_floor_is_refused() {
+    let mut c = FlyCoordinator::new();
+    hatch_with_timer(&mut c, "timer-9", 9);
+}
+
+#[test]
+fn a_timer_at_the_floor_is_accepted() {
+    let mut c = FlyCoordinator::new();
+    let id = hatch_with_timer(&mut c, "timer-10", 10);
+    assert_eq!(c.get_syndicate(id).unwrap().timeout_blocks, 10);
+}
+
+#[test]
+fn the_terms_view_shows_what_a_depositor_consents_to_and_that_the_timer_is_covered() {
+    let mut c = FlyCoordinator::new();
+    let id = hatch_with_timer(&mut c, "timer-view", 30);
+    let t = c.get_policy_terms(id).unwrap();
+    assert_eq!(t.timeout_blocks, 30);
+    assert_eq!(t.release_window_blocks, 60);
+    assert_eq!(t.max_release_bps_per_epoch, 2500);
+    assert_eq!(t.settle_deadline_block, 1_000_000);
+    assert_eq!(
+        t.allowed_recipients,
+        vec!["r.near".parse::<AccountId>().unwrap()]
+    );
+    assert!(t.timer_in_consent_hash);
+}
+
+#[test]
+fn a_group_opened_before_this_change_is_shown_with_its_timer_not_covered() {
+    // Simulate one: its stored hash is the old formula, which omits the timer.
+    let mut c = FlyCoordinator::new();
+    let id = hatch_with_timer(&mut c, "timer-legacy", 30);
+    c.syndicates.get_mut(&id).unwrap().policy_hash = policy_for_timer().compute_hash();
+    let t = c.get_policy_terms(id.clone()).unwrap();
+    assert!(!t.timer_in_consent_hash);
+    // and it still accepts the hash it was opened with
+    testing_env!(get_context("m1.near".parse().unwrap(), NearToken::from_near(1), 105).build());
+    c.deposit(id.clone(), Some(policy_for_timer().compute_hash()));
+    assert_eq!(
+        c.get_escrow(id, "m1.near".parse().unwrap()),
+        NearToken::from_near(1)
+    );
+}
+
+#[test]
+fn the_terms_of_an_unknown_group_are_none() {
+    let c = FlyCoordinator::new();
+    assert!(c.get_policy_terms("nope".to_string()).is_none());
+}
+
+#[test]
+fn every_term_a_depositor_consents_to_changes_the_hash() {
+    let base = policy_for_timer();
+    let h = base.compute_hash_with_timeout(30);
+    let mut cap = base.clone();
+    cap.max_release_bps_per_epoch = 2501;
+    let mut deadline = base.clone();
+    deadline.settle_deadline_block += 1;
+    let mut who = base.clone();
+    who.allowed_recipients = vec!["other.near".parse().unwrap()];
+    assert_ne!(cap.compute_hash_with_timeout(30), h, "the cap");
+    assert_ne!(deadline.compute_hash_with_timeout(30), h, "the deadline");
+    assert_ne!(who.compute_hash_with_timeout(30), h, "the recipients");
+    assert_ne!(base.compute_hash_with_timeout(31), h, "the timer");
+}
+
+#[test]
+fn the_hash_does_not_depend_on_the_order_or_repetition_of_recipients() {
+    let mut a = policy_for_timer();
+    a.allowed_recipients = vec![
+        "b.near".parse().unwrap(),
+        "a.near".parse().unwrap(),
+        "b.near".parse().unwrap(),
+    ];
+    let mut b = policy_for_timer();
+    b.allowed_recipients = vec!["a.near".parse().unwrap(), "b.near".parse().unwrap()];
+    assert_eq!(
+        a.compute_hash_with_timeout(30),
+        b.compute_hash_with_timeout(30)
+    );
+}

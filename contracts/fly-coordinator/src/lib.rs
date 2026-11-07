@@ -83,6 +83,27 @@ impl ReleasePolicy {
         current_block > self.settle_deadline_block
     }
 
+    /// The hash new groups are opened with and depositors consent to (version 2): the same fields as `compute_hash` plus the exit
+    /// timer, because the release pacing and the wait to exit both depend on it (GAP-025).
+    pub fn compute_hash_with_timeout(&self, timeout_blocks: u64) -> String {
+        let mut sorted = self.allowed_recipients.clone();
+        sorted.sort();
+        sorted.dedup();
+        let canonical_str = format!(
+            "release_policy:v2:{}:{}:{}:{}",
+            sorted
+                .iter()
+                .map(|a| a.as_str())
+                .collect::<Vec<_>>()
+                .join(","),
+            self.max_release_bps_per_epoch,
+            self.settle_deadline_block,
+            timeout_blocks
+        );
+        hex::encode(env::sha256(canonical_str.as_bytes()))
+    }
+
+    /// Version 1 hash (recipients, cap, deadline). Groups opened before GAP-025 keep this hash; it does not cover the timer.
     /// Computes canonical SHA-256 hash over sorted allowed_recipients, max_release_bps_per_epoch, and settle_deadline_block.
     pub fn compute_hash(&self) -> String {
         let mut sorted = self.allowed_recipients.clone();
@@ -278,10 +299,27 @@ pub struct FlyCoordinator {
 
 /// A payout whose follow-up step has not run for this many blocks may be settled by anyone (GAP-008).
 pub const STUCK_SETTLEMENT_BLOCKS: u64 = 100;
+/// A sanity floor for a group's exit timer, in blocks (about 6 seconds on testnet). It stops absurd values such as 1 block, which
+/// would make the release window (twice the timer) meaningless. It is NOT a recommendation: a real group must choose its timer on
+/// purpose, and depositors consent to the chosen value through the policy hash (GAP-025).
+pub const MIN_TIMEOUT_BLOCKS: u64 = 10;
 /// Gas given to the follow-up step: a base plus a little per member, so a 50-member settlement cannot starve it.
 const CALLBACK_BASE_TGAS: u64 = 25;
 const CALLBACK_PER_MEMBER_TGAS: u64 = 1;
 const CALLBACK_MAX_TGAS: u64 = 100;
+
+/// The terms a depositor consents to, as the contract holds them (GAP-025).
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct PolicyTerms {
+    pub allowed_recipients: Vec<AccountId>,
+    pub max_release_bps_per_epoch: u16,
+    pub settle_deadline_block: u64,
+    pub timeout_blocks: u64,
+    pub release_window_blocks: u64,
+    pub policy_hash: String,
+    pub timer_in_consent_hash: bool,
+}
 
 /// How much has been released since a time window opened (GAP-024). A window lasts twice the exit timer. Within it the release
 /// cap is cumulative: everything released must stay within cap x (escrow at the window's start + deposits since).
@@ -489,6 +527,10 @@ impl FlyCoordinator {
         // Validate quorum and timeout are positive
         assert!(quorum >= 1, "[Hatch REJECT] quorum_threshold must be >= 1.");
         assert!(timeout >= 1, "[Hatch REJECT] timeout_blocks must be >= 1.");
+        assert!(
+            timeout >= MIN_TIMEOUT_BLOCKS,
+            "[Hatch REJECT] timeout_blocks must be at least 10 (a sanity floor, not a recommendation: choose the timer on purpose)."
+        );
 
         // Release policy initialization & validation (Task Y1, API-013, API-014)
         let policy = match release_policy {
@@ -507,7 +549,7 @@ impl FlyCoordinator {
                 }
             }
         };
-        let policy_hash = policy.compute_hash();
+        let policy_hash = policy.compute_hash_with_timeout(timeout);
         let primary_recipient = policy.allowed_recipients[0].clone();
 
         // Safe NearToken arithmetic preventing u128 overflow
@@ -1459,6 +1501,21 @@ impl FlyCoordinator {
             .get(&(syndicate_id, account_id))
             .copied()
             .unwrap_or_else(|| NearToken::from_yoctonear(0))
+    }
+
+    /// Everything a depositor consents to, and whether the exit timer is covered by the hash they must present. `false` marks a group
+    /// opened before GAP-025: its hash covers the recipients, the cap and the deadline but not the timer, so read the timer yourself.
+    pub fn get_policy_terms(&self, syndicate_id: String) -> Option<PolicyTerms> {
+        self.syndicates.get(&syndicate_id).map(|s| PolicyTerms {
+            allowed_recipients: s.release_policy.allowed_recipients.clone(),
+            max_release_bps_per_epoch: s.release_policy.max_release_bps_per_epoch,
+            settle_deadline_block: s.release_policy.settle_deadline_block,
+            timeout_blocks: s.timeout_blocks,
+            release_window_blocks: s.timeout_blocks.saturating_mul(2),
+            policy_hash: s.policy_hash.clone(),
+            timer_in_consent_hash: s.policy_hash
+                == s.release_policy.compute_hash_with_timeout(s.timeout_blocks),
+        })
     }
 
     /// The current release window, if a settlement has opened one.
