@@ -15,7 +15,15 @@
       "from": "2026-11-05T03:55Z",
       "deployTx": "2fys41cS2cjo6TzAWx4X8ehu3pNXfH4jwXm7198WnK3C",
       "gitCommit": "68d6b9d",
-      "reason": "GAP-022 fix: exact 256-bit multiply-then-divide in the pro-rata deduction. State unchanged (15 syndicates intact across the deploy)."
+      "reason": "GAP-022 fix: exact 256-bit multiply-then-divide in the pro-rata deduction. State unchanged (15 syndicates intact across the deploy).",
+      "until": "2026-11-05T04:48Z"
+    },
+    {
+      "codeHash": "4Zzj8DuTxwJnLv1c3jXfKRvQrxAYUFFfeMnAgSHJjevx",
+      "from": "2026-11-05T04:48Z",
+      "deployTx": "2foizKuuAca7q74UYBCZzRooGm2v5EFqAedspaqAjnXV",
+      "gitCommit": "8d4d0d4",
+      "reason": "Adds settle_batch_charged (the room names how much each member pays). settle_batch is unchanged. State unchanged: 15 syndicates intact across the deploy."
     }
   ]
 }
