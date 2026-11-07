@@ -161,3 +161,23 @@ An ongoing group is a Dark Vault: it lasts across rounds, takes deposits between
 5. **A weakness I expect to remain:** groups opened before this change still have a timer their depositors never agreed to. The view marks them, nothing more.
 
 **Not tested:** that a real person reads the terms before depositing (the check is in the software, not in people); a floor above 10 (the right floor depends on what the group holds and how fast its members can react).
+
+
+## `runRoom` slice 1: predictions (E-ROOMSERVICE-01, offline), written 2026-11-07 before any code
+
+**What slice 1 is.** A new module, `RoomService`, in front of the host with one room kind (the vote). Design: `docs/RUNROOM_DESIGN.md`. In plain words: one small door that takes sealed inputs, runs the vote, and hands back the finished contract call, instead of five hand-copied steps.
+
+**Correction to the design, found while writing the tests:** signed inputs are bound to the open round, so the round must be opened before anyone submits. The service therefore has a fourth verb, `open(round)`, and `run` must be given the same round. Also, the host clears its queue when a round runs, so retry-safety needs the service to remember the last result: an identical repeat returns the same result, anything different is refused until a new round is opened.
+
+**Predictions (through the service interface only):**
+1. `describe()` lists exactly one program, `ballot`, with its parameters, and reports the host's settlement key.
+2. A five-member vote (A, A, A, B, abstain) returns winner A and a ready contract call: method `settle_batch_charged`, with the six arguments the contract takes; the signature verifies against the host's key over the message rebuilt independently from those arguments.
+3. **Parity:** the result's order hash, allocations and charges equal what the old path (`runBallot` then `signSettlement`) gives on a twin host with the same inputs.
+4. A tie decides nothing: `settlement` is `null`, there is no order hash, and nothing was signed (a later settlement signature for that round is impossible).
+5. Typed errors, each with its code and with the queue unharmed: unknown program (`UNKNOWN_PROGRAM`), bad parameters (`INVALID_PARAMS`), run with no inputs (`NO_INPUTS`), run before a round is opened or for another round (`ROUND_NOT_OPEN`), a forged or unsigned input (`NOT_AUTHORISED`).
+6. A refused run changes nothing: after a bad-parameter run, the same inputs still run correctly.
+7. Idempotence: running the same vote twice returns the identical result and signs once; running anything different after a decided vote is refused with `ALREADY_SIGNED` until `open` is called again.
+8. The result never contains a submitted ciphertext, and its outcome has no tally.
+9. The registry is real: a second program passed to the constructor is listed and runs through the same three verbs.
+
+**Not tested:** the other six programs, the adapters (MCP, REST, SSE, SDK), a hardware host.
