@@ -76,6 +76,28 @@ pub struct Poll {
     pub winner: Option<String>,
 }
 
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug)]
+pub struct Rfq {
+    pub taker: AccountId,
+    pub side: String,
+    pub units: u32,
+    pub limit_micro: u128,
+    pub end_block: u64,
+    pub best_maker: Option<AccountId>,
+    pub best_price_micro: u128,
+    pub quotes: u32,
+    pub settled: bool,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug)]
+pub struct RfqQuote {
+    pub maker: AccountId,
+    pub price_micro: u128,
+    pub block: u64,
+}
+
 #[near(contract_state)]
 pub struct PublicMarket {
     requests: LookupMap<String, Request>,
@@ -84,6 +106,8 @@ pub struct PublicMarket {
     orders: LookupMap<String, Vec<Order>>,
     polls: LookupMap<String, Poll>,
     votes: LookupMap<String, Vec<(AccountId, String)>>,
+    rfqs: LookupMap<String, Rfq>,
+    rfq_quotes: LookupMap<String, Vec<RfqQuote>>,
 }
 
 impl Default for PublicMarket {
@@ -95,6 +119,8 @@ impl Default for PublicMarket {
             orders: LookupMap::new(b"o"),
             polls: LookupMap::new(b"v"),
             votes: LookupMap::new(b"w"),
+            rfqs: LookupMap::new(b"f"),
+            rfq_quotes: LookupMap::new(b"g"),
         }
     }
 }
@@ -486,6 +512,142 @@ impl PublicMarket {
 
     pub fn get_votes(&self, poll_id: String) -> Vec<(AccountId, String)> {
         self.votes.get(&poll_id).cloned().unwrap_or_default()
+    }
+
+    // ------------------------------------------------------------------ open RFQ (taker and makers)
+    /// An open request for quote. The taker (the caller) states the side, size and limit IN PUBLIC. A buy RFQ goes to the lowest
+    /// ask at or under the limit; the taker escrows units x limit. A sell RFQ goes to the highest bid at or over the limit; each
+    /// maker escrows units x price and an outbid maker is refunded at once. After `end_block` anyone closes it: the winner is paid
+    /// (buy) or the taker is paid from the winner's escrow (sell), the unspent part of a buyer's escrow is returned.
+    #[payable]
+    pub fn open_rfq(
+        &mut self,
+        rfq_id: String,
+        side: String,
+        units: u32,
+        limit_micro: u128,
+        end_block: u64,
+    ) {
+        let taker = env::predecessor_account_id();
+        let attached = env::attached_deposit().as_yoctonear();
+        assert!(self.rfqs.get(&rfq_id).is_none(), "rfq exists");
+        assert!(
+            end_block > env::block_height(),
+            "end_block must be in the future"
+        );
+        assert!(
+            units > 0 && limit_micro > 0,
+            "units and limit must be positive"
+        );
+        match side.as_str() {
+            "buy" => assert!(
+                attached == units as u128 * limit_micro * MICRO_YOCTO,
+                "buyers deposit units x limit"
+            ),
+            "sell" => assert!(attached == 0, "sellers deposit nothing"),
+            _ => env::panic_str("side must be buy or sell"),
+        }
+        self.rfqs.insert(
+            rfq_id.clone(),
+            Rfq {
+                taker,
+                side,
+                units,
+                limit_micro,
+                end_block,
+                best_maker: None,
+                best_price_micro: 0,
+                quotes: 0,
+                settled: false,
+            },
+        );
+        self.rfq_quotes.insert(rfq_id, Vec::new());
+    }
+
+    #[payable]
+    pub fn rfq_quote(&mut self, rfq_id: String, price_micro: u128) {
+        let maker = env::predecessor_account_id();
+        let attached = env::attached_deposit().as_yoctonear();
+        let r = self
+            .rfqs
+            .get_mut(&rfq_id)
+            .unwrap_or_else(|| env::panic_str("no such rfq"));
+        assert!(env::block_height() < r.end_block, "rfq has ended");
+        assert!(maker != r.taker, "the taker cannot quote");
+        assert!(price_micro > 0, "price must be positive");
+        let buy = r.side == "buy";
+        if buy {
+            assert!(price_micro <= r.limit_micro, "above the taker's limit");
+            assert!(attached == 0, "a buy maker attaches nothing");
+        } else {
+            assert!(price_micro >= r.limit_micro, "below the taker's limit");
+            assert!(
+                attached == r.units as u128 * price_micro * MICRO_YOCTO,
+                "a sell maker must attach units x price"
+            );
+        }
+        assert!(
+            r.best_maker.is_none()
+                || (buy && price_micro < r.best_price_micro)
+                || (!buy && price_micro > r.best_price_micro),
+            "a quote must improve on the best"
+        );
+        let previous = r.best_maker.replace(maker.clone());
+        let previous_price = r.best_price_micro;
+        r.best_price_micro = price_micro;
+        r.quotes += 1;
+        let units = r.units;
+        if !buy {
+            if let Some(prev) = previous {
+                let refund = units as u128 * previous_price * MICRO_YOCTO;
+                let _ = Promise::new(prev).transfer(NearToken::from_yoctonear(refund));
+            }
+        }
+        if let Some(log) = self.rfq_quotes.get_mut(&rfq_id) {
+            log.push(RfqQuote {
+                maker,
+                price_micro,
+                block: env::block_height(),
+            });
+        }
+    }
+
+    pub fn close_rfq(&mut self, rfq_id: String) {
+        let r = self
+            .rfqs
+            .get_mut(&rfq_id)
+            .unwrap_or_else(|| env::panic_str("no such rfq"));
+        assert!(env::block_height() >= r.end_block, "rfq has not ended");
+        assert!(!r.settled, "already settled");
+        r.settled = true;
+        let notional = |p: u128| NearToken::from_yoctonear(r.units as u128 * p * MICRO_YOCTO);
+        if r.side == "buy" {
+            let escrow = r.units as u128 * r.limit_micro * MICRO_YOCTO;
+            let cost = r.units as u128 * r.best_price_micro * MICRO_YOCTO;
+            match &r.best_maker {
+                Some(w) => {
+                    let _ = Promise::new(w.clone()).transfer(notional(r.best_price_micro));
+                    if escrow > cost {
+                        let _ = Promise::new(r.taker.clone())
+                            .transfer(NearToken::from_yoctonear(escrow - cost));
+                    }
+                }
+                None => {
+                    let _ =
+                        Promise::new(r.taker.clone()).transfer(NearToken::from_yoctonear(escrow));
+                }
+            }
+        } else if r.best_maker.is_some() {
+            let _ = Promise::new(r.taker.clone()).transfer(notional(r.best_price_micro));
+        }
+    }
+
+    pub fn get_rfq(&self, rfq_id: String) -> Option<Rfq> {
+        self.rfqs.get(&rfq_id).cloned()
+    }
+
+    pub fn get_rfq_quotes(&self, rfq_id: String) -> Vec<RfqQuote> {
+        self.rfq_quotes.get(&rfq_id).cloned().unwrap_or_default()
     }
 
     pub fn get_book(&self, book_id: String) -> Option<Book> {
@@ -1208,5 +1370,206 @@ mod tests {
         ctx("anyone.near", 0, 100);
         c.close_poll("p".into());
         c.close_poll("p".into());
+    }
+
+    // ---------------------------------------------------------------- open RFQ (taker and makers)
+    const UNITS: u32 = 10;
+    fn rfq(side: &str, limit_micro: u128) -> PublicMarket {
+        ctx("anyone.near", 0, 10);
+        let mut c = PublicMarket::default();
+        let deposit = if side == "buy" {
+            UNITS as u128 * limit_micro * MICRO
+        } else {
+            0
+        };
+        ctx("taker.near", deposit, 11);
+        c.open_rfq("q".into(), side.into(), UNITS, limit_micro, 100);
+        c
+    }
+    fn maker_quote(c: &mut PublicMarket, who: &str, price_micro: u128, block: u64) {
+        let deposit = if c.get_rfq("q".into()).unwrap().side == "sell" {
+            UNITS as u128 * price_micro * MICRO
+        } else {
+            0
+        };
+        ctx(who, deposit, block);
+        c.rfq_quote("q".into(), price_micro);
+    }
+
+    #[test]
+    fn the_taker_side_size_and_limit_are_public_before_any_maker_quotes() {
+        let c = rfq("buy", 2200);
+        let r = c.get_rfq("q".into()).unwrap();
+        assert_eq!(
+            (r.taker.as_str(), r.side.as_str(), r.units, r.limit_micro),
+            ("taker.near", "buy", 10, 2200)
+        );
+    }
+
+    #[test]
+    fn a_buy_rfq_goes_to_the_lowest_ask_and_every_quote_is_public() {
+        let mut c = rfq("buy", 2200);
+        maker_quote(&mut c, "m4.near", 2150, 20);
+        maker_quote(&mut c, "m3.near", 2100, 21);
+        maker_quote(&mut c, "m2.near", 2000, 22);
+        let r = c.get_rfq("q".into()).unwrap();
+        assert_eq!(
+            (r.best_maker.unwrap().as_str(), r.best_price_micro, r.quotes),
+            ("m2.near", 2000, 3)
+        );
+        assert_eq!(
+            c.get_rfq_quotes("q".into())
+                .iter()
+                .map(|x| x.price_micro)
+                .collect::<Vec<_>>(),
+            vec![2150, 2100, 2000]
+        );
+    }
+
+    #[test]
+    fn a_sell_rfq_goes_to_the_highest_bid_and_an_outbid_maker_is_refunded() {
+        let mut c = rfq("sell", 1800);
+        maker_quote(&mut c, "m4.near", 1850, 20);
+        maker_quote(&mut c, "m3.near", 1970, 21);
+        assert_eq!(
+            transfers(),
+            vec![("m4.near".to_string(), UNITS as u128 * 1850 * MICRO)]
+        );
+        let r = c.get_rfq("q".into()).unwrap();
+        assert_eq!(
+            (r.best_maker.unwrap().as_str(), r.best_price_micro),
+            ("m3.near", 1970)
+        );
+    }
+
+    #[test]
+    fn closing_a_buy_rfq_pays_the_winner_and_refunds_the_taker_the_difference() {
+        let mut c = rfq("buy", 2200);
+        maker_quote(&mut c, "m2.near", 2000, 20);
+        ctx("anyone.near", 0, 100);
+        c.close_rfq("q".into());
+        let t = transfers();
+        assert!(t.contains(&("m2.near".to_string(), UNITS as u128 * 2000 * MICRO)));
+        assert!(t.contains(&(
+            "taker.near".to_string(),
+            UNITS as u128 * (2200 - 2000) * MICRO
+        )));
+        assert!(c.get_rfq("q".into()).unwrap().settled);
+    }
+
+    #[test]
+    fn closing_a_sell_rfq_pays_the_taker_from_the_winners_escrow() {
+        let mut c = rfq("sell", 1800);
+        maker_quote(&mut c, "m3.near", 1970, 20);
+        ctx("anyone.near", 0, 100);
+        c.close_rfq("q".into());
+        assert_eq!(
+            transfers(),
+            vec![("taker.near".to_string(), UNITS as u128 * 1970 * MICRO)]
+        );
+    }
+
+    #[test]
+    fn a_buy_rfq_with_no_quote_refunds_the_taker_in_full() {
+        let mut c = rfq("buy", 2200);
+        ctx("anyone.near", 0, 100);
+        c.close_rfq("q".into());
+        assert_eq!(
+            transfers(),
+            vec![("taker.near".to_string(), UNITS as u128 * 2200 * MICRO)]
+        );
+    }
+
+    #[test]
+    fn a_sell_rfq_with_no_quote_moves_nothing() {
+        let mut c = rfq("sell", 1800);
+        ctx("anyone.near", 0, 100);
+        c.close_rfq("q".into());
+        assert!(transfers().is_empty());
+    }
+
+    #[test]
+    #[should_panic(expected = "above the taker's limit")]
+    fn a_buy_quote_above_the_limit_is_refused() {
+        let mut c = rfq("buy", 2200);
+        maker_quote(&mut c, "m1.near", 2201, 20);
+    }
+
+    #[test]
+    #[should_panic(expected = "below the taker's limit")]
+    fn a_sell_bid_below_the_limit_is_refused() {
+        let mut c = rfq("sell", 1800);
+        maker_quote(&mut c, "m1.near", 1799, 20);
+    }
+
+    #[test]
+    #[should_panic(expected = "must improve")]
+    fn a_buy_quote_must_be_lower_than_the_best() {
+        let mut c = rfq("buy", 2200);
+        maker_quote(&mut c, "m1.near", 2100, 20);
+        maker_quote(&mut c, "m2.near", 2100, 21);
+    }
+
+    #[test]
+    #[should_panic(expected = "must improve")]
+    fn a_sell_bid_must_be_higher_than_the_best() {
+        let mut c = rfq("sell", 1800);
+        maker_quote(&mut c, "m1.near", 1900, 20);
+        maker_quote(&mut c, "m2.near", 1900, 21);
+    }
+
+    #[test]
+    #[should_panic(expected = "the taker cannot quote")]
+    fn the_taker_cannot_quote_on_their_own_request() {
+        let mut c = rfq("buy", 2200);
+        maker_quote(&mut c, "taker.near", 2000, 20);
+    }
+
+    #[test]
+    #[should_panic(expected = "buyers deposit units x limit")]
+    fn a_buy_request_needs_the_full_deposit() {
+        ctx("taker.near", 1, 11);
+        let mut c = PublicMarket::default();
+        c.open_rfq("q".into(), "buy".into(), UNITS, 2200, 100);
+    }
+
+    #[test]
+    #[should_panic(expected = "a sell maker must attach units x price")]
+    fn a_sell_maker_must_attach_the_full_notional() {
+        let mut c = rfq("sell", 1800);
+        ctx("m1.near", 1, 20);
+        c.rfq_quote("q".into(), 1900);
+    }
+
+    #[test]
+    #[should_panic(expected = "has ended")]
+    fn no_rfq_quote_after_the_end() {
+        let mut c = rfq("buy", 2200);
+        maker_quote(&mut c, "m1.near", 2000, 100);
+    }
+
+    #[test]
+    #[should_panic(expected = "has not ended")]
+    fn the_rfq_cannot_close_early() {
+        let mut c = rfq("buy", 2200);
+        ctx("anyone.near", 0, 50);
+        c.close_rfq("q".into());
+    }
+
+    #[test]
+    #[should_panic(expected = "already settled")]
+    fn the_rfq_closes_only_once() {
+        let mut c = rfq("buy", 2200);
+        ctx("anyone.near", 0, 100);
+        c.close_rfq("q".into());
+        c.close_rfq("q".into());
+    }
+
+    #[test]
+    #[should_panic(expected = "side must be buy or sell")]
+    fn the_side_must_be_buy_or_sell() {
+        ctx("taker.near", 0, 11);
+        let mut c = PublicMarket::default();
+        c.open_rfq("q".into(), "hold".into(), UNITS, 2200, 100);
     }
 }
