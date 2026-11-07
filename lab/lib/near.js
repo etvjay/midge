@@ -61,7 +61,14 @@ export async function connect(rootDir, { rpc = process.env.LAB_NEAR_RPC || 'http
   const ledger = [];
 
   async function balance(account) { return BigInt((await account.getBalance()).toString()); }
-  async function view(method, args = {}, contractId = coordinatorId) { return provider.callFunction({ contractId, method, args }); }
+  /** The public RPC rate-limits bursts (HTTP 429). Retry with a growing pause; any other error is thrown at once. */
+  async function retry(fn, tries = 8) {
+    for (let i = 0; ; i += 1) {
+      try { return await fn(); } catch (e) { if (i >= tries - 1 || !/429|rate limit/i.test(String(e?.message ?? e))) throw e; await sleep(1200 * (i + 1)); }
+    }
+  }
+  async function view(method, args = {}, contractId = coordinatorId) { return retry(() => provider.callFunction({ contractId, method, args })); }
+  const blockHeight = async (finality = 'optimistic') => retry(async () => Number((await provider.viewBlock({ finality })).header.height));
 
   /** Send a function call. Never throws for an on-chain failure: returns { ok, hash, error, gasTGas }. */
   async function send(account, methodName, args, { deposit = 0n, gas = 60000000000000n, contractId = coordinatorId, label } = {}) {
@@ -92,6 +99,9 @@ export async function connect(rootDir, { rpc = process.env.LAB_NEAR_RPC || 'http
    * land a block or two later (worth real money at testnet gas prices); receipts are not.
    */
   async function transfersOf(hash, signerId, archival = 'https://archival-rpc.testnet.fastnear.com') {
+    return retry(() => transfersOnce(hash, signerId, archival));
+  }
+  async function transfersOnce(hash, signerId, archival) {
     const body = { jsonrpc: '2.0', id: 1, method: 'EXPERIMENTAL_tx_status', params: [hash, signerId] };
     const res = await (await fetch(archival, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(40000) })).json();
     if (res.error || !res.result) throw new Error(`could not read receipts of ${hash}: ${JSON.stringify(res.error || {}).slice(0, 160)}`);
@@ -100,6 +110,6 @@ export async function connect(rootDir, { rpc = process.env.LAB_NEAR_RPC || 'http
     return out;
   }
 
-  return { provider, env, transfersOf, master, masterId, coordinatorId, sub, ledger, balance, view, send, waitFor, near, fmt, explorer, computePolicyHash,
+  return { provider, env, retry, blockHeight, transfersOf, master, masterId, coordinatorId, sub, ledger, balance, view, send, waitFor, near, fmt, explorer, computePolicyHash,
     codeHash: async () => (await provider.viewContractCode({ contractId: coordinatorId })).hash };
 }
