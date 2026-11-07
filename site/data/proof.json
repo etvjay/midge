@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-07T11:17:39.617Z",
+ "generatedAt": "2026-11-07T11:59:55.867Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 67,
+  "settled": 68,
   "exit": 25,
-  "other": 39,
-  "rejected": 27
+  "other": 41,
+  "rejected": 28
  },
  "security": {
   "run": "20261105T035644Z-7c1d",
@@ -2474,6 +2474,42 @@
    "exp": "E-CMP-CROSS-01",
    "run": "20261107T110708Z-d81d",
    "error": null
+  },
+  {
+   "hash": "GyRyGe1149kyTqZfzbKChpdBNQsSTwFtZmg3CYdtRB6a",
+   "label": "close poll",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-VOTE-01",
+   "run": "20261107T115138Z-9678",
+   "error": null
+  },
+  {
+   "hash": "4AF12qqXj8VzwEBBR8dtxQUj26kxz4RxrMQ4a5p25hvq",
+   "label": "settle_batch_charged vote-mw6cf14p-sealed",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-VOTE-01",
+   "run": "20261107T115138Z-9678",
+   "error": null
+  },
+  {
+   "hash": "7jLMpYjvxMg56PYoZKNZezxM614oqAR32QQ8WVfGgkaA",
+   "label": "execute m4",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-VOTE-01",
+   "run": "20261107T115138Z-9678",
+   "error": null
+  },
+  {
+   "hash": "2uEDpFATLPs4kg3vKMAXvk8VVZ3ALTC5vSA6zVWnAa3H",
+   "label": "thief payment, validly signed",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-VOTE-01",
+   "run": "20261107T115138Z-9678",
+   "error": "Smart contract panicked: panicked at src/lib.rs:821:13: [Settle REJECT] Recipient vcf14pt.fly-1793636729.testnet is not in allowed_recipient"
   },
   {
    "hash": "Gsg1cvZyhPXVGBNva7oLwVgxrfTgjZmk81f4ueU8wQ36",

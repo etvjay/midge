@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T115138Z-9678",
+  "startedAt": "2026-11-07T11:51:38.176Z",
+  "rootHash": "a87816c3d7551fc3604be434c250327c6998b55c10f0fd96762167bd6b0effbf",
+  "verdicts": {
+    "E-CMP-VOTE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 104,
+  "commit": "872ca50350217477e447b9ed48a302cc2c6a58bc"
+}
