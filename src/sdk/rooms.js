@@ -31,6 +31,30 @@ export class RoomsClient {
     return json;
   }
 
+  /**
+   * Follow the live event stream. Calls onEvent({ id, event, data }) for each event until `signal` aborts or the stream ends, and
+   * resolves then. It does not reconnect by itself: pass `lastEventId` to catch up from where you left off.
+   */
+  async subscribe(onEvent, { lastEventId, signal } = {}) {
+    let res;
+    try {
+      res = await this.fetch(`${this.baseUrl}/v1/rooms/events`, { signal, headers: lastEventId !== undefined ? { 'last-event-id': String(lastEventId) } : {} });
+    } catch (e) { if (signal?.aborted) return; throw Object.assign(new RoomError('INTERNAL', 'could not reach the room service'), { status: 0 }); }
+    if (!res.ok) { const j = await res.json().catch(() => null); throw Object.assign(new RoomError(j?.code ?? 'INTERNAL', j?.error ?? `request failed with status ${res.status}`), { status: res.status }); }
+    const dec = new TextDecoder(); let buf = '';
+    try {
+      for await (const chunk of res.body) {
+        buf += dec.decode(chunk, { stream: true });
+        let i; while ((i = buf.indexOf('\n\n')) >= 0) {
+          const block = buf.slice(0, i); buf = buf.slice(i + 2);
+          if (block.startsWith(':') || block.startsWith('retry:')) continue;
+          const f = {}; for (const line of block.split('\n')) { const m = /^(\w+): ?(.*)$/.exec(line); if (m) f[m[1]] = m[2]; }
+          if (f.event) onEvent({ id: Number(f.id), event: f.event, data: JSON.parse(f.data) });
+        }
+      }
+    } catch (e) { if (!signal?.aborted) throw e; }
+  }
+
   describe() { return this.#request('GET', '/v1/rooms'); }
   openApi() { return this.#request('GET', '/v1/rooms/openapi.json'); }
   openRound(round) { return this.#request('POST', '/v1/rooms/round', round); }

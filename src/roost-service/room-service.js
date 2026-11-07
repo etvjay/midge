@@ -14,6 +14,7 @@
  */
 import crypto from 'node:crypto';
 import { RoostAggregationError } from '../enclave/errors.js';
+import { createEventHub } from './room-events.js';
 
 export class RoomError extends Error {
   /** @param {'INVALID_PARAMS'|'UNKNOWN_PROGRAM'|'ROUND_NOT_OPEN'|'NO_INPUTS'|'ALREADY_SIGNED'|'NOT_AUTHORISED'|'INTERNAL'} code */
@@ -99,8 +100,12 @@ export class RoomService {
   #programs;
   #last = null; // { key, result, signed } for the open round
 
-  constructor({ host, programs = RoomService.defaultPrograms } = {}) {
+  /** The live event hub: round_opened, input_accepted (a count) and round_run. Nothing sealed is ever published. */
+  events;
+
+  constructor({ host, programs = RoomService.defaultPrograms, events = createEventHub() } = {}) {
     if (!host) throw new Error('RoomService needs a host');
+    this.events = events;
     this.#host = host;
     this.#programs = new Map(programs.map((p) => [p.id, p]));
   }
@@ -120,6 +125,7 @@ export class RoomService {
     try {
       const opened = this.#host.openRound(round);
       this.#last = null;
+      this.events.publish('round_opened', { ...opened });
       return opened;
     } catch (e) { throw this.#translate(e, 'INVALID_PARAMS'); }
   }
@@ -132,6 +138,7 @@ export class RoomService {
     try {
       const res = h.requireSignedInputs ? await h.submitSignedIntent(input) : h.submitSealedIntent(input);
       this.#last = null; // new input: an earlier undecided result no longer stands
+      this.events.publish('input_accepted', { count: res.count });
       return { accepted: true, count: res.count, replaced: Boolean(res.replaced) };
     } catch (e) {
       if (e instanceof RoostAggregationError) {
@@ -179,6 +186,7 @@ export class RoomService {
     for (const k of prog.sealed ?? []) if (ran[k] !== undefined) result[k] = ran[k]; // already encrypted to its readers, safe to return
     const confidential = Object.fromEntries((prog.confidential ?? []).filter((k) => ran[k] !== undefined && ran[k] !== null).map((k) => [k, ran[k]]));
     this.#last = { key, result, confidential, signed: settlement !== null };
+    this.events.publish('round_run', { program, decided: settlement !== null, orderHash: result.orderHash });
     return this.#shape(this.#last, includeConfidential);
   }
 

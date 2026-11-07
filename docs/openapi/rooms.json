@@ -148,6 +148,64 @@
         }
       }
     },
+    "/v1/rooms/events": {
+      "get": {
+        "summary": "A live server-sent event stream of rounds opening, inputs arriving (a count) and rooms running",
+        "operationId": "events",
+        "parameters": [
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "description": "Resume after this event id; events still held in the last-100 ring are replayed.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lastEventId",
+            "in": "query",
+            "required": false,
+            "description": "The same, for clients that cannot set the header.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "x-sse-events": {
+          "round_opened": {
+            "$ref": "#/components/schemas/EventRoundOpened"
+          },
+          "input_accepted": {
+            "$ref": "#/components/schemas/EventInputAccepted"
+          },
+          "round_run": {
+            "$ref": "#/components/schemas/EventRoundRun"
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A server-sent event stream. Each event has an id, an event name and JSON data. Nothing sealed is ever sent: no member id, ciphertext, choice or trade term.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
     "/v1/rooms/run": {
       "post": {
         "summary": "Run a room and receive the outcome and the finished contract call (coordinator only)",
@@ -291,6 +349,16 @@
           }
         }
       },
+      "Unavailable": {
+        "description": "Too many open event streams (UNAVAILABLE); see Retry-After.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
       "Internal": {
         "description": "Unexpected failure (INTERNAL); the body never carries internal detail.",
         "content": {
@@ -325,7 +393,8 @@
               "INTERNAL",
               "NOT_FOUND",
               "METHOD_NOT_ALLOWED",
-              "RATE_LIMITED"
+              "RATE_LIMITED",
+              "UNAVAILABLE"
             ]
           }
         }
@@ -517,6 +586,49 @@
           },
           "confidential": {
             "type": "object"
+          }
+        }
+      },
+      "EventRoundOpened": {
+        "type": "object",
+        "description": "A round was opened.",
+        "properties": {
+          "contractId": {
+            "type": "string"
+          },
+          "syndicateId": {
+            "type": "string"
+          },
+          "epoch": {
+            "type": "integer"
+          },
+          "roundNonce": {
+            "type": "string"
+          }
+        }
+      },
+      "EventInputAccepted": {
+        "type": "object",
+        "description": "An input was accepted. Only a running count: never who sent it.",
+        "properties": {
+          "count": {
+            "type": "integer"
+          }
+        }
+      },
+      "EventRoundRun": {
+        "type": "object",
+        "description": "A room was run. Whether it decided something, never what.",
+        "properties": {
+          "program": {
+            "type": "string"
+          },
+          "decided": {
+            "type": "boolean"
+          },
+          "orderHash": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
