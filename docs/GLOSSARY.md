@@ -37,8 +37,8 @@ One pattern (a private room, public rules, an exit) serves several kinds of grou
 |---|---|---|---|
 | **Buy and sell** | Auctions and token sales; lending quotes; big trades between two desks | Opens sealed bids or quotes; the rules fix the winner and price; losers get their deposit back | Auctions (first-price, second-price, uniform-price), lending quotes (first- and second-price) and block trades (pro-rata cross): each run on testnet against a public version, on a local host. Only the cash leg settles. |
 | **Invest together** | A fund or angel round; backers pooling into one recipient | Totals sealed amounts; charges each backer their own | Run on testnet against a public round and an organizer. Hiding the amounts and charging each backer their own cannot both be had: the charges are public at settlement. |
-| **Decide together** | Votes, approvals, committee decisions | Counts sealed ballots; publishes only the winner; the winner decides a payment | Designed with research, not built. Weight is money (a deposit), not people. |
-| **Pay people** | Payroll, grants, contractor pay | Splits a pool among named recipients without showing each person's amount to the others | Planned. The settlement shows each recipient's payment, so per-person privacy needs a design not yet built. |
+| **Decide together** | Votes, approvals, committee decisions | Counts sealed, signed ballots; publishes only the winner; the winner decides where the pool goes | Run on testnet against an open poll and a 3-of-5 multisig, on a local host. Weight is money (a deposit), not people; the count cannot be checked by anyone but the host. |
+| **Pay people** | Payroll, grants, contractor pay | Pays a pool to recipients. A pay run can use fresh one-time addresses so the chain cannot name the payee, and each payee gets a signed private receipt. **The amounts stay public on NEAR.** | Designed, not built. Say "private who, with private receipts", never "confidential amounts". At most 8 recipients per settlement. |
 | **Agents together** | Teams of AI agents buying, trading or pooling | A limited key lets an agent do one thing only; the rules bound what a hijacked agent can do | Limited keys, SDK, API and MCP tools run on testnet; swarm demos are simulations. |
 | **Share compute** | Pooled AI credits for a private request | Members pool credits; the room runs one request | Simulation only; set aside. |
 | **A network of rooms** | Many groups on one contract; one member in several | Listing, finding and joining rooms | Live on testnet. Rooms do not yet interact with each other. |
@@ -51,3 +51,4 @@ One pattern (a private room, public rules, an exit) serves several kinds of grou
 2. A claim says what ran, where, and what did not (a local host is not hardware; one operator is not independent users).
 3. Deposits and balances are public on NEAR. What stays private is what members bid, vote or decide.
 4. Every new term gets a layman line next to it.
+5. Payroll and anything like it is "private who, with private receipts". A payment is a public NEAR transfer, so its amount is public; never write "confidential amounts" or "shielded allocations".

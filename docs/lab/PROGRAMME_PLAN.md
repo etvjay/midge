@@ -28,6 +28,10 @@ A ballot program: the options are fixed recipients set when the room opens; memb
 **Baselines:** an open on-chain vote; the multisig. **Measured:** votes an observer can infer; how far a last voter can swing an open vote; double and outsider votes refused; the dead-host exit; two hosts.
 **Limits up front:** the weight is money (a deposit), not people. No coercion resistance beyond re-voting. A unanimous result is visible only if the tally is published, which it is not, but the count cannot then be checked except by trusting the host (two hosts reduce that).
 
+## 1b. Voting: done
+
+Run on 2026-11-07: see `VOTE_RESULTS.md` (`E-CMP-VOTE-01` PASS). The multisig baseline (item 0) is built and was used in that run.
+
 ## 2. Payroll, invoicing, receipts and accounting views
 
 The settlement publishes who is paid and how much, so the amounts cannot be hidden from the chain. What can be hidden is **who the payee is**, and what can be added is **a private paper trail**:
@@ -72,7 +76,7 @@ Five members m1 to m5 each put 0.02 NEAR into a pool of 0.1. Two options: A (rec
 1. **Visibility.** In the open poll an observer reads all 5 votes by account (5 of 5), and before the last vote the public tally is 2 to 2 so the fifth voter knows their vote decides. In the sealed ballot an observer reads 0 of 5 votes; the settlement carries no tally and no turnout, only the pool paid to the winner's recipient and equal charges on all five.
 2. **Outcome.** With honest voting both the open poll and the sealed ballot pay the whole 0.1 NEAR to ra (A wins 3 to 2).
 3. **Outsiders and doubles.** A non-member's vote is refused or ignored in both. A member voting twice counts once.
-4. **The latest vote counts.** In the sealed ballot a member who re-votes changes the outcome in a second, separate round (m3 and m4 switch to A: A wins 5 to 0).
+4. **The latest vote counts.** In the sealed ballot a re-vote changes the result: with first ballots m1 B, m2 B, m3 B, m4 A, m5 A the host would pay B (3 to 2); after m1 and m2 re-vote A with a higher sequence number it pays A (4 to 1). *(Revised before the run: the first wording, that m3 and m4 switch to A, would not have changed the winner.)*
 5. **Multisig.** Three of the five signers can send the whole pool to an address outside both options (a thief) and it works; under Midge a payout to a recipient outside the rules is refused by the contract even with a valid host signature (a signing key we hold stands in for a compromised host), and the escrow is intact.
 6. **Dead host.** If the host never signs, nothing is paid and all five exit alone with the full 0.02.
 7. **Cost.** Total gas of the sealed ballot over the open poll is between 0.5 and 3.

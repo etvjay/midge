@@ -21,7 +21,7 @@ Midge resolves this fundamental trilemma through a novel architectural paradigm:
 
 Participants (heterogeneous swarms of autonomous AI agents and human wallets) deposit capital into public on-chain smart contract escrows on NEAR L1. Multi-party deliberation, secret-ballot voting, order aggregation, and credit negotiations execute inside hardware-isolated Intel TDX trusted execution environments (TEEs) on NEAR AI Cloud, verified via DCAP-QVL to Intel's Root CA. The enclave acts strictly as an **arbiter, never a custodian**: it holds zero withdrawal keys and can only propose batch settlements bounded by immutable, creator-defined on-chain release policies (whitelisted recipients, per-epoch release caps, and block deadlines) to which depositors explicitly consented. Crucially, if an enclave or operator stalls, crashes, or disappears, Midge’s sovereign escape hatch (`hatch_out`) allows any individual participant to unilaterally reclaim 100% of their unspent escrow directly from NEAR L1 consensus without requiring operator permission or draining other members.
 
-Midge serves as the general-purpose, programmable coordination substrate for institutional private credit and repo facilities, dark OTC block crossing, confidential corporate payroll, private angel syndicates, and human-agent operational budgeting.
+Midge serves as the general-purpose, programmable coordination substrate for institutional private credit and repo facilities, dark OTC block crossing, payroll with private payees, private angel syndicates, and human-agent operational budgeting.
 
 ---
 
@@ -51,7 +51,7 @@ Public blockchains are unmatched at enforcing deterministic custody and absolute
 When groups pool capital and act in concert on transparent ledgers, they suffer systemic economic penalties:
 1. **Mempool Extraction and Front-Running:** Research by EigenPhi on Ethereum decentralized exchanges estimates approximately **$60 million in annual trader sandwich losses**, where predatory searchers front-run and back-run large pooled orders. On high-speed networks like Solana, Bitquery analyzed **6.9 million sandwich attacks** across **2.2 million unique wallets**, extracting approximately **$29.7 million before costs**, with swaps allowing wider slippage caught 14 times as often as disciplined trades.
 2. **Strategy and Alpha Depletion:** Public multi-sigs (such as SputnikDAO or Gnosis Safe) broadcast proposals, voting weights, and rebalancing parameters prior to execution. Competitors observe planned asset purchases, front-run the trade, and copy proprietary strategies.
-3. **Institutional Infeasibility:** Real-world commercial coordination cannot operate transparently. DAOs cannot disburse payroll without exposing employee salaries to the public. Co-investors cannot seed deals without leaking cap tables. Institutional lenders cannot manage repo facilities without broadcasting borrower margin health to liquidator bots.
+3. **Institutional Infeasibility:** Real-world commercial coordination cannot operate transparently. DAOs cannot disburse payroll without tying each employee's name to their salary on a public explorer. Co-investors cannot seed deals without leaking cap tables. Institutional lenders cannot manage repo facilities without broadcasting borrower margin health to liquidator bots.
 
 ### 1.2 The Failure Modes of Existing Privacy Solutions
 Existing attempts to introduce privacy into decentralized finance introduce catastrophic structural risks:
@@ -240,11 +240,14 @@ Institutional funds frequently execute multi-million dollar block trades that wo
 2. **Mid-Market Crossing:** The TEE queries reference pricing from live cross-chain registries (such as the 1Click API), verifies that price bounds overlap, and crosses the trade at the volume-weighted mid-market price inside enclave RAM.
 3. **Atomic Clearing:** The TEE dispatches the batch settlement proof to NEAR L1, swapping assets simultaneously across both escrows. The trade executes with zero front-running, zero sandwich exploitation, and zero pre-trade market impact.
 
-### 3.3 Facility C: Confidential Payroll and Contributor Compensation
-Autonomous AI agent organizations and decentralized enterprises face an accounting dilemma: they must operate on-chain, but publishing salary sheets and contractor rates to public block explorers damages employee retention and competitive positioning.
-1. The organization deposits its monthly payroll allocation into a Midge Syndicate.
-2. Contributor performance metrics, hourly logs, and compensation algorithms are processed confidentially inside the Roost TEE.
-3. The coordinator contract executes an aggregate batch settlement. Public observers see only that the organization disbursed funds; individual contractor allocations remain shielded inside enclave memory.
+### 3.3 Facility C: Payroll with Private Payees and Private Receipts
+*(Corrected 2026-11-07. An earlier version of this section said individual allocations stay shielded inside the enclave and that observers see only that the organisation disbursed funds. That is not true: a settlement is a public NEAR transfer to each recipient, so every payment's address and amount is visible on a block explorer. This facility is designed, not built.)*
+
+Autonomous AI agent organisations and decentralised enterprises must operate on-chain, but a salary sheet tied to names on a public explorer damages retention and competitive positioning. What Midge can offer is **private who, with private receipts**, not confidential amounts:
+1. The organisation opens a room for each pay run and deposits the run's funds.
+2. Each person gives a fresh one-time payout address for the run. Only the room knows which person owns which address, so a stranger sees amounts going to addresses they cannot name.
+3. The host issues each payee a signed, encrypted receipt (invoice id, period, gross, deductions, net) and gives an auditor only category totals. The root of all receipts is recorded in the settlement's signed order hash, so anyone can check that a receipt belongs to the run without seeing the others.
+4. **Limits:** the amounts are public. One settlement pays at most 8 recipients, so a larger payroll is several settlements. A dishonest host could issue a wrong receipt (two hosts reduce that). Nothing here has been built or run.
 
 ### 3.4 Facility D: Stealth Angel Syndicates and Early-Stage Seeding
 Angel collectives, venture syndicates, and AI investment swarms frequently want to co-invest in early-stage rounds without publishing individual check sizes or revealing backer identities to competitors.
