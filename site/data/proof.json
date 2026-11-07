@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-07T13:06:30.489Z",
+ "generatedAt": "2026-11-07T13:16:11.019Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 72,
+  "settled": 75,
   "exit": 25,
-  "other": 55,
-  "rejected": 28
+  "other": 58,
+  "rejected": 31
  },
  "security": {
   "run": "20261105T035644Z-7c1d",
@@ -2671,6 +2671,87 @@
    "kind": "settled",
    "exp": "E-CMP-RFQ-01",
    "run": "20261107T124146Z-ca19",
+   "error": null
+  },
+  {
+   "hash": "AmXQetDj72qbw9EJ25dU1E3EH9GVBPzSEzqQCgk2ZDY8",
+   "label": "settle_batch_charged round 1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
+   "error": null
+  },
+  {
+   "hash": "3v2YFmGzFMPFrtiwehD8cQg4yJJmJVrKduGLugvEUwaS",
+   "label": "settle_batch_charged round 2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
+   "error": null
+  },
+  {
+   "hash": "6rGCbYyKXgEJcSA8JP8VGMfDKB3Dgzh3LocTU7xcx9si",
+   "label": "replay of round 1",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
+   "error": "Smart contract panicked: panicked at src/lib.rs:789:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "v6RkFFPqH1vYFYtyY4BduvKF9D9Ktu5mMXepKU7X2WD",
+   "label": "settle_batch_charged round 3",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
+   "error": null
+  },
+  {
+   "hash": "5wANZrfJJUsYh65MFfMZzNhDMAPsh1i7cw2MxPjmmDbc",
+   "label": "early exit as u1",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
+   "error": "Smart contract panicked: [Hatch-Out LOCKED] Deliberation window still active."
+  },
+  {
+   "hash": "6t1CvTgumcTR6JoJFe7fUkrjEhghgbAoSH4uHw6AVaiN",
+   "label": "payout above the cap: 0.11 of 0.4, charged 0.055 to each of two members so only the cap can refuse it",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
+   "error": "Smart contract panicked: panicked at src/lib.rs:841:9: [Settle REJECT] Allocation sum exceeds max_release_bps_per_epoch cap."
+  },
+  {
+   "hash": "E959gDwo1a1v4y8krHjWrYTFsLgvhaqK1fqeVhPaVhmE",
+   "label": "payout at exactly 25% of the current escrow: 0.1",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
+   "error": null
+  },
+  {
+   "hash": "9G59k4dGRd6vtJVwFtYciEYgkuXqEJ6UnKmLdnim5r7N",
+   "label": "payout at exactly 25% of the current escrow: 0.075",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
+   "error": null
+  },
+  {
+   "hash": "6oemTTNiQkqdqyw1VaXCddPrUrReiMX57naD2f8uFQuN",
+   "label": "payout at exactly 25% of the current escrow: 0.05625",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-ONGOING-01",
+   "run": "20261107T131007Z-d8a0",
    "error": null
   },
   {
