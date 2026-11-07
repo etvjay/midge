@@ -2691,3 +2691,310 @@ fn charges_hash_matches_the_roosts_javascript_implementation() {
         "277962d41d643c5f0b7aaf5616124070cdb5f906d57e7a5ab0f6906f9c7e8be9"
     );
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Two-room agreement: a syndicate registers two room keys, and a settlement needs BOTH to sign the same message
+// ---------------------------------------------------------------------------------------------------------------
+
+const ROOM_A: u8 = 42;
+const ROOM_B: u8 = 7;
+
+fn room_pk(seed: u8) -> String {
+    hex::encode(
+        SigningKey::from_bytes(&[seed; 32])
+            .verifying_key()
+            .to_bytes(),
+    )
+}
+
+fn room_sign(seed: u8, message: &str) -> String {
+    hex::encode(
+        SigningKey::from_bytes(&[seed; 32])
+            .sign(message.as_bytes())
+            .to_bytes(),
+    )
+}
+
+fn plain_msg(id: &str, nonce: &str, allocations: &[Allocation], order: &str) -> String {
+    format!(
+        "fly-coordinator.testnet:{}:1:{}:{}:{}",
+        id,
+        nonce,
+        compute_allocations_hash(allocations),
+        order
+    )
+}
+
+fn charged_msg(
+    id: &str,
+    nonce: &str,
+    allocations: &[Allocation],
+    charges: &[Charge],
+    order: &str,
+) -> String {
+    format!(
+        "fly-coordinator.testnet:{}:1:{}:{}:{}:{}",
+        id,
+        nonce,
+        compute_allocations_hash(allocations),
+        compute_charges_hash(charges),
+        order
+    )
+}
+
+/// Same as charged_setup, but the syndicate registers two room keys.
+fn two_room_setup(id: &str) -> (FlyCoordinator, String, String, [AccountId; 3]) {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner, NearToken::from_near(1), 100).build());
+    let mut contract = FlyCoordinator::new();
+    let syn_id = contract.hatch_two_room(
+        id.to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        room_pk(ROOM_A),
+        room_pk(ROOM_B),
+        "hash".to_string(),
+        Some(30),
+        Some("r.near".parse().unwrap()),
+        None,
+    );
+    let p_hash = contract.get_policy_hash(syn_id.clone());
+    let members: [AccountId; 3] = [
+        "a.near".parse().unwrap(),
+        "b.near".parse().unwrap(),
+        "c.near".parse().unwrap(),
+    ];
+    for (i, m) in members.iter().enumerate() {
+        testing_env!(get_context(m.clone(), NearToken::from_near(10), 105 + i as u64).build());
+        contract.deposit(syn_id.clone(), p_hash.clone());
+    }
+    let nonce = contract.get_syndicate(syn_id.clone()).unwrap().round_nonce;
+    (contract, syn_id, nonce, members)
+}
+
+fn as_owner_at_120() {
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 120).build());
+}
+
+#[test]
+fn two_room_settlement_pays_when_both_rooms_sign_the_same_message() {
+    let (mut c, id, nonce, _) = two_room_setup("tr-ok");
+    let alloc = pay_r(12);
+    let msg = plain_msg(&id, &nonce, &alloc, "order");
+    as_owner_at_120();
+    c.settle_batch_two_room(
+        id.clone(),
+        nonce,
+        "order".to_string(),
+        alloc,
+        room_sign(ROOM_A, &msg),
+        room_sign(ROOM_B, &msg),
+    );
+    assert!(c.get_syndicate(id).unwrap().is_settling);
+}
+
+#[test]
+fn two_room_syndicate_exposes_its_second_key_and_a_one_room_one_does_not() {
+    let (c, id, _, _) = two_room_setup("tr-view");
+    assert_eq!(c.get_second_enclave_key(id), Some(room_pk(ROOM_B)));
+    let (c1, id1, _, _) = charged_setup("one-room-view");
+    assert_eq!(c1.get_second_enclave_key(id1), None);
+}
+
+#[test]
+#[should_panic(expected = "second room")]
+fn two_room_settlement_rejects_a_bad_second_signature() {
+    let (mut c, id, nonce, _) = two_room_setup("tr-bad-b");
+    let alloc = pay_r(12);
+    let msg = plain_msg(&id, &nonce, &alloc, "order");
+    as_owner_at_120();
+    c.settle_batch_two_room(
+        id,
+        nonce,
+        "order".to_string(),
+        alloc,
+        room_sign(ROOM_A, &msg),
+        room_sign(ROOM_B, "something else entirely"),
+    );
+}
+
+#[test]
+#[should_panic(expected = "first room")]
+fn two_room_settlement_rejects_a_bad_first_signature() {
+    let (mut c, id, nonce, _) = two_room_setup("tr-bad-a");
+    let alloc = pay_r(12);
+    let msg = plain_msg(&id, &nonce, &alloc, "order");
+    as_owner_at_120();
+    c.settle_batch_two_room(
+        id,
+        nonce,
+        "order".to_string(),
+        alloc,
+        room_sign(ROOM_A, "something else entirely"),
+        room_sign(ROOM_B, &msg),
+    );
+}
+
+#[test]
+#[should_panic(expected = "second room")]
+fn one_room_signing_twice_is_not_two_rooms() {
+    let (mut c, id, nonce, _) = two_room_setup("tr-same-twice");
+    let alloc = pay_r(12);
+    let msg = plain_msg(&id, &nonce, &alloc, "order");
+    as_owner_at_120();
+    let a = room_sign(ROOM_A, &msg);
+    c.settle_batch_two_room(id, nonce, "order".to_string(), alloc, a.clone(), a);
+}
+
+#[test]
+#[should_panic(expected = "second room")]
+fn two_rooms_that_computed_different_payouts_cannot_settle() {
+    let (mut c, id, nonce, _) = two_room_setup("tr-disagree");
+    let alloc = pay_r(12);
+    let honest = plain_msg(&id, &nonce, &alloc, "order");
+    // room B computed a different payout (13) and signed that instead
+    let other = plain_msg(&id, &nonce, &pay_r(13), "order");
+    as_owner_at_120();
+    c.settle_batch_two_room(
+        id,
+        nonce,
+        "order".to_string(),
+        alloc,
+        room_sign(ROOM_A, &honest),
+        room_sign(ROOM_B, &other),
+    );
+}
+
+#[test]
+#[should_panic(expected = "different")]
+fn a_two_room_syndicate_cannot_register_the_same_key_twice() {
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    c.hatch_two_room(
+        "tr-dup".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        room_pk(ROOM_A),
+        room_pk(ROOM_A),
+        "hash".to_string(),
+        Some(30),
+        Some("r.near".parse().unwrap()),
+        None,
+    );
+}
+
+#[test]
+#[should_panic(expected = "two-room")]
+fn a_two_room_syndicate_refuses_a_single_signature_settlement() {
+    let (mut c, id, nonce, _) = two_room_setup("tr-single");
+    let alloc = pay_r(12);
+    let msg = plain_msg(&id, &nonce, &alloc, "order");
+    as_owner_at_120();
+    c.settle_batch(
+        id,
+        nonce,
+        "order".to_string(),
+        alloc,
+        room_sign(ROOM_A, &msg),
+    );
+}
+
+#[test]
+#[should_panic(expected = "two-room")]
+fn a_two_room_syndicate_refuses_a_single_signature_charged_settlement() {
+    let (mut c, id, nonce, m) = two_room_setup("tr-single-chg");
+    let alloc = pay_r(12);
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    let msg = charged_msg(&id, &nonce, &alloc, &charges, "order");
+    as_owner_at_120();
+    c.settle_batch_charged(
+        id,
+        nonce,
+        "order".to_string(),
+        alloc,
+        charges,
+        room_sign(ROOM_A, &msg),
+    );
+}
+
+#[test]
+#[should_panic(expected = "not a two-room")]
+fn a_one_room_syndicate_refuses_a_two_room_settlement() {
+    let (mut c, id, nonce, _) = charged_setup("one-room-refuses");
+    let alloc = pay_r(12);
+    let msg = plain_msg(&id, &nonce, &alloc, "order");
+    as_owner_at_120();
+    c.settle_batch_two_room(
+        id,
+        nonce,
+        "order".to_string(),
+        alloc,
+        room_sign(ROOM_A, &msg),
+        room_sign(ROOM_B, &msg),
+    );
+}
+
+#[test]
+fn two_room_charged_settlement_pays_when_both_rooms_sign_the_charges() {
+    let (mut c, id, nonce, m) = two_room_setup("tr-chg-ok");
+    let alloc = pay_r(12);
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    let msg = charged_msg(&id, &nonce, &alloc, &charges, "order");
+    as_owner_at_120();
+    c.settle_batch_charged_two_room(
+        id.clone(),
+        nonce,
+        "order".to_string(),
+        alloc,
+        charges,
+        room_sign(ROOM_A, &msg),
+        room_sign(ROOM_B, &msg),
+    );
+    assert!(c.get_syndicate(id).unwrap().is_settling);
+}
+
+#[test]
+#[should_panic(expected = "second room")]
+fn two_rooms_that_disagree_on_who_pays_cannot_settle() {
+    let (mut c, id, nonce, m) = two_room_setup("tr-chg-disagree");
+    let alloc = pay_r(12);
+    let honest = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    // room B charges member a everything
+    let greedy = vec![charge(&m[0], 10), charge(&m[1], 1), charge(&m[2], 1)];
+    as_owner_at_120();
+    c.settle_batch_charged_two_room(
+        id.clone(),
+        nonce.clone(),
+        "order".to_string(),
+        alloc.clone(),
+        honest.clone(),
+        room_sign(ROOM_A, &charged_msg(&id, &nonce, &alloc, &honest, "order")),
+        room_sign(ROOM_B, &charged_msg(&id, &nonce, &alloc, &greedy, "order")),
+    );
+}
+
+#[test]
+fn a_pruned_two_room_syndicate_forgets_its_second_key() {
+    // Hatch, abort by exit, prune, and the second key is gone; a fresh syndicate under the same id starts clean.
+    let (mut c, id, _, m) = two_room_setup("tr-prune");
+    testing_env!(get_context(m[0].clone(), NearToken::from_near(0), 100 + 40).build());
+    for who in &m {
+        testing_env!(get_context(who.clone(), NearToken::from_near(0), 100 + 40).build());
+        let _ = c.hatch_out(id.clone());
+        testing_env_with_promise_results(
+            get_context(
+                "fly-coordinator.testnet".parse().unwrap(),
+                NearToken::from_near(0),
+                141,
+            )
+            .build(),
+            PromiseResult::Successful(vec![]),
+        );
+        let _ = c.on_hatch_out_payout(id.clone(), who.clone(), NearToken::from_near(10));
+    }
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 150).build());
+    c.prune_syndicate(id.clone());
+    assert_eq!(c.get_second_enclave_key(id), None);
+}

@@ -276,6 +276,13 @@ pub struct FlyCoordinator {
     pub member_syndicates: LookupMap<AccountId, Vec<String>>,
 }
 
+/// Raw storage key for a two-room syndicate's second room key.
+fn second_key_slot(syndicate_id: &str) -> Vec<u8> {
+    let mut k = b"k2:".to_vec();
+    k.extend_from_slice(syndicate_id.as_bytes());
+    k
+}
+
 #[near]
 #[allow(clippy::too_many_arguments)]
 impl FlyCoordinator {
@@ -299,6 +306,79 @@ impl FlyCoordinator {
         quorum_threshold: Option<u32>,
         max_spend_near: Option<u128>,
         enclave_public_key: String, // 64 hex characters (32 bytes)
+        expected_code_hash: String,
+        timeout_blocks: Option<u64>,
+        payout_recipient: Option<AccountId>,
+        release_policy: Option<ReleasePolicy>,
+    ) -> String {
+        self.hatch_inner(
+            syndicate_id,
+            syndicate_type,
+            quorum_threshold,
+            max_spend_near,
+            enclave_public_key,
+            None,
+            expected_code_hash,
+            timeout_blocks,
+            payout_recipient,
+            release_policy,
+        )
+    }
+
+    /// hatch_two_room(): like hatch, but the syndicate registers TWO room keys (two independent Roosts running the same
+    /// program). Its settlements must then carry both signatures over the same message (settle_batch_two_room /
+    /// settle_batch_charged_two_room); a single-signature settlement is refused. If the rooms disagree they sign
+    /// different messages, no valid pair exists, nothing is paid, and members use the exit.
+    #[payable]
+    #[allow(clippy::too_many_arguments)]
+    pub fn hatch_two_room(
+        &mut self,
+        syndicate_id: String,
+        syndicate_type: Option<String>,
+        quorum_threshold: Option<u32>,
+        max_spend_near: Option<u128>,
+        enclave_public_key: String,
+        second_enclave_public_key: String,
+        expected_code_hash: String,
+        timeout_blocks: Option<u64>,
+        payout_recipient: Option<AccountId>,
+        release_policy: Option<ReleasePolicy>,
+    ) -> String {
+        let second = hex::decode(&second_enclave_public_key).unwrap_or_else(|_| {
+            env::panic_str("[Hatch REJECT] Invalid hex second room public key")
+        });
+        assert_eq!(
+            second.len(),
+            32,
+            "[Hatch REJECT] The second room public key must be exactly 32 bytes (64 hex characters)."
+        );
+        assert!(
+            enclave_public_key.to_lowercase() != second_enclave_public_key.to_lowercase(),
+            "[Hatch REJECT] The two room keys must be different."
+        );
+        self.hatch_inner(
+            syndicate_id,
+            syndicate_type,
+            quorum_threshold,
+            max_spend_near,
+            enclave_public_key,
+            Some(second_enclave_public_key.to_lowercase()),
+            expected_code_hash,
+            timeout_blocks,
+            payout_recipient,
+            release_policy,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn hatch_inner(
+        &mut self,
+        syndicate_id: String,
+        syndicate_type: Option<String>,
+        quorum_threshold: Option<u32>,
+        max_spend_near: Option<u128>,
+        enclave_public_key: String,
+        second_enclave_public_key: Option<String>,
         expected_code_hash: String,
         timeout_blocks: Option<u64>,
         payout_recipient: Option<AccountId>,
@@ -421,6 +501,15 @@ impl FlyCoordinator {
         };
 
         self.syndicates.insert(syndicate_id.clone(), record);
+        // The second room key lives under its own storage key, so existing records and contract state are untouched.
+        match &second_enclave_public_key {
+            Some(k) => {
+                env::storage_write(&second_key_slot(&syndicate_id), k.as_bytes());
+            }
+            None => {
+                env::storage_remove(&second_key_slot(&syndicate_id));
+            }
+        }
 
         // Update secondary member index for creator (API-001)
         let mut owner_syns = self
@@ -553,6 +642,56 @@ impl FlyCoordinator {
             allocations,
             Vec::new(),
             enclave_signature,
+            None,
+        );
+    }
+
+    /// settle_batch_two_room(): settle_batch for a two-room syndicate. Both rooms sign the same message.
+    pub fn settle_batch_two_room(
+        &mut self,
+        syndicate_id: String,
+        attestation_nonce: String,
+        aggregate_order_hash: String,
+        allocations: Vec<Allocation>,
+        enclave_signature: String,
+        second_enclave_signature: String,
+    ) {
+        self.settle_inner(
+            syndicate_id,
+            attestation_nonce,
+            aggregate_order_hash,
+            allocations,
+            Vec::new(),
+            enclave_signature,
+            Some(second_enclave_signature),
+        );
+    }
+
+    /// settle_batch_charged_two_room(): settle_batch_charged for a two-room syndicate. Both rooms sign the same message,
+    /// charges included, so two rooms that disagree on who pays cannot settle.
+    #[allow(clippy::too_many_arguments)]
+    pub fn settle_batch_charged_two_room(
+        &mut self,
+        syndicate_id: String,
+        attestation_nonce: String,
+        aggregate_order_hash: String,
+        allocations: Vec<Allocation>,
+        charges: Vec<Charge>,
+        enclave_signature: String,
+        second_enclave_signature: String,
+    ) {
+        assert!(
+            !charges.is_empty(),
+            "[Settle REJECT] Charges list cannot be empty."
+        );
+        self.settle_inner(
+            syndicate_id,
+            attestation_nonce,
+            aggregate_order_hash,
+            allocations,
+            charges,
+            enclave_signature,
+            Some(second_enclave_signature),
         );
     }
 
@@ -582,9 +721,11 @@ impl FlyCoordinator {
             allocations,
             charges,
             enclave_signature,
+            None,
         );
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn settle_inner(
         &mut self,
         syndicate_id: String,
@@ -593,6 +734,7 @@ impl FlyCoordinator {
         allocations: Vec<Allocation>,
         charges: Vec<Charge>,
         enclave_signature: String,
+        second_enclave_signature: Option<String>,
     ) {
         let syn = self
             .syndicates
@@ -760,10 +902,47 @@ impl FlyCoordinator {
                 aggregate_order_hash
             )
         };
-        assert!(
-            env::ed25519_verify(&sig_arr, message.as_bytes(), &pk_arr),
-            "[HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
-        );
+        match (
+            env::storage_read(&second_key_slot(&syndicate_id)),
+            second_enclave_signature,
+        ) {
+            (None, None) => {
+                assert!(
+                    env::ed25519_verify(&sig_arr, message.as_bytes(), &pk_arr),
+                    "[HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+                );
+            }
+            (Some(_), None) => env::panic_str(
+                "[HAQ REJECT] This is a two-room syndicate: settle with settle_batch_two_room or settle_batch_charged_two_room, carrying both room signatures.",
+            ),
+            (None, Some(_)) => env::panic_str(
+                "[HAQ REJECT] This is not a two-room syndicate: use settle_batch or settle_batch_charged.",
+            ),
+            (Some(second_key), Some(second_sig)) => {
+                assert!(
+                    env::ed25519_verify(&sig_arr, message.as_bytes(), &pk_arr),
+                    "[HAQ REJECT] Invalid signature from the first room over the deliberation batch!"
+                );
+                let second_pk_bytes = hex::decode(&second_key).unwrap_or_else(|_| {
+                    env::panic_str("[HAQ REJECT] Stored second room key is not valid hex")
+                });
+                let second_sig_bytes = hex::decode(&second_sig).unwrap_or_else(|_| {
+                    env::panic_str("[HAQ REJECT] Invalid hex signature from the second room")
+                });
+                assert!(
+                    second_pk_bytes.len() == 32 && second_sig_bytes.len() == 64,
+                    "[HAQ REJECT] The second room key must be 32 bytes and its signature 64 bytes."
+                );
+                let mut second_pk = [0u8; 32];
+                second_pk.copy_from_slice(&second_pk_bytes);
+                let mut second_sig_arr = [0u8; 64];
+                second_sig_arr.copy_from_slice(&second_sig_bytes);
+                assert!(
+                    env::ed25519_verify(&second_sig_arr, message.as_bytes(), &second_pk),
+                    "[HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+                );
+            }
+        }
 
         syn.settled_batches.push(aggregate_order_hash.clone());
         syn.total_escrow = syn
@@ -1095,6 +1274,12 @@ impl FlyCoordinator {
             .unwrap_or_else(|| NearToken::from_yoctonear(0))
     }
 
+    /// The second room's public key, if this is a two-room syndicate.
+    pub fn get_second_enclave_key(&self, syndicate_id: String) -> Option<String> {
+        env::storage_read(&second_key_slot(&syndicate_id))
+            .map(|b| String::from_utf8(b).unwrap_or_default())
+    }
+
     pub fn get_syndicate(&self, syndicate_id: String) -> Option<SyndicateRecord> {
         self.syndicates.get(&syndicate_id).cloned()
     }
@@ -1133,6 +1318,7 @@ impl FlyCoordinator {
         let total_settled = syn.total_settled_payouts.as_yoctonear();
 
         self.syndicates.remove(&syndicate_id);
+        env::storage_remove(&second_key_slot(&syndicate_id));
         if let Some(ids) = self.member_syndicates.get(&owner).cloned() {
             let kept: Vec<String> = ids.into_iter().filter(|id| id != &syndicate_id).collect();
             self.member_syndicates.insert(owner, kept);
