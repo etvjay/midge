@@ -200,3 +200,41 @@ An ongoing group is a Dark Vault: it lasts across rounds, takes deposits between
 **A weakness I expect to remain:** the existing host route for an RFQ already returns the plain terms to whoever calls it; slice 2 does not change that route, it only keeps `RoomService` from adding to it.
 
 **Not tested:** the adapters, a hardware host, a testnet settlement through `RoomService`.
+
+
+## `runRoom` slices 3 to 6: predictions, written 2026-11-07 before any code
+
+In plain words: the one door (`RoomService`) now gets four ways in (web API, AI-agent tools, a live event stream, a code library) plus a ready-made practice room. Each way in only translates; none contains room logic. Experiments `E-ROOMSERVICE-03` to `-06`, offline, real HTTP on a local port.
+
+**Correction to the design:** MCP needs four tools that mirror the four verbs (describe, open, submit a pre-signed input, run), not two. The coordinator who opens and runs a round and the members who submit are different principals, and a secret key must never pass through a tool argument, so a member's input arrives already signed.
+
+### Slice 3: web API (`/v1/rooms`), OpenAPI document, rate limits, SDK
+1. `GET /v1/rooms` returns the description (seven programs) with no key.
+2. Opening a round and running one need the coordinator key (`X-Roost-Admin-Key` or `Authorization: Bearer`); without it or with a wrong one, 401. Submitting an input needs no key, only a valid member signature.
+3. A full vote over HTTP (open, five signed inputs, run) returns the same settlement as calling the service directly on a twin host.
+4. Every error code maps to one status and one body shape `{ error, code }`: INVALID_PARAMS 400, NOT_AUTHORISED 401 (no key) or 403 (forged input), UNKNOWN_PROGRAM 404, ROUND_NOT_OPEN / NO_INPUTS / ALREADY_SIGNED 409, INTERNAL 500 with no stack. Unknown route 404, wrong method 405 with `Allow`, bad JSON 400, oversized body 413, all in the same shape.
+5. Rate limit: past the per-client limit, 429 with `Retry-After`; `X-RateLimit-Limit/Remaining/Reset` on every response; the allowance returns after the window; another client is unaffected.
+6. An RFQ's plain terms appear only with `includeConfidential: true` and the coordinator key.
+7. `GET /v1/rooms/openapi.json` is a valid OpenAPI 3.0 document that documents exactly the routes the router serves (a drift test compares both lists), every program's parameter names, every error code, and the key scheme.
+8. The SDK (`RoomsClient`) returns the same results over HTTP and raises `RoomError` with the server's code.
+9. Responses carry `cache-control: no-store`.
+
+### Slice 4: MCP (tools, stdio and streamable HTTP)
+1. `tools/list` shows the four new tools and still the ten old ones. None has a secret-key parameter.
+2. A vote through the tools gives the same settlement as the service.
+3. One dispatcher serves stdio and HTTP; the same request gives the same response on both.
+4. Over HTTP (`POST /mcp`): initialize, list and call work; a notification gets 202; `GET` gets 405; open and run need the coordinator key, describe and submit do not; tool errors come back as JSON-RPC errors carrying the room error code; the same rate limit applies.
+
+### Slice 5: live events (SSE)
+1. `GET /v1/rooms/events` streams `round_opened`, `input_accepted` (a count only), and `round_run` (program, decided yes/no, order hash). No flyer id, no ciphertext, no outcome detail.
+2. A run that decides nothing reports `decided: false`.
+3. Each event has an id; reconnecting with `Last-Event-ID` replays what was missed (ring of the last 100).
+4. A client cap (503 beyond it), cleanup on disconnect, and a heartbeat comment.
+
+### Slice 6: a practice room (`createDemoRoom`)
+1. One call builds a labelled-simulation room with generated member keys and a helper that signs and seals an input; `describe()` says simulated.
+2. All seven room kinds run end to end through it.
+3. The same vote through HTTP, the SDK and MCP gives the identical settlement (cross-surface parity).
+4. It holds no real key and cannot be pointed at a real chain.
+
+**Not tested:** a browser bundle, a hardware host, a testnet settlement through these adapters, load beyond the rate-limit and client-cap tests.

@@ -99,6 +99,10 @@ Rules: one test then one change per slice; expected values come from the existin
 
 *2026-11-07, while writing the slice-1 tests.* (a) **Four verbs, not three:** signed inputs name the open round, so `open(round)` comes first; `run` takes the same round and refuses another (`ROUND_NOT_OPEN`). (b) **Retry-safety is the service's job:** the host clears its queue when a round runs, so the service remembers the last result; an identical `run` returns it unchanged, a different one is refused with `ALREADY_SIGNED` until `open` is called again.
 
+## 10b. Correction (slice 3 to 6 planning)
+
+*2026-11-07.* MCP gets **four** tools that mirror the four verbs, not two: the coordinator (who opens and runs) and members (who submit) are different principals, and a secret key must never pass through a tool argument, so a member's input arrives already signed. Still no tool per program.
+
 ## 11. Not claimed
 
 Only slice 1 (the vote room through `RoomService`) is built and tested, offline. The other six room kinds, the adapters and the playground are not.
