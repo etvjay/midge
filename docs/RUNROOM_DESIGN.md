@@ -1,6 +1,6 @@
 # `runRoom`: one way in for every room program
 
-*Written 2026-11-07. Status: **slice 1 built and tested** (the vote room; see `docs/lab/ROOMSERVICE_RESULTS.md`); the other six room kinds and the adapters are not built. Vocabulary follows `docs/GLOSSARY.md` and the codebase-design terms (module, interface, seam, adapter).*
+*Written 2026-11-07. Status: **slices 1 to 6 built and tested offline** (all seven room kinds; web API with OpenAPI, MCP over stdio and HTTP, live events, SDK, practice room; see `docs/lab/ROOMSERVICE_RESULTS.md`). Not built: a browser bundle, a hardware host and a testnet pass through these doors. Vocabulary follows `docs/GLOSSARY.md` and the codebase-design terms (module, interface, seam, adapter).*
 
 **In plain words.** Midge has seven things a room can do (pool money, auction, best quote, cross, vote, pay run, two-sided quote). Today each one is reachable in a different way from the command line, the web API, the AI-agent tool server and the code library, and most are not reachable from all four. This design puts them all behind one small door, so a new room kind is added once and every way in gets it.
 
@@ -105,4 +105,4 @@ Rules: one test then one change per slice; expected values come from the existin
 
 ## 11. Not claimed
 
-Only slice 1 (the vote room through `RoomService`) is built and tested, offline. The other six room kinds, the adapters and the playground are not.
+Built and tested offline: all seven room kinds through `RoomService`, the web API, OpenAPI file, MCP, live events, SDK and a practice room. Not built or tested: a browser bundle and the playground page, a hardware host, and a testnet settlement through these doors.
