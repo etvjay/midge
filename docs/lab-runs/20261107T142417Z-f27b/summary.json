@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T142417Z-f27b",
+  "startedAt": "2026-11-07T14:24:17.931Z",
+  "rootHash": "6b8ad898653096721aa16f674e4ff160274fb41e72d4a2b456fd5104488d2290",
+  "verdicts": {
+    "E-TIMER-CONSENT-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 69,
+  "commit": "41e02aa400c304e8d2b9adfe368d0dd86add8791"
+}
