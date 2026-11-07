@@ -61,6 +61,15 @@ export function createRoostServer({ roost, adminKey }) {
         const body = await readJson(req);
         return send(res, 200, roost.openRound({ contractId: body.contractId, syndicateId: body.syndicateId, epoch: body.epoch, roundNonce: body.roundNonce }));
       }
+      if (req.method === 'GET' && url.pathname === '/digests') {
+        if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
+        return send(res, 200, roost.inputDigests());
+      }
+      if (req.method === 'POST' && url.pathname === '/exclude') {
+        if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
+        const body = await readJson(req);
+        return send(res, 200, roost.excludeMembers(Array.isArray(body.members) ? body.members : []));
+      }
       if (req.method === 'POST' && url.pathname === '/signed-intents') {
         const body = await readJson(req);
         return send(res, 200, await roost.submitSignedIntent({ flyerId: body.flyerId, cipherTextHex: body.cipherTextHex, publicKey: body.publicKey, signature: body.signature, seq: body.seq }));

@@ -69,11 +69,14 @@ export class HostedRoost {
   #intentSecret;
   #settleKey;
 
-  constructor({ provider, maxIntents = 50, requireSignedInputs = false, accountKeyCheck = null } = {}) {
+  constructor({ provider, maxIntents = 50, requireSignedInputs = false, accountKeyCheck = null, deterministicOrder = false } = {}) {
     if (!provider) throw new Error('HostedRoost needs an attestation provider');
     if (requireSignedInputs && typeof accountKeyCheck !== 'function') throw new Error('requireSignedInputs needs an accountKeyCheck(accountId, publicKey) that asks the chain');
     this.provider = provider;
     this.requireSignedInputs = Boolean(requireSignedInputs);
+    // Two-room mode: the order hash and tie-breaking depend only on the round and the inputs, never on a random number or
+    // arrival order, so two independent Roosts that see the same inputs sign byte-identical messages.
+    this.deterministicOrder = Boolean(deterministicOrder);
     this.accountKeyCheck = accountKeyCheck;
     this.round = null; // { contractId, syndicateId, epoch, roundNonce }: what inputs must be signed for
     this.lastSeq = new Map(); // account -> highest accepted sequence number this round
@@ -133,6 +136,40 @@ export class HostedRoost {
       info,
       simulated: Boolean(this.provider.simulated),
     };
+  }
+
+  /** Random in single-room mode (each aggregate is unique); empty in two-room mode (the outcome alone decides the hash). */
+  #orderSalt() { return this.deterministicOrder ? '' : crypto.randomBytes(16).toString('hex'); }
+
+  /** Arrival order in single-room mode; in two-room mode a fixed order derived from the round nonce, which ties break by. */
+  #inRoundOrder() {
+    if (!this.deterministicOrder) return this.sealedIntents;
+    const rank = (i) => sha256Hex(`${this.round?.roundNonce ?? ''}:${i.flyerId}`);
+    return [...this.sealedIntents].sort((x, y) => (rank(x) < rank(y) ? -1 : rank(x) > rank(y) ? 1 : 0));
+  }
+
+  /**
+   * Per-member digests of what each member sealed to THIS room, for comparing two rooms without revealing amounts.
+   * The body must carry a secret random `salt` (16+ chars): without it a digest of a small-domain amount could be guessed,
+   * so an unsalted body gets null. Two rooms holding the same body for a member return the same digest.
+   */
+  inputDigests() {
+    const canon = (v) => (Array.isArray(v) ? `[${v.map(canon).join(',')}]` : v && typeof v === 'object' ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canon(v[k])}`).join(',')}}` : JSON.stringify(v));
+    const out = {};
+    for (const intent of this.sealedIntents) {
+      try {
+        const body = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret));
+        out[intent.flyerId] = body && typeof body.salt === 'string' && body.salt.length >= 16 ? sha256Hex(`midge-digest-v1:${this.round?.roundNonce ?? ''}:${intent.flyerId}:${canon(body)}`) : null;
+      } catch { out[intent.flyerId] = null; }
+    }
+    return out;
+  }
+
+  /** Drop members from the queue (for example those whose digests differ between the two rooms). */
+  excludeMembers(ids) {
+    const drop = new Set(ids);
+    this.sealedIntents = this.sealedIntents.filter((i) => !drop.has(i.flyerId));
+    return { excluded: [...drop], remaining: this.sealedIntents.length };
   }
 
   /** Fix the round that inputs must be signed for, and clear everything from any earlier round. */
@@ -204,7 +241,7 @@ export class HostedRoost {
     }
     if (valid === 0) throw new RoostAggregationError('no valid bids in this round');
 
-    const aggregateNonce = crypto.randomBytes(16).toString('hex');
+    const aggregateNonce = this.#orderSalt();
     const orderHash = sha256Hex(`midge-order-v1:${roundId}:${totalMicro}:${valid}:${excluded.length}:${aggregateNonce}`);
     this.sealedIntents = []; // plaintext never outlives this call; ciphertext is dropped too
     this.aggregate = { orderHash, totalMicro, signed: false };
@@ -237,7 +274,7 @@ export class HostedRoost {
     if (!Number.isSafeInteger(lotUnits) || lotUnits < 1 || lotUnits > 1_000_000) throw new RoostAggregationError('lotUnits must be an integer from 1 to 1,000,000');
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run an auction on an empty sealed bid queue');
     const bids = []; const excluded = [];
-    this.sealedIntents.forEach((intent, order) => {
+    this.#inRoundOrder().forEach((intent, order) => {
       try {
         const payload = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret));
         const priceMicro = toMicro(payload?.price);
@@ -260,7 +297,7 @@ export class HostedRoost {
     const allocations = [{ recipient: seller, amount: String(outcome.proceedsMicro * YOCTO_PER_MICRO) }];
     const charges = outcome.fills.map((f) => ({ member: f.flyerId, amount: String(f.payMicro * YOCTO_PER_MICRO) }));
     const bound = Object.fromEntries(outcome.fills.map((f) => [f.flyerId, f.bidMicro * YOCTO_PER_MICRO]));
-    const orderHash = sha256Hex(`midge-auction-v1:${roundId}:${format}:${lotUnits}:${formatMicro(reserveMicro)}:${seller}:${JSON.stringify(pub.fills)}:${pub.clearingPrice}:${excluded.length}:${crypto.randomBytes(16).toString('hex')}`);
+    const orderHash = sha256Hex(`midge-auction-v1:${roundId}:${format}:${lotUnits}:${formatMicro(reserveMicro)}:${seller}:${JSON.stringify(pub.fills)}:${pub.clearingPrice}:${excluded.length}:${this.#orderSalt()}`);
     this.aggregate = { orderHash, totalMicro: outcome.proceedsMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
@@ -276,7 +313,7 @@ export class HostedRoost {
     if (minMicro === null || (cap !== null && capMicro === null)) throw new RoostAggregationError('min and cap must be decimals with at most 6 places');
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run a pool on an empty sealed bid queue');
     const bids = []; const unreadable = [];
-    this.sealedIntents.forEach((intent, order) => {
+    this.#inRoundOrder().forEach((intent, order) => {
       try { const payload = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); const amountMicro = toMicro(payload?.amount); if (amountMicro === null) throw new Error('malformed'); bids.push({ flyerId: intent.flyerId, amountMicro, order }); } catch { unreadable.push(intent.flyerId); }
     });
     const out = clearPool({ bids, minMicro, capMicro });
@@ -286,7 +323,7 @@ export class HostedRoost {
     const allocations = [{ recipient, amount: String(out.totalMicro * YOCTO_PER_MICRO) }];
     const charges = out.contributions.map((c) => ({ member: c.flyerId, amount: String(c.amountMicro * YOCTO_PER_MICRO) }));
     const bound = Object.fromEntries(out.contributions.map((c) => [c.flyerId, c.amountMicro * YOCTO_PER_MICRO]));
-    const orderHash = sha256Hex(`midge-pool-v1:${roundId}:${recipient}:${pub.total}:${out.contributions.length}:${pub.leftOut.length}:${crypto.randomBytes(16).toString('hex')}`);
+    const orderHash = sha256Hex(`midge-pool-v1:${roundId}:${recipient}:${pub.total}:${out.contributions.length}:${pub.leftOut.length}:${this.#orderSalt()}`);
     this.aggregate = { orderHash, totalMicro: out.totalMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
