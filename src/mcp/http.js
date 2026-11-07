@@ -6,11 +6,12 @@
  */
 import crypto from 'node:crypto';
 import { createRateLimiter } from '../roost-service/rate-limit.js';
+import { createClientResolver } from '../roost-service/client-id.js';
 import { COORDINATOR_ONLY } from './rooms-tools.js';
 
 const safeEqual = (a, b) => crypto.timingSafeEqual(crypto.createHash('sha256').update(String(a)).digest(), crypto.createHash('sha256').update(String(b)).digest());
 
-export function createMcpHttpHandler(rpc, { adminKey, path = '/mcp', maxBody = 256 * 1024, rate = {}, allowedOrigins = [], clientOf = (req) => req.socket.remoteAddress || 'unknown' } = {}) {
+export function createMcpHttpHandler(rpc, { adminKey, path = '/mcp', maxBody = 256 * 1024, rate = {}, allowedOrigins = [], trustedProxies = [], clientOf = createClientResolver({ trustedProxies }) } = {}) {
   if (!adminKey) throw new Error('createMcpHttpHandler needs an adminKey to mark the coordinator');
   const limiter = rate && typeof rate.take === 'function' ? rate : createRateLimiter(rate);
   const isCoordinator = (req) => {

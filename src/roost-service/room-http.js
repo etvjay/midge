@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { RoomError } from './room-service.js';
 import { buildOpenApi } from './room-openapi.js';
 import { createRateLimiter } from './rate-limit.js';
+import { createClientResolver } from './client-id.js';
 
 /** The single table the router serves and the OpenAPI document describes. */
 export const ROUTES = [
@@ -28,7 +29,7 @@ const safeEqual = (a, b) => crypto.timingSafeEqual(crypto.createHash('sha256').u
 
 const MAX_STREAM_BUFFER = 1024 * 1024; // a client that lets this much pile up unread is dropped
 
-export function createRoomHandler(service, { adminKey, maxBody = 256 * 1024, rate = {}, events = null, maxStreams = 50, heartbeatMs = 15_000, clientOf = (req) => req.socket.remoteAddress || 'unknown' } = {}) {
+export function createRoomHandler(service, { adminKey, maxBody = 256 * 1024, rate = {}, events = null, maxStreams = 50, heartbeatMs = 15_000, trustedProxies = [], clientOf = createClientResolver({ trustedProxies }) } = {}) {
   if (!adminKey) throw new Error('createRoomHandler needs an adminKey to protect opening and running a round');
   const limiter = rate && typeof rate.take === 'function' ? rate : createRateLimiter(rate); // a limiter instance may be shared with other doors
   const limit = limiter.limit;
