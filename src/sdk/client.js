@@ -123,11 +123,12 @@ export class FlyClient {
     return res.data;
   }
 
-  async deposit(syndicateId, flyerId, amountNear, policyHash = null) {
+  async deposit(syndicateId, flyerId, amountNear, policyHash = null, expect = null) {
     const res = await this._request('POST', `/v1/syndicates/${syndicateId}/deposit`, {
       flyerId,
       amountNear,
       policyHash,
+      expect,
     });
     return res.data;
   }

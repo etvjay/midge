@@ -34,7 +34,7 @@ export default {
     const state = (id) => chain.view('get_syndicate', { syndicate_id: id });
     const policy = () => ({ allowed_recipients: rcpts.map((r) => r.id), max_release_bps_per_epoch: 10000, settle_deadline_block: 500000000 });
     const hatch = (id) => { created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roost.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: 50, payout_recipient: rcpts[0].id, release_policy: policy() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
-    const deposit = (f, id, amt) => chain.send(f.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy()) }, { deposit: near(amt), gas: 30000000000000n, label: `deposit ${f.id} -> ${id}` });
+    const deposit = (f, id, amt) => chain.send(f.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy(), 50) }, { deposit: near(amt), gas: 30000000000000n, label: `deposit ${f.id} -> ${id}` });
     const bidAndAggregate = (members, amountEach, label) => { for (const m of members) roost.submitSealedIntent({ flyerId: m.id, cipherTextHex: sealToModel(JSON.stringify({ amount: amountEach }), roost.intentPublicKey) }); return roost.aggregateAndClear({ roundId: `${tag}-${label}` }); };
     const settle = async (id, allocations, agg) => {
       const st = await state(id);

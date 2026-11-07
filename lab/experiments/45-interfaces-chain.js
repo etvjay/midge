@@ -53,6 +53,8 @@ export default {
     };
     const want = expectedCodeHash(ctx.rootDir);
     const hatchArgs = (sid, extra = {}) => ({ syndicateId: sid, expectedCodeHash: want.hash, quorumThreshold: 1, enclavePublicKey: roost.settlePublicKey, allowedRecipients: [rcpt.id], timeoutBlocks: 50, ...extra });
+    // A deposit consents to the group's terms (GAP-025), so each deposit states them: the cap and deadline are the tool's defaults, the timer is what we hatched with.
+    const expectFor = (timer) => ({ allowedRecipients: [rcpt.id], maxReleaseBps: 10000, settleDeadlineBlock: 999999999, timeoutBlocks: timer });
 
     await ctx.step('preflight: write access, deployed contract, balances, storage headroom', async (s) => {
       // Write access is passed in explicitly: the chain client no longer reads the repository's .env on its own (GAP-018).
@@ -84,7 +86,13 @@ export default {
       const st = await chain.waitFor(() => state(s1), { what: 'syndicate to appear' });
       s.assert('the chain shows the Roost\'s settlement key', st.enclave_public_key === roost.settlePublicKey, { expected: roost.settlePublicKey, actual: st.enclave_public_key });
       s.assert('the chain shows the allowed recipient the agent asked for', JSON.stringify(st.release_policy.allowed_recipients) === JSON.stringify([rcpt.id]), { actual: st.release_policy });
-      const d = await call(s, 'midge_deposit', { syndicateId: s1, amountNear: '0.02' });
+      const before = await state(s1);
+      const noTerms = await call(s, 'midge_deposit', { syndicateId: s1, amountNear: '0.02' });
+      s.assert('a deposit that states no terms is refused, and the tool does not copy the hash from the contract', !noTerms.ok && /state them|will not copy/.test(JSON.stringify(noTerms)), { actual: noTerms });
+      const wrongTimer = await call(s, 'midge_deposit', { syndicateId: s1, amountNear: '0.02', expect: expectFor(300) });
+      s.assert('a deposit that expected a 300-block timer into a 50-block group is refused', !wrongTimer.ok && /exit timer/.test(JSON.stringify(wrongTimer)), { actual: wrongTimer });
+      s.assert('neither refused deposit changed the escrow', (await state(s1)).total_escrow === before.total_escrow, { expected: before.total_escrow, actual: (await state(s1)).total_escrow });
+      const d = await call(s, 'midge_deposit', { syndicateId: s1, amountNear: '0.02', expect: expectFor(50) });
       s.assert('midge_deposit reports DEPOSITED_ON_CHAIN', d.ok && d.r.status === 'DEPOSITED_ON_CHAIN', { actual: d });
       const funded = await chain.waitFor(async () => { const x = await state(s1); return BigInt(x.total_escrow) === near('0.02') ? x : null; }, { what: 'escrow 0.02' });
       s.assert('the escrow is exactly 0.02 NEAR', BigInt(funded.total_escrow) === near('0.02'));
@@ -105,7 +113,7 @@ export default {
     await ctx.step('MCP: a partial settlement cannot be replayed, the next needs a fresh signature', async (s) => {
       s.assert('hatch #2', (await call(s, 'midge_hatch_syndicate', hatchArgs(s2))).ok);
       await chain.waitFor(() => state(s2), { what: 'syndicate 2' });
-      s.assert('deposit 0.03', (await call(s, 'midge_deposit', { syndicateId: s2, amountNear: '0.03' })).ok);
+      s.assert('deposit 0.03', (await call(s, 'midge_deposit', { syndicateId: s2, amountNear: '0.03', expect: expectFor(50) })).ok);
       await chain.waitFor(async () => BigInt((await state(s2)).total_escrow) === near('0.03'), { what: 'escrow 0.03' });
       const part = [{ recipient: rcpt.id, amount: yocto('0.01') }];
       const { agg, st: pre, signed } = await bidAndSign({ syndicateId: s2, bid: '0.03', allocations: part });
@@ -124,11 +132,11 @@ export default {
 
     const s3 = id(3);
     await ctx.step('MCP: the non-custodial exit (hatch_out) refunds exactly the deposit', async (s) => {
-      s.assert('hatch #3 with a 2-block timeout', (await call(s, 'midge_hatch_syndicate', hatchArgs(s3, { timeoutBlocks: 2 }))).ok);
+      s.assert('hatch #3 with a 10-block timeout (the contract floor)', (await call(s, 'midge_hatch_syndicate', hatchArgs(s3, { timeoutBlocks: 10 }))).ok);
       await chain.waitFor(() => state(s3), { what: 'syndicate 3' });
-      s.assert('deposit 0.02', (await call(s, 'midge_deposit', { syndicateId: s3, amountNear: '0.02' })).ok);
+      s.assert('deposit 0.02', (await call(s, 'midge_deposit', { syndicateId: s3, amountNear: '0.02', expect: expectFor(10) })).ok);
       await chain.waitFor(async () => BigInt((await state(s3)).total_escrow) === near('0.02'), { what: 'escrow' });
-      await sleep(10000);
+      await sleep(12000); // the 10-block timer is about 6 s; wait past it
       const out = await call(s, 'midge_hatch_out', { syndicateId: s3 });
       s.assert('midge_hatch_out reports HATCHED_OUT_ON_CHAIN', out.ok && out.r.status === 'HATCHED_OUT_ON_CHAIN', { actual: out });
       const fin = await chain.waitFor(async () => { const x = await state(s3); return BigInt(x.total_escrow) === 0n ? x : null; }, { what: 'refund' });
@@ -156,7 +164,7 @@ export default {
         s.assert('sdk.hatchSyndicate -> API -> chain hatches on chain, with a transaction hash and the round nonce (GAP-016: it used to create an in-memory model syndicate)', hatched.mode === 'chain' && Boolean(hatched.txHash) && typeof hatched.roundNonce === 'string', { actual: hatched });
         const onChain = await chain.waitFor(() => state(s4), { what: 'syndicate 4 on chain' });
         s.assert('the chain really has it, with the Roost\'s key', onChain.enclave_public_key === roost.settlePublicKey);
-        const dep = await sdk.deposit(s4, chain.masterId, '0.02');
+        const dep = await sdk.deposit(s4, chain.masterId, '0.02', null, expectFor(50));
         s.assert('sdk.deposit -> API -> chain deposits on chain', dep.status === 'DEPOSITED_ON_CHAIN' && Boolean(dep.txHash), { actual: dep });
         await chain.waitFor(async () => BigInt((await state(s4)).total_escrow) === near('0.02'), { what: 'escrow' });
         const got = await sdk.getSyndicate(s4);
@@ -174,11 +182,11 @@ export default {
         s.assert('a settle without nonce, hash or signature is refused with an explanation, and sends nothing', /round_nonce/.test(bad), { actual: bad });
 
         const s5 = id(5);
-        s.assert('hatch #5 with a 2-block timeout', (await call(s, 'midge_hatch_syndicate', hatchArgs(s5, { timeoutBlocks: 2 }))).ok);
+        s.assert('hatch #5 with a 10-block timeout (the contract floor)', (await call(s, 'midge_hatch_syndicate', hatchArgs(s5, { timeoutBlocks: 10 }))).ok);
         await chain.waitFor(() => state(s5), { what: 'syndicate 5' });
-        s.assert('deposit 0.02', (await call(s, 'midge_deposit', { syndicateId: s5, amountNear: '0.02' })).ok);
+        s.assert('deposit 0.02', (await call(s, 'midge_deposit', { syndicateId: s5, amountNear: '0.02', expect: expectFor(10) })).ok);
         await chain.waitFor(async () => BigInt((await state(s5)).total_escrow) === near('0.02'), { what: 'escrow' });
-        await sleep(10000);
+        await sleep(12000); // the 10-block timer is about 6 s; wait past it
         const out = await sdk.hatchOut(s5);
         s.assert('sdk.hatchOut -> API -> chain returns HATCHED_OUT_ON_CHAIN', out.status === 'HATCHED_OUT_ON_CHAIN' && Boolean(out.txHash), { actual: out });
         const refunded = await chain.waitFor(async () => { const x = await state(s5); return BigInt(x.total_escrow) === 0n ? x : null; }, { what: 'refund #5' });

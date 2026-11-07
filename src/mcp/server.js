@@ -75,7 +75,8 @@ export const FLY_MCP_TOOLS = [
       properties: {
         syndicateId: { type: 'string', description: 'Unique identifier of the target syndicate' },
         amountNear: { type: 'number', default: 0.02, description: 'Deposit amount in NEAR (minimum 0.01 NEAR)' },
-        policyHash: { type: 'string', description: 'SHA-256 release policy hash to consent to (optional, auto-queried if omitted)' },
+        policyHash: { type: 'string', description: 'SHA-256 release policy hash (version 2: recipients, cap, deadline and exit timer) computed from the terms you expect. Required unless `expect` is given. The tool will not copy the hash from the contract.' },
+        expect: { type: 'object', description: 'The terms you consent to; the tool computes the hash from these and refuses if the group differs. Required unless policyHash is given.', properties: { allowedRecipients: { type: 'array', items: { type: 'string' } }, maxReleaseBps: { type: 'number' }, settleDeadlineBlock: { type: 'number' }, timeoutBlocks: { type: 'number' } } },
         flyerId: { type: 'string', description: 'Flyer account ID (model mode only; in chain mode uses signer)' },
       },
       required: ['syndicateId'],
@@ -298,6 +299,7 @@ export class FlyMcpServer {
           const res = await this.chainClient.deposit({
             syndicateId: args.syndicateId,
             policyHash: args.policyHash,
+            expect: args.expect,
             amountNear: args.amountNear !== undefined ? String(args.amountNear) : '0.02',
           });
           return this.formatOutput(res);

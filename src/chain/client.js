@@ -117,12 +117,14 @@ export class FlyChainClient {
   }
 
   /**
-   * Canonical SHA-256 policy hash computation matching on-chain release_policy:v1:...
+   * Canonical SHA-256 policy hash matching on-chain release_policy:v2: recipients, cap, deadline and the exit timer (GAP-025).
+   * The timer is required: it sets the release pacing and the wait to exit, so the caller must say which timer it consents to.
    */
-  computePolicyHash(policy) {
+  computePolicyHash(policy, timeoutBlocks) {
     if (!policy) return null;
-    const recipientsStr = (policy.allowed_recipients || []).join(',');
-    const canonical = `release_policy:v1:${recipientsStr}:${policy.max_release_bps_per_epoch}:${policy.settle_deadline_block}`;
+    if (!Number.isSafeInteger(timeoutBlocks) || timeoutBlocks < 1) throw new Error('[FlyChainClient] computePolicyHash needs the exit timer in blocks');
+    const recipientsStr = [...new Set(policy.allowed_recipients || [])].sort().join(',');
+    const canonical = `release_policy:v2:${recipientsStr}:${policy.max_release_bps_per_epoch}:${policy.settle_deadline_block}:${timeoutBlocks}`;
     return crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
   }
 
@@ -295,7 +297,7 @@ export class FlyChainClient {
     });
 
     const txHash = res.transaction_outcome?.id || res.transaction?.hash;
-    const policyHash = this.computePolicyHash(policy);
+    const policyHash = this.computePolicyHash(policy, timeoutBlocks);
 
     return {
       status: 'HATCHED_ON_CHAIN',
@@ -308,14 +310,46 @@ export class FlyChainClient {
     };
   }
 
-  async deposit({ syndicateId, policyHash = null, amountNear = '0.02' }) {
+  /** What a depositor consents to, as the contract holds it, and whether the exit timer is covered by the hash (false for groups opened before GAP-025). */
+  async getPolicyTerms(syndicateId) {
+    return this.callView('get_policy_terms', { syndicate_id: syndicateId });
+  }
+
+  /** The version-1 hash (recipients, cap, deadline): only for groups opened before GAP-025, whose hash does not cover the timer. */
+  legacyPolicyHash(policy) {
+    const recipientsStr = [...new Set(policy.allowed_recipients || [])].sort().join(',');
+    return crypto.createHash('sha256').update(`release_policy:v1:${recipientsStr}:${policy.max_release_bps_per_epoch}:${policy.settle_deadline_block}`, 'utf8').digest('hex');
+  }
+
+  /**
+   * Deposit. A deposit is consent to a group's terms, so the caller must state them. Either pass `policyHash`, computed from the
+   * terms you expect (computePolicyHash), or pass `expect` = { allowedRecipients, maxReleaseBps, settleDeadlineBlock, timeoutBlocks }
+   * and this client computes the hash from THOSE terms, checks them against what the contract holds, and sends the hash it computed.
+   * It never copies the hash from the contract: that would consent to whatever the group's owner chose, a 10-block timer included.
+   * The contract refuses the deposit if the hash does not match the group's stored one.
+   */
+  async deposit({ syndicateId, policyHash = null, amountNear = '0.02', expect = null }) {
     if (!this.account) {
       throw new Error('[FlyChainClient] Missing NEAR_ACCOUNT_ID / NEAR_PRIVATE_KEY for on-chain transaction');
     }
 
     let pHash = policyHash;
     if (!pHash) {
-      pHash = await this.getPolicyHash(syndicateId);
+      if (!expect || !Array.isArray(expect.allowedRecipients) || !Number.isSafeInteger(expect.maxReleaseBps) || !Number.isSafeInteger(expect.settleDeadlineBlock) || !Number.isSafeInteger(expect.timeoutBlocks)) {
+        throw new Error('[FlyChainClient] a deposit consents to a group\'s terms, so state them: pass policyHash (computed from the terms you expect) or expect { allowedRecipients, maxReleaseBps, settleDeadlineBlock, timeoutBlocks }. This client will not copy the hash from the contract.');
+      }
+      const terms = await this.getPolicyTerms(syndicateId);
+      if (!terms) throw new Error(`[FlyChainClient] syndicate ${syndicateId} not found`);
+      const mine = [...new Set(expect.allowedRecipients)].sort().join(',');
+      const theirs = [...new Set(terms.allowed_recipients || [])].sort().join(',');
+      const diffs = [];
+      if (mine !== theirs) diffs.push(`recipients: you expected [${mine}], the group allows [${theirs}]`);
+      if (Number(terms.max_release_bps_per_epoch) !== expect.maxReleaseBps) diffs.push(`release cap: you expected ${expect.maxReleaseBps} bps, the group has ${terms.max_release_bps_per_epoch}`);
+      if (Number(terms.settle_deadline_block) !== expect.settleDeadlineBlock) diffs.push(`settle deadline: you expected block ${expect.settleDeadlineBlock}, the group has ${terms.settle_deadline_block}`);
+      if (Number(terms.timeout_blocks) !== expect.timeoutBlocks) diffs.push(`exit timer: you expected ${expect.timeoutBlocks} blocks, the group has ${terms.timeout_blocks}`);
+      if (diffs.length) throw new Error(`[FlyChainClient] refusing to deposit, the group's terms differ from what you expected: ${diffs.join('; ')}`);
+      const policy = { allowed_recipients: expect.allowedRecipients, max_release_bps_per_epoch: expect.maxReleaseBps, settle_deadline_block: expect.settleDeadlineBlock };
+      pHash = terms.timer_in_consent_hash ? this.computePolicyHash(policy, expect.timeoutBlocks) : this.legacyPolicyHash(policy);
     }
 
     const action = actions.functionCall(

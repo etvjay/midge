@@ -29,7 +29,9 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   const state = async (id) => chain.view('get_syndicate', { syndicate_id: id });
   const bal = (acc) => chain.balance(acc);
 
+  const timers = {}; // exit timer per group: part of what depositors consent to (GAP-025)
   async function hatch(id, { timeoutBlocks = 50, pol = policy(), payout = rcpt.id } = {}) {
+    timers[id] = timeoutBlocks;
     createdSyndicates.push(id);
     return chain.send(coord.account, 'hatch', {
       syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1,
@@ -39,7 +41,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` });
   }
   async function deposit(flyer, id, amountNear, pol = policy()) {
-    return chain.send(flyer.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(pol) }, { deposit: near(amountNear), gas: 30000000000000n, label: `deposit ${flyer.id} -> ${id}` });
+    return chain.send(flyer.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(pol, timers[id] ?? 50) }, { deposit: near(amountNear), gas: 30000000000000n, label: `deposit ${flyer.id} -> ${id}` });
   }
   async function sealedRound(flyers, amountEach) {
     for (const f of flyers) await bid(f.id, amountEach);
@@ -217,7 +219,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
 
   const id3 = synId(3);
   await ctx.step('the Roost stalls: a member takes their own funds back with hatch_out', async (s) => {
-    await must(s, 'hatch #3 (timeout 2 blocks) succeeded', hatch(id3, { timeoutBlocks: 2 }));
+    await must(s, 'hatch #3 (timeout 10 blocks, the floor) succeeded', hatch(id3, { timeoutBlocks: 10 }));
     await chain.waitFor(() => state(id3), { what: 'syndicate 3' });
     const f2 = F[1];
     await must(s, 'f2 deposited 0.03', deposit(f2, id3, '0.03'));

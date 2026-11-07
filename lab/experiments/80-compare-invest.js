@@ -41,8 +41,9 @@ export default {
     const recovered = (seen) => Object.entries(BIDS).filter(([k, v]) => seen[who[k].id] === near(v)).length;
     const policyFor = (r) => ({ allowed_recipients: [r.id], max_release_bps_per_epoch: 10000, settle_deadline_block: 500000000 });
     const state = (id) => chain.view('get_syndicate', { syndicate_id: id });
-    const hatch = (id, roost, p, timeout) => { created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roost.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: timeout, payout_recipient: recipient.id, release_policy: p }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
-    const deposit = (f, id, p, amt) => chain.send(f.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(p) }, { deposit: near(amt), gas: 30000000000000n, label: `deposit ${f.id} -> ${id}` });
+    const timers = {}; // exit timer per group: it is part of what depositors consent to (GAP-025)
+    const hatch = (id, roost, p, timeout) => { timers[id] = timeout; created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roost.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: timeout, payout_recipient: recipient.id, release_policy: p }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
+    const deposit = (f, id, p, amt) => chain.send(f.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(p, timers[id]) }, { deposit: near(amt), gas: 30000000000000n, label: `deposit ${f.id} -> ${id}` });
     const escrowsSeenByObserver = async (id) => { const seen = {}; for (const f of flyers()) seen[f.id] = BigInt(await chain.view('get_escrow', { syndicate_id: id, account_id: f.id })); return seen; };
 
     await ctx.step('set up: four backers, a recipient and an organizer, fresh accounts', async (s) => {

@@ -33,7 +33,7 @@ export default {
       const members = people.slice(0, count);
       const h = await chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roost.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: 16, payout_recipient: recipient.id, release_policy: policy() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` });
       s.assert(`hatch ${id}`, h.ok); await chain.waitFor(() => state(id), { what: 'syndicate' });
-      for (const m of members) { const r = await chain.send(m.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy()) }, { deposit: near('0.02'), gas: 30000000000000n, label: `deposit ${m.id} -> ${id}` }); if (!r.ok) throw new Error(`deposit failed: ${r.error}`); }
+      for (const m of members) { const r = await chain.send(m.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy(), 16) }, { deposit: near('0.02'), gas: 30000000000000n, label: `deposit ${m.id} -> ${id}` }); if (!r.ok) throw new Error(`deposit failed: ${r.error}`); }
       await chain.waitFor(async () => BigInt((await state(id)).total_escrow) === near('0.02') * BigInt(count), { what: 'deposits' });
       for (const m of members) roost.submitSealedIntent({ flyerId: m.id, cipherTextHex: sealToModel(JSON.stringify({ amount: '0.01' }), roost.intentPublicKey) });
       const agg = roost.aggregateAndClear({ roundId: id }); const st = await state(id);

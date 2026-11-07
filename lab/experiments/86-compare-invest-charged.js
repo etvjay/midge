@@ -29,7 +29,7 @@ export default {
     const state = (id) => chain.view('get_syndicate', { syndicate_id: id });
     const policy = () => ({ allowed_recipients: [recipient.id], max_release_bps_per_epoch: 10000, settle_deadline_block: 500000000 });
     const hatch = (id, roost) => { created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roost.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: 16, payout_recipient: recipient.id, release_policy: policy() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
-    const deposit = (k, id) => chain.send(people[k].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy()) }, { deposit: near(DEPOSIT), gas: 30000000000000n, label: `deposit ${k} -> ${id}` });
+    const deposit = (k, id) => chain.send(people[k].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy(), 16) }, { deposit: near(DEPOSIT), gas: 30000000000000n, label: `deposit ${k} -> ${id}` });
     const escrows = async (id) => Object.fromEntries(await Promise.all(WHO.map(async (k) => [k, BigInt(await chain.view('get_escrow', { syndicate_id: id, account_id: people[k].id }))])));
     const height = async () => Number((await chain.provider.viewBlock({ finality: 'final' })).header.height);
     /** What an observer reads from a settlement transaction: its public arguments, as an explorer shows them. */

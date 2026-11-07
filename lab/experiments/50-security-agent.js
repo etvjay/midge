@@ -34,8 +34,9 @@ export default {
     let own; let naive; let atk; let agentKey; let agent; let countBefore;
     const state = (id) => chain.view('get_syndicate', { syndicate_id: id });
     const policy = () => ({ allowed_recipients: [own.id], max_release_bps_per_epoch: 10000, settle_deadline_block: 500000000 });
-    const hatch = (id, timeoutBlocks) => { created.push(id); return chain.send(chain.sub('c').account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roost.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: timeoutBlocks, payout_recipient: own.id, release_policy: policy() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
-    const deposit = (id, amt) => chain.send(own.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy()) }, { deposit: near(amt), gas: 30000000000000n, label: `deposit ${id}` });
+    const timers = {}; // exit timer per group: it is part of what depositors consent to (GAP-025)
+    const hatch = (id, timeoutBlocks) => { timers[id] = timeoutBlocks; created.push(id); return chain.send(chain.sub('c').account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roost.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: timeoutBlocks, payout_recipient: own.id, release_policy: policy() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
+    const deposit = (id, amt) => chain.send(own.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy(), timers[id]) }, { deposit: near(amt), gas: 30000000000000n, label: `deposit ${id}` });
     const bal = (a) => chain.balance(a.account || a);
     const txSigner = async (hash) => { const r = await (await fetch('https://archival-rpc.testnet.fastnear.com', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'EXPERIMENTAL_tx_status', params: [hash, own.id] }) })).json(); return r.result?.transaction?.public_key; };
 
@@ -49,7 +50,7 @@ export default {
       countBefore = Number(await chain.view('get_syndicate_count', {}));
       [own, naive, atk] = await createMembers(chain, { rootDir: ctx.rootDir, tag: `s${tag.slice(-5)}`, count: 3, fundNear: '0.4', names: ['own', 'nv', 'atk'] });
       s.assert('the owner, the control account and the attacker exist', (await Promise.all([own, naive, atk].map((m) => accountExists(chain, m.id)))).every(Boolean));
-      s.assert('hatch syndicate #1 (2-block timelock)', (await hatch(sid(1), 2)).ok);
+      s.assert('hatch syndicate #1 (10-block timelock, the contract floor)', (await hatch(sid(1), 10)).ok);
       await chain.waitFor(() => state(sid(1)), { what: 'syndicate 1' });
       s.assert('the owner deposits 0.05 NEAR with the full-access key', (await deposit(sid(1), '0.05')).ok);
       await chain.waitFor(async () => BigInt((await state(sid(1))).total_escrow) === near('0.05'), { what: 'escrow' });
@@ -107,7 +108,7 @@ export default {
     });
 
     await ctx.step('what the key IS for: after the timelock the agent takes the owner\'s funds back out, and only the owner\'s', async (s) => {
-      await sleep(4000); // the 2-block timelock of syndicate #1
+      await sleep(9000); // the 10-block timelock of syndicate #1 (the contract's floor; about 6 s)
       const ownerBefore = await bal(own);
       const r = await asAgent(chain.coordinatorId, [actions.functionCall('hatch_out', { syndicate_id: sid(1) }, 35000000000000n, 0n)]);
       s.evidence('exit', { ok: r.ok, hash: r.hash, error: r.error, explorer: r.hash ? chain.explorer(r.hash) : null });

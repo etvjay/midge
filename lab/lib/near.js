@@ -39,9 +39,14 @@ export function deriveSubKeyPair(masterPrivKeyString, subId) {
   return { keyPair: KeyPair.fromString('ed25519:' + bs58encode(Buffer.concat([seed, rawPub]))), rawPub, seed };
 }
 
-export const computePolicyHash = (policy) => {
+/**
+ * The hash depositors consent to (version 2, GAP-025): recipients, cap, deadline AND the exit timer. The timer is required on
+ * purpose: it sets the release pacing and the wait to exit, so a caller must state which timer it is consenting to.
+ */
+export const computePolicyHash = (policy, timeoutBlocks) => {
+  if (!Number.isSafeInteger(timeoutBlocks) || timeoutBlocks < 1) throw new Error('computePolicyHash needs the group\'s exit timer in blocks (it is part of what depositors consent to)');
   const sorted = [...new Set(policy.allowed_recipients)].sort();
-  return crypto.createHash('sha256').update(`release_policy:v1:${sorted.join(',')}:${policy.max_release_bps_per_epoch}:${policy.settle_deadline_block}`, 'utf8').digest('hex');
+  return crypto.createHash('sha256').update(`release_policy:v2:${sorted.join(',')}:${policy.max_release_bps_per_epoch}:${policy.settle_deadline_block}:${timeoutBlocks}`, 'utf8').digest('hex');
 };
 
 export const near = (n) => BigInt(parseNearAmount(String(n)));

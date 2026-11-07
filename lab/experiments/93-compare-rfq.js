@@ -44,7 +44,7 @@ export default {
     const waitForTimer = (id) => chain.waitFor(async () => (await height('final')) - Number((await state(id)).epoch_start_block) >= 16, { what: 'the exit timer', timeoutMs: 120000 });
     const rfqView = (id) => chain.view('get_rfq', { rfq_id: id }, market.id);
     const hatch = (id, keyHex) => { created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: keyHex, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: 16, payout_recipient: P.t.id, release_policy: policyFor() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
-    const deposit = (who, id) => chain.send(P[who].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor()) }, { deposit: near(COMMON), gas: 30000000000000n, label: `deposit ${who} -> ${id}` });
+    const deposit = (who, id) => chain.send(P[who].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor(), 16) }, { deposit: near(COMMON), gas: 30000000000000n, label: `deposit ${who} -> ${id}` });
     const cast = (host, round, who, body) => { const cipherTextHex = sealToModel(JSON.stringify(body), host.intentPublicKey); return host.submitSignedIntent({ flyerId: P[who].id, cipherTextHex, publicKey: P[who].key.keyPair.getPublicKey().toString(), signature: signInputWithNearKey(P[who].key.keyPair.toString(), inputMessage({ ...round, flyerId: P[who].id, seq: 1, cipherTextHex })), seq: 1 }); };
 
     await ctx.step('set up: a taker, four makers, and the open RFQ contract deployed fresh', async (s) => {

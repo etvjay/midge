@@ -84,9 +84,10 @@ function computeAllocationsHash(allocations) {
   return crypto.createHash('sha256').update(allocStr, 'utf8').digest('hex');
 }
 
-function computePolicyHash(policy) {
+function computePolicyHash(policy, timeoutBlocks) {
+  // version 2 (GAP-025): the exit timer is part of what depositors consent to
   const sorted = [...new Set(policy.allowed_recipients)].sort();
-  const canonicalStr = `release_policy:v1:${sorted.join(',')}:${policy.max_release_bps_per_epoch}:${policy.settle_deadline_block}`;
+  const canonicalStr = `release_policy:v2:${sorted.join(',')}:${policy.max_release_bps_per_epoch}:${policy.settle_deadline_block}:${timeoutBlocks}`;
   return crypto.createHash('sha256').update(canonicalStr, 'utf8').digest('hex');
 }
 
@@ -317,7 +318,7 @@ async function main() {
   console.log(`      ✓ Hatched syndicate (tx: ${hatchTxHash})`);
 
   // Computed & verified policy hash
-  const policyHash1 = computePolicyHash(releasePolicy1);
+  const policyHash1 = computePolicyHash(releasePolicy1, 50);
   console.log(`      ✓ Syndicate Policy Hash: ${policyHash1}`);
   await new Promise(r => setTimeout(r, 1500));
 
@@ -448,7 +449,7 @@ async function main() {
     deposit: BigInt(parseNearAmount('0.01')),
     gas: 40000000000000n
   });
-  const atkPolHash = computePolicyHash(releasePolicyAtk1);
+  const atkPolHash = computePolicyHash(releasePolicyAtk1, 50);
   await new Promise(r => setTimeout(r, 1500));
   await flyer1Account.callFunctionRaw({
     contractId: coordinatorId,
@@ -510,7 +511,7 @@ async function main() {
     deposit: BigInt(parseNearAmount('0.01')),
     gas: 40000000000000n
   });
-  const atk2PolHash = computePolicyHash(releasePolicyAtk2);
+  const atk2PolHash = computePolicyHash(releasePolicyAtk2, 50);
   await new Promise(r => setTimeout(r, 1500));
   await flyer1Account.callFunctionRaw({
     contractId: coordinatorId,
@@ -579,7 +580,7 @@ async function main() {
     settle_deadline_block: 500000000
   };
 
-  console.log(`      1. Calling hatch("${syndicateEscapeId}") with timeout_blocks=2...`);
+  console.log(`      1. Calling hatch("${syndicateEscapeId}") with timeout_blocks=10 (the contract's floor)...`);
   const hatchEscRes = await coordAccount.callFunctionRaw({
     contractId: coordinatorId,
     methodName: 'hatch',
@@ -590,7 +591,7 @@ async function main() {
       max_spend_near: 1,
       enclave_public_key: encPubHex,
       expected_code_hash: crypto.randomBytes(32).toString('hex'),
-      timeout_blocks: 2,
+      timeout_blocks: 10,
       payout_recipient: coordinatorId,
       release_policy: releasePolicyEscape
     },
@@ -605,7 +606,7 @@ async function main() {
   });
   console.log(`      ✓ Hatched escape syndicate (tx: ${hatchEscTxHash})`);
 
-  const escPolHash = computePolicyHash(releasePolicyEscape);
+  const escPolHash = computePolicyHash(releasePolicyEscape, 10);
   await new Promise(r => setTimeout(r, 1500));
 
   console.log('      2. Depositing from Flyer 2 (0.03 NEAR)...');

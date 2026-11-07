@@ -41,7 +41,7 @@ export default {
       return chain.send(coord.account, 'hatch_two_room', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: keyA, second_enclave_public_key: keyB, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: 16, payout_recipient: recipient.id, release_policy: policy() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch_two_room ${id}` });
     }
     async function fund(id, who) {
-      for (const k of who) { const r = await chain.send(P[k].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy()) }, { deposit: near(DEPOSIT), gas: 30000000000000n, label: `deposit ${k} -> ${id}` }); if (!r.ok) throw new Error(`deposit failed: ${r.error}`); }
+      for (const k of who) { const r = await chain.send(P[k].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy(), 16) }, { deposit: near(DEPOSIT), gas: 30000000000000n, label: `deposit ${k} -> ${id}` }); if (!r.ok) throw new Error(`deposit failed: ${r.error}`); }
       await chain.waitFor(async () => BigInt((await state(id)).total_escrow) === near(DEPOSIT) * BigInt(who.length), { what: 'deposits' });
     }
     /** A member seals once per room (a different ciphertext for each) and signs each submission with their real NEAR key. */

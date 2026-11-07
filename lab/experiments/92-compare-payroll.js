@@ -81,7 +81,7 @@ export default {
       const id = `pay-${tag}-m${month}`; created.push(id); const host = new HostedRoost({ provider, requireSignedInputs: true, accountKeyCheck: keyCheck });
       const h = await chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: host.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: 16, payout_recipient: addr[0], release_policy: policyFor(all) }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` });
       gas.MIDGE += h.gasTGas || 0; s.assert(`month ${month}: hatch`, h.ok, { actual: h.error }); await chain.waitFor(() => state(id), { what: 'syndicate' });
-      const dep = await chain.send(P.er.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor(all)) }, { deposit: near(DEPOSIT), gas: 30000000000000n, label: `deposit er -> ${id}` });
+      const dep = await chain.send(P.er.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor(all), 16) }, { deposit: near(DEPOSIT), gas: 30000000000000n, label: `deposit er -> ${id}` });
       gas.MIDGE += dep.gasTGas || 0; s.assert(`month ${month}: the employer deposits ${DEPOSIT}`, dep.ok, { actual: dep.error });
       await chain.waitFor(async () => BigInt((await state(id)).total_escrow) === near(DEPOSIT), { what: 'deposit' });
       const st = await state(id); const round = { contractId: chain.coordinatorId, syndicateId: id, epoch: Number(st.epoch), roundNonce: st.round_nonce }; host.openRound(round);
@@ -142,7 +142,7 @@ export default {
       const id = `pay-${tag}-dead`; created.push(id); const host = new HostedRoost({ provider }); const all = [P.a1.id, P.tx.id];
       s.assert('hatch', (await chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: host.settlePublicKey, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: 16, payout_recipient: all[0], release_policy: policyFor(all) }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` })).ok);
       await chain.waitFor(() => state(id), { what: 'syndicate' });
-      s.assert('the employer deposits', (await chain.send(P.er.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor(all)) }, { deposit: near(DEPOSIT), gas: 30000000000000n, label: 'deposit' })).ok);
+      s.assert('the employer deposits', (await chain.send(P.er.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor(all), 16) }, { deposit: near(DEPOSIT), gas: 30000000000000n, label: 'deposit' })).ok);
       await chain.waitFor(async () => BigInt((await state(id)).total_escrow) === near(DEPOSIT), { what: 'deposit' });
       await waitForTimer(id);
       const r = await chain.send(P.er.account, 'hatch_out', { syndicate_id: id }, { gas: 60000000000000n, label: 'exit' }); s.assert('the employer exits alone', r.ok, { actual: r.error });

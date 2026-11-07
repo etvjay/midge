@@ -48,8 +48,9 @@ export default {
 
     // ---------- Midge helpers ----------
     const policyFor = () => ({ allowed_recipients: [seller.id], max_release_bps_per_epoch: 10000, settle_deadline_block: 500000000 });
-    const hatch = (id, enclaveKeyHex, timeout) => { created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: enclaveKeyHex, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: timeout, payout_recipient: seller.id, release_policy: policyFor() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
-    const deposit = (who, id, amt) => chain.send(people[who].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor()) }, { deposit: near(amt), gas: 30000000000000n, label: `deposit ${who} -> ${id}` });
+    const timers = {}; // exit timer per group: it is part of what depositors consent to (GAP-025)
+    const hatch = (id, enclaveKeyHex, timeout) => { timers[id] = timeout; created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: enclaveKeyHex, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: timeout, payout_recipient: seller.id, release_policy: policyFor() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
+    const deposit = (who, id, amt) => chain.send(people[who].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor(), timers[id]) }, { deposit: near(amt), gas: 30000000000000n, label: `deposit ${who} -> ${id}` });
     const escrowsOf = async (id, members = WHO) => Object.fromEntries(await Promise.all(members.map(async (k) => [k, BigInt(await chain.view('get_escrow', { syndicate_id: id, account_id: people[k].id }))])));
     const waitForTimer = (id, blocks) => chain.waitFor(async () => (await height('final')) - Number((await state(id)).epoch_start_block) >= blocks, { what: 'the exit timer', timeoutMs: 120000 });
 

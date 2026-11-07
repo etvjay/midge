@@ -484,7 +484,7 @@ export class FlyApiDaemon {
       if (this.chainWrites()) {
         try {
           // On chain the depositor is the account this server signs with; a flyerId in the body is not honoured.
-          const dep = await this.chainClient.deposit({ syndicateId: synId, amountNear: String(body.amountNear ?? '0.02'), policyHash: body.policyHash || null });
+          const dep = await this.chainClient.deposit({ syndicateId: synId, amountNear: String(body.amountNear ?? '0.02'), policyHash: body.policyHash || null, expect: body.expect || null });
           this.events.emit('syndicate_event', { syndicateId: synId, type: 'deposit_received', payload: { flyerId: dep.flyerId, amountNear: dep.amountNear, txHash: dep.txHash } });
           return this.sendJson(res, 200, dep, req);
         } catch (err) {
