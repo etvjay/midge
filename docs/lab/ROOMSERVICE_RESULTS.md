@@ -19,3 +19,18 @@ All nine held: one program described with the host's keys; a five-member vote re
 
 ## Not shown
 The other six room kinds, the four adapters (MCP, REST, SSE, SDK), a hardware host, and the two-host second signature (returned as a later step). One operator played every member.
+
+## Slice 2: the other six room kinds (`E-ROOMSERVICE-02`)
+
+*Kept run `docs/lab-runs/20261107T161239Z-4aad` (PASS, three repeats, with `E-ROOMSERVICE-01`). Predictions: `PROGRAMME_PLAN.md`, committed before any code.*
+
+Pool, auction, quote, cross, RFQ and pay run now sit behind the same four verbs. For each: the same order hash, allocations, charges and outcome as the old path on a twin host; a contract call (`settle_batch_charged`) whose signature verifies against the host's key; a variant that decides nothing returns no settlement and signs nothing; wrong parameters return `INVALID_PARAMS` and leave the inputs queued.
+
+- **Confidential extras held.** A pay run's receipts leave only as sealed statements (one per payee, one for the employer, one for the auditor), and the outcome and settlement name no person, invoice or tax amount. An RFQ's plain terms (side, units, price) are left out of every default result and returned only with `includeConfidential: true`; an identical retry gives the same single signature either way.
+- **Signed-input programs** (vote, RFQ, pay run) refuse an unsigned host with `NOT_AUTHORISED`; `describe()` says which need signing.
+- **A real bug found by the table of wrong parameters:** an unknown `pricing` value on a quote or an RFQ made the host throw a raw error, which would have surfaced as an internal error. The host now rejects it with a proper message (two checks, each mutation-tested).
+- **My wrong assumption, again:** I listed a numeric `referencePrice` as invalid; the host accepts numbers. It ran, consumed the queue and failed the next assertion. Removed.
+- **Slice 1's "exactly one program" assertion was superseded** by the seven-program registry and rewritten; the rest of slice 1 is unchanged.
+- **Mutation testing:** 13 deliberate breaks of the service plus the 2 host checks, all caught (one of my 14 was not a real mutation and matched no text).
+
+**Weakness that remains (stated before the run):** the existing host route for an RFQ already returns plain terms to its caller. Slice 2 keeps `RoomService` from adding to that; it does not change that route.
