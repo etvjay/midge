@@ -1,12 +1,12 @@
 {
- "generatedAt": "2026-11-07T12:30:00.590Z",
+ "generatedAt": "2026-11-07T12:47:22.922Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 70,
+  "settled": 72,
   "exit": 25,
-  "other": 53,
+  "other": 55,
   "rejected": 28
  },
  "security": {
@@ -2635,6 +2635,42 @@
    "kind": "settled",
    "exp": "E-CMP-PAYROLL-01",
    "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "8JF13p4y726LBHqx9LYT5rTRk7XWoUQo5QeX9hDap5Rm",
+   "label": "close buy rfq",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-RFQ-01",
+   "run": "20261107T124146Z-ca19",
+   "error": null
+  },
+  {
+   "hash": "qPyNe44H6SVdDmcBbp8vcB8N4dKwsy7jeRVrT5iuk5p",
+   "label": "close sell rfq",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-RFQ-01",
+   "run": "20261107T124146Z-ca19",
+   "error": null
+  },
+  {
+   "hash": "6VjyuMYkU1QNVkrPFM7ZK3ESkUwu7DZn6usRYdXPZDQY",
+   "label": "settle_batch_charged rfq-mw6e7ivf-sealed buy",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-RFQ-01",
+   "run": "20261107T124146Z-ca19",
+   "error": null
+  },
+  {
+   "hash": "5Kjj7cGMAdM7ewwE53Eg1KrQVvYU1k2FGeHQMm54QgGR",
+   "label": "settle_batch_charged rfq-mw6e7ivf-sealed sell",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-RFQ-01",
+   "run": "20261107T124146Z-ca19",
    "error": null
   },
   {

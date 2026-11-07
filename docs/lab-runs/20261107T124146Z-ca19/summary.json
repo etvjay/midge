@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T124146Z-ca19",
+  "startedAt": "2026-11-07T12:41:46.986Z",
+  "rootHash": "5478a786714ba50382bf4ec3fef2bc8474866067f5b9c65bcbe1eb65bb6053b8",
+  "verdicts": {
+    "E-CMP-RFQ-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 117,
+  "commit": "943a177821eda023d9925ba27fa1a64b2a2ccdcd"
+}
