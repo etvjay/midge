@@ -4,7 +4,8 @@ Vercel project `midge` (team jaydearcadians-projects), deployed from `site/` wit
 
 | When (UTC) | Deployment | Git commit | What | Where |
 |---|---|---|---|---|
-| 2026-11-07 13:10 | `midge-kgbfeab2x-jaydearcadians-projects.vercel.app` | `56e9dca` | Requests for quote in both directions listed as run next to an open RFQ; 300 recorded transactions; the live contract check expects `6Jt4kSPX…` | **https://midge.vercel.app** (current) |
+| 2026-11-07 13:35 | `midge-aftuxtogk-jaydearcadians-projects.vercel.app` | `c7d78e9` | Ongoing groups listed as run; the release-cap limit stated on the page (GAP-024: the cap bounds each payment, not the pace); 309 recorded transactions; the live contract check expects `6Jt4kSPX…` | **https://midge.vercel.app** (current) |
+| 2026-11-07 13:10 | `midge-kgbfeab2x-jaydearcadians-projects.vercel.app` | `56e9dca` | Requests for quote in both directions listed as run next to an open RFQ; 300 recorded transactions; the live contract check expects `6Jt4kSPX…` | per-deployment URL |
 | 2026-11-07 12:35 | `midge-c3pevrrqq-jaydearcadians-projects.vercel.app` | `574a02d` | Payroll listed as run next to a public pay run, with what it hides (who is paid, receipts) and what it does not (amounts; a person is still linkable across months by amount); 296 recorded transactions; the live contract check expects `6Jt4kSPX…` | per-deployment URL |
 | 2026-11-07 12:15 | `midge-14cxhk5hb-jaydearcadians-projects.vercel.app` | `b849326` | Payroll described as private who with private receipts (amounts public); voting listed as run next to an open poll and a multisig; 282 recorded transactions; the live contract check expects `6Jt4kSPX…` | per-deployment URL |
 | 2026-11-07 11:20 | `midge-36lw4bf4v-jaydearcadians-projects.vercel.app` | `cac891b` | Lending quotes and block trades listed as run on testnet next to open versions, with their limits; 278 recorded transactions; the live contract check expects `6Jt4kSPX…` | per-deployment URL |
