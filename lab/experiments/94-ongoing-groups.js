@@ -7,7 +7,7 @@ import { signInputWithNearKey, inputMessage, makeAccountKeyCheck } from '../../s
 
 const provider = { simulated: true, attest: async () => Buffer.from('lab-local-no-hardware'), info: async () => ({}) };
 const MEMBERS = ['u1', 'u2', 'u3', 'u4', 'u5']; const FOUNDERS = ['u1', 'u2', 'u3', 'u4'];
-const DEP = '0.1'; const CAP_BPS = 2500;
+const DEP = '0.1'; const CAP_BPS = 2500; const TIMER = 24;
 const toN = (x) => near(String(x));
 
 export default {
@@ -15,7 +15,7 @@ export default {
   title: 'Ongoing groups on testnet: a Dark Vault that lives across three rounds with three programs, takes a late deposit, and what its release cap really bounds',
   tier: 'testnet',
   requires: ['near-key', 'network'],
-  hypothesis: 'Predictions are fixed in docs/lab/PROGRAMME_PLAN.md (committed before this ran). A. Four members deposit 0.1 each into a Dark Vault (25% cap, 16-block exit timer); round 1 an investing pool (0.05 to rp); a fifth member deposits 0.1; round 2 a ballot among all five (0.05 to ra); round 3 a lending quote (0.04 to rl, won by u3 at 400 bps). (1) The epoch rises by exactly 1 per settlement and the round nonce changes each time. (2) The late member joins between rounds and is counted and charged correctly; escrows sum to the group total after every round. (3) Replaying round 1\'s signed settlement after round 2 is refused and changes nothing. (4) The exit timer restarts each epoch: an exit right after round 3 is refused; 16 blocks after the last settlement every member exits alone with exactly deposit minus charges (u1 0.08, u2 0.08, u3 0.035, u4 0.075, u5 0.09). B. With a key we hold standing in for a compromised host, a payout above 25% of the current escrow is refused, but payouts of exactly 25% of the current escrow succeed back to back (0.1, 0.075, 0.05625), releasing 0.23125 of 0.4, which is 57.8% against a stated 25% per epoch: expected to be a design weakness. Fails if A breaks; B is recorded as a finding if it holds.',
+  hypothesis: 'Predictions are fixed in docs/lab/PROGRAMME_PLAN.md (committed before the first run, and again before this re-run on the GAP-024 fix). A. Four members deposit 0.1 each into a Dark Vault (25% cap, 24-block exit timer, so a 48-block release window); round 1 an investing pool (0.05 to rp); a fifth member deposits 0.1; round 2 a ballot among all five (0.05 to ra); round 3 a lending quote (0.04 to rl, won by u3 at 400 bps); each round waits for the previous window to end, so each opens its own window. (1) The epoch rises by exactly 1 per round and the nonce changes each time. (2) The late member joins between rounds and is counted and charged; escrows sum to the group total after every round. (3) Replaying round 1\'s signed settlement after round 2 is refused and changes nothing. (4) An exit straight after round 3 is refused; a fourth, small round inside round 3\'s window does not advance the epoch or move the exit timer\'s start; members can exit at the window start plus the timer, which is earlier than the fourth settlement plus the timer (the old rule would have locked them out until then), with exactly deposit minus charges. B. With a key we hold standing in for a compromised host, 25% cap, 24-block timer: 0.11 of 0.4 is refused; exactly 0.1 succeeds; a second payout of 0.075 straight after is refused (cumulative), and so is 0.001; after the window ends 0.075 (25% of the then-current 0.3) succeeds; the window\'s real length in seconds is read from the chain and the implied time to release 90% is reported; members exit with exact remainders. The limit is only as strict as the timer. Fails if any breaks.',
   limits: [
     'One operator controls every account and the host; the members are scripted. The host is a local HostedRoost with a simulated attestation provider; signed inputs use real NEAR keys and the real account-key lookup.',
     'Three rounds and five members: not a long-lived or large group. There is no baseline; this tests the contract\'s lifecycle claims against what it says.',
@@ -34,13 +34,15 @@ export default {
     const keyCheck = makeAccountKeyCheck({ rpcUrl: 'https://test.rpc.fastnear.com', contractId: chain.coordinatorId });
     const escrowOf = async (id, who) => BigInt(await chain.view('get_escrow', { syndicate_id: id, account_id: P[who].id }));
     const policyFor = () => ({ allowed_recipients: [P.rp.id, P.ra.id, P.rb.id, P.rl.id], max_release_bps_per_epoch: CAP_BPS, settle_deadline_block: 500000000 });
-    const hatch = (id, keyHex) => { created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'DARK_VAULT', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: keyHex, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: 16, payout_recipient: P.rp.id, release_policy: policyFor() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
+    const hatch = (id, keyHex) => { created.push(id); return chain.send(coord.account, 'hatch', { syndicate_id: id, syndicate_type: 'DARK_VAULT', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: keyHex, expected_code_hash: crypto.randomBytes(32).toString('hex'), timeout_blocks: TIMER, payout_recipient: P.rp.id, release_policy: policyFor() }, { deposit: near('0.01'), gas: 40000000000000n, label: `hatch ${id}` }); };
     const deposit = (who, id) => chain.send(P[who].account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policyFor()) }, { deposit: near(DEP), gas: 30000000000000n, label: `deposit ${who} -> ${id}` });
     const cast = (host, round, who, body) => { const cipherTextHex = sealToModel(JSON.stringify(body), host.intentPublicKey); return host.submitSignedIntent({ flyerId: P[who].id, cipherTextHex, publicKey: P[who].key.keyPair.getPublicKey().toString(), signature: signInputWithNearKey(P[who].key.keyPair.toString(), inputMessage({ ...round, flyerId: P[who].id, seq: 1, cipherTextHex })), seq: 1 }); };
     const roundOf = async (id) => { const st = await state(id); return { contractId: chain.coordinatorId, syndicateId: id, epoch: Number(st.epoch), roundNonce: st.round_nonce }; };
     const waitSettled = (id, expectTotal) => chain.waitFor(async () => { const x = await state(id); return !x.is_settling && BigInt(x.total_escrow) === expectTotal; }, { what: 'settlement resolved' });
     const sumEscrows = async (id, who) => { let t = 0n; for (const k of who) t += await escrowOf(id, k); return t; };
-    const waitForTimer = (id) => chain.waitFor(async () => (await height('final')) - Number((await state(id)).epoch_start_block) >= 16, { what: 'the exit timer', timeoutMs: 120000 });
+    const windowOf = (cid) => chain.view('get_release_window', { syndicate_id: cid });
+    const waitWindowEnd = async (cid) => { const w = await windowOf(cid); if (w) await chain.waitFor(async () => (await height('final')) > Number(w.ends_at_block), { what: 'the release window to end', timeoutMs: 120000, everyMs: 1000 }); };
+    const waitForTimer = (id) => chain.waitFor(async () => (await height('final')) - Number((await state(id)).epoch_start_block) >= TIMER, { what: 'the exit timer', timeoutMs: 120000 });
 
     await ctx.step('set up: five members and four recipients', async (s) => {
       countBefore = Number(await chain.view('get_syndicate_count', {}));
@@ -91,6 +93,7 @@ export default {
     });
 
     await ctx.step('A · round 2: a ballot among all five, the pool of 0.05 to the winner', async (s) => {
+      await waitWindowEnd(id);
       const round = await roundOf(id); host.openRound(round);
       for (const [k, c] of [['u1', 'A'], ['u2', 'A'], ['u3', 'B'], ['u4', 'A'], ['u5', 'B']]) await cast(host, round, k, { choice: c });
       const out = host.runBallot({ options: { A: P.ra.id, B: P.rb.id }, roll: MEMBERS.map((k) => P[k].id), share: '0.01', quorumBps: 5000, rule: 'majority', roundId: `${id}-r2` });
@@ -112,6 +115,7 @@ export default {
     });
 
     await ctx.step('A · round 3: a lending quote, 0.04 NEAR loan to rl won by u3 at 400 bps', async (s) => {
+      await waitWindowEnd(id);
       const round = await roundOf(id); host.openRound(round);
       for (const [k, bps] of [['u2', 450], ['u3', 400], ['u4', 500], ['u5', 600]]) await cast(host, round, k, { rateBps: bps });
       const out = host.runQuote({ shape: 'lend', counterparty: P.rl.id, amount: '0.04', limit: 700, roundId: `${id}-r3` });
@@ -126,20 +130,48 @@ export default {
       found.epochs = epochs;
     });
 
-    await ctx.step('A · the exit timer restarted with the last epoch: an immediate exit is refused, and 16 blocks later everyone leaves with exactly their remainder', async (s) => {
-      const sinceHatch = (await height()) - openedAt;
+    await ctx.step('A · an exit straight after round 3 is refused: the window opened by round 3 started the timer', async (s) => {
+      const st = await state(id); const w = await windowOf(id); const elapsed = (await height()) - Number(st.epoch_start_block);
+      s.assert('round 3 opened a new window and the group\'s epoch start is that window\'s start', Number(w.start_block) === Number(st.epoch_start_block), { actual: [w.start_block, st.epoch_start_block] });
       const early = await chain.send(P.u1.account, 'hatch_out', { syndicate_id: id }, { gas: 60000000000000n, label: 'early exit as u1' });
       s.evidence('tx', { label: early.label, hash: early.hash, ok: early.ok, explorer: early.explorer, error: early.error });
-      s.assert('(4) an exit right after round 3 is refused: the deliberation window restarted', !early.ok && /LOCKED|Deliberation window/.test(early.error || ''), { actual: early.error });
-      s.observe('blocks since the group was opened, far more than the 16-block timer', sinceHatch);
+      s.assert(`precondition: only ${elapsed} blocks have passed since the window opened, inside the ${TIMER}-block timer`, elapsed < TIMER, { actual: elapsed });
+      s.assert(`(4) so an exit now is refused: the window opened by round 3 started the timer`, !early.ok && /LOCKED|Deliberation window/.test(early.error || ''), { actual: early.error });
+      s.observe('blocks since the group was opened, far more than the timer', (await height()) - openedAt);
+      found.round3Window = { start: Number(w.start_block), ends: Number(w.ends_at_block), epochStart: Number(st.epoch_start_block), epoch: Number(st.epoch) };
+    });
+
+    let preRound4 = 0; let lockedUntilIfOldRule = 0;
+    await ctx.step('A · round 4, inside round 3\'s window: a settlement that must not advance the epoch or restart the exit timer', async (s) => {
+      const before = await state(id); const w0 = await windowOf(id);
+      await chain.waitFor(async () => (await height()) - Number(before.epoch_start_block) >= 16, { what: 'well into the window', timeoutMs: 60000, everyMs: 800 });
+      const round = await roundOf(id); host.openRound(round);
+      await cast(host, round, 'u1', { amount: '0.01' });
+      const out = host.runPool({ recipient: P.rp.id, roundId: `${id}-r4` });
+      preRound4 = await height(); lockedUntilIfOldRule = preRound4 + TIMER;
+      const signed = host.signSettlement({ ...round, allocations: out.allocations, orderHash: out.orderHash, charges: out.charges });
+      const tx = await chain.send(coord.account, 'settle_batch_charged', { syndicate_id: id, attestation_nonce: round.roundNonce, aggregate_order_hash: out.orderHash, allocations: out.allocations, charges: out.charges, enclave_signature: signed.signature }, { gas: 150000000000000n, label: 'settle_batch_charged round 4' });
+      s.evidence('tx', { label: tx.label, hash: tx.hash, ok: tx.ok, explorer: tx.explorer, error: tx.error }); s.assert('round 4: the settlement succeeded', tx.ok, { actual: tx.error });
+      await waitSettled(id, toN('0.35'));
+      const after = await state(id); const w1 = await windowOf(id);
+      s.assert('round 4 landed inside round 3\'s window: same window start', Number(w1.start_block) === Number(w0.start_block), { actual: [w0.start_block, w1.start_block, 'ends', w0.ends_at_block] });
+      s.assert('(4) the epoch did not advance and the exit timer\'s start did not move', after.epoch === before.epoch && after.epoch_start_block === before.epoch_start_block, { actual: [before.epoch, after.epoch, before.epoch_start_block, after.epoch_start_block] });
+      s.assert('round 4: the window recorded 0.05 released, 0.04 + 0.01', BigInt(w1.released) === toN('0.05'), { actual: w1.released });
+      await conserved(s, 'round 4', MEMBERS);
+    });
+
+    await ctx.step('A · the members leave at the window\'s start plus the timer, earlier than the old rule would have allowed, with exactly their remainders', async (s) => {
       await waitForTimer(id);
-      const expected = { u1: '0.08', u2: '0.08', u3: '0.035', u4: '0.075', u5: '0.09' };
+      const exitBlock = await height();
+      const expected = { u1: '0.07', u2: '0.08', u3: '0.035', u4: '0.075', u5: '0.09' };
       for (const k of MEMBERS) { const r = await chain.send(P[k].account, 'hatch_out', { syndicate_id: id }, { gas: 60000000000000n, label: `exit as ${k}` }); s.assert(`(4) ${k} exits alone`, r.ok, { actual: r.error }); const m = (await chain.transfersOf(r.hash, P[k].id)).filter((x) => x.fromContract && x.to === P[k].id); s.assert(`(4) ${k} got back exactly ${expected[k]}`, m.length === 1 && BigInt(m[0].amount) === toN(expected[k]), { actual: m.map((x) => String(x.amount)) }); }
+      s.observe('block of the exit, against the block the old rule would have kept them out until (the round 4 settlement plus the timer)', { exitBlock, oldRuleLockedUntil: lockedUntilIfOldRule });
+      s.assert('(4) the exit happened before round 4\'s settlement plus the timer: a settlement inside the window no longer keeps members out', exitBlock < lockedUntilIfOldRule, { actual: [exitBlock, lockedUntilIfOldRule] });
       const fin = await state(id); s.assert('the group ended fully refunded', /aborted|refunded/i.test(String(fin.status)) && BigInt(fin.total_escrow) === 0n, { actual: fin.status });
     });
 
-    // ================= B. what the cap bounds =================
-    await ctx.step('B · the cap: a payout above 25% of the current escrow is refused, yet payouts at exactly 25% succeed back to back', async (s) => {
+    // ================= B. what the cap bounds, after the fix =================
+    await ctx.step('B · the cap, fixed: a payout above 25% is refused, exactly 25% succeeds, and a second payout straight after is refused until the window ends', async (s) => {
       const cid = `dv-${tag}-cap`; const kp = crypto.generateKeyPairSync('ed25519'); const pk = kp.publicKey.export({ format: 'der', type: 'spki' }).subarray(12).toString('hex');
       s.assert('hatch with a key we hold, standing in for a compromised host', (await hatch(cid, pk)).ok); await chain.waitFor(() => state(cid), { what: 'syndicate' });
       for (const k of FOUNDERS) s.assert(`${k} deposits ${DEP}`, (await deposit(k, cid)).ok);
@@ -151,21 +183,31 @@ export default {
         s.evidence('tx', { label: tx.label, hash: tx.hash, ok: tx.ok, explorer: tx.explorer, error: tx.error }); return tx;
       };
       const over = await attempt('payout above the cap: 0.11 of 0.4, charged 0.055 to each of two members so only the cap can refuse it', [['u1', '0.055'], ['u2', '0.055']], '0.11');
-      s.assert('(B) a payout of 0.11 against a 25% cap of 0.1 is refused even with a valid signature', !over.ok && /exceeds max_release_bps_per_epoch cap/.test(over.error || ''), { actual: over.error });
-      s.assert('(B) nothing moved', BigInt((await state(cid)).total_escrow) === toN('0.4'));
-      let total = toN('0.4'); let released = 0n;
-      for (const [who, amt] of [['u1', '0.1'], ['u2', '0.075'], ['u3', '0.05625']]) {
-        const tx = await attempt(`payout at exactly 25% of the current escrow: ${amt}`, [[who, amt]], amt);
-        s.assert(`(B) a payout of ${amt}, exactly 25% of the current escrow, succeeds`, tx.ok, { actual: tx.error });
-        released += toN(amt); total -= toN(amt); await waitSettled(cid, total);
-      }
-      const pct = Number(released * 10000n / toN('0.4')) / 100;
-      s.observe('released within a few minutes, as a share of the original 0.4 NEAR, against a stated 25% per epoch', `${pct}%`);
-      s.assert('(B) FINDING: three back-to-back settlements released 0.23125 of 0.4, which is 57.8% of the group, 2.3 times the stated 25% per epoch: the cap bounds each settlement, not the pace of release', released === toN('0.23125') && pct > 57 && pct < 58, { actual: pct });
-      found.cap = { stated: '25% per epoch', releasedPct: pct, settlements: 3 };
+      s.assert('(B1) a payout of 0.11 against a 25% cap of 0.1 is refused even with a valid signature', !over.ok && /exceeds max_release_bps_per_epoch cap/.test(over.error || ''), { actual: over.error });
+      const first = await attempt('payout at exactly 25% of the escrow: 0.1', [['u1', '0.1']], '0.1'); s.assert('(B1) a payout of exactly 0.1 succeeds', first.ok, { actual: first.error });
+      await waitSettled(cid, toN('0.3'));
+      const w = await windowOf(cid); const blockMs = 571;
+      s.assert('the chain recorded a window opened by that settlement with start escrow 0.4, released 0.1, lasting twice the timer (48 blocks)', BigInt(w.start_escrow) === toN('0.4') && BigInt(w.released) === toN('0.1') && Number(w.ends_at_block) - Number(w.start_block) === TIMER * 2, { actual: w });
+      const second = await attempt('the drain that worked before the fix: 0.075, 25% of the remaining 0.3, straight after', [['u2', '0.075']], '0.075');
+      s.assert('(B2) the second payout straight after is REFUSED: cumulative release in this window would exceed the cap', !second.ok && /cumulative release in this window/.test(second.error || ''), { actual: second.error });
+      const tiny = await attempt('even a milliNEAR more is refused inside the window', [['u2', '0.001']], '0.001');
+      s.assert('(B2) 0.001 more is refused too', !tiny.ok && /cumulative release in this window/.test(tiny.error || ''), { actual: tiny.error });
+      s.assert('(B2) nothing moved: the escrow is 0.3 and nothing is in flight', BigInt((await state(cid)).total_escrow) === toN('0.3') && !(await state(cid)).is_settling);
+      await waitWindowEnd(cid);
+      const third = await attempt('after the window ends: 0.075, 25% of the then-current 0.3', [['u2', '0.075']], '0.075');
+      s.assert('(B3) after the window ended the allowance returned, sized to the escrow then: 0.075 succeeds', third.ok, { actual: third.error });
+      await waitSettled(cid, toN('0.225'));
+      const w2 = await windowOf(cid);
+      s.assert('(B3) a new window with start escrow 0.3 and 0.075 released', BigInt(w2.start_escrow) === toN('0.3') && BigInt(w2.released) === toN('0.075') && Number(w2.start_block) > Number(w.start_block), { actual: w2 });
+      // real time
+      const windowSeconds = (TIMER * 2 * blockMs) / 1000; const windowsFor90 = Math.ceil(Math.log(0.1) / Math.log(0.75));
+      const hourBlocks = Math.round(3600 * 1000 / blockMs);
+      const impliedHere = Math.round(windowsFor90 * windowSeconds); const impliedHour = Math.round(windowsFor90 * 2 * 3600 / 3600);
+      s.observe('the real length of a release window at this timer, in seconds, and the time to release 90% at a 25% cap (8 windows): here, and with a one-hour timer (about 6,300 blocks, a two-hour window)', { windowSeconds: +windowSeconds.toFixed(1), windowsFor90, secondsForNinetyPercentHere: impliedHere, hoursForNinetyPercentWithAOneHourTimer: impliedHour, oneHourInBlocks: hourBlocks });
+      found.cap = { stated: '25% per window of twice the timer', timerBlocks: TIMER, windowSeconds: +windowSeconds.toFixed(1), secondBackToBackPayoutRefused: true, allowanceReturnedInNewWindow: true, hoursForNinetyPercentWithAOneHourTimer: impliedHour };
       await waitForTimer(cid);
-      const left = { u2: '0.025', u3: '0.04375', u4: '0.1' };
-      for (const [k, v] of Object.entries(left)) { const r = await chain.send(P[k].account, 'hatch_out', { syndicate_id: cid }, { gas: 60000000000000n, label: `exit as ${k}` }); const m = (await chain.transfersOf(r.hash, P[k].id)).filter((x) => x.fromContract && x.to === P[k].id); s.assert(`${k} exits alone with exactly ${v}`, r.ok && m.length === 1 && BigInt(m[0].amount) === toN(v), { actual: m.map((x) => String(x.amount)) }); }
+      const left = { u2: '0.025', u3: '0.1', u4: '0.1' };
+      for (const [k, v] of Object.entries(left)) { const r = await chain.send(P[k].account, 'hatch_out', { syndicate_id: cid }, { gas: 60000000000000n, label: `exit as ${k}` }); s.assert(`${k} exits alone`, r.ok, { actual: r.error }); const m = (await chain.transfersOf(r.hash, P[k].id)).filter((x) => x.fromContract && x.to === P[k].id); s.assert(`${k} got back exactly ${v}`, m.length === 1 && BigInt(m[0].amount) === toN(v), { actual: m.map((x) => String(x.amount)) }); }
     });
 
     await ctx.step('teardown: prune the syndicates, delete the accounts', async (s) => {
