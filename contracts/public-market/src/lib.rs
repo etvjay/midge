@@ -54,12 +54,36 @@ pub struct Book {
     pub max_units: u32,
 }
 
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug)]
+pub struct PollOption {
+    pub id: String,
+    pub recipient: AccountId,
+}
+
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug)]
+pub struct Poll {
+    pub options: Vec<PollOption>,
+    pub roll: Vec<AccountId>,
+    pub share: NearToken,
+    pub quorum_bps: u32,
+    pub rule: String,
+    pub end_block: u64,
+    pub joined: Vec<AccountId>,
+    pub settled: bool,
+    pub decided: bool,
+    pub winner: Option<String>,
+}
+
 #[near(contract_state)]
 pub struct PublicMarket {
     requests: LookupMap<String, Request>,
     quote_logs: LookupMap<String, Vec<Quote>>,
     books: LookupMap<String, Book>,
     orders: LookupMap<String, Vec<Order>>,
+    polls: LookupMap<String, Poll>,
+    votes: LookupMap<String, Vec<(AccountId, String)>>,
 }
 
 impl Default for PublicMarket {
@@ -69,11 +93,14 @@ impl Default for PublicMarket {
             quote_logs: LookupMap::new(b"q"),
             books: LookupMap::new(b"b"),
             orders: LookupMap::new(b"o"),
+            polls: LookupMap::new(b"v"),
+            votes: LookupMap::new(b"w"),
         }
     }
 }
 
 #[near]
+#[allow(clippy::too_many_arguments)]
 impl PublicMarket {
     // ------------------------------------------------------------------ open reverse quotes
     pub fn open_request(
@@ -312,6 +339,153 @@ impl PublicMarket {
                 let _ = Promise::new(o.trader.clone()).transfer(NearToken::from_yoctonear(back));
             }
         }
+    }
+
+    // ------------------------------------------------------------------ open poll (voting)
+    /// An open vote: every roll member deposits `share`, votes in public (a later vote replaces an earlier one), and after
+    /// `end_block` anyone closes it. Counting is the sealed room's rule: one latest vote per member, a quorum over the whole roll,
+    /// abstentions count toward the quorum but not the majority, a strict leader (and more than half of the non-abstaining votes
+    /// under "majority") wins. If decided the whole pool goes to the winner's recipient; otherwise every deposit is refunded.
+    #[allow(clippy::too_many_arguments)]
+    pub fn open_poll(
+        &mut self,
+        poll_id: String,
+        options: Vec<PollOption>,
+        roll: Vec<AccountId>,
+        share: NearToken,
+        quorum_bps: u32,
+        rule: String,
+        end_block: u64,
+    ) {
+        assert!(self.polls.get(&poll_id).is_none(), "poll exists");
+        assert!(
+            end_block > env::block_height(),
+            "end_block must be in the future"
+        );
+        assert!(options.len() >= 2, "a poll needs at least two options");
+        assert!(
+            rule == "majority" || rule == "plurality",
+            "rule must be majority or plurality"
+        );
+        assert!(quorum_bps <= 10_000, "quorum_bps is at most 10000");
+        self.polls.insert(
+            poll_id.clone(),
+            Poll {
+                options,
+                roll,
+                share,
+                quorum_bps,
+                rule,
+                end_block,
+                joined: Vec::new(),
+                settled: false,
+                decided: false,
+                winner: None,
+            },
+        );
+        self.votes.insert(poll_id, Vec::new());
+    }
+
+    #[payable]
+    pub fn join_poll(&mut self, poll_id: String) {
+        let who = env::predecessor_account_id();
+        let amount = env::attached_deposit();
+        let poll = self
+            .polls
+            .get_mut(&poll_id)
+            .unwrap_or_else(|| env::panic_str("no such poll"));
+        assert!(env::block_height() < poll.end_block, "poll has ended");
+        assert!(poll.roll.contains(&who), "only the roll can join");
+        assert!(!poll.joined.contains(&who), "already joined");
+        assert!(amount == poll.share, "must deposit exactly the share");
+        poll.joined.push(who);
+    }
+
+    pub fn vote(&mut self, poll_id: String, choice: String) {
+        let who = env::predecessor_account_id();
+        let poll = self
+            .polls
+            .get(&poll_id)
+            .unwrap_or_else(|| env::panic_str("no such poll"));
+        assert!(env::block_height() < poll.end_block, "poll has ended");
+        assert!(
+            poll.joined.contains(&who),
+            "only a member who joined can vote"
+        );
+        assert!(
+            choice == "abstain" || poll.options.iter().any(|o| o.id == choice),
+            "unknown option"
+        );
+        let list = self
+            .votes
+            .get_mut(&poll_id)
+            .unwrap_or_else(|| env::panic_str("no such poll"));
+        match list.iter_mut().find(|(a, _)| *a == who) {
+            Some(entry) => entry.1 = choice,
+            None => list.push((who, choice)),
+        }
+    }
+
+    pub fn close_poll(&mut self, poll_id: String) {
+        let poll = self
+            .polls
+            .get_mut(&poll_id)
+            .unwrap_or_else(|| env::panic_str("no such poll"));
+        assert!(env::block_height() >= poll.end_block, "poll has not ended");
+        assert!(!poll.settled, "already settled");
+        poll.settled = true;
+        let votes = self.votes.get(&poll_id).cloned().unwrap_or_default();
+        let cast = votes.len() as u64;
+        let quorum_met = cast * 10_000 >= poll.quorum_bps as u64 * poll.roll.len() as u64;
+        let mut winner: Option<String> = None;
+        if quorum_met {
+            let counts: Vec<(String, u64)> = poll
+                .options
+                .iter()
+                .map(|o| {
+                    (
+                        o.id.clone(),
+                        votes.iter().filter(|(_, c)| *c == o.id).count() as u64,
+                    )
+                })
+                .collect();
+            let non_abstain: u64 = counts.iter().map(|(_, n)| *n).sum();
+            let top = counts.iter().map(|(_, n)| *n).max().unwrap_or(0);
+            let leaders: Vec<&(String, u64)> = counts.iter().filter(|(_, n)| *n == top).collect();
+            if non_abstain > 0
+                && leaders.len() == 1
+                && (poll.rule == "plurality" || top * 2 > non_abstain)
+            {
+                winner = Some(leaders[0].0.clone());
+            }
+        }
+        poll.decided = winner.is_some();
+        poll.winner = winner.clone();
+        match winner {
+            Some(w) => {
+                let recipient = poll
+                    .options
+                    .iter()
+                    .find(|o| o.id == w)
+                    .map(|o| o.recipient.clone())
+                    .unwrap_or_else(|| env::panic_str("winner has no recipient"));
+                let pool = poll.share.as_yoctonear() * poll.joined.len() as u128;
+                let _ = Promise::new(recipient).transfer(NearToken::from_yoctonear(pool));
+            }
+            None => {
+                for m in poll.joined.clone() {
+                    let _ = Promise::new(m).transfer(poll.share);
+                }
+            }
+        }
+    }
+
+    pub fn get_poll(&self, poll_id: String) -> Option<Poll> {
+        self.polls.get(&poll_id).cloned()
+    }
+
+    pub fn get_votes(&self, poll_id: String) -> Vec<(AccountId, String)> {
+        self.votes.get(&poll_id).cloned().unwrap_or_default()
     }
 
     pub fn get_book(&self, book_id: String) -> Option<Book> {
@@ -681,5 +855,358 @@ mod tests {
         ctx("anyone.near", 0, 100);
         c.cross("b".into());
         c.cross("b".into());
+    }
+
+    // ---------------------------------------------------------------- open poll (voting)
+    fn roll() -> Vec<AccountId> {
+        ["m1.near", "m2.near", "m3.near", "m4.near", "m5.near"]
+            .iter()
+            .map(|s| acct(s))
+            .collect()
+    }
+    fn options() -> Vec<PollOption> {
+        vec![
+            PollOption {
+                id: "A".into(),
+                recipient: acct("ra.near"),
+            },
+            PollOption {
+                id: "B".into(),
+                recipient: acct("rb.near"),
+            },
+            PollOption {
+                id: "C".into(),
+                recipient: acct("rc.near"),
+            },
+        ]
+    }
+    const SHARE: u128 = 20_000_000_000_000_000_000_000; // 0.02 NEAR
+    fn poll(quorum_bps: u32, rule: &str) -> PublicMarket {
+        ctx("anyone.near", 0, 10);
+        let mut c = PublicMarket::default();
+        c.open_poll(
+            "p".into(),
+            options(),
+            roll(),
+            NearToken::from_yoctonear(SHARE),
+            quorum_bps,
+            rule.into(),
+            100,
+        );
+        for (i, m) in roll().iter().enumerate() {
+            ctx(m.as_str(), SHARE, 20 + i as u64);
+            c.join_poll("p".into());
+        }
+        c
+    }
+    fn vote(c: &mut PublicMarket, who: &str, choice: &str, block: u64) {
+        ctx(who, 0, block);
+        c.vote("p".into(), choice.into());
+    }
+
+    #[test]
+    fn every_vote_is_public_with_the_voter_and_the_choice() {
+        let mut c = poll(5000, "majority");
+        vote(&mut c, "m1.near", "A", 30);
+        vote(&mut c, "m2.near", "B", 31);
+        let v = c.get_votes("p".into());
+        assert_eq!(v.len(), 2);
+        assert_eq!((v[0].0.as_str(), v[0].1.as_str()), ("m1.near", "A"));
+        assert_eq!((v[1].0.as_str(), v[1].1.as_str()), ("m2.near", "B"));
+    }
+
+    #[test]
+    fn the_tally_before_the_last_vote_is_public_so_the_last_voter_knows_they_are_pivotal() {
+        let mut c = poll(5000, "majority");
+        for (i, (m, ch)) in [
+            ("m1.near", "A"),
+            ("m2.near", "A"),
+            ("m3.near", "B"),
+            ("m4.near", "B"),
+        ]
+        .iter()
+        .enumerate()
+        {
+            vote(&mut c, m, ch, 30 + i as u64);
+        }
+        let v = c.get_votes("p".into());
+        let a = v.iter().filter(|x| x.1 == "A").count();
+        let b = v.iter().filter(|x| x.1 == "B").count();
+        assert_eq!((a, b), (2, 2)); // the fifth voter reads this and knows their vote decides
+    }
+
+    #[test]
+    fn a_later_vote_replaces_an_earlier_one() {
+        let mut c = poll(5000, "majority");
+        vote(&mut c, "m1.near", "A", 30);
+        vote(&mut c, "m1.near", "B", 31);
+        let v = c.get_votes("p".into());
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0].1, "B");
+    }
+
+    #[test]
+    fn a_decided_poll_pays_the_pool_to_the_winner() {
+        let mut c = poll(5000, "majority");
+        for (i, (m, ch)) in [
+            ("m1.near", "A"),
+            ("m2.near", "A"),
+            ("m3.near", "A"),
+            ("m4.near", "B"),
+            ("m5.near", "abstain"),
+        ]
+        .iter()
+        .enumerate()
+        {
+            vote(&mut c, m, ch, 30 + i as u64);
+        }
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        assert_eq!(transfers(), vec![("ra.near".to_string(), 5 * SHARE)]);
+        let p = c.get_poll("p".into()).unwrap();
+        assert!(p.settled && p.decided);
+        assert_eq!(p.winner.unwrap(), "A");
+    }
+
+    #[test]
+    fn a_tie_decides_nothing_and_every_deposit_is_refunded() {
+        let mut c = poll(5000, "majority");
+        for (i, (m, ch)) in [
+            ("m1.near", "A"),
+            ("m2.near", "A"),
+            ("m3.near", "B"),
+            ("m4.near", "B"),
+            ("m5.near", "abstain"),
+        ]
+        .iter()
+        .enumerate()
+        {
+            vote(&mut c, m, ch, 30 + i as u64);
+        }
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        let t = transfers();
+        assert_eq!(t.len(), 5);
+        assert!(t.iter().all(|(_, a)| *a == SHARE));
+        assert!(!c.get_poll("p".into()).unwrap().decided);
+    }
+
+    #[test]
+    fn a_missed_quorum_refunds_everyone() {
+        let mut c = poll(6000, "majority"); // needs 3 of 5
+        vote(&mut c, "m1.near", "A", 30);
+        vote(&mut c, "m2.near", "A", 31);
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        assert_eq!(transfers().len(), 5);
+        assert!(!c.get_poll("p".into()).unwrap().decided);
+    }
+
+    #[test]
+    fn abstentions_count_toward_quorum_but_not_the_majority() {
+        let mut c = poll(5000, "majority");
+        for (i, (m, ch)) in [
+            ("m1.near", "A"),
+            ("m2.near", "A"),
+            ("m3.near", "B"),
+            ("m4.near", "abstain"),
+            ("m5.near", "abstain"),
+        ]
+        .iter()
+        .enumerate()
+        {
+            vote(&mut c, m, ch, 30 + i as u64);
+        }
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        // A has 2 of the 3 non-abstaining ballots: more than half, so it wins
+        assert_eq!(transfers(), vec![("ra.near".to_string(), 5 * SHARE)]);
+    }
+
+    #[test]
+    fn a_missed_majority_refunds_everyone_but_a_plurality_would_have_decided() {
+        let ballots = [
+            ("m1.near", "A"),
+            ("m2.near", "A"),
+            ("m3.near", "B"),
+            ("m4.near", "C"),
+            ("m5.near", "abstain"),
+        ];
+        let mut c = poll(5000, "majority"); // A has 2 of 4 non-abstaining: not more than half
+        for (i, (m, ch)) in ballots.iter().enumerate() {
+            vote(&mut c, m, ch, 30 + i as u64);
+        }
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        assert_eq!(transfers().len(), 5);
+        assert!(!c.get_poll("p".into()).unwrap().decided);
+        let mut c = poll(5000, "plurality");
+        for (i, (m, ch)) in ballots.iter().enumerate() {
+            vote(&mut c, m, ch, 30 + i as u64);
+        }
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        assert_eq!(transfers(), vec![("ra.near".to_string(), 5 * SHARE)]);
+    }
+
+    #[test]
+    fn a_quorum_exactly_on_the_boundary_is_met() {
+        let mut c = poll(6000, "majority"); // 3 of 5 is exactly 60%
+        for (i, m) in ["m1.near", "m2.near", "m3.near"].iter().enumerate() {
+            vote(&mut c, m, "A", 30 + i as u64);
+        }
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        assert_eq!(transfers(), vec![("ra.near".to_string(), 5 * SHARE)]);
+    }
+
+    #[test]
+    fn a_plurality_tie_decides_nothing() {
+        let mut c = poll(5000, "plurality");
+        for (i, (m, ch)) in [
+            ("m1.near", "A"),
+            ("m2.near", "A"),
+            ("m3.near", "B"),
+            ("m4.near", "B"),
+            ("m5.near", "abstain"),
+        ]
+        .iter()
+        .enumerate()
+        {
+            vote(&mut c, m, ch, 30 + i as u64);
+        }
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        assert_eq!(transfers().len(), 5);
+        assert!(!c.get_poll("p".into()).unwrap().decided);
+    }
+
+    #[test]
+    fn the_pool_goes_to_the_winning_option_whichever_it_is() {
+        let mut c = poll(5000, "majority");
+        for (i, (m, ch)) in [
+            ("m1.near", "B"),
+            ("m2.near", "B"),
+            ("m3.near", "B"),
+            ("m4.near", "A"),
+            ("m5.near", "A"),
+        ]
+        .iter()
+        .enumerate()
+        {
+            vote(&mut c, m, ch, 30 + i as u64);
+        }
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        assert_eq!(transfers(), vec![("rb.near".to_string(), 5 * SHARE)]);
+    }
+
+    #[test]
+    fn the_pool_is_what_was_deposited_not_the_size_of_the_roll() {
+        ctx("anyone.near", 0, 10);
+        let mut c = PublicMarket::default();
+        c.open_poll(
+            "p".into(),
+            options(),
+            roll(),
+            NearToken::from_yoctonear(SHARE),
+            0,
+            "majority".into(),
+            100,
+        );
+        for (i, m) in ["m1.near", "m2.near", "m3.near", "m4.near"]
+            .iter()
+            .enumerate()
+        {
+            ctx(m, SHARE, 20 + i as u64);
+            c.join_poll("p".into());
+        }
+        vote(&mut c, "m1.near", "A", 30);
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        assert_eq!(transfers(), vec![("ra.near".to_string(), 4 * SHARE)]);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the roll")]
+    fn an_outsider_cannot_join() {
+        let mut c = poll(5000, "majority");
+        ctx("outsider.near", SHARE, 40);
+        c.join_poll("p".into());
+    }
+
+    #[test]
+    #[should_panic(expected = "must deposit exactly the share")]
+    fn joining_needs_exactly_the_share() {
+        ctx("anyone.near", 0, 10);
+        let mut c = PublicMarket::default();
+        c.open_poll(
+            "p".into(),
+            options(),
+            roll(),
+            NearToken::from_yoctonear(SHARE),
+            5000,
+            "majority".into(),
+            100,
+        );
+        ctx("m1.near", SHARE - 1, 20);
+        c.join_poll("p".into());
+    }
+
+    #[test]
+    #[should_panic(expected = "already joined")]
+    fn joining_twice_is_refused() {
+        let mut c = poll(5000, "majority");
+        ctx("m1.near", SHARE, 40);
+        c.join_poll("p".into());
+    }
+
+    #[test]
+    #[should_panic(expected = "only a member who joined")]
+    fn voting_needs_a_deposit() {
+        ctx("anyone.near", 0, 10);
+        let mut c = PublicMarket::default();
+        c.open_poll(
+            "p".into(),
+            options(),
+            roll(),
+            NearToken::from_yoctonear(SHARE),
+            5000,
+            "majority".into(),
+            100,
+        );
+        vote(&mut c, "m1.near", "A", 30);
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown option")]
+    fn voting_for_an_unknown_option_is_refused() {
+        let mut c = poll(5000, "majority");
+        vote(&mut c, "m1.near", "Z", 30);
+    }
+
+    #[test]
+    #[should_panic(expected = "has ended")]
+    fn no_vote_after_the_end() {
+        let mut c = poll(5000, "majority");
+        vote(&mut c, "m1.near", "A", 100);
+    }
+
+    #[test]
+    #[should_panic(expected = "has not ended")]
+    fn the_poll_cannot_close_early() {
+        let mut c = poll(5000, "majority");
+        ctx("anyone.near", 0, 50);
+        c.close_poll("p".into());
+    }
+
+    #[test]
+    #[should_panic(expected = "already settled")]
+    fn the_poll_closes_only_once() {
+        let mut c = poll(5000, "majority");
+        vote(&mut c, "m1.near", "A", 30);
+        ctx("anyone.near", 0, 100);
+        c.close_poll("p".into());
+        c.close_poll("p".into());
     }
 }

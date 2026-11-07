@@ -64,3 +64,15 @@ The NEAR contract would ask the Chain Signatures MPC to sign a payment on Ethere
 ## Order of work, and what gets cut first
 
 0, 1, 2, 3, 4 are the core. If time runs short the cuts, in order, are 8, 7, 5, 6; each cut item stays in the repository as a written design. Every item's predictions are written into this folder before its run, as with the quote and cross runs.
+
+## Predictions for E-CMP-VOTE-01 (voting), written 2026-11-07 before the run
+
+Five members m1 to m5 each put 0.02 NEAR into a pool of 0.1. Two options: A (recipient ra) and B (recipient rb). Preferences: m1, m2 and m5 prefer A; m3 and m4 prefer B. Quorum 50%, majority rule. Three paths: an **open poll** (our own contract, votes public, a later vote replaces an earlier one); **Midge sealed ballot** (signed ballots, equal deposits, the host counts); a **3-of-5 multisig** whose signers are the five members and which pays whatever three of them approve.
+
+1. **Visibility.** In the open poll an observer reads all 5 votes by account (5 of 5), and before the last vote the public tally is 2 to 2 so the fifth voter knows their vote decides. In the sealed ballot an observer reads 0 of 5 votes; the settlement carries no tally and no turnout, only the pool paid to the winner's recipient and equal charges on all five.
+2. **Outcome.** With honest voting both the open poll and the sealed ballot pay the whole 0.1 NEAR to ra (A wins 3 to 2).
+3. **Outsiders and doubles.** A non-member's vote is refused or ignored in both. A member voting twice counts once.
+4. **The latest vote counts.** In the sealed ballot a member who re-votes changes the outcome in a second, separate round (m3 and m4 switch to A: A wins 5 to 0).
+5. **Multisig.** Three of the five signers can send the whole pool to an address outside both options (a thief) and it works; under Midge a payout to a recipient outside the rules is refused by the contract even with a valid host signature (a signing key we hold stands in for a compromised host), and the escrow is intact.
+6. **Dead host.** If the host never signs, nothing is paid and all five exit alone with the full 0.02.
+7. **Cost.** Total gas of the sealed ballot over the open poll is between 0.5 and 3.
