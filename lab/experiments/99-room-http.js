@@ -138,6 +138,43 @@ export default {
       } finally { await api.close(); }
     });
 
+    await ctx.step('behind a proxy: the forwarded address is trusted only from our own proxy, and cannot be forged to dodge the limit', async (s) => {
+      const burn = async (api, xff) => (await fetch(api.base + '/v1/rooms', { headers: xff === undefined ? {} : { 'x-forwarded-for': xff } })).status;
+      const mk = (opts) => serve(new RoomService({ host: mkHost() }), { rate: { limit: 2, windowMs: 60_000, now: () => 1 }, ...opts });
+      let api = await mk({ trustedProxies: ['127.0.0.1'] });
+      try {
+        s.assert('a client behind our proxy gets its own allowance: two pass', (await burn(api, '1.1.1.1')) === 200 && (await burn(api, '1.1.1.1')) === 200);
+        s.assert('its third is limited', (await burn(api, '1.1.1.1')) === 429);
+        s.assert('a different forwarded client is not affected by it', (await burn(api, '2.2.2.2')) === 200);
+        s.assert('entries an attacker prepends do not help: the address our proxy saw is the last one', (await burn(api, '9.9.9.9, 1.1.1.1')) === 429);
+        s.assert('our own proxies in the chain are skipped to find the real client', (await burn(api, '1.1.1.1, 127.0.0.1')) === 429);
+        s.assert('a garbage header falls back to the connecting address, not to a free pass', (await burn(api, 'not-an-ip')) === 200 && (await burn(api, 'not-an-ip')) === 200 && (await burn(api, 'also-garbage')) === 429);
+        s.assert('IPv6 addresses work', (await burn(api, '2001:db8::1')) === 200 && (await burn(api, '2001:db8::1')) === 200 && (await burn(api, '2001:DB8::1')) === 429);
+      } finally { await api.close(); }
+      api = await mk({ trustedProxies: ['127.0.0.1'] });
+      try {
+        s.assert('a chain with an unreadable hop is not believed (the address before it could be forged): it counts against the connecting address', (await burn(api, '8.8.8.8, garbage')) === 200 && (await burn(api, '8.8.8.8, garbage')) === 200 && (await burn(api, undefined)) === 429, { actual: 'see assertion' });
+      } finally { await api.close(); }
+      api = await mk({ trustedProxies: ['127.0.0.1'] });
+      try {
+        s.assert('an IPv4-mapped IPv6 address is the same client as the plain IPv4 one', (await burn(api, '5.5.5.5')) === 200 && (await burn(api, '::ffff:5.5.5.5')) === 200 && (await burn(api, '5.5.5.5')) === 429);
+      } finally { await api.close(); }
+      api = await mk({ trustedProxies: ['::ffff:127.0.0.1'] });
+      try {
+        s.assert('and a proxy listed in the mapped form is recognised too', (await burn(api, '6.6.6.6')) === 200 && (await burn(api, '6.6.6.6')) === 200 && (await burn(api, '6.6.6.6')) === 429 && (await burn(api, '7.7.7.7')) === 200);
+      } finally { await api.close(); }
+      api = await mk({});
+      try {
+        const codes = [await burn(api, '3.3.3.1'), await burn(api, '3.3.3.2'), await burn(api, '3.3.3.3')];
+        s.assert('by default the header is ignored: three different forwarded addresses share the real one, so the third is limited', codes.join() === '200,200,429', { actual: codes });
+      } finally { await api.close(); }
+      api = await mk({ trustedProxies: ['10.9.9.9'] });
+      try {
+        const codes = [await burn(api, '4.4.4.1'), await burn(api, '4.4.4.2'), await burn(api, '4.4.4.3')];
+        s.assert('a proxy list that does not include the connecting address is no better than none', codes.join() === '200,200,429', { actual: codes });
+      } finally { await api.close(); }
+    });
+
     await ctx.step('an RFQ\'s plain terms need the flag and the coordinator key', async (s) => {
       const host = mkHost(); const api = await serve(new RoomService({ host }));
       const quotes = { 'maker1.near': { bid: '0.00195', ask: '0.00205' }, 'maker2.near': { bid: '0.0019', ask: '0.002' } };
