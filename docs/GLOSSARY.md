@@ -35,7 +35,7 @@ One pattern (a private room, public rules, an exit) serves several kinds of grou
 
 | Family | Examples | What the room does | Status |
 |---|---|---|---|
-| **Buy and sell** | Auctions and token sales; lending quotes; big trades between two desks | Opens sealed bids or quotes; the rules fix the winner and price; losers get their deposit back | Auctions (first-price, second-price, uniform-price): run on testnet against a public auction, on a local host. Lending quotes and big trades: simulations only. |
+| **Buy and sell** | Auctions and token sales; lending quotes; big trades between two desks | Opens sealed bids or quotes; the rules fix the winner and price; losers get their deposit back | Auctions (first-price, second-price, uniform-price), lending quotes (first- and second-price) and block trades (pro-rata cross): each run on testnet against a public version, on a local host. Only the cash leg settles. |
 | **Invest together** | A fund or angel round; backers pooling into one recipient | Totals sealed amounts; charges each backer their own | Run on testnet against a public round and an organizer. Hiding the amounts and charging each backer their own cannot both be had: the charges are public at settlement. |
 | **Decide together** | Votes, approvals, committee decisions | Counts sealed ballots; publishes only the winner; the winner decides a payment | Designed with research, not built. Weight is money (a deposit), not people. |
 | **Pay people** | Payroll, grants, contractor pay | Splits a pool among named recipients without showing each person's amount to the others | Planned. The settlement shows each recipient's payment, so per-person privacy needs a design not yet built. |

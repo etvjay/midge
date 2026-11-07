@@ -72,3 +72,7 @@ Reference price 0.0005 NEAR per unit. Buyers: B1 100 units, limit 0.00055; B2 50
 **Regression evidence.** The new tests fail against the old priority rule (six assertions, including the extreme-limit and "the limit decides nothing but qualifying" checks) and pass on the fix. Mutation tests: 12 of 13 deliberate breaks of the program and host are caught, the 13th being an equivalent mutant (pro-rating a side that is already the short side gives the same answer); the public contract's 11 breaks are all caught after one test was added.
 
 **Revised predictions for E-CMP-CROSS-01.** Prediction 2 now reads: both versions match 150 units at the reference price with the pro-rata split S1 71 and S2 79 when F is absent. Prediction 3 now reads: **F, a late seller with an extreme limit (0.00001) and 40 units, gets no queue position.** With F present the sell side is 210 units for 150 matched, so the fills are S1 57, S2 64 and F 29 in the public book and in the sealed round alike, and F gets exactly what it would get with a limit equal to the reference. Under the old rule F would have filled 40 first and displaced S2 to 30. The public cap in both versions is 100 units.
+
+## Results
+
+Run on 2026-11-07: see `QUOTE_CROSS_RESULTS.md` (`E-CMP-QUOTE-01` PASS; `E-CMP-CROSS-01` PASS after a first run failed a pre-registered gas band, kept as evidence).
