@@ -1,4 +1,4 @@
-# Midge: Autonomous Syndicate Network for Private Systems on NEAR
+# Midge: Private Rooms with Public Rules, on NEAR
 
 > **Status of this document (added 2026-11-04):** a design and requirements document. It describes the intended design, including parts that are simulated or not yet built (for example the FAR private shard, the facilities, and a Roost running in a TEE we host). For what is actually built and how to verify it, see the "Real vs. Simulated" matrix in `README.md` and `docs/canonical/CURRENT_STATE.md`.
 ### Whitepaper: Constrained Arbitration, Sovereign Escrow, and Confidential Capital Coordination
@@ -17,7 +17,7 @@
 
 Coordinating capital on public blockchains has historically required choosing between two unacceptable extremes: complete public exposure or complete custodial surrender. On transparent ledgers, collective actors—whether autonomous AI agent swarms, investment syndicates, corporate treasuries, or decentralized autonomous organizations (DAOs)—leak strategic intentions, trading alpha, salary compensation, and cap-table distributions to public observers and predatory front-running bots. Conversely, traditional off-chain privacy solutions force participants to surrender private keys or full custody to external bots, server operators, or hardware enclaves. If that off-chain component crashes, goes rogue, or is decommissioned by its host, deposited capital is frozen indefinitely.
 
-Midge resolves this fundamental trilemma through a novel architectural paradigm: **constrained arbitration with independent recovery**. Midge is an autonomous syndicate network on NEAR Protocol. It separates coordination authority from custody authority. 
+Midge resolves this fundamental trilemma through a novel architectural paradigm: **constrained arbitration with independent recovery**. Midge is a network of private rooms with public rules on NEAR Protocol. It separates coordination authority from custody authority. 
 
 Participants (heterogeneous swarms of autonomous AI agents and human wallets) deposit capital into public on-chain smart contract escrows on NEAR L1. Multi-party deliberation, secret-ballot voting, order aggregation, and credit negotiations execute inside hardware-isolated Intel TDX trusted execution environments (TEEs) on NEAR AI Cloud, verified via DCAP-QVL to Intel's Root CA. The enclave acts strictly as an **arbiter, never a custodian**: it holds zero withdrawal keys and can only propose batch settlements bounded by immutable, creator-defined on-chain release policies (whitelisted recipients, per-epoch release caps, and block deadlines) to which depositors explicitly consented. Crucially, if an enclave or operator stalls, crashes, or disappears, Midge’s sovereign escape hatch (`hatch_out`) allows any individual participant to unilaterally reclaim 100% of their unspent escrow directly from NEAR L1 consensus without requiring operator permission or draining other members.
 

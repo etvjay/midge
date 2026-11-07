@@ -62,7 +62,7 @@ function lock(ctx, x, y, s, color, alpha = 1) {
 function tick(ctx, x, y, s, color, alpha = 1) { ctx.save(); ctx.globalAlpha *= alpha; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - s * 0.5, y); ctx.lineTo(x - s * 0.1, y + s * 0.4); ctx.lineTo(x + s * 0.55, y - s * 0.45); ctx.stroke(); ctx.restore(); }
 function cross(ctx, x, y, s, color, alpha = 1) { ctx.save(); ctx.globalAlpha *= alpha; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - s / 2, y - s / 2); ctx.lineTo(x + s / 2, y + s / 2); ctx.moveTo(x + s / 2, y - s / 2); ctx.lineTo(x - s / 2, y + s / 2); ctx.stroke(); ctx.restore(); }
 const quad = (a, c, b, p) => ({ x: (1 - p) * (1 - p) * a.x + 2 * (1 - p) * p * c.x + p * p * b.x, y: (1 - p) * (1 - p) * a.y + 2 * (1 - p) * p * c.y + p * p * b.y });
-// A room: the private place a syndicate decides in. Glows while it deliberates.
+// A room: the private place a group decides in. Glows while it deliberates.
 function room(ctx, x, y, r, { glow = 0.6, color = C.lake, label = null, alpha = 1, dark = false } = {}) {
   ctx.save(); ctx.globalAlpha *= alpha;
   if (!dark) glowAt(ctx, x, y, r * 2.6, color === C.lake ? 'rgba(124,196,184,0.45)' : 'rgba(217,130,74,0.45)', glow);
@@ -127,7 +127,7 @@ S.hero = {
   draw(ctx, w, h, t, s) {
     // NEAR: the one contract every room settles to.
     line(ctx, w * 0.04, s.base, w * 0.96, s.base, C.line, 1, 0.8);
-    text(ctx, 'NEAR · one contract · every syndicate settles here', w * 0.96, s.base + 16, { size: 11, color: C.ink2, align: 'right', alpha: 0.8 });
+    text(ctx, 'NEAR · one contract · every group settles here', w * 0.96, s.base + 16, { size: 11, color: C.ink2, align: 'right', alpha: 0.8 });
     // agent memberships
     const ag = s.agentRooms.map((i) => s.rooms[i]);
     for (let k = 0; k < ag.length; k++) { const a = ag[k], b = ag[(k + 1) % ag.length]; line(ctx, a.x, a.y, b.x, b.y, C.glow, 1, 0.22 * ease(seg(t, 2.5, 4)), [3, 5]); }
@@ -148,14 +148,14 @@ S.hero = {
       const p = ((t + tr.off) % (tr.dur + 2)) / tr.dur; if (p > 1 || t < 1.5) continue;
       const c = { x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 50 }; const q = quad(a, c, b, easeIO(p)); dot(ctx, q.x, q.y, 2, C.ink, Math.sin(p * Math.PI));
     }
-    // the agent in three syndicates
+    // the agent in three groups
     if (ag.length >= 2) {
       const per = 2.6; const k = Math.floor(t / per) % ag.length; const p = easeIO(seg(t % per, 0.6, 2.2));
       const a = ag[k], b = ag[(k + 1) % ag.length]; const c = { x: (a.x + b.x) / 2 + 30, y: (a.y + b.y) / 2 - 40 };
       const q = quad({ x: a.x, y: a.y - a.r * 1.55 }, c, { x: b.x, y: b.y - b.r * 1.55 }, p);
       const show = ease(seg(t, 2.5, 3.5));
       glowAt(ctx, q.x, q.y, 18, 'rgba(217,130,74,0.6)', show); dot(ctx, q.x, q.y, 3.6, C.glow, show);
-      text(ctx, 'one agent · three syndicates', q.x + 12, q.y - 12, { size: 11, color: C.glow, alpha: show * 0.9 });
+      text(ctx, 'one agent · three groups', q.x + 12, q.y - 12, { size: 11, color: C.glow, alpha: show * 0.9 });
     }
   },
 };
@@ -367,7 +367,7 @@ S.network = {
     glowAt(ctx, ccx, ccy, 70 * z, 'rgba(124,196,184,0.35)', 0.8); box(ctx, ccx - 46 * z, ccy - 16 * z, 92 * z, 32 * z, { r: 8 * z, stroke: C.lake, fill: '#111a1b' });
     text(ctx, 'one contract', ccx, ccy, { size: Math.min(13, 11 * z), color: C.ink, align: 'center' });
     const sa = seg(lt, 3, 4); glowAt(ctx, ax, ay, 16, 'rgba(217,130,74,0.6)', sa); dot(ctx, ax, ay, 4, C.glow, sa); text(ctx, 'an agent', ax + 10, ay - 10, { size: 10, color: C.glow, alpha: sa });
-    text(ctx, `${window.__synCount || s.rooms.length} syndicates`, 16, 20, { size: 11, color: C.ink2, alpha: k });
+    text(ctx, `${window.__synCount || s.rooms.length} groups`, 16, 20, { size: 11, color: C.ink2, alpha: k });
     text(ctx, 'rooms do not talk to each other yet', 16, h - 18, { size: 10, color: C.dim, alpha: seg(lt, 4, 5) });
   },
 };
@@ -460,7 +460,7 @@ S.beyond = {
   still: 4,
   draw(ctx, w, h, t) {
     const lt = t % 7; const cx = w * 0.24, cy = h / 2;
-    room(ctx, cx, cy, 24, { glow: 0.5 }); text(ctx, 'a syndicate on NEAR', cx, cy + 42, { size: 11, color: C.ink2, align: 'center' });
+    room(ctx, cx, cy, 24, { glow: 0.5 }); text(ctx, 'a group on NEAR', cx, cy + 42, { size: 11, color: C.ink2, align: 'center' });
     const chains = [['Bitcoin', 'bc1q…7wz3'], ['Ethereum', '0x5c…19af'], ['Solana', '9xQe…v2Lp']];
     chains.forEach(([name, addr], i) => {
       const y = h * (0.22 + i * 0.28); const x = w * 0.7; const grow = ease(seg(lt, 0.3 + i * 0.25, 1.2 + i * 0.25));
@@ -613,7 +613,7 @@ function row(list, ok, label, detail) {
     const { value: count, block } = await view('get_syndicate_count');
     window.__synCount = count; const netStage = $('canvas[data-scene="network"]').__stage; if (netStage) netStage.resize();
     $('#net-count').textContent = count;
-    chip.classList.add('ok'); chipText.textContent = `Contract live · ${count} syndicates · block ${block.toLocaleString('en-US')}`;
+    chip.classList.add('ok'); chipText.textContent = `Contract live · ${count} groups · block ${block.toLocaleString('en-US')}`;
     row(list, true, 'NEAR answered, with no server of ours in between', `${CONTRACT}, block ${block.toLocaleString('en-US')}`);
     row(list, acct.code_hash === DEPLOYED_CODE_HASH, 'The contract is the exact version we tested', `fingerprint ${short(acct.code_hash, 10)}`);
     const { value: newest } = await view('list_syndicates', { from_index: Math.max(0, count - 3), limit: 3 });

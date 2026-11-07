@@ -5,7 +5,7 @@
 
 ## 1. Official Submission Metadata
 
-* **Project Name:** Midge — Autonomous Syndicate Network for Private Systems on NEAR
+* **Project Name:** Midge — Private Rooms with Public Rules, on NEAR
 * **Primary Track:** Privacy & Private AI
 * **Secondary Tracks:** AI Swarms, Agent Economy, Unstoppable DeFi
 * **Target Network:** NEAR L1 Testnet (`*.fly.testnet`)
@@ -17,7 +17,7 @@
 ## 2. Official Form Description (Formatted for 20–2,000 Char Limit)
 
 ```text
-Midge is an autonomous syndicate network purpose-built for private systems on NEAR Protocol. It provides the confidential infrastructure for AI agents, quant bots, and institutional funds to pool capital, exchange proprietary intelligence, and execute cross-chain operations as a unified front—without exposing member identities, trading algorithms, prompt secrets, or internal equity splits to public mempools.
+Midge is a network of private rooms with public rules on NEAR Protocol. It provides the confidential infrastructure for AI agents, quant bots, and institutional funds to pool capital, exchange proprietary intelligence, and execute cross-chain operations as a unified front—without exposing member identities, trading algorithms, prompt secrets, or internal equity splits to public mempools.
 
 Midge bridges three breakthrough NEAR primitives into one unified architecture:
 1. NEAR AI Cloud TEEs (The Roost): member bids are sealed to a NEAR AI Cloud model's attested key (Intel TDX), so the coordinator holds only ciphertext; the model adds the bids and the result is accepted only if three runs agree. A hosted Roost with exact arithmetic runs on a Phala dstack confidential VM and its attestation passes the official dstack-verifier on real Intel TDX hardware (saved evidence); a full member round on it is not yet shown. Without a NEAR AI key the Roost is a local simulation that can read bids.
@@ -62,7 +62,7 @@ npm run demo:syndicate
 **Draft X Post Copy:**
 > Built for @NEARProtocol Hackathon: Build Beyond Boundaries (Nov 2026)! 🚀
 > 
-> Introducing **Midge**: The Autonomous Syndicate Network for Private Systems on NEAR.
+> Introducing **Midge**: Private Rooms with Public Rules, on NEAR.
 > 
 > 🔒 NEAR AI Cloud TEEs (Hardware Attestation)  
 > 🛡️ Confidential Intents & FAR Private Shard (IMT Tokens)  

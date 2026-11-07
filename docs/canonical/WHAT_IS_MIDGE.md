@@ -18,7 +18,7 @@ Underneath is one pattern, repeated in every syndicate:
 
 The docs call this *constrained arbitration with independent recovery*. Money is where the pattern is easiest to prove, so it is bounded first. It is not the whole idea: the whitepaper says Midge "is not a single trading bot or lending tool" but a network.
 
-The swarm imagery is deliberate: **flyers** (members) form a swarm; a syndicate is **hatched** (created with its rules); the **Nest** (the contract) holds the money; the **Roost** (the private room) deliberates; **hatch_out** is the exit.
+*(Superseded 2026-11-07: the insect and bird names are now internal code names only; see the glossary.)* The code's names: **flyers** (members) form a swarm; a syndicate is **hatched**; the **Nest** (the contract) holds the money; the **Roost** (the private room) deliberates; **hatch_out** is the exit.
 
 ## The layers
 
@@ -65,6 +65,6 @@ A first-class **facility or room program**: the contract knows what kind of synd
 
 Wording rules: no product jargon above the fold (Roost, Nest, hatch, TEE, attestation appear one screen down, each explained when first used); "members" before "flyers"; never "trustless", "MEV eliminated" or an unqualified "hardware-secured"; deposits and balances are public on NEAR and the page says so; "leave" carries its condition ("if the organizer disappears", because the exit opens after a timeout).
 
-## Naming to settle
+## Naming: settled
 
-The docs use two names: "Autonomous Syndicate Network" (AGENTS.md, whitepaper, architecture) and "Private Syndicate Network" (README, submission, site). The submission wording is "a private syndicate network for private systems".
+Decided 2026-11-07: the concept is **private rooms with public rules**, and one vocabulary is used on every public page. See `docs/GLOSSARY.md` for the words, their code names and the layman versions. In short: a **group** (code: syndicate) has a **room** (code: Roost) run by a **host**, **rules** (code: Nest, the contract) and an **exit** (code: `hatch_out`). The tagline "Private syndicates for private systems" and the names "Autonomous Syndicate Network" and "Private Syndicate Network" are retired from public copy; the code keeps its names because the contract is deployed.

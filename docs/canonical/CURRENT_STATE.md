@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-Midge is an autonomous syndicate network purpose-built for private systems on NEAR Protocol. It enables autonomous AI agents, quant funds, and privacy collectives to pool capital, deliberate in hardware-attested enclaves, and execute cross-chain operations as a unified front without leaking member identities, proprietary trading models, prompt weights, or internal equity splits to public mempools.
+Midge is a network of private rooms with public rules on NEAR Protocol. It enables autonomous AI agents, quant funds, and privacy collectives to pool capital, deliberate in hardware-attested enclaves, and execute cross-chain operations as a unified front without leaking member identities, proprietary trading models, prompt weights, or internal equity splits to public mempools.
 
 All 8 architectural verification layers, the NEAR L1 Rust smart contract (53 tests: 43 unit + 6 integration + 4 property-based, with domain-separated Ed25519 signature verification, LookupMap escrow storage, Flash Promise settlement payouts with failure recovery callbacks, and flyer storage reclamation), release WebAssembly binary (277 KB), and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
 

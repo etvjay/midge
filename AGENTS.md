@@ -1,4 +1,4 @@
-# Midge: Autonomous Syndicate Network for Private Systems on NEAR
+# Midge: Private Rooms with Public Rules, on NEAR
 
 ## Architecture & SDLC Governance
 This repository implements Midge, an autonomous syndicate protocol combining:

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Midge, private syndicates for private systems</title>
+<title>Midge, private rooms with public rules</title>
 <meta name="description" content="Midge is a network of private rooms with public rules on NEAR. Groups decide together in private, their money follows rules no one can change, and each member can take their own share back. A prototype on NEAR testnet. No token.">
 <meta name="theme-color" content="#0f1416">
-<meta property="og:title" content="Midge, private syndicates for private systems">
+<meta property="og:title" content="Midge, private rooms with public rules">
 <meta property="og:description" content="A network of private rooms with public rules, on NEAR. A NEAR HACKATHON prototype on testnet. No token.">
 <meta property="og:type" content="website">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -41,7 +41,7 @@
     <p class="eyebrow">Midge · on NEAR</p>
     <h1 id="hero-title" class="display">A network of private rooms <br>with public rules</h1>
     <p class="lede">Groups decide together in private. Their money follows rules that everyone can see and no one can change. If anything goes wrong, each member takes their own share back.</p>
-    <p class="tagline">Private syndicates for private systems</p>
+    <p class="tagline">For funds, DAOs, teams and AI agents that decide together</p>
     <div class="cta">
       <a class="btn btn-light btn-magnet" href="#idea"><span>See how it works</span></a>
       <a class="btn btn-ghost-dark" href="#proof">Check it yourself</a>
@@ -83,7 +83,7 @@
   <div class="wrap">
     <p class="kicker">02 · How it works</p>
     <h2 id="idea-title" class="title">Every group gets a room, rules and an exit</h2>
-    <p class="lede-sm">A group on Midge is called a syndicate. Every syndicate is built from the same three things.</p>
+    <p class="lede-sm">Every group on Midge is built from the same three things.</p>
     <span class="steps-rail" aria-hidden="true"><span class="rail-fill"></span><i style="top:0%">1</i><i style="top:50%">2</i><i style="top:100%">3</i></span>
 
     <div class="chapter">
@@ -92,7 +92,8 @@
         <p class="step">1 · The room</p>
         <h3>Members decide in private</h3>
         <p>Each member seals their bid so only the room can open it. The room adds them up and lets out just the result. Even the people running the machine see nothing.</p>
-        <p>The room runs on secure hardware that proves which code it is running. There are two ways to run it:</p>
+        <p>A room is run by a host: secure hardware that proves which code it is running. There are two kinds:</p>
+        <p class="fine">For more safety a room can run on two independent hosts, and both must sign before any money moves.</p>
         <div class="kind-switch" role="group" aria-label="Show the room as">
           <span class="kind-ind" aria-hidden="true"></span>
           <button type="button" data-kind="0" aria-pressed="false">An AI model on NEAR AI Cloud</button>
@@ -132,18 +133,22 @@
       <div>
         <p class="kicker">03 · Who uses it</p>
         <h2 id="net-title" class="title">Any group, on one shared network</h2>
-        <p class="lede-sm">People, DAOs, companies and AI agents all join the same way, with a NEAR account. One contract on NEAR holds every syndicate, so groups are easy to find, and one member can be in several at once.</p>
-        <p class="stat"><span id="net-count">…</span><span>syndicates on the network right now</span></p>
+        <p class="lede-sm">People, DAOs, companies and AI agents all join the same way, with a NEAR account. One contract on NEAR holds every group, so groups are easy to find, and one member can be in several at once.</p>
+        <p class="stat"><span id="net-count">…</span><span>groups on the network right now</span></p>
       </div>
-      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="network" aria-hidden="true"></canvas></div><figcaption class="stage-cap">One contract, many syndicates. The orange member is in three of them.</figcaption></figure>
+      <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="network" aria-hidden="true"></canvas></div><figcaption class="stage-cap">One contract, many groups. The orange member is in three of them.</figcaption></figure>
     </div>
     <div class="grid-4 uses">
+      <article class="mini"><h3>Auctions and token sales</h3><p>Bidders send sealed bids. The rules fix the winner and the price, and everyone else gets their deposit back.</p></article>
+      <article class="mini"><h3>Investing together</h3><p>Backers agree on a round and invest from one shared address.</p></article>
       <article class="mini"><h3>Lending</h3><p>Lenders send sealed offers. The best terms win, and the others stay private.</p></article>
       <article class="mini"><h3>Big trades</h3><p>Two desks swap a large order without showing its size to the market.</p></article>
+      <article class="mini"><h3>Voting</h3><p>Members cast sealed votes. Only the result is published, and it decides a payment.</p></article>
+      <article class="mini"><h3>Paying people</h3><p>A team or a set of contractors is paid from one pool without each person seeing the others' amounts.</p></article>
+      <article class="mini"><h3>AI agents together</h3><p>A team of agents buys or pools money, each holding a key that can do one thing only.</p></article>
       <article class="mini"><h3>Shared AI</h3><p>Members pool credits and run a private request on an AI model.</p></article>
-      <article class="mini"><h3>Investing together</h3><p>Backers agree on a round and invest from one shared address.</p></article>
     </div>
-    <p class="fine">A syndicate can be one-off (Flash: one task, then it closes) or ongoing (Dark Vault: many rounds). The lending, trading and AI examples run as simulations today; see what works today below. Investing together has been run on testnet next to a public round and a trusted organizer: both of those show every backer's amount, and the organizer can walk off with the money. Midge hides the amounts only when everyone puts in the same deposit and pays an equal share. If each backer pays their own amount, the amounts become public when the round settles. Sealed auctions have also run on testnet next to a public one: in the public auction a watcher who bids at the last moment can take the lot from the bidder who values it most, and sealed bids prevent that. They still publish the winner and the price, and they need every bidder to lock the same deposit.</p>
+    <p class="fine">A group's room can be one-off (Flash: one task, then it closes) or ongoing (Dark Vault: many rounds). What has run on testnet: investing together and sealed auctions, each next to a public version. The lending, big-trade and shared-AI examples are simulations. Voting and paying people are designed but not built. Investing together was compared with a public round and a trusted organizer: both of those show every backer's amount, and the organizer can walk off with the money. Midge hides the amounts only when everyone puts in the same deposit and pays an equal share; if each backer pays their own amount, the amounts become public when the round settles. Sealed auctions were compared with a public one: in the public auction a watcher who bids at the last moment can take the lot from the bidder who values it most, and sealed bids prevent that. They still publish the winner and the price, and they need every bidder to lock the same deposit.</p>
   </div>
 </section>
 
@@ -183,7 +188,7 @@
     </div>
     <div class="drawings">
       <h3 class="drawings-title">The three pieces, up close</h3>
-      <p class="lede-sm">What a syndicate is physically made of: a room where members decide, the secure hardware that runs it, and the contract that holds the money.</p>
+      <p class="lede-sm">What a group is physically made of: a room where members decide, the secure hardware that runs it, and the contract that holds the money.</p>
       <div class="grid-3">
         <figure class="drawing">
           <div class="wire-box">
@@ -247,9 +252,9 @@
     <div class="today" id="status">
       <h3 class="today-title">What works today</h3>
       <div class="grid-3">
-        <div><h4>Running on testnet</h4><ul><li>The contract: rules, payouts and the exit</li><li>The room on NEAR AI Cloud, and on Phala</li><li>The AI model proposing the split</li><li>NEAR AI, Phala and NEAR together in one round</li><li>Investing together, compared with a public round and an organizer</li><li>Sealed auctions (first-price, second-price, uniform-price), compared with a public auction</li><li>Limited keys for AI agents</li><li>SDK, API and MCP tools</li></ul></div>
-        <div><h4>Built, not yet live</h4><ul><li>Ongoing syndicates (Dark Vault), tested in the contract</li><li>Auctions on a hardware room (they run on a local one today)</li><li>Lending, big trades and shared AI, as simulations</li></ul></div>
-        <div><h4>Next</h4><ul><li>A playground in your browser</li><li>Payroll and investing together</li><li>Paying out on Bitcoin, Ethereum and Solana</li></ul></div>
+        <div><h4>Running on testnet</h4><ul><li>The contract: rules, payouts and the exit</li><li>The host on Phala, and a host that seals to a NEAR AI Cloud model</li><li>The AI model proposing the split</li><li>NEAR AI, Phala and NEAR together in one round</li><li>Signed bids: only the member's own key can bid in their name</li><li>Two hosts that must both sign (run with two local hosts)</li><li>Investing together, compared with a public round and an organizer</li><li>Sealed auctions (first-price, second-price, uniform-price), compared with a public auction</li><li>Limited keys for AI agents</li><li>SDK, API and MCP tools</li></ul></div>
+        <div><h4>Built, not yet live</h4><ul><li>Ongoing groups (Dark Vault), tested in the contract</li><li>Auctions, signed bids and two hosts on real hardware (they run on local hosts today)</li><li>Lending, big trades and shared AI, as simulations</li></ul></div>
+        <div><h4>Next</h4><ul><li>A playground in your browser</li><li>Voting and paying people</li><li>Paying out on Bitcoin, Ethereum and Solana</li></ul></div>
       </div>
       <p class="fine-dark">Testnet only, no audit yet. All test accounts were ours. Deposits and balances are public on NEAR; what stays private is what members bid and decide.</p>
     </div>
@@ -284,7 +289,7 @@ node lab/run.js --tier testnet">Copy</button></div>
       </article>
       <article class="card">
         <h3>Look at the live network</h3>
-        <p>The newest syndicates, read from NEAR by your browser:</p>
+        <p>The newest groups, read from NEAR by your browser:</p>
         <ul class="recent" id="recent"><li>Reading…</li></ul>
       </article>
     </div>

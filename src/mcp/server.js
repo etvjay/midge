@@ -117,7 +117,7 @@ export const FLY_MCP_TOOLS = [
   },
   {
     name: 'midge_list_syndicates',
-    description: 'Lists active and settled syndicates on the Midge Autonomous Syndicate Network (paginated).',
+    description: 'Lists active and settled groups (syndicates) on the Midge network of private rooms (paginated).',
     inputSchema: {
       type: 'object',
       properties: {

@@ -3,7 +3,7 @@
 > **Status of this document (added 2026-11-04):** a design and requirements document. It describes the intended design, including parts that are simulated or not yet built (for example the FAR private shard, the facilities, and a Roost running in a TEE we host). For what is actually built and how to verify it, see the "Real vs. Simulated" matrix in `README.md` and `docs/canonical/CURRENT_STATE.md`.
 > **Components and how far each has been tested (added 2026-11-04):** the diagram above is the intended design. `docs/LAB.md` has a table of every component, with what has run live on NEAR testnet or real hardware and what is covered by offline tests only. In short: the Nest (Flash syndicates, `hatch`, `hatch_out`), the model-sealed Roost and the hosted Roost on a real Phala TDX VM have run live. Dark Vaults, Pods, the FAR Shard, the 1Click settlement path, Chain Signatures, the facilities and x402 are offline models.
 
-## Project: Midge — Syndicate Network for Private Systems on NEAR
+## Project: Midge — Private Rooms with Public Rules, on NEAR
 **Document Identifier:** SAD-FLY-2026-V1.0  
 **Status:** Approved & Implemented Baseline  
 

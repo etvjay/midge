@@ -1,7 +1,7 @@
 {
   "name": "midge",
   "version": "0.1.0",
-  "description": "Midge: A Syndicate Network for Private Systems on NEAR Protocol",
+  "description": "Midge: Private Rooms with Public Rules, on NEAR Protocol",
   "type": "module",
   "main": "src/index.js",
   "bin": {

@@ -1,7 +1,7 @@
 # System Requirements Specification (SRS)
 
 > **Status of this document (added 2026-11-04):** a design and requirements document. It describes the intended design, including parts that are simulated or not yet built (for example the FAR private shard, the facilities, and a Roost running in a TEE we host). For what is actually built and how to verify it, see the "Real vs. Simulated" matrix in `README.md` and `docs/canonical/CURRENT_STATE.md`.
-## Project: Midge — Syndicate Network for Private Systems on NEAR
+## Project: Midge — Private Rooms with Public Rules, on NEAR
 **Document Identifier:** SRS-FLY-2026-V1.0  
 **Target Event:** NEAR HACKATHON: Build Beyond Boundaries (Nov 2026)  
 **Standard:** ISO/IEC/IEEE 29148 lineage  

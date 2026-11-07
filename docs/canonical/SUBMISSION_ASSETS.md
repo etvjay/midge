@@ -13,7 +13,7 @@
 
 ### Draft text
 ```text
-Midge: a private syndicate network for private systems, built at NEAR HACKATHON on @NEARProtocol.
+Midge: private rooms with public rules, built at NEAR HACKATHON on @NEARProtocol.
 
 Members seal their bids to NEAR AI Cloud's attested TEE, so the coordinator never sees them. The contract only pays recipients, caps and deadlines everyone agreed to, and any member can exit alone.
 
@@ -26,7 +26,7 @@ Live on testnet. Verify it yourself: npm run verify
 ## 2. Project Description / Idea Text (1925 / 2,000 characters)
 
 ```text
-Midge is a private syndicate network for private systems on NEAR: institutions, funds, DAOs and agent swarms form syndicates and deal with each other without exposing their bids or strategies.
+Midge is a network of private rooms with public rules on NEAR: funds, DAOs, teams and AI agents form groups, each with a private room, public rules and an exit, and deal with each other without exposing their bids or strategies.
 
 Pooling money forces a choice: trust an off-chain coordinator with custody, or deliberate in public where bids and sizes leak. Midge separates the two. The Nest, a Rust contract on NEAR testnet (c.fly-1793636729.testnet), holds the money and an immutable policy: up to 8 allowed recipients, a cap per epoch, a deadline. A settlement pays out only with a signature bound to the contract, syndicate, epoch, nonce, allocations and order, and only inside that policy; payouts to unapproved recipients are rejected on chain (3 attack transactions recorded). If the coordinator stalls, any member calls hatch_out after the timeout and takes back their own balance alone.
 

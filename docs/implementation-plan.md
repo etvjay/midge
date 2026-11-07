@@ -1,5 +1,5 @@
 # Implementation Plan
-## Project: Midge — Syndicate Network for Private Systems on NEAR
+## Project: Midge — Private Rooms with Public Rules, on NEAR
 **Document Identifier:** PLAN-FLY-2026-V1.0  
 **Methodology:** Agentic SDLC & Test-Driven Development (TDD)  
 

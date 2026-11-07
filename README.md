@@ -1,5 +1,7 @@
-# Midge: A Private Syndicate Network for Private Systems on NEAR
-**Constrained Arbitration with Independent Recovery for Agent Swarms & Capital Collectives**
+# Midge: Private Rooms with Public Rules, on NEAR
+**A network of private rooms with public rules: groups decide together in private, their money follows rules everyone can see, and any member can leave with their own share.**
+
+*In technical terms the pattern is called constrained arbitration with independent recovery. Words used here are defined in [`docs/GLOSSARY.md`](docs/GLOSSARY.md): a **group** (code: syndicate) has a **room** (code: Roost) run by a **host**, **rules** (code: Nest, the contract) and an **exit** (code: `hatch_out`).*
 
 **NEAR HACKATHON: Build Beyond Boundaries (November 1–14, 2026)**  
 **Primary Track:** Privacy & Private AI  
@@ -28,7 +30,7 @@ Existing Web3 paradigms fail autonomous swarms:
 
 **Midge solves this by unbundling coordination from custody:**
 1. **Public Escrow on NEAR L1:** Deposits, depositor accounts, and available escrow balances are public on NEAR L1 (`contracts/fly-coordinator`).
-2. **Confidential Coordination:** Individual bids are sealed to a NEAR AI Cloud model's attested key (the default whenever a NEAR AI key is configured). Each round verifies the Intel TDX quote chain, the TCB status and that the model key is bound to a fresh nonce, so the coordinator holds ciphertext only; members verify that key themselves rather than trusting the coordinator. A language model does the sum, accepted only if three runs agree (8 of 8 live rounds exact, recorded in `docs/canonical/roost-model-evidence.json`). A hosted Roost with exact arithmetic is built and tested against the dstack simulator and the official `dstack-verifier`, but **has not yet run on a real TDX VM**. Without a NEAR AI key the Roost falls back to a local simulation that can read every bid and says so at startup.
+2. **Confidential Coordination:** Members seal their bids (or ballots, or amounts) so only the room can open them, and sign each one with their NEAR key. The room is run by a **host** in secure hardware that proves which code it is running. Two kinds are built. Our program on **Phala** (Intel TDX) opens the sealed inputs, does the arithmetic exactly and signs a result only if it fits the rules; it has run on a real TDX machine and verified 12 of 12 attestation checks, and ran a full round together with the NEAR AI advisor on testnet. The **NEAR AI Cloud** model-sealed host seals inputs to an attested model key, and a language model does the sum (accepted only if three runs agree; 8 of 8 live rounds exact). The attested NEAR AI model also acts as an **advisor** that proposes how to split a total and sees only the total. Without a NEAR AI key the room falls back to a local simulation that can read every bid and says so at startup. A group can also use **two hosts** that must both sign; that is tested on testnet with two local hosts, not yet on two machines.
 3. **Constrained Settlement Authority:** The TEE is **never a custodian**. It cannot hold withdrawal keys or direct arbitrary payouts. It can only propose settlements strictly conforming to an immutable `ReleasePolicy` (allowlisted recipient accounts, max per-epoch release caps, and deadlines) to which depositors explicitly consented upon depositing.
 4. **Independent Non-Custodial Recovery (`hatch_out`):** If an enclave or operator crashes, stalls, or disappears past `timeout_blocks`, any individual depositor can unilaterally reclaim 100% of their remaining eligible balance directly from the contract. This operation requires zero operator cooperation, zero enclave signatures, and does not touch or dilute any other participant's escrow.
 
@@ -266,7 +268,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 > [!NOTE]
 > Network discovery methods (`list_syndicates`, `list_syndicates_by_member`, NEP-297 events) are deployed and live on NEAR Testnet at `c.fly-1793636729.testnet`. Autonomous agents discover active syndicates and their own memberships directly through RPC view calls with bounded gas.
 
-Midge is designed as an **Autonomous Syndicate Network**: a single NEAR L1 coordinator smart contract hosts multiple independent syndicates, each specialized in a financial or computational mission (e.g. signal research, algorithmic execution, AI compute).
+Midge is designed as a **network of private rooms with public rules** (a group is called a syndicate in the code and in the contract): a single NEAR L1 coordinator smart contract hosts multiple independent syndicates, each specialized in a financial or computational mission (e.g. signal research, algorithmic execution, AI compute).
 
 ```
                       ┌─────────────────────────────────────────┐
@@ -316,7 +318,7 @@ For hackathon track justifications and submission assets, see:
 ## 6b. Known Limits and Disclosures
 
 - **Contract deployer key.** The testnet coordinator account `c.fly-1793636729.testnet` still holds one full-access key (the deployer's). The *policy* is immutable inside the contract, but whoever holds that key could redeploy the *code*. The final submission instance will have all access keys deleted, which anyone can check with `view_access_key_list` returning no keys. Until then, treat the contract code as replaceable by the deployer.
-- **Aggregation.** The model-sealed Roost relies on a language model for the sum (three agreeing runs, count check, strict reply format). The hosted Roost computes it exactly but has not run on real TDX hardware.
+- **Aggregation.** The model-sealed Roost relies on a language model for the sum (three agreeing runs, count check, strict reply format). The hosted room (our program on Phala) computes it exactly and has run on a real Intel TDX machine.
 - **Chain Signatures.** One secp256k1 signature on testnet was produced and verified; no transaction has been broadcast on another chain.
 - **Facilities.** RFQ/repo, OTC block trades and the FAR private shard are in-memory simulations. Payroll and angel rounds are planned. On a public chain, individual payouts are visible unless a private settlement layer is used, which we do not have.
 - **Testnet only.** No mainnet deployment, no audit by a third party, and no external users yet.

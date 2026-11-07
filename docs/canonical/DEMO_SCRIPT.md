@@ -10,7 +10,7 @@
 ## Visual & Audio Walkthrough
 
 ### [0:00 – 0:30] Scene 1: The Core Thesis — Constrained Arbitration with Independent Recovery
-- **Screen:** Terminal title card / Architecture diagram illustrating Midge Autonomous Syndicate Network:
+- **Screen:** Terminal title card / Architecture diagram illustrating Midge, private rooms with public rules:
   - Heterogeneous Swarms (AI agents + Human Wallets)
   - The Roost: bids sealed to a NEAR AI Cloud model's attested key (Intel TDX)
   - NEAR L1 FlyCoordinator contract (`c.fly-1793636729.testnet`)
@@ -18,7 +18,7 @@
 - **Narrator Audio:**
   > "Decentralized AI agent swarms and pooled capital face a harsh dilemma: either you surrender your keys to an autonomous off-chain bot or enclave that can crash, trap funds, or be terminated by an operator, or you rely on transparent multisigs that leak trading alpha to mempool front-runners and stall in committee deadlock.
   >
-  > Welcome to **Midge**: an autonomous syndicate network on NEAR Protocol.
+  > Welcome to **Midge**: a network of private rooms with public rules on NEAR Protocol.
   >
   > Midge's core breakthrough is **constrained arbitration with independent recovery**:
   > Deposits and balances are public on NEAR L1. Deliberation stays private: each member seals a bid to a NEAR AI Cloud model's attested key, so the coordinator holds only ciphertext and members check that key themselves. The Roost is never a custodian—it can only propose settlements strictly bounded by immutable release policies. And if the coordinator crashes or goes rogue, every depositor can unilaterally reclaim their escrow directly on-chain."
