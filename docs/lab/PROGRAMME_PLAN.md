@@ -118,3 +118,15 @@ Five members m1 to m5 each put 0.02 NEAR into a pool of 0.1. Two options: A (rec
 4. **Dead host.** If the host never signs, nothing settles and all five exit with the full 0.03.
 5. **Cost.** Gas of the sealed path over the open path (both RFQs, deposits and settlements, no exits) is between 0.5 and 4; the sealed RFQs finish faster than the open ones (an open RFQ runs for its window).
 **Not tested live:** second-price (tested offline), a sniper (shown for lending quotes), and the asset leg (only cash moves).
+
+## Ongoing groups: predictions (E-ONGOING-01 on testnet), written 2026-11-07 before the run
+
+An ongoing group is a Dark Vault: it lasts across rounds, takes deposits between them, and each settlement that leaves money behind starts a new epoch. No open baseline exists for this (it tests the contract's lifecycle claims); the comparison is against what the contract says.
+
+**A. A real life.** Four members deposit 0.1 each into a Dark Vault (25% release cap, 16-block exit timer). Round 1 is an investing pool (0.05 to rp); a fifth member then deposits 0.1; round 2 is a ballot among all five (0.05 to the winner, `ra`); round 3 is a lending quote (0.04 loan to rl, won by u3 at 400 bps). One host serves all three rounds with three different programs.
+1. The epoch rises by exactly 1 per settlement and the round nonce changes each time.
+2. The late member deposits between rounds and is then counted in round 2 and charged correctly; after every round the members' escrows sum to the group's total.
+3. Replaying round 1's signed settlement after round 2 is refused (nonce mismatch) and changes nothing.
+4. The exit timer restarts each epoch: an exit right after round 3 is refused even though far more than 16 blocks have passed since the group was opened; 16 blocks after the last settlement every member exits alone with exactly deposit minus charges: u1 0.08, u2 0.08, u3 0.035, u4 0.075, u5 0.09 (total 0.36).
+**B. The cap (predicted from reading the code, expected to be a weakness).** The cap is a share of the group's *current* escrow at each settlement, and the epoch advances by settlement, not by time. With a key we hold standing in for a compromised host, a payout above 25% of the current escrow is refused (0.11 of 0.4), but three payouts of exactly 25% of the current escrow succeed back to back (0.1, then 0.075, then 0.05625), releasing 0.23125 of the original 0.4, that is 57.8% against a stated 25% per epoch. If this holds it is a design weakness (a new gap), not a pass: the "per epoch" cap does not bound how fast a compromised host can drain the group.
+**Not tested:** a baseline, many members, or a very long-lived group.
