@@ -1,12 +1,12 @@
 {
- "generatedAt": "2026-11-07T12:11:23.033Z",
+ "generatedAt": "2026-11-07T12:21:49.811Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 68,
+  "settled": 70,
   "exit": 25,
-  "other": 41,
+  "other": 53,
   "rejected": 28
  },
  "security": {
@@ -2510,6 +2510,132 @@
    "exp": "E-CMP-VOTE-01",
    "run": "20261107T115138Z-9678",
    "error": "Smart contract panicked: panicked at src/lib.rs:821:13: [Settle REJECT] Recipient vcf14pt.fly-1793636729.testnet is not in allowed_recipient"
+  },
+  {
+   "hash": "CAejWDzxna7hSz1sFQ1VDJb23mnYaErKfQ1VMWWpzGNB",
+   "label": "public pay month 1 -> ydcrydp1.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "CiuXZZBbQGpi4yvi6ns7WNeweVHLJemWYDqssiCRn9jP",
+   "label": "public pay month 1 -> ydcrydp2.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "DwJCfJS45W5S2JB1rfQ46hq54oNAWzXtvUCnBSdDpjMn",
+   "label": "public pay month 1 -> ydcrydp3.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "Ac7KJAGHRVKGTkEFP7Htwo9oq91fDzVmFhxvPcwpGes8",
+   "label": "public pay month 1 -> ydcrydp4.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "58LPSGGk3FMcKM7mXQxP6fQ4bQK2yfrReBfKqJi9kxBv",
+   "label": "public pay month 1 -> ydcrydtx.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "DfE7tq1GiR7RieQE5XQSbQADNrtTY6MrdxqTjY6C3W4n",
+   "label": "public pay month 1 -> ydcrydbn.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "7KaPAvxNU4PGdpDSj9HBYCPv8fNDNuXc1kw5Y5t7gKCT",
+   "label": "public pay month 2 -> ydcrydp1.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "FXJN6dX6Xq3jAcPz2yDKWKRNiFSLLKSxmhqJGjKyh5CM",
+   "label": "public pay month 2 -> ydcrydp2.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "GwRkWeKoSoaFFNGFuVEzTPj7fg1AL841LR9n6ZT8QDxK",
+   "label": "public pay month 2 -> ydcrydp3.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "HLWBtdYCwgRg6af6eZ68hPRBi8AAvMGsUFssJ3QTApTS",
+   "label": "public pay month 2 -> ydcrydp4.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "31jR5MTGTXGbBYbJoG2kEhcMrP13yL3pFnBqreQ1zUvp",
+   "label": "public pay month 2 -> ydcrydtx.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "32HxSTYdM2mEdvZmZ6SiZcySmLoFVLMZJ53eBfSNs9un",
+   "label": "public pay month 2 -> ydcrydbn.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "DX79QbhEPgSFzaj5Rt2znbQT3TA62orD4Yc4qo2Xa17N",
+   "label": "settle_batch_charged pay-mw6dcryd-m1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
+  },
+  {
+   "hash": "HWoHWehgvYqTf8Sf8TXhtQWfhY3NtGN7PFsXGQahXLnG",
+   "label": "settle_batch_charged pay-mw6dcryd-m2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261107T121752Z-d9f4",
+   "error": null
   },
   {
    "hash": "Gsg1cvZyhPXVGBNva7oLwVgxrfTgjZmk81f4ueU8wQ36",

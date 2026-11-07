@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T121752Z-d9f4",
+  "startedAt": "2026-11-07T12:17:52.403Z",
+  "rootHash": "e4e186c291c849be023f66f64a1c2493b21adb2481a04e27fc3c04526d361c49",
+  "verdicts": {
+    "E-CMP-PAYROLL-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 83,
+  "commit": "09e902950198441395948ae0cbb36ee0b1d7c167"
+}
