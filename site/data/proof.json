@@ -1,10 +1,10 @@
 {
- "generatedAt": "2026-11-07T07:03:09.640Z",
+ "generatedAt": "2026-11-07T07:31:57.691Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 57,
+  "settled": 59,
   "exit": 25,
   "other": 34,
   "rejected": 22
@@ -2293,6 +2293,24 @@
    "kind": "settled",
    "exp": "E-CMP-AUCTION-01",
    "run": "20261107T064700Z-6ae9",
+   "error": null
+  },
+  {
+   "hash": "7jR4DKre2omnrgcWSvwvU7opa26izxazR5Uaru4tAE2V",
+   "label": "settle_batch_charged inv2-mw62tu5x-charged",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-INVEST-02",
+   "run": "20261107T072312Z-f5ad",
+   "error": null
+  },
+  {
+   "hash": "JAu5v4E3Umwhk8hG9TXvyk4iMozcXKR3ts31uyfwp2Dc",
+   "label": "settle_batch inv2-mw62tu5x-equal",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-INVEST-02",
+   "run": "20261107T072312Z-f5ad",
    "error": null
   },
   {

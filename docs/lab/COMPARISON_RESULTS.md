@@ -48,3 +48,17 @@ Four backers invest 0.01, 0.02, 0.03 and 0.04 NEAR (0.10 in all) into one recipi
 ## A bug the experiment found
 
 The first run failed. After a 0.10 payout out of 0.20 deposited, one member could not exit and the other three exited with their full deposit. The contract multiplied each member's balance by the payout in a type too small for real amounts and clamped the result (GAP-022). The fix and its tests are in commit `68d6b9d`; the contract was redeployed as `9y8w4PU5…`; the second run above is against the fixed contract. The first run is kept as evidence, not deleted.
+
+## Follow-up: each backer funding their own amount (`E-CMP-INVEST-02`)
+
+*Run `20261107T072312Z-f5ad`, PASS on the first run; predictions were written in `USECASE_PLAN.md` before it.* The same four backers (0.01, 0.02, 0.03, 0.04 NEAR) and the same common 0.05 deposit, settled two ways in one run, with an observer reading only the public settlement transaction.
+
+| | Per-member charges (`settle_batch_charged`) | Equal shares (`settle_batch`) |
+|---|---|---|
+| Contributions an observer recovers from the settlement transaction | **4 of 4** | **0 of 4** |
+| What each backer bore, against what they put in | exactly their own: 0.01, 0.02, 0.03, 0.04 | 0.025 each, whatever they put in |
+| Escrows an observer reads before settlement | all equal (0 of 4) | all equal (0 of 4) |
+
+**The trade-off is real and I had predicted it:** on this contract, for pooled investing, hiding each backer's amount and funding each backer fairly are not both available. Per-member charges fix the fairness problem found in `E-CMP-INVEST-01`, but the charges are arguments of the settlement transaction and so public. Equal shares keep the amounts hidden and are unfair. The common deposit still hides everything before settlement.
+
+A way around it exists but is not built: the room signs a private receipt per member, and each member claims their refund against it, so the settlement publishes only the total. It would trust the room more (a lying room could leave late claimers short, though it could not create money) and it needs its own tests.
