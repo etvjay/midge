@@ -1,0 +1,112 @@
+{
+  "takenAt": "2026-11-07T14:23:36.753Z",
+  "codeHash": "DNZDmhLRfSubVSfNoHtAjRZaPLCpvchTSqeqJgxa4si1",
+  "count": 15,
+  "groups": [
+    {
+      "id": "syn-flash-1793645977",
+      "policy_hash": "a21710781748478eea8889010c91a025302e136695e8089b462714a90731b8f2",
+      "timeout_blocks": 50,
+      "status": "Settled",
+      "total_escrow": "0"
+    },
+    {
+      "id": "syn-atk-wl-1793645988",
+      "policy_hash": "a21710781748478eea8889010c91a025302e136695e8089b462714a90731b8f2",
+      "timeout_blocks": 50,
+      "status": "Active",
+      "total_escrow": "0"
+    },
+    {
+      "id": "syn-flash-1793646106",
+      "policy_hash": "a21710781748478eea8889010c91a025302e136695e8089b462714a90731b8f2",
+      "timeout_blocks": 50,
+      "status": "Settled",
+      "total_escrow": "0"
+    },
+    {
+      "id": "syn-atk-wl-1793646119",
+      "policy_hash": "a21710781748478eea8889010c91a025302e136695e8089b462714a90731b8f2",
+      "timeout_blocks": 50,
+      "status": "Active",
+      "total_escrow": "20000000000000000000000"
+    },
+    {
+      "id": "syn-atk-cap-1793646126",
+      "policy_hash": "69aa0f64c48988248eb10cca0cf8e1cea4ef0a07693d5095bdbcf5abd9fa91e4",
+      "timeout_blocks": 50,
+      "status": "Active",
+      "total_escrow": "40000000000000000000000"
+    },
+    {
+      "id": "syn-escape-1793646136",
+      "policy_hash": "3bde51bd1dbeab27675c5d5c14574919047181a690b080d5d3434219ced01a29",
+      "timeout_blocks": 2,
+      "status": "AbortedRefunded",
+      "total_escrow": "0"
+    },
+    {
+      "id": "lab-mw20t3zk-1",
+      "policy_hash": "ffae209188a05e4bfebaa23a4cea15a59b468cd587e817d126b1dea5f66b9414",
+      "timeout_blocks": 50,
+      "status": "Active",
+      "total_escrow": "0"
+    },
+    {
+      "id": "lab-mw20u2n7-1",
+      "policy_hash": "ffae209188a05e4bfebaa23a4cea15a59b468cd587e817d126b1dea5f66b9414",
+      "timeout_blocks": 50,
+      "status": "Active",
+      "total_escrow": "0"
+    },
+    {
+      "id": "no-keys-syn",
+      "policy_hash": "1754ae34ea43dffb161a43f6825700fe197670859c07fce31db857b65fc997e2",
+      "timeout_blocks": 100,
+      "status": "Active",
+      "total_escrow": "0"
+    },
+    {
+      "id": "syn-flash-1793803348",
+      "policy_hash": "a21710781748478eea8889010c91a025302e136695e8089b462714a90731b8f2",
+      "timeout_blocks": 50,
+      "status": "Settled",
+      "total_escrow": "0"
+    },
+    {
+      "id": "syn-escape-1793803376",
+      "policy_hash": "3bde51bd1dbeab27675c5d5c14574919047181a690b080d5d3434219ced01a29",
+      "timeout_blocks": 2,
+      "status": "AbortedRefunded",
+      "total_escrow": "0"
+    },
+    {
+      "id": "syn-atk-cap-1793803367",
+      "policy_hash": "69aa0f64c48988248eb10cca0cf8e1cea4ef0a07693d5095bdbcf5abd9fa91e4",
+      "timeout_blocks": 50,
+      "status": "Active",
+      "total_escrow": "40000000000000000000000"
+    },
+    {
+      "id": "syn-atk-wl-1793803361",
+      "policy_hash": "a21710781748478eea8889010c91a025302e136695e8089b462714a90731b8f2",
+      "timeout_blocks": 50,
+      "status": "Active",
+      "total_escrow": "20000000000000000000000"
+    },
+    {
+      "id": "ifc-mw2962xo-1",
+      "policy_hash": "38b6f8d1b47c46fa97aa7cf59e78deccc21bc59f8dc30ffd9022f302bc96da8d",
+      "timeout_blocks": 50,
+      "status": "Active",
+      "total_escrow": "0"
+    },
+    {
+      "id": "sec-mw29sqcx-1",
+      "policy_hash": "96adddf950e97af5f7ce3be25f7b5510ec0e08284404a355d381a49a755a590a",
+      "timeout_blocks": 2,
+      "status": "Active",
+      "total_escrow": "50000000000000000000000"
+    }
+  ]
+}

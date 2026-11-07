@@ -145,3 +145,19 @@ An ongoing group is a Dark Vault: it lasts across rounds, takes deposits between
 **Part A, changed to match the new rule (each round waits for the previous window to end, so each round opens its own window):** the epoch still rises by exactly 1 per round; a fourth, small round inside the third round's window **does not** advance the epoch or move the exit timer's start, and the members can exit at the window's start plus the timer, which is **earlier** than the fourth settlement plus the timer (the old rule would have locked them out until then). An exit straight after round 3 is refused while the timer from the window's start has not elapsed.
 
 *Correction, 2026-11-07, after the re-run:* releasing 90% at a 25% cap takes 9 windows, not 8 (8 windows leave 10.01%), so the one-hour-timer figure above, "about 16 hours", is about 18 hours; at the 24-block timer it is about 247 seconds. All predictions for part A and part B held (73 of 73 assertions, run `20261107T134236Z-af24`).
+
+
+## GAP-025 fix: predictions for the live check (E-TIMER-CONSENT-01), written 2026-11-07 before the contract was redeployed
+
+**What the fix is, in plain words.** When you put money into a group you agree to its rules, and the contract checks that you name the same rules. The rules used to leave out the exit timer, so a group could be opened with a one-block timer and nobody who deposited would ever have agreed to it. Now the timer is part of the rules you agree to, and a timer shorter than 10 blocks (about 6 seconds) is refused. The 10 is a sanity floor, not a recommendation: a real group must still choose its timer on purpose, and the release limit is only as strict as that timer.
+
+**The side-agent note, adopted:** the protection works only if the depositor's app works out the hash from the terms the person expects. A client that asks the contract for its hash and sends it back always passes. The client now refuses to do that (offline experiment `E-DEPOSIT-CONSENT-01`, 7 mutations caught).
+
+**Predictions (testnet, after redeploy):**
+1. A hatch with a 9-block timer is refused with the floor message; the group does not exist afterwards and the group count is unchanged.
+2. A hatch with a 12-block timer succeeds. Its stored hash equals the version-2 hash computed independently in the experiment, and `get_policy_terms` reports 12 blocks, a 24-block window and `timer_in_consent_hash: true`.
+3. A deposit using the old formula (no timer) is refused; a deposit that assumed a 300-block timer is refused; neither changes the escrow. A deposit naming the real timer (12) succeeds.
+4. **The 15 groups that existed before the deploy are intact:** the group count is unchanged by the deploy, at least one of them reads back with its stored hash unchanged, and `get_policy_terms` reports `timer_in_consent_hash: false` for it, so anyone reading it knows its timer is not covered.
+5. **A weakness I expect to remain:** groups opened before this change still have a timer their depositors never agreed to. The view marks them, nothing more.
+
+**Not tested:** that a real person reads the terms before depositing (the check is in the software, not in people); a floor above 10 (the right floor depends on what the group holds and how fast its members can react).
