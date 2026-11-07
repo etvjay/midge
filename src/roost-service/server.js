@@ -83,6 +83,16 @@ export function createRoostServer({ roost, adminKey }) {
         const body = await readJson(req);
         return send(res, 200, roost.runPool({ recipient: body.recipient, min: body.min, cap: body.cap, roundId: body.roundId }));
       }
+      if (req.method === 'POST' && url.pathname === '/quote') {
+        if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
+        const body = await readJson(req);
+        return send(res, 200, roost.runQuote({ shape: body.shape, pricing: body.pricing, counterparty: body.counterparty, amount: body.amount, units: body.units, limit: body.limit, roundId: body.roundId }));
+      }
+      if (req.method === 'POST' && url.pathname === '/cross') {
+        if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
+        const body = await readJson(req);
+        return send(res, 200, roost.runCross({ referencePrice: body.referencePrice, roundId: body.roundId }));
+      }
       if (req.method === 'POST' && url.pathname === '/auction') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
         const body = await readJson(req);

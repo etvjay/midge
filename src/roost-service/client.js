@@ -27,6 +27,8 @@ export class HostedRoostClient {
   signSettlement(params) { return this.#call('POST', '/settle', params, true); }
   runAuction(params) { return this.#call('POST', '/auction', params, true); }
   runPool(params) { return this.#call('POST', '/pool', params, true); }
+  runQuote(params) { return this.#call('POST', '/quote', params, true); }
+  runCross(params) { return this.#call('POST', '/cross', params, true); }
   openRound(params) { return this.#call('POST', '/round', params, true); }
   inputDigests() { return this.#call('GET', '/digests', undefined, true); }
   excludeMembers(members) { return this.#call('POST', '/exclude', { members }, true); }

@@ -3,6 +3,7 @@ import { generateClientKey, openFromModel } from '../enclave/e2ee.js';
 import { RoostAggregationError } from '../enclave/errors.js';
 import { clearAuction, FORMATS } from './auction-programs.js';
 import { clearPool } from './pool-program.js';
+import { clearBestQuote, clearCross } from './quote-programs.js';
 import { inputMessage, verifyNearSignature, isAccountId } from './signed-input.js';
 
 /**
@@ -325,6 +326,91 @@ export class HostedRoost {
     const bound = Object.fromEntries(out.contributions.map((c) => [c.flyerId, c.amountMicro * YOCTO_PER_MICRO]));
     const orderHash = sha256Hex(`midge-pool-v1:${roundId}:${recipient}:${pub.total}:${out.contributions.length}:${pub.leftOut.length}:${this.#orderSalt()}`);
     this.aggregate = { orderHash, totalMicro: out.totalMicro, signed: false, program: { allocations, charges, bound } };
+    return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
+   * Best quote. shape 'lend': each sealed input is { rateBps } (0 to 10000); the lowest rate at or under `limit` (basis
+   * points) wins and that lender funds `amount` NEAR to `counterparty` (the borrower). shape 'buy': each input is
+   * { price } (NEAR per unit); the lowest price at or under `limit` wins and `counterparty` (the taker) pays units x price
+   * to the winning dealer. pricing 'first' charges the winner's own quote, 'second' the runner-up's. Settled with
+   * settle_batch_charged; only the cash leg moves (no repayment, collateral or asset delivery is enforced).
+   */
+  runQuote({ shape, pricing = 'first', counterparty, amount = null, units = null, limit, roundId = '' } = {}) {
+    if (shape !== 'lend' && shape !== 'buy') throw new RoostAggregationError("shape must be 'lend' or 'buy'");
+    if (typeof counterparty !== 'string' || counterparty.length === 0 || counterparty.includes(':') || counterparty.includes(',')) throw new RoostAggregationError('counterparty must be a plain account id');
+    if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run a quote round on an empty sealed queue');
+    let limitMicro; let fixedMicro;
+    if (shape === 'lend') {
+      limitMicro = Number.isSafeInteger(Number(limit)) && Number(limit) >= 0 && Number(limit) <= 10000 ? BigInt(Number(limit)) : null;
+      fixedMicro = toMicro(amount);
+      if (limitMicro === null) throw new RoostAggregationError('limit must be a maximum rate in basis points, 0 to 10000');
+      if (fixedMicro === null || fixedMicro === 0n) throw new RoostAggregationError('amount must be a positive decimal with at most 6 places');
+    } else {
+      limitMicro = toMicro(limit);
+      if (limitMicro === null) throw new RoostAggregationError('limit must be a maximum price, a decimal with at most 6 places');
+      if (!Number.isSafeInteger(units) || units < 1 || units > 1_000_000) throw new RoostAggregationError('units must be an integer from 1 to 1,000,000');
+    }
+    const quotes = []; const unreadable = [];
+    this.#inRoundOrder().forEach((intent, order) => {
+      try {
+        const body = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret));
+        let valueMicro;
+        if (shape === 'lend') { const r = body?.rateBps; if (!Number.isSafeInteger(r) || r < 0 || r > 10000) throw new Error('malformed'); valueMicro = BigInt(r); } else { valueMicro = toMicro(body?.price); if (valueMicro === null) throw new Error('malformed'); }
+        if (intent.flyerId === counterparty) throw new Error('the counterparty cannot quote');
+        quotes.push({ flyerId: intent.flyerId, valueMicro, order });
+      } catch { unreadable.push(intent.flyerId); }
+    });
+    const out = clearBestQuote({ direction: 'lowest', quotes, limitMicro, pricing });
+    this.sealedIntents = [];
+    const pub = { shape, pricing, counterparty, won: out.won, winner: out.winner, quotesReceived: out.quotesReceived, quotesEligible: out.quotesEligible, unreadable, executionModel: 'HOSTED_SEALED_QUOTE', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    if (!out.won) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
+    let payMicro; let allocations; let charges; let bound;
+    if (shape === 'lend') {
+      pub.rateBps = Number(out.priceMicro); pub.loan = formatMicro(fixedMicro); payMicro = fixedMicro;
+      allocations = [{ recipient: counterparty, amount: String(payMicro * YOCTO_PER_MICRO) }];
+      charges = [{ member: out.winner, amount: String(payMicro * YOCTO_PER_MICRO) }];
+      bound = { [out.winner]: payMicro * YOCTO_PER_MICRO };
+    } else {
+      payMicro = BigInt(units) * out.priceMicro; pub.price = formatMicro(out.priceMicro); pub.units = units; pub.cost = formatMicro(payMicro);
+      allocations = [{ recipient: out.winner, amount: String(payMicro * YOCTO_PER_MICRO) }];
+      charges = [{ member: counterparty, amount: String(payMicro * YOCTO_PER_MICRO) }];
+      bound = { [counterparty]: BigInt(units) * limitMicro * YOCTO_PER_MICRO };
+    }
+    const orderHash = sha256Hex(`midge-quote-v1:${roundId}:${shape}:${pricing}:${counterparty}:${out.winner}:${out.priceMicro}:${payMicro}:${this.#orderSalt()}`);
+    this.aggregate = { orderHash, totalMicro: payMicro, signed: false, program: { allocations, charges, bound } };
+    return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
+   * Block-trade cross. Each sealed input is { side: 'buy'|'sell', units, limit }. Buyers whose limit is at or above the
+   * public `referencePrice` and sellers whose limit is at or below it are crossed at that price; matched units are the
+   * smaller side's total. Sellers are paid, buyers are charged, equal sums. Settled with settle_batch_charged. Only the
+   * cash leg moves; the asset is not delivered. The reference price is supplied, not verified.
+   */
+  runCross({ referencePrice, roundId = '' } = {}) {
+    const referenceMicro = toMicro(referencePrice);
+    if (referenceMicro === null || referenceMicro === 0n) throw new RoostAggregationError('referencePrice must be a positive decimal with at most 6 places');
+    if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run a cross on an empty sealed queue');
+    const buys = []; const sells = []; const unreadable = [];
+    this.#inRoundOrder().forEach((intent, order) => {
+      try {
+        const b = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); const limitMicro = toMicro(b?.limit);
+        if ((b?.side !== 'buy' && b?.side !== 'sell') || !Number.isSafeInteger(b?.units) || b.units < 1 || b.units > 1_000_000 || limitMicro === null) throw new Error('malformed');
+        (b.side === 'buy' ? buys : sells).push({ flyerId: intent.flyerId, units: b.units, limitMicro, order });
+      } catch { unreadable.push(intent.flyerId); }
+    });
+    const out = clearCross({ buys, sells, referenceMicro });
+    this.sealedIntents = [];
+    const cashTotal = out.matchedUnits * referenceMicro;
+    const pub = { shape: 'cross', referencePrice: formatMicro(referenceMicro), matchedUnits: Number(out.matchedUnits), cash: formatMicro(cashTotal), buyers: out.buyFills.length, sellers: out.sellFills.length, ordersReceived: out.buysReceived + out.sellsReceived, unreadable, executionModel: 'HOSTED_SEALED_CROSS', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    if (out.matchedUnits === 0n) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
+    if (out.sellFills.length > 8) throw new RoostAggregationError('a settlement can pay at most 8 sellers');
+    const allocations = out.sellFills.map((f) => ({ recipient: f.flyerId, amount: String(f.cashMicro * YOCTO_PER_MICRO) }));
+    const charges = out.buyFills.map((f) => ({ member: f.flyerId, amount: String(f.cashMicro * YOCTO_PER_MICRO) }));
+    const bound = Object.fromEntries(out.buyFills.map((f) => [f.flyerId, f.ordered * f.limitMicro * YOCTO_PER_MICRO]));
+    const orderHash = sha256Hex(`midge-cross-v1:${roundId}:${referenceMicro}:${out.matchedUnits}:${out.buyFills.map((f) => `${f.flyerId}=${f.units}`).sort().join(',')}:${out.sellFills.map((f) => `${f.flyerId}=${f.units}`).sort().join(',')}:${this.#orderSalt()}`);
+    this.aggregate = { orderHash, totalMicro: cashTotal, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
 
