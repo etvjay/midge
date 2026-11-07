@@ -181,3 +181,22 @@ An ongoing group is a Dark Vault: it lasts across rounds, takes deposits between
 9. The registry is real: a second program passed to the constructor is listed and runs through the same three verbs.
 
 **Not tested:** the other six programs, the adapters (MCP, REST, SSE, SDK), a hardware host.
+
+
+## `runRoom` slice 2: predictions (E-ROOMSERVICE-02, offline), written 2026-11-07 before any code
+
+**What slice 2 is.** The other six room kinds (pool, auction, quote, cross, RFQ, pay run) join the vote behind the same four verbs. In plain words: every kind of room now has the same door.
+
+**Predictions:**
+1. `describe()` lists seven programs: ballot, pool, auction, quote, cross, rfq, payrun, each with its parameters.
+2. **Parity, per program:** on a twin host with the same inputs, the service returns the same order hash, allocations, charges and outcome as the old path. (Hosts use deterministic order so the two are comparable.)
+3. Every decided run returns a ready contract call whose signature verifies against the host's key over a message rebuilt independently; the method is `settle_batch_charged` for all six (each carries per-member charges).
+4. A run that decides nothing (no eligible quote, no crossing orders, a sold-out reserve, no winning RFQ quote) returns a null settlement and signs nothing.
+5. A table of wrong parameters per program (wrong type, missing, out of range) returns `INVALID_PARAMS` every time, never `INTERNAL`, and leaves the queue as it was.
+6. **Confidentiality of extras:** a pay run returns its receipts only as sealed statements (one per payee, one for the employer, one for the auditor) and the result contains no payee name or amount in the clear; an RFQ's terms (side, units, price) are left out unless the caller asks with `includeConfidential: true`.
+7. Programs needing signed inputs (RFQ, pay run, vote) refuse an unsigned host with a typed code; the others work on an unsigned host.
+8. Existing behaviour holds: retry-safety, `ALREADY_SIGNED`, typed errors (the slice-1 tests still pass).
+
+**A weakness I expect to remain:** the existing host route for an RFQ already returns the plain terms to whoever calls it; slice 2 does not change that route, it only keeps `RoomService` from adding to it.
+
+**Not tested:** the adapters, a hardware host, a testnet settlement through `RoomService`.
