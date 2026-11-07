@@ -1,0 +1,49 @@
+{
+  "runId": "20261107T163616Z-64d8",
+  "startedAt": "2026-11-07T16:36:16.540Z",
+  "rootHash": "7241000b4127008deb9df0aec0c54ee5e5ddd654eaf0022e961178fd1a54a117",
+  "verdicts": {
+    "E-ROOMSERVICE-04": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-05": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-01": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-02": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-03": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 1358,
+  "commit": "eeab4d7119303c5c95531f0901b63ef528433f68"
+}
