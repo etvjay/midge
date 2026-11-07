@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T092049Z-2727",
+  "startedAt": "2026-11-07T09:20:49.246Z",
+  "rootHash": "6ea0bf7f07e8d31a0f5f6324ce990ef2d5c15743dff20f1c91b50a93c5b3d699",
+  "verdicts": {
+    "E-TWO-ROOM-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 75,
+  "commit": "cb8d12bb6e025200876fe21f6140899adbdf2650"
+}

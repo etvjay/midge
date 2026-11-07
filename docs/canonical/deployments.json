@@ -23,7 +23,15 @@
       "from": "2026-11-05T04:48Z",
       "deployTx": "2foizKuuAca7q74UYBCZzRooGm2v5EFqAedspaqAjnXV",
       "gitCommit": "8d4d0d4",
-      "reason": "Adds settle_batch_charged (the room names how much each member pays). settle_batch is unchanged. State unchanged: 15 syndicates intact across the deploy."
+      "reason": "Adds settle_batch_charged (the room names how much each member pays). settle_batch is unchanged. State unchanged: 15 syndicates intact across the deploy.",
+      "until": "2026-11-07T09:25Z"
+    },
+    {
+      "codeHash": "Cb2iAamXCuum588BnfantDy5BJSRjCBAQ3gNqqQtAQKh",
+      "from": "2026-11-07T09:25Z",
+      "deployTx": "GxUNHwwM1JrdM5wj4i7qkqr9wqN1cVMVKbZTMnzVj16g",
+      "gitCommit": "20c6763",
+      "reason": "Adds two-room agreement: hatch_two_room, settle_batch_two_room, settle_batch_charged_two_room and get_second_enclave_key. Existing entry points unchanged. State unchanged: 15 syndicates intact across the deploy. Deployed by scripts/deploy-contract.mjs."
     }
   ]
 }

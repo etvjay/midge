@@ -41,3 +41,7 @@ The research asks which rule wins when a member exits while settlement is pendin
 - Contract unit/integration: two valid signatures settle; one signature, the same signature twice, a signature from a key not registered, two different messages, and a one-room syndicate given two signatures are each refused.
 - Exit: an exit during `is_settling` is refused; an exit after a refused two-room settlement returns the full deposit; an exit never returns more than the member's escrow.
 - JS: both Roosts, fed the same inputs, produce the same message; fed different inputs, different messages.
+
+## Result
+
+Built and run on testnet 2026-11-07: see `TWO_ROOM_RESULTS.md` (PASS, run `20261107T092049Z-2727`).

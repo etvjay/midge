@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-07T07:31:57.691Z",
+ "generatedAt": "2026-11-07T09:24:07.823Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
   "settled": 59,
   "exit": 25,
-  "other": 34,
-  "rejected": 22
+  "other": 37,
+  "rejected": 27
  },
  "security": {
   "run": "20261105T035644Z-7c1d",
@@ -2312,6 +2312,78 @@
    "exp": "E-CMP-INVEST-02",
    "run": "20261107T072312Z-f5ad",
    "error": null
+  },
+  {
+   "hash": "BFHiE1qPkWqFyGd9KghtEFHpYoYoTYvspPZnPB6k5PaQ",
+   "label": "room A alone",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261107T092049Z-2727",
+   "error": "Smart contract panicked: [HAQ REJECT] This is a two-room syndicate: settle with settle_batch_two_room or settle_batch_charged_two_room, carr"
+  },
+  {
+   "hash": "AB1cJsYEuwocj9MJnAXJxUpbGmsuvmfUX36qrroF5vWM",
+   "label": "room B greedy",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261107T092049Z-2727",
+   "error": "Smart contract panicked: panicked at src/lib.rs:940:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "9Nhmpjhd1perWNs2LCgrjpCsvEhsaRYPpeJt6y8T6jLD",
+   "label": "room A twice",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261107T092049Z-2727",
+   "error": "Smart contract panicked: panicked at src/lib.rs:940:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "Fhb39xscxUPX8aC44EweaGgFVqrUnxFdbBuwyXBXj77H",
+   "label": "honest pair (room B key we hold)",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261107T092049Z-2727",
+   "error": null
+  },
+  {
+   "hash": "7hTi4Yw2JKiqedu87PU6woE9pWZfeyLX9c5xU99g3QHm",
+   "label": "two real Roosts",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261107T092049Z-2727",
+   "error": null
+  },
+  {
+   "hash": "EmRYZ1kCFHwAAKhrB4Hd4c9rBTsxUr1b49v5a1fR2fCC",
+   "label": "rooms disagree",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261107T092049Z-2727",
+   "error": "Smart contract panicked: panicked at src/lib.rs:940:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "BEmjPCAAsNhZDrLdyqR6nYhMTeEMEYYkjmL39bSJaPfC",
+   "label": "rooms agree after excluding d",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261107T092049Z-2727",
+   "error": null
+  },
+  {
+   "hash": "HMc9cGY1uTFpiqPa42aojeb22eb4W8DVau3YT6jWSi77",
+   "label": "A alone, B gone",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261107T092049Z-2727",
+   "error": "Smart contract panicked: [HAQ REJECT] This is a two-room syndicate: settle with settle_batch_two_room or settle_batch_charged_two_room, carr"
   },
   {
    "hash": "Gsg1cvZyhPXVGBNva7oLwVgxrfTgjZmk81f4ueU8wQ36",
