@@ -40,33 +40,57 @@ export default {
       s.assert('no invariant broke in 3,000 random rounds (winner is the lowest eligible, price within bounds, value independent of order)', bad.length === 0, { actual: bad });
     });
 
-    await ctx.step('cross: worked example and 3,000 random rounds', async (s) => {
+    await ctx.step('cross (pro-rata): worked examples and 3,000 random rounds', async (s) => {
       const o = (id, units, limit, order) => ({ flyerId: id, units, limitMicro: M(limit), order });
-      const r = clearCross({ buys: [o('b1', 100, 1.1, 0), o('b2', 50, 1.05, 1)], sells: [o('s1', 80, 0.95, 2), o('s2', 90, 1.0, 3)], referenceMicro: M(1.0) });
+      const fills = (r) => ({ buys: r.buyFills.map((f) => `${f.flyerId}:${f.units}`).join(), sells: r.sellFills.map((f) => `${f.flyerId}:${f.units}`).join() });
+      const base = { buys: [o('b1', 100, 1.1, 0), o('b2', 50, 1.05, 1)], sells: [o('s1', 80, 0.95, 2), o('s2', 90, 1.0, 3)], referenceMicro: M(1.0) };
+      const r = clearCross(base);
       s.assert('150 buy units meet 170 sell units: 150 match at the reference', r.matchedUnits === 150n);
-      s.assert('buyers fill in full (100 and 50) and pay 1.0 each', r.buyFills.map((f) => `${f.flyerId}:${f.units}:${f.cashMicro}`).join() === `b1:100:${M(100)},b2:50:${M(50)}`);
-      s.assert('the more aggressive seller (limit 0.95) fills first: 80, then 70 of the 90', r.sellFills.map((f) => `${f.flyerId}:${f.units}`).join() === 's1:80,s2:70');
+      s.assert('the short side (buyers) fills in full: b1 100, b2 50', fills(r).buys === 'b1:100,b2:50');
+      s.assert('the long side (sellers) fills pro-rata with largest remainder: s1 gets 71 (70.59), s2 gets 79 (79.41)', fills(r).sells === 's1:71,s2:79', { actual: fills(r) });
       s.assert('a buyer below the reference does not take part', clearCross({ buys: [o('b', 10, 0.9, 0)], sells: [o('s', 10, 0.8, 1)], referenceMicro: M(1.0) }).matchedUnits === 0n);
       s.assert('a seller above the reference does not take part', clearCross({ buys: [o('b', 10, 1.2, 0)], sells: [o('s', 10, 1.1, 1)], referenceMicro: M(1.0) }).matchedUnits === 0n);
+      // the fix: a free extreme limit buys nothing but qualification
+      const withF = (limit) => clearCross({ ...base, sells: [...base.sells, o('F', 40, limit, 4)] });
+      const extreme = withF(0.00001); const atRef = withF(1.0);
+      s.assert('a seller with an extreme limit (0.00001) is filled pro-rata like everyone else: F 29, s1 57, s2 64 (not F 40 first)', fills(extreme).sells === 's1:57,s2:64,F:29', { actual: fills(extreme) });
+      s.assert('and gets exactly what the same seller gets with a limit equal to the reference: the limit decides nothing but qualifying', JSON.stringify(fills(extreme)) === JSON.stringify(fills(atRef)));
+      const capped = clearCross({ ...base, buys: [o('b1', 100000, 1.1, 0), o('b2', 50, 1.05, 1)], maxUnits: 100 });
+      s.assert('a public per-order cap clamps an inflated order: b1 asking for 100,000 is treated as 100', capped.buyFills.find((f) => f.flyerId === 'b1').ordered === 100n && capped.matchedUnits === 150n);
+      const tie = clearCross({ buys: [o('first', 10, 1.0, 0), o('second', 10, 1.0, 1)], sells: [o('s', 15, 1.0, 2)], referenceMicro: M(1.0) });
+      s.assert('when two long-side orders have equal remainders (7.5 each of 15), the extra unit goes to the earlier order: first 8, second 7', fills(tie).buys === 'first:8,second:7', { actual: fills(tie) });
       const rnd = rngOf(9); const bad = [];
       for (let t = 0; t < 3000; t += 1) {
         const nb = Math.floor(rnd() * 6); const ns = Math.floor(rnd() * 6); const ref = M(0.5 + rnd());
         const buys = Array.from({ length: nb }, (_, i) => o(`b${i}`, 1 + Math.floor(rnd() * 200), 0.3 + rnd() * 1.5, i)); const sells = Array.from({ length: ns }, (_, i) => o(`s${i}`, 1 + Math.floor(rnd() * 200), 0.3 + rnd() * 1.5, 100 + i));
-        const a = clearCross({ buys, sells, referenceMicro: ref }); const b = clearCross({ buys, sells, referenceMicro: ref });
+        const cap = rnd() < 0.4 ? 1 + Math.floor(rnd() * 150) : null;
+        const a = clearCross({ buys, sells, referenceMicro: ref, maxUnits: cap }); const b = clearCross({ buys, sells, referenceMicro: ref, maxUnits: cap });
         const fail = (w) => bad.length < 4 && bad.push(w);
         const sum = (l, k) => l.reduce((x, f) => x + f[k], 0n);
         if (sum(a.buyFills, 'units') !== a.matchedUnits || sum(a.sellFills, 'units') !== a.matchedUnits) fail('fills do not sum to matched units');
         if (sum(a.buyFills, 'cashMicro') !== sum(a.sellFills, 'cashMicro') || sum(a.buyFills, 'cashMicro') !== a.matchedUnits * ref) fail('cash is not conserved');
         for (const f of [...a.buyFills, ...a.sellFills]) if (f.units > f.ordered || f.units < 1n) fail('fill outside its order');
+        if (cap !== null) for (const f of [...a.buyFills, ...a.sellFills]) if (f.ordered > BigInt(cap)) fail('an order exceeded the cap');
         for (const f of a.buyFills) if (f.limitMicro < ref) fail('a buyer below the reference was filled');
         for (const f of a.sellFills) if (f.limitMicro > ref) fail('a seller above the reference was filled');
-        const eligB = buys.filter((x) => x.limitMicro >= ref).sort((x, y) => (x.limitMicro !== y.limitMicro ? (x.limitMicro > y.limitMicro ? -1 : 1) : x.order - y.order));
-        let partial = false; for (const x of eligB) { const f = a.buyFills.find((y) => y.flyerId === x.flyerId); const got = f ? f.units : 0n; if (partial && got > 0n) fail('a less aggressive buyer filled after a partial fill'); if (got < BigInt(x.units)) partial = true; }
-        const eligS = sells.filter((x) => x.limitMicro <= ref).sort((x, y) => (x.limitMicro !== y.limitMicro ? (x.limitMicro < y.limitMicro ? -1 : 1) : x.order - y.order));
-        partial = false; for (const x of eligS) { const f = a.sellFills.find((y) => y.flyerId === x.flyerId); const got = f ? f.units : 0n; if (partial && got > 0n) fail('a less aggressive seller filled after a partial fill'); if (got < BigInt(x.units)) partial = true; }
+        // short side in full, long side within one unit of its proportional share
+        const totalB = a.buyFills.length ? 0n : 0n; void totalB;
+        const eligB = buys.filter((x) => x.limitMicro >= ref && x.units > 0).map((x) => BigInt(cap === null ? x.units : Math.min(x.units, cap))); const eligS = sells.filter((x) => x.limitMicro <= ref && x.units > 0).map((x) => BigInt(cap === null ? x.units : Math.min(x.units, cap)));
+        const tb = eligB.reduce((x, y) => x + y, 0n); const ts = eligS.reduce((x, y) => x + y, 0n);
+        if (a.matchedUnits !== (tb < ts ? tb : ts)) fail('matched units are not the smaller side');
+        const longFills = tb > ts ? a.buyFills : a.sellFills; const longTotal = tb > ts ? tb : ts; const shortFills = tb > ts ? a.sellFills : a.buyFills;
+        if (a.matchedUnits > 0n) {
+          for (const f of shortFills) if (f.units !== f.ordered) fail('the short side was not filled in full');
+          for (const f of longFills) { const exact = f.ordered * a.matchedUnits; const lo = exact / longTotal; if (f.units < lo || f.units > lo + 1n) fail('a long-side fill is not within one unit of its pro-rata share'); }
+        }
+        // the limit decides only who qualifies: move every eligible trader's limit to the reference exactly
+        const flat = (l) => l.map((x) => (x.limitMicro >= ref && l === buys) || (x.limitMicro <= ref && l === sells) ? { ...x, limitMicro: ref } : x);
+        const c = clearCross({ buys: flat(buys), sells: flat(sells), referenceMicro: ref, maxUnits: cap });
+        const key = (r) => JSON.stringify([r.matchedUnits, r.buyFills.map((f) => [f.flyerId, f.units]), r.sellFills.map((f) => [f.flyerId, f.units])], (k, v) => (typeof v === 'bigint' ? String(v) : v));
+        if (key(a) !== key(c)) fail('fills changed when only the limits of qualifying traders changed');
         if (JSON.stringify(a, (k, v) => (typeof v === 'bigint' ? String(v) : v)) !== JSON.stringify(b, (k, v) => (typeof v === 'bigint' ? String(v) : v))) fail('not deterministic');
       }
-      s.assert('no invariant broke in 3,000 random rounds (units and cash conserved, fills within orders, priority respected, deterministic)', bad.length === 0, { actual: bad });
+      s.assert('no invariant broke in 3,000 random rounds (units and cash conserved, short side full, long side within one unit of pro-rata, caps respected, limits decide only who qualifies, deterministic)', bad.length === 0, { actual: bad });
     });
 
     await ctx.step('the Roost runs the programs and signs only what it computed', async (s) => {
@@ -92,7 +116,7 @@ export default {
       // cross
       r = new HostedRoost({ provider }); const orders = [['b1', 'buy', 100, '1.10'], ['b2', 'buy', 50, '1.05'], ['s1', 'sell', 80, '0.95'], ['s2', 'sell', 90, '1.00']]; for (const [id, side, units, limit] of orders) seal(r, id, { side, units, limit });
       out = r.runCross({ referencePrice: '1.00', roundId: 'z' });
-      s.assert('cross: 150 units match; sellers s1 and s2 are paid 80 and 70; buyers b1 and b2 pay 100 and 50', out.outcome.matchedUnits === 150 && out.allocations.map((a) => `${a.recipient}:${BigInt(a.amount) / NEAR}`).join() === 's1:80,s2:70' && out.charges.map((c) => `${c.member}:${BigInt(c.amount) / NEAR}`).join() === 'b1:100,b2:50', { actual: out });
+      s.assert('cross: 150 units match pro-rata; sellers s1 and s2 are paid 71 and 79; buyers b1 and b2 pay 100 and 50', out.outcome.matchedUnits === 150 && out.allocations.map((a) => `${a.recipient}:${BigInt(a.amount) / NEAR}`).join() === 's1:71,s2:79' && out.charges.map((c) => `${c.member}:${BigInt(c.amount) / NEAR}`).join() === 'b1:100,b2:50', { actual: out });
       const mk = () => { const q = new HostedRoost({ provider }); for (const [id, side, units, limit] of orders) seal(q, id, { side, units, limit }); return { q, o: q.runCross({ referencePrice: '1.00', roundId: 'z' }) }; };
       const t1 = mk(); const bumped = t1.o.charges.map((c) => ({ ...c })); bumped[0].amount = String(BigInt(bumped[0].amount) + 1n);
       s.assert('a charge raised by one yocto is refused', refused(() => t1.q.signSettlement({ ...ROUND, allocations: t1.o.allocations, orderHash: t1.o.orderHash, charges: bumped }), /charges do not match/) === true);
@@ -100,6 +124,10 @@ export default {
       s.assert('an allocation moved to another recipient is refused', refused(() => t2.q.signSettlement({ ...ROUND, allocations: moved, orderHash: t2.o.orderHash, charges: t2.o.charges }), /allocations do not match/) === true);
       const t3 = mk(); s.assert('a cross outcome cannot be settled without its charges', refused(() => t3.q.signSettlement({ ...ROUND, allocations: t3.o.allocations, orderHash: t3.o.orderHash }), /only be settled with its charges/) === true);
       const t4 = mk(); sign(t4.q, t4.o); s.assert('a second signature is refused', refused(() => sign(t4.q, t4.o), /already been signed/) === true);
+      // the public per-order cap is applied by the host
+      r = new HostedRoost({ provider }); for (const [id, side, units, limit] of [['b1', 'buy', 100000, '1.10'], ['b2', 'buy', 50, '1.10'], ['s1', 'sell', 200, '0.90']]) seal(r, id, { side, units, limit });
+      out = r.runCross({ referencePrice: '1.00', maxUnits: 100, roundId: 'cap' });
+      s.assert('cross with a cap of 100 units: b1\'s inflated 100,000 counts as 100, sell side clamps to 100, so 100 units match and the buyers split 67 and 33', out.outcome.matchedUnits === 100 && out.charges.map((c) => `${c.member}:${BigInt(c.amount) / NEAR}`).join() === 'b1:67,b2:33', { actual: out });
       // malformed input never blocks a round
       r = new HostedRoost({ provider }); seal(r, 'b1', { side: 'buy', units: 10, limit: '1.10' }); seal(r, 's1', { side: 'sell', units: 10, limit: '0.9' }); seal(r, 'junk', { side: 'hold', units: -3, limit: 'x' });
       out = r.runCross({ referencePrice: '1.00' });
@@ -117,7 +145,7 @@ export default {
       const C = mkHost(); const D = mkHost(); const ords = [['b1', { side: 'buy', units: 10, limit: '1.0' }], ['b2', { side: 'buy', units: 10, limit: '1.0' }], ['s1', { side: 'sell', units: 15, limit: '1.0' }]];
       for (const [id, o] of ords) seal(C, id, o); for (const [id, o] of [...ords].reverse()) seal(D, id, o);
       const c = C.runCross({ referencePrice: '1.0', roundId: 'k' }); const d = D.runCross({ referencePrice: '1.0', roundId: 'k' });
-      s.assert('cross with tied limits and a partial fill: both hosts split the same way and sign the same order hash', c.orderHash === d.orderHash && JSON.stringify(c.charges) === JSON.stringify(d.charges) && JSON.stringify(c.allocations) === JSON.stringify(d.allocations));
+      s.assert('cross with equal limits and an uneven pro-rata split (10 + 10 buy against 15 sell): both hosts split the same way and sign the same order hash', c.orderHash === d.orderHash && JSON.stringify(c.charges) === JSON.stringify(d.charges) && JSON.stringify(c.allocations) === JSON.stringify(d.allocations));
     });
   },
 };

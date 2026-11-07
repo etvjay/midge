@@ -383,15 +383,16 @@ export class HostedRoost {
   }
 
   /**
-   * Block-trade cross. Each sealed input is { side: 'buy'|'sell', units, limit }. Buyers whose limit is at or above the
-   * public `referencePrice` and sellers whose limit is at or below it are crossed at that price; matched units are the
-   * smaller side's total. Sellers are paid, buyers are charged, equal sums. Settled with settle_batch_charged. Only the
+   * Block-trade cross, pro-rata. Each sealed input is { side: 'buy'|'sell', units, limit }. Buyers whose limit is at or above
+   * the public `referencePrice` and sellers whose limit is at or below it qualify (the limit decides nothing else); matched units are
+   * the smaller side's total, the short side fills in full and the long side in proportion to size. `maxUnits` is a public cap on any one order. Sellers are paid, buyers are charged, equal sums. Settled with settle_batch_charged. Only the
    * cash leg moves; the asset is not delivered. The reference price is supplied, not verified.
    */
-  runCross({ referencePrice, roundId = '' } = {}) {
+  runCross({ referencePrice, maxUnits = null, roundId = '' } = {}) {
     const referenceMicro = toMicro(referencePrice);
     if (referenceMicro === null || referenceMicro === 0n) throw new RoostAggregationError('referencePrice must be a positive decimal with at most 6 places');
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run a cross on an empty sealed queue');
+    if (maxUnits !== null && (!Number.isSafeInteger(maxUnits) || maxUnits < 1 || maxUnits > 1_000_000)) throw new RoostAggregationError('maxUnits must be an integer from 1 to 1,000,000, or null');
     const buys = []; const sells = []; const unreadable = [];
     this.#inRoundOrder().forEach((intent, order) => {
       try {
@@ -400,10 +401,10 @@ export class HostedRoost {
         (b.side === 'buy' ? buys : sells).push({ flyerId: intent.flyerId, units: b.units, limitMicro, order });
       } catch { unreadable.push(intent.flyerId); }
     });
-    const out = clearCross({ buys, sells, referenceMicro });
+    const out = clearCross({ buys, sells, referenceMicro, maxUnits });
     this.sealedIntents = [];
     const cashTotal = out.matchedUnits * referenceMicro;
-    const pub = { shape: 'cross', referencePrice: formatMicro(referenceMicro), matchedUnits: Number(out.matchedUnits), cash: formatMicro(cashTotal), buyers: out.buyFills.length, sellers: out.sellFills.length, ordersReceived: out.buysReceived + out.sellsReceived, unreadable, executionModel: 'HOSTED_SEALED_CROSS', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { shape: 'cross', referencePrice: formatMicro(referenceMicro), maxUnits, matchedUnits: Number(out.matchedUnits), cash: formatMicro(cashTotal), buyers: out.buyFills.length, sellers: out.sellFills.length, ordersReceived: out.buysReceived + out.sellsReceived, unreadable, executionModel: 'HOSTED_SEALED_CROSS', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (out.matchedUnits === 0n) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     if (out.sellFills.length > 8) throw new RoostAggregationError('a settlement can pay at most 8 sellers');
     const allocations = out.sellFills.map((f) => ({ recipient: f.flyerId, amount: String(f.cashMicro * YOCTO_PER_MICRO) }));

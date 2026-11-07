@@ -51,6 +51,7 @@ pub struct Book {
     pub end_block: u64,
     pub settled: bool,
     pub matched_units: u64,
+    pub max_units: u32,
 }
 
 #[near(contract_state)]
@@ -162,7 +163,13 @@ impl PublicMarket {
     }
 
     // ------------------------------------------------------------------ open order book
-    pub fn open_book(&mut self, book_id: String, reference_micro: u128, end_block: u64) {
+    pub fn open_book(
+        &mut self,
+        book_id: String,
+        reference_micro: u128,
+        end_block: u64,
+        max_units: u32,
+    ) {
         assert!(self.books.get(&book_id).is_none(), "book exists");
         assert!(
             end_block > env::block_height(),
@@ -176,6 +183,7 @@ impl PublicMarket {
                 end_block,
                 settled: false,
                 matched_units: 0,
+                max_units,
             },
         );
         self.orders.insert(book_id, Vec::new());
@@ -216,6 +224,10 @@ impl PublicMarket {
         });
     }
 
+    /// Pro-rata cross, the same rule as the sealed room. The limit decides only who qualifies (buyers at or above the
+    /// reference, sellers at or below it); matched units are the smaller side's total; the short side is filled in full and
+    /// the long side in proportion to size, largest remainder first, ties to posting order. `max_units` (0 = none) clamps any
+    /// one order's size. Sellers are paid fill x reference; every buyer gets back deposit minus cash paid.
     pub fn cross(&mut self, book_id: String) {
         let book = self
             .books
@@ -225,51 +237,77 @@ impl PublicMarket {
         assert!(!book.settled, "already settled");
         book.settled = true;
         let reference = book.reference_micro;
+        let cap = if book.max_units == 0 {
+            u64::MAX
+        } else {
+            book.max_units as u64
+        };
         let orders = self.orders.get(&book_id).cloned().unwrap_or_default();
 
-        let mut buys: Vec<(usize, &Order)> = orders
-            .iter()
-            .enumerate()
-            .filter(|(_, o)| o.side == "buy" && o.limit_micro >= reference)
-            .collect();
-        let mut sells: Vec<(usize, &Order)> = orders
-            .iter()
-            .enumerate()
-            .filter(|(_, o)| o.side == "sell" && o.limit_micro <= reference)
-            .collect();
-        buys.sort_by(|a, b| b.1.limit_micro.cmp(&a.1.limit_micro).then(a.0.cmp(&b.0)));
-        sells.sort_by(|a, b| a.1.limit_micro.cmp(&b.1.limit_micro).then(a.0.cmp(&b.0)));
-        let total_buy: u64 = buys.iter().map(|(_, o)| o.units as u64).sum();
-        let total_sell: u64 = sells.iter().map(|(_, o)| o.units as u64).sum();
+        // (posting index, trader, clamped units)
+        let take = |side: &str, ok: &dyn Fn(&Order) -> bool| -> Vec<(usize, AccountId, u64)> {
+            orders
+                .iter()
+                .enumerate()
+                .filter(|(_, o)| o.side == side && o.units > 0 && ok(o))
+                .map(|(i, o)| (i, o.trader.clone(), (o.units as u64).min(cap)))
+                .collect()
+        };
+        let buys = take("buy", &|o| o.limit_micro >= reference);
+        let sells = take("sell", &|o| o.limit_micro <= reference);
+        let total_buy: u64 = buys.iter().map(|b| b.2).sum();
+        let total_sell: u64 = sells.iter().map(|s| s.2).sum();
         let matched = total_buy.min(total_sell);
         book.matched_units = matched;
 
-        let mut buyer_fill: Vec<(AccountId, u64)> = Vec::new();
-        let mut rest = matched;
-        for (_, o) in &buys {
-            let u = (o.units as u64).min(rest);
-            rest -= u;
-            buyer_fill.push((o.trader.clone(), u));
-        }
-        let mut rest = matched;
-        for (_, o) in &sells {
-            let u = (o.units as u64).min(rest);
-            rest -= u;
-            if u > 0 {
-                let cash = u as u128 * reference * MICRO_YOCTO;
-                let _ = Promise::new(o.trader.clone()).transfer(NearToken::from_yoctonear(cash));
+        let fill = |list: &Vec<(usize, AccountId, u64)>, total: u64| -> Vec<(AccountId, u64)> {
+            if matched == 0 {
+                return Vec::new();
+            }
+            if total == matched {
+                return list.iter().map(|(_, a, u)| (a.clone(), *u)).collect();
+            }
+            let mut units: Vec<u64> = list
+                .iter()
+                .map(|(_, _, u)| ((*u as u128 * matched as u128) / total as u128) as u64)
+                .collect();
+            let mut rest = matched - units.iter().sum::<u64>();
+            let mut by_rem: Vec<(usize, u128)> = list
+                .iter()
+                .enumerate()
+                .map(|(k, (_, _, u))| (k, (*u as u128 * matched as u128) % total as u128))
+                .collect();
+            by_rem.sort_by(|a, b| b.1.cmp(&a.1).then(list[a.0].0.cmp(&list[b.0].0)));
+            for (k, _) in by_rem {
+                if rest == 0 {
+                    break;
+                }
+                units[k] += 1;
+                rest -= 1;
+            }
+            list.iter()
+                .zip(units)
+                .map(|((_, a, _), u)| (a.clone(), u))
+                .collect()
+        };
+        let buyer_fills = fill(&buys, total_buy);
+        let seller_fills = fill(&sells, total_sell);
+
+        for (seller, u) in &seller_fills {
+            if *u > 0 {
+                let cash = *u as u128 * reference * MICRO_YOCTO;
+                let _ = Promise::new(seller.clone()).transfer(NearToken::from_yoctonear(cash));
             }
         }
-        // every buyer (matched or not) gets back deposit minus cash paid, including buyers who were not eligible
+        // every buyer (matched or not) gets back deposit minus cash paid, including buyers who did not qualify
         for o in orders.iter().filter(|o| o.side == "buy") {
             let deposited = o.units as u128 * o.limit_micro * MICRO_YOCTO;
-            let filled = buyer_fill
+            let filled = buyer_fills
                 .iter()
                 .find(|(a, _)| *a == o.trader)
                 .map(|(_, u)| *u)
                 .unwrap_or(0);
-            let paid = filled as u128 * reference * MICRO_YOCTO;
-            let back = deposited - paid;
+            let back = deposited - filled as u128 * reference * MICRO_YOCTO;
             if back > 0 {
                 let _ = Promise::new(o.trader.clone()).transfer(NearToken::from_yoctonear(back));
             }
@@ -440,7 +478,7 @@ mod tests {
     fn book() -> PublicMarket {
         ctx("anyone.near", 0, 10);
         let mut c = PublicMarket::default();
-        c.open_book("b".into(), 1_000_000, 100); // reference price 1.0 NEAR per unit
+        c.open_book("b".into(), 1_000_000, 100, 0); // reference price 1.0 NEAR per unit, no cap
         c
     }
     fn buy(c: &mut PublicMarket, who: &str, units: u32, limit_micro: u128, block: u64) {
@@ -491,9 +529,9 @@ mod tests {
         ctx("anyone.near", 0, 100);
         c.cross("b".into());
         let t = transfers();
-        // sellers: s1 80, s2 70 units at 1.0
-        assert!(t.contains(&("s1.near".to_string(), 80 * NEAR)));
-        assert!(t.contains(&("s2.near".to_string(), 70 * NEAR)));
+        // sellers fill pro-rata with largest remainder: s1 71 (70.59), s2 79 (79.41), at 1.0
+        assert!(t.contains(&("s1.near".to_string(), 71 * NEAR)));
+        assert!(t.contains(&("s2.near".to_string(), 79 * NEAR)));
         // buyers had deposited units x limit; each is refunded deposit minus fill x reference
         assert!(t.contains(&("b1.near".to_string(), 100 * 1_100_000 * MICRO - 100 * NEAR)));
         assert!(t.contains(&("b2.near".to_string(), 50 * 1_050_000 * MICRO - 50 * NEAR)));
@@ -531,34 +569,77 @@ mod tests {
     }
 
     #[test]
-    fn the_more_aggressive_buyer_fills_first_when_sellers_run_out() {
+    fn a_seller_above_the_reference_does_not_trade_even_against_an_eager_buyer() {
         let mut c = book();
-        buy(&mut c, "low.near", 100, 1_050_000, 20); // posted first, less aggressive
-        buy(&mut c, "high.near", 100, 1_100_000, 21);
+        buy(&mut c, "b1.near", 10, 1_200_000, 20);
+        sell(&mut c, "s1.near", 10, 1_100_000, 21); // asks more than the 1.0 reference
+        ctx("anyone.near", 0, 100);
+        c.cross("b".into());
+        assert_eq!(c.get_book("b".into()).unwrap().matched_units, 0);
+        assert_eq!(
+            transfers(),
+            vec![("b1.near".to_string(), 10 * 1_200_000 * MICRO)]
+        );
+    }
+
+    #[test]
+    fn an_extreme_limit_buys_no_queue_position() {
+        let mut c = book();
+        buy(&mut c, "low.near", 100, 1_050_000, 20);
+        buy(&mut c, "high.near", 100, 1_900_000, 21); // an extreme limit, posted second
         sell(&mut c, "s1.near", 100, 900_000, 22);
         ctx("anyone.near", 0, 100);
         c.cross("b".into());
         let t = transfers();
         assert!(t.contains(&("s1.near".to_string(), 100 * NEAR)));
-        // high filled in full: refunded 100 x 1.10 - 100 x 1.0; low filled nothing: refunded its whole deposit
-        assert!(t.contains(&(
-            "high.near".to_string(),
-            100 * 1_100_000 * MICRO - 100 * NEAR
-        )));
-        assert!(t.contains(&("low.near".to_string(), 100 * 1_050_000 * MICRO)));
+        // the long side (buyers, 200 units for 100 matched) is split evenly whatever the limits: 50 each
+        assert!(t.contains(&("high.near".to_string(), 100 * 1_900_000 * MICRO - 50 * NEAR)));
+        assert!(t.contains(&("low.near".to_string(), 100 * 1_050_000 * MICRO - 50 * NEAR)));
     }
 
     #[test]
-    fn equally_aggressive_orders_fill_in_posting_order() {
-        let mut c = book();
-        buy(&mut c, "first.near", 60, 1_000_000, 20);
-        buy(&mut c, "second.near", 60, 1_000_000, 21);
-        sell(&mut c, "s1.near", 80, 1_000_000, 22);
+    fn a_seller_with_an_extreme_limit_is_filled_pro_rata_not_first() {
+        let mut c = example();
+        ctx("f.near", 0, 90);
+        c.post_order("b".into(), "sell".into(), 40, 10); // limit 0.00001: as aggressive as it gets
         ctx("anyone.near", 0, 100);
         c.cross("b".into());
         let t = transfers();
-        assert!(!t.iter().any(|(a, _)| a == "first.near")); // first filled in full (60 x 1.0 = its deposit): nothing to refund
-        assert!(t.contains(&("second.near".to_string(), 40 * NEAR))); // second got 20 of 60: refunded 40
+        // sell units 80 + 90 + 40 = 210 for 150 matched: s1 57, s2 64, f 29 (not f 40 first)
+        assert!(t.contains(&("s1.near".to_string(), 57 * NEAR)));
+        assert!(t.contains(&("s2.near".to_string(), 64 * NEAR)));
+        assert!(t.contains(&("f.near".to_string(), 29 * NEAR)));
+    }
+
+    #[test]
+    fn equal_remainders_go_to_the_earlier_order() {
+        let mut c = book();
+        buy(&mut c, "first.near", 10, 1_000_000, 20);
+        buy(&mut c, "second.near", 10, 1_000_000, 21);
+        sell(&mut c, "s1.near", 15, 1_000_000, 22);
+        ctx("anyone.near", 0, 100);
+        c.cross("b".into());
+        let t = transfers();
+        assert!(t.contains(&("s1.near".to_string(), 15 * NEAR)));
+        // each buyer is owed 7.5 of 15; the extra unit goes to the first: first 8, second 7
+        assert!(t.contains(&("second.near".to_string(), 3 * NEAR))); // deposited 10, paid 7
+        assert!(t.contains(&("first.near".to_string(), 2 * NEAR))); // deposited 10, paid 8
+    }
+
+    #[test]
+    fn the_per_order_cap_clamps_an_inflated_order() {
+        ctx("anyone.near", 0, 10);
+        let mut c = PublicMarket::default();
+        c.open_book("b".into(), 1_000_000, 100, 100); // cap of 100 units
+        buy(&mut c, "b1.near", 1_000, 1_000_000, 20); // asks for 1,000 but counts as 100
+        sell(&mut c, "s1.near", 400, 1_000_000, 21); // counts as 100
+        ctx("anyone.near", 0, 100);
+        c.cross("b".into());
+        let t = transfers();
+        assert!(t.contains(&("s1.near".to_string(), 100 * NEAR)));
+        // b1 deposited 1,000 x 1.0 and pays for 100: refunded 900
+        assert!(t.contains(&("b1.near".to_string(), 900 * NEAR)));
+        assert_eq!(c.get_book("b".into()).unwrap().matched_units, 100);
     }
 
     #[test]

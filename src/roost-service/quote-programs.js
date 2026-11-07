@@ -23,15 +23,30 @@ export function clearBestQuote({ direction, quotes, limitMicro, pricing = 'first
 }
 
 /**
- * Cross at a reference price. Buyers with limit >= reference and sellers with limit <= reference take part. Matched units
- * are min(total buy, total sell). The more aggressive limit fills first (higher for buyers, lower for sellers), then the
- * earlier `order`. Every fill is at the reference price.
+ * Cross at a reference price, pro-rata. Buyers with limit >= reference and sellers with limit <= reference take part: the
+ * limit decides ONLY who qualifies, never who is filled first (a free extreme limit would otherwise jump the queue). Matched
+ * units are min(total buy, total sell). The short side is filled in full; the long side is filled in proportion to order size
+ * (largest remainder, ties to the fixed order), so no fill exceeds its order. `maxUnits`, if given, is a public cap on any one
+ * order's size, which limits the over-ordering that pro-rata invites. Every fill is at the reference price.
  */
-export function clearCross({ buys, sells, referenceMicro }) {
-  const eb = buys.filter((b) => b.units > 0 && b.limitMicro >= referenceMicro).sort((a, b) => (a.limitMicro !== b.limitMicro ? (a.limitMicro > b.limitMicro ? -1 : 1) : a.order - b.order));
-  const es = sells.filter((s) => s.units > 0 && s.limitMicro <= referenceMicro).sort((a, b) => (a.limitMicro !== b.limitMicro ? (a.limitMicro < b.limitMicro ? -1 : 1) : a.order - b.order));
-  const totalBuy = eb.reduce((x, b) => x + BigInt(b.units), 0n); const totalSell = es.reduce((x, s) => x + BigInt(s.units), 0n);
+export function clearCross({ buys, sells, referenceMicro, maxUnits = null }) {
+  const clamp = (u) => (maxUnits === null ? BigInt(u) : BigInt(Math.min(u, maxUnits)));
+  const take = (list, ok) => list.filter((o) => o.units > 0 && ok(o)).map((o) => ({ ...o, ordered: clamp(o.units) })).sort((a, b) => a.order - b.order);
+  const eb = take(buys, (b) => b.limitMicro >= referenceMicro);
+  const es = take(sells, (s) => s.limitMicro <= referenceMicro);
+  const sum = (l) => l.reduce((x, o) => x + o.ordered, 0n);
+  const totalBuy = sum(eb); const totalSell = sum(es);
   const matched = totalBuy < totalSell ? totalBuy : totalSell;
-  const fill = (list) => { let rest = matched; const out = []; for (const o of list) { if (rest === 0n) break; const u = BigInt(o.units) < rest ? BigInt(o.units) : rest; out.push({ flyerId: o.flyerId, units: u, cashMicro: u * referenceMicro, limitMicro: o.limitMicro, ordered: BigInt(o.units) }); rest -= u; } return out; };
-  return { matchedUnits: matched, referenceMicro, buyFills: fill(eb), sellFills: fill(es), buysReceived: buys.length, sellsReceived: sells.length, buysEligible: eb.length, sellsEligible: es.length };
+  const fill = (list, total) => {
+    let units;
+    if (total === matched) units = list.map((o) => o.ordered);
+    else {
+      units = list.map((o) => (o.ordered * matched) / total);
+      let rest = matched - units.reduce((x, u) => x + u, 0n);
+      const byRemainder = list.map((o, i) => ({ i, r: (o.ordered * matched) % total })).sort((a, b) => (a.r !== b.r ? (a.r > b.r ? -1 : 1) : list[a.i].order - list[b.i].order));
+      for (const { i } of byRemainder) { if (rest === 0n) break; units[i] += 1n; rest -= 1n; }
+    }
+    return list.map((o, i) => ({ flyerId: o.flyerId, units: units[i], cashMicro: units[i] * referenceMicro, limitMicro: o.limitMicro, ordered: o.ordered })).filter((f) => f.units > 0n);
+  };
+  return { matchedUnits: matched, referenceMicro, buyFills: matched === 0n ? [] : fill(eb, totalBuy), sellFills: matched === 0n ? [] : fill(es, totalSell), buysReceived: buys.length, sellsReceived: sells.length, buysEligible: eb.length, sellsEligible: es.length };
 }

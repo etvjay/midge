@@ -17,7 +17,7 @@ Pricing is first-price (the winner gets their own quote) or second-price (the wi
 **Cross** (block trade). Buyers and sellers seal an order (side, units, limit) and the room crosses them at a public reference price.
 *Layman:* two desks leave sealed orders; if they overlap at today's posted price the clerk matches the overlap and shows nobody the rest.
 
-Matched units are the smaller side's total. Buyers with a limit at or above the reference and sellers with a limit at or below it take part; the more aggressive limit fills first, then a fixed order. Every fill is at the reference price. Buyers are charged units x reference; sellers receive the same.
+Matched units are the smaller side's total. Buyers with a limit at or above the reference and sellers with a limit at or below it take part. *(Original rule: the more aggressive limit fills first. Replaced on 2026-11-07 before any run: see "Revised before any run" below.)* Every fill is at the reference price. Buyers are charged units x reference; sellers receive the same.
 
 ## What this does not do (stated up front)
 
@@ -60,3 +60,15 @@ Reference price 0.0005 NEAR per unit. Buyers: B1 100 units, limit 0.00055; B2 50
 3. **Queue jumping.** The cross fills the more aggressive limit first, so a late seller F with an extreme limit (0.00001) displaces S2's fill in the public book and in the sealed round alike. Sealing does not stop it; this is a property of the priority rule, not of the room.
 4. **Dead host.** Nothing settles; all exit with the full 0.06.
 5. **Cost.** The sealed round locks more capital (every participant deposits 0.06) than the public book (only buyers deposit). Gas is measured with no prediction beyond: sealed is within 0.3 to 3 times the public.
+
+## Revised before any run: the cross is pro-rata (2026-11-07, 10:50 UTC)
+
+**What was wrong.** The cross above filled the most aggressive limit first. Everyone trades at the reference price, so an extreme limit (a seller asking almost nothing, a buyer offering far more than needed) costs nothing and moves that trader to the front. Sealing the orders does not stop it: a trader can set an extreme limit without seeing anyone else's order. My own prediction 3 for E-CMP-CROSS-01 (below, kept) treated this as an accepted property of the rule. A reviewer pointed out it is a flaw, and the fix is cheaper before the run than after, so it was changed first. No experiment had run.
+
+**The rule now.** The limit decides **only who qualifies**. Matched units are the smaller side's total. The short side is filled in full; the long side is filled in proportion to order size (largest remainder, ties to the fixed order). A public per-order cap (`max_units`) clamps any one order's size.
+
+**What this does not fix.** Pro-rata invites over-ordering, because a trader pays only for what is filled. The public cap limits this but does not remove it: every trader can still claim up to the cap. Sellers' size cannot be bounded by a deposit (the asset leg is not on this chain). A reference price that is given, not verified, remains an input.
+
+**Regression evidence.** The new tests fail against the old priority rule (six assertions, including the extreme-limit and "the limit decides nothing but qualifying" checks) and pass on the fix. Mutation tests: 12 of 13 deliberate breaks of the program and host are caught, the 13th being an equivalent mutant (pro-rating a side that is already the short side gives the same answer); the public contract's 11 breaks are all caught after one test was added.
+
+**Revised predictions for E-CMP-CROSS-01.** Prediction 2 now reads: both versions match 150 units at the reference price with the pro-rata split S1 71 and S2 79 when F is absent. Prediction 3 now reads: **F, a late seller with an extreme limit (0.00001) and 40 units, gets no queue position.** With F present the sell side is 210 units for 150 matched, so the fills are S1 57, S2 64 and F 29 in the public book and in the sealed round alike, and F gets exactly what it would get with a limit equal to the reference. Under the old rule F would have filled 40 first and displaced S2 to 30. The public cap in both versions is 100 units.
