@@ -166,7 +166,7 @@ export default {
         s.assert('every operation has a summary and at least one response with a description', Object.values(doc.paths).every((ops) => Object.values(ops).every((o) => o.summary && Object.values(o.responses).length > 0 && Object.values(o.responses).every((x) => x.description || x.$ref))));
         const refs = [...JSON.stringify(doc).matchAll(/"\$ref":"#\/components\/([a-zA-Z]+)\/([A-Za-z0-9_]+)"/g)];
         s.assert('every $ref points at something that exists', refs.length > 0 && refs.every(([, kind, name]) => doc.components?.[kind]?.[name]), { actual: refs.map((x) => x[0]).slice(0, 4) });
-        const codes = ['INVALID_PARAMS', 'UNKNOWN_PROGRAM', 'ROUND_NOT_OPEN', 'NO_INPUTS', 'ALREADY_SIGNED', 'NOT_AUTHORISED', 'INTERNAL', 'NOT_FOUND', 'METHOD_NOT_ALLOWED', 'RATE_LIMITED'];
+        const codes = ['INVALID_PARAMS', 'UNKNOWN_PROGRAM', 'ROUND_NOT_OPEN', 'NO_INPUTS', 'ALREADY_SIGNED', 'NOT_AUTHORISED', 'INTERNAL', 'NOT_FOUND', 'METHOD_NOT_ALLOWED', 'RATE_LIMITED', 'UNAVAILABLE'];
         s.assert('the error schema lists every code the server can return', JSON.stringify([...doc.components.schemas.Error.properties.code.enum].sort()) === JSON.stringify([...codes].sort()), { actual: doc.components.schemas.Error.properties.code.enum });
         const text = JSON.stringify(doc);
         const allParams = svc.describe().programs.flatMap((p) => Object.keys(p.params).map((k) => `${p.id}.${k}`));
