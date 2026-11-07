@@ -1,0 +1,25 @@
+{
+  "runId": "20261107T161239Z-4aad",
+  "startedAt": "2026-11-07T16:12:39.732Z",
+  "rootHash": "f11ef913bd786139b1a0d433e6a7c8b13aa415dac137519624a516bdc02fd12b",
+  "verdicts": {
+    "E-ROOMSERVICE-01": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-02": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 707,
+  "commit": "6be86ad88ffac9541c047f78295237cb84dcc286"
+}
