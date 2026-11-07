@@ -10,6 +10,7 @@
 import crypto from 'node:crypto';
 import { RoomError } from './room-service.js';
 import { buildOpenApi } from './room-openapi.js';
+import { createRateLimiter } from './rate-limit.js';
 
 /** The single table the router serves and the OpenAPI document describes. */
 export const ROUTES = [
@@ -26,18 +27,8 @@ const safeEqual = (a, b) => crypto.timingSafeEqual(crypto.createHash('sha256').u
 
 export function createRoomHandler(service, { adminKey, maxBody = 256 * 1024, rate = {}, clientOf = (req) => req.socket.remoteAddress || 'unknown' } = {}) {
   if (!adminKey) throw new Error('createRoomHandler needs an adminKey to protect opening and running a round');
-  const limit = rate.limit ?? 120; const windowMs = rate.windowMs ?? 60_000; const now = rate.now ?? Date.now;
-  const buckets = new Map();
-
-  const take = (client) => {
-    const t = now();
-    if (buckets.size > 10_000) for (const [k, v] of buckets) if (v.resetAt <= t) buckets.delete(k);
-    let b = buckets.get(client);
-    if (!b || b.resetAt <= t) { b = { count: 0, resetAt: t + windowMs }; buckets.set(client, b); }
-    const allowed = b.count < limit;
-    if (allowed) b.count += 1;
-    return { allowed, remaining: Math.max(0, limit - b.count), resetAt: b.resetAt, retryAfter: Math.max(1, Math.ceil((b.resetAt - t) / 1000)) };
-  };
+  const limiter = rate && typeof rate.take === 'function' ? rate : createRateLimiter(rate); // a limiter instance may be shared with other doors
+  const limit = limiter.limit;
   const isCoordinator = (req) => {
     const h = req.headers['x-roost-admin-key']; const a = req.headers.authorization;
     return (typeof h === 'string' && safeEqual(h, adminKey)) || (typeof a === 'string' && a.startsWith('Bearer ') && safeEqual(a.slice(7), adminKey));
@@ -60,7 +51,7 @@ export function createRoomHandler(service, { adminKey, maxBody = 256 * 1024, rat
     const path = new URL(req.url, 'http://rooms').pathname;
     if (path !== '/v1/rooms' && !path.startsWith('/v1/rooms/')) return false;
     const headers = { 'content-type': 'application/json', 'cache-control': 'no-store' };
-    const bucket = take(clientOf(req));
+    const bucket = limiter.take(clientOf(req));
     Object.assign(headers, { 'x-ratelimit-limit': String(limit), 'x-ratelimit-remaining': String(bucket.remaining), 'x-ratelimit-reset': String(Math.ceil(bucket.resetAt / 1000)) });
     const send = (status, obj, extra = {}) => { res.writeHead(status, { ...headers, ...extra }); res.end(JSON.stringify(obj)); return true; };
     const fail = (status, code, error, extra) => send(status, { error, code }, extra);

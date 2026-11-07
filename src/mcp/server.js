@@ -1,6 +1,8 @@
 import { FlyChainClient } from '../chain/client.js';
 import { FlyNestContract } from '../contracts/nest.js';
 import { ConfidentialRfqFacility } from '../facilities/rfq-adjudication.js';
+import { ROOM_TOOLS, ROOM_TOOL_NAMES, COORDINATOR_ONLY } from './rooms-tools.js';
+import { RoomError } from '../roost-service/room-service.js';
 import { OtcBlockTradeFacility } from '../facilities/otc-block-trade.js';
 
 /**
@@ -198,6 +200,7 @@ export class FlyMcpServer {
     roostEnclave = null,
     rfqFacility = null,
     otcFacility = null,
+    rooms = null,
   } = {}) {
     // Mode resolution: explicit argument -> FLY_MODE env -> default 'chain'
     const envMode = process.env.FLY_MODE;
@@ -220,13 +223,25 @@ export class FlyMcpServer {
     if (this.mode === 'model' && !this.nestContract) this.nestContract = new FlyNestContract();
     this.rfq = rfqFacility || new ConfidentialRfqFacility();
     this.otc = otcFacility || new OtcBlockTradeFacility();
-    this.tools = FLY_MCP_TOOLS;
+    this.rooms = rooms; // a RoomService (or any object with describe/open/submit/run): enables the four room tools
+    this.tools = rooms ? [...FLY_MCP_TOOLS, ...ROOM_TOOLS] : FLY_MCP_TOOLS;
   }
 
   /** Chain mode without write keys must refuse a write. Falling back to the model while the output says "chain" misleads the caller. */
   requireWritable(tool) {
     if (this.mode === 'chain' && !(this.chainClient && this.chainClient.isConfiguredForWrites())) {
       throw new Error(`[${tool}] chain mode needs NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY to send transactions. Set FLY_MODE=model to use the in-memory simulation instead.`);
+    }
+  }
+
+  async #roomTool(name, args, ctx) {
+    if (!this.rooms) throw new Error(`[${name}] no rooms are configured on this server`);
+    if (COORDINATOR_ONLY.has(name) && !ctx.coordinator) throw new RoomError('NOT_AUTHORISED', `[${name}] this tool needs the coordinator key`);
+    switch (name) {
+      case 'midge_describe_rooms': return this.formatOutput(await this.rooms.describe());
+      case 'midge_open_room_round': return this.formatOutput(await this.rooms.open(args.round));
+      case 'midge_submit_room_input': return this.formatOutput(await this.rooms.submit(args.input));
+      default: return this.formatOutput(await this.rooms.run({ program: args.program, params: args.params ?? {}, round: args.round, includeConfidential: args.includeConfidential === true }));
     }
   }
 
@@ -255,7 +270,12 @@ export class FlyMcpServer {
     };
   }
 
-  async executeTool(name, args = {}) {
+  /**
+   * @param {object} [ctx] who is calling. `coordinator: true` means the caller holds the coordinator key (the process that launched
+   * the stdio server, or an HTTP request with the key). The default is false: room tools that open or run a round refuse.
+   */
+  async executeTool(name, args = {}, ctx = {}) {
+    if (ROOM_TOOL_NAMES.has(name)) return this.#roomTool(name, args, ctx);
     const isChain = this.mode === 'chain' && this.chainClient;
 
     switch (name) {

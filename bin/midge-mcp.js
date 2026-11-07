@@ -3,73 +3,41 @@ import readline from 'node:readline';
 import { FlyMcpServer } from '../src/mcp/server.js';
 import { FlyNestContract } from '../src/contracts/nest.js';
 import { createRoost } from '../src/enclave/factory.js';
+import { createRpc } from '../src/mcp/rpc.js';
+import { RoomsClient, remoteRooms } from '../src/sdk/rooms.js';
 
 /**
  * Midge Model Context Protocol (MCP) Server:
- * Provides stdio JSON-RPC transport for LLM coding agents (Claude Code, Cursor, Codex).
+ * Provides stdio JSON-RPC transport for LLM coding agents (Claude Code, Cursor, Codex). The same dispatcher serves the HTTP endpoint
+ * (src/mcp/http.js). Set MIDGE_ROOMS_URL (and MIDGE_ROOMS_KEY, the coordinator key) to add the room tools, backed by a rooms API.
  */
 const nest = new FlyNestContract();
 const roost = createRoost();
+const rooms = process.env.MIDGE_ROOMS_URL
+  ? remoteRooms(new RoomsClient({ baseUrl: process.env.MIDGE_ROOMS_URL, adminKey: process.env.MIDGE_ROOMS_KEY || null }))
+  : null;
 const mcp = new FlyMcpServer({
   mode: process.env.FLY_MODE || 'chain',
   nestContract: nest,
   roostEnclave: roost,
+  rooms,
 });
+const rpc = createRpc(mcp);
+// Whoever launched this process holds whatever key it was given, so over stdio the caller is the coordinator.
+const ctx = { coordinator: true };
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  terminal: false,
-});
-
-function sendResponse(id, result, error = null) {
-  const resp = { jsonrpc: '2.0', id };
-  if (error) {
-    resp.error = error;
-  } else {
-    resp.result = result;
-  }
-  process.stdout.write(JSON.stringify(resp) + '\n');
-}
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: false });
 
 rl.on('line', async (line) => {
   if (!line.trim()) return;
+  let msg;
+  try { msg = JSON.parse(line); } catch (err) {
+    process.stderr.write(`[midge-mcp] Error: ${err.message}\n`);
+    return;
+  }
   try {
-    const req = JSON.parse(line);
-    const { id, method, params } = req;
-
-    switch (method) {
-      case 'initialize':
-        return sendResponse(id, {
-          protocolVersion: '2024-11-05',
-          serverInfo: {
-            name: 'fly-syndicate-mcp',
-            version: '0.1.0',
-          },
-          capabilities: {
-            tools: {},
-            resources: {},
-          },
-        });
-
-      case 'tools/list':
-        return sendResponse(id, mcp.listTools());
-
-      case 'tools/call': {
-        const { name, arguments: args } = params || {};
-        try {
-          const toolResult = await mcp.executeTool(name, args || {});
-          return sendResponse(id, {
-            content: [{ type: 'text', text: JSON.stringify(toolResult, null, 2) }],
-          });
-        } catch (toolErr) {
-          return sendResponse(id, null, { code: -32000, message: toolErr.message });
-        }
-      }
-
-      default:
-        return sendResponse(id, null, { code: -32601, message: `Method not found: ${method}` });
-    }
+    const out = await rpc.handleAny(msg, ctx);
+    if (out !== null) process.stdout.write(JSON.stringify(out) + '\n');
   } catch (err) {
     process.stderr.write(`[midge-mcp] Error: ${err.message}\n`);
   }

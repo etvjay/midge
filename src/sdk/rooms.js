@@ -37,3 +37,8 @@ export class RoomsClient {
   submit(input) { return this.#request('POST', '/v1/rooms/inputs', input); }
   run({ program, params = {}, round, includeConfidential = false }) { return this.#request('POST', '/v1/rooms/run', { program, params, round, includeConfidential }); }
 }
+
+/** Lets anything that expects a RoomService (the MCP server, for one) use a remote rooms API instead. */
+export function remoteRooms(client) {
+  return { describe: () => client.describe(), open: (round) => client.openRound(round), submit: (input) => client.submit(input), run: (req) => client.run(req) };
+}
