@@ -1270,6 +1270,21 @@ impl FlyCoordinator {
         if !in_flight && !has_pending {
             return true;
         }
+        // A follow-up may only finish the settlement that scheduled it. If that one was already finished by
+        // recover_stuck_settlement and a newer one is in flight, this callback is stale and must change nothing.
+        let matches_pending = env::storage_read(&pending_slot(&syndicate_id))
+            .and_then(|raw| near_sdk::borsh::from_slice::<PendingSettlement>(&raw).ok())
+            .map(|p| {
+                p.allocations == allocations
+                    && p.charges == charges
+                    && p.total_payout == total_payout
+                    && p.allocations_hash == allocations_hash
+                    && p.order_hash == order_hash
+            })
+            .unwrap_or(false);
+        if !matches_pending {
+            return true;
+        }
         env::storage_remove(&pending_slot(&syndicate_id));
         self.finish_settlement(
             syndicate_id,

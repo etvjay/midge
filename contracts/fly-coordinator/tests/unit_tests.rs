@@ -3842,3 +3842,43 @@ fn a_member_drained_to_zero_who_deposits_again_is_not_listed_twice() {
     assert_eq!(seen.len(), after.flyers.len(), "flyers must be unique");
     assert_eq!(after.active_flyer_count as usize, after.flyers.len());
 }
+
+#[test]
+fn a_late_callback_from_a_recovered_settlement_cannot_finish_the_next_one() {
+    // Settlement A is recovered by hand. Settlement B starts. A's own follow-up then arrives late and must not touch B.
+    let (mut a, id, m) = stuck_after_charged_settlement("stale-cb");
+    testing_env!(get_context(m[2].clone(), NearToken::from_near(0), 220).build());
+    a.recover_stuck_settlement(id.clone());
+    let nonce = a.get_syndicate(id.clone()).unwrap().round_nonce;
+    let b_alloc = pay_r(3);
+    let b_charges = vec![charge(&m[0], 3)];
+    let sig = sign_charged(
+        &id,
+        1,
+        &nonce,
+        &compute_allocations_hash(&b_alloc),
+        &compute_charges_hash(&b_charges),
+        "order",
+    );
+    testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 230).build());
+    a.settle_batch_charged(
+        id.clone(),
+        nonce,
+        "order".to_string(),
+        b_alloc,
+        b_charges,
+        sig,
+    );
+    assert!(a.get_syndicate(id.clone()).unwrap().is_settling);
+    let escrow_before = a.get_escrow(id.clone(), m[0].clone());
+
+    // A's late callback
+    let late = run_the_callback(&mut a, &id, &m, 231);
+    assert!(late, "a stale callback reports nothing to do");
+    assert!(
+        a.get_syndicate(id.clone()).unwrap().is_settling,
+        "B must still be in flight"
+    );
+    assert!(a.get_pending_settlement(id.clone()).is_some(), "B's record must survive");
+    assert_eq!(a.get_escrow(id, m[0].clone()), escrow_before);
+}
