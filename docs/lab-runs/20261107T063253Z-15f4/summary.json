@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T063253Z-15f4",
+  "startedAt": "2026-11-07T06:32:53.686Z",
+  "rootHash": "d772a508d5c3b7ff7f90949e60a484097e12ad7593cb841d1feb61d026e0ad38",
+  "verdicts": {
+    "E-CMP-AUCTION-01": {
+      "attempts": [
+        "FAIL"
+      ],
+      "verdict": "FAIL"
+    }
+  },
+  "events": 173,
+  "commit": "423b600fe8b0ec120327e1732cbd962f9322fb7e"
+}

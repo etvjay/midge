@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-05T04:05:03.474Z",
+ "generatedAt": "2026-11-07T07:03:09.640Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 49,
+  "settled": 57,
   "exit": 25,
   "other": 34,
-  "rejected": 16
+  "rejected": 22
  },
  "security": {
   "run": "20261105T035644Z-7c1d",
@@ -2167,6 +2167,132 @@
    "kind": "exit",
    "exp": "E-CMP-INVEST-01",
    "run": "20261105T035644Z-7c1d",
+   "error": null
+  },
+  {
+   "hash": "2Gr24eLSHWGdD9o4gYYPF3wpMvKrRturLrNoPrPHpeqK",
+   "label": "settle_batch_charged auc-mw6114js-fp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T063253Z-15f4",
+   "error": null
+  },
+  {
+   "hash": "6WNWW6ZLoupFSVBxdLBXUoWFhvCvs5GbkJJqRmN6Kp6o",
+   "label": "settle_batch_charged auc-mw6114js-sp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T063253Z-15f4",
+   "error": null
+  },
+  {
+   "hash": "3We1DQQMMd8ucbjftrmtDW68oDEJ3HdDt9YXS8znSw8X",
+   "label": "settle_batch_charged auc-mw6114js-uni",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T063253Z-15f4",
+   "error": null
+  },
+  {
+   "hash": "AAkeLhhNer4c8KMSEVfamstFEkYijjtDegqkLBTYi4qx",
+   "label": "OVERCHARGE settle_batch_charged: a charged 0.06 against a 0.05 deposit",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T063253Z-15f4",
+   "error": "Smart contract panicked: panicked at src/lib.rs:702:17: [Settle REJECT] Charge for u114jsa.fly-1793636729.testnet exceeds that member's escr"
+  },
+  {
+   "hash": "8zEHs3fYyrXCjeGriSgMyPMu7zjpacrJw8mEwfmntPFQ",
+   "label": "MISMATCH settle_batch_charged: charges 0.04 for a 0.05 payout",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T063253Z-15f4",
+   "error": "Smart contract panicked: panicked at src/lib.rs:711:13: assertion `left == right` failed: [Settle REJECT] Charges must sum to exactly the pa"
+  },
+  {
+   "hash": "3SddJoihVhJNTkvDZJTYNSk8ZTFX41cfbBJRoq1ywiVb",
+   "label": "OLD-FORMAT settle_batch_charged: an ordinary settlement signature on the charged entry point",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T063253Z-15f4",
+   "error": "Smart contract panicked: panicked at src/lib.rs:763:9: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "CYuUkZo8XhZWJ7fqWzAFeBuJhFUFsc95hFM8AbFsot5d",
+   "label": "RESIDUAL-RISK settle_batch_charged: b charged their whole 0.05 for a payout b never bid on",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T063253Z-15f4",
+   "error": null
+  },
+  {
+   "hash": "GdrFG8bYUmvVkTikjnFrS1pe3431yQv2JYGM6Pa6FXy",
+   "label": "settle_batch_charged auc-mw61ja4w-fp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T064700Z-6ae9",
+   "error": null
+  },
+  {
+   "hash": "EWTUfReVXaKhiRm6akLLjr8R6UEMSGyHe8SD9w8t6fhS",
+   "label": "settle_batch_charged auc-mw61ja4w-sp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T064700Z-6ae9",
+   "error": null
+  },
+  {
+   "hash": "EjdX3vqcrf5dnGQKbRtjCRaX5zRrNwaWrEezdMGC7kC5",
+   "label": "settle_batch_charged auc-mw61ja4w-uni",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T064700Z-6ae9",
+   "error": null
+  },
+  {
+   "hash": "EVNKtVmkAUdduVXwnodJmgLYD4VMFFUoH3i33PWxJ7mA",
+   "label": "OVERCHARGE settle_batch_charged: a charged 0.06 against a 0.05 deposit",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T064700Z-6ae9",
+   "error": "Smart contract panicked: panicked at src/lib.rs:702:17: [Settle REJECT] Charge for u1ja4wa.fly-1793636729.testnet exceeds that member's escr"
+  },
+  {
+   "hash": "HCQcoiLgmjmW6929NTLE1Kp8LA3chTERTiNH4v9RV1cD",
+   "label": "MISMATCH settle_batch_charged: charges 0.04 for a 0.05 payout",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T064700Z-6ae9",
+   "error": "Smart contract panicked: panicked at src/lib.rs:711:13: assertion `left == right` failed: [Settle REJECT] Charges must sum to exactly the pa"
+  },
+  {
+   "hash": "3LgBPLKt3x4Z9T6mGWUBbZcYCd46YBTqRrRrFHxTMQ4J",
+   "label": "OLD-FORMAT settle_batch_charged: an ordinary settlement signature on the charged entry point",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T064700Z-6ae9",
+   "error": "Smart contract panicked: panicked at src/lib.rs:763:9: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "5d3cPH1SgxpaGWd2VDM7q4gapmHaKJY53YFv1R1bNg2o",
+   "label": "RESIDUAL-RISK settle_batch_charged: b charged their whole 0.05 for a payout b never bid on",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261107T064700Z-6ae9",
    "error": null
   },
   {
