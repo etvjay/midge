@@ -1,7 +1,7 @@
 # Midge: Private Rooms with Public Rules, on NEAR
 
 ## Architecture & SDLC Governance
-This repository implements Midge, an autonomous syndicate protocol combining:
+This repository implements Midge, a network of private rooms with public rules (see `docs/GLOSSARY.md` for the words), combining:
 1. **NEAR AI Cloud TEEs:** Hardware-isolated enclaves (AMD SEV-SNP/Intel TDX) for confidential multi-agent deliberation.
 2. **Confidential Intents & FAR Shard:** Shielded cross-chain intent settlement via 1Click Swap API with IMT tokens.
 3. **NEAR Chain Signatures:** Omnichain threshold MPC execution across Bitcoin, Ethereum, and Solana.
@@ -19,7 +19,7 @@ make verify
 # or:
 npm run verify
 ```
-*Total verification runtime: **<2.0s** (Deterministic, zero external keys needed).*
+*Total verification runtime: about **100 s** on this machine (deterministic, zero external keys needed). Earlier text said under 2 s; that was the time of the first, much smaller suite.*
 
 ---
 
@@ -45,7 +45,7 @@ npm run verify
 
 ## Verification & Test Command Reference
 ```bash
-make verify              # Complete judge suite: Rust, WASM, 8-layer suite & Foundry (~1.9s)
+make verify              # Complete judge suite: Rust, WASM, 8-layer suite & Foundry (~100 s)
 make test                # 8-layer master architectural test suite (~1.1s)
 make rust                # Production NEAR L1 Rust unit tests (0.12s)
 make wasm                # Compile release WebAssembly binary (238 KB)
@@ -69,4 +69,4 @@ npm run verify:api       # HTTP Gateway Daemon, SSE Streams, x402 & MCP Server
 - All API keys and secrets belong in `.env`. The NEAR chain client does not read `.env` on its own: pass credentials in the environment or point `MIDGE_ENV_FILE` at the file. Without write credentials, chain-mode writes are refused.
 - Never commit private keys or API credentials to git.
 - Testnet first (`*.fly.testnet`).
-- Strict UI Freeze: No frontend modifications; focus entirely on cryptographic protocol, smart contracts, and agent tooling.
+- Frontend: the default focus is the cryptographic protocol, smart contracts and agent tooling. Site changes (`site/`) are made only when the user asks for them, as in the 2026-11 site rebuild; follow `docs/DESIGN_SYSTEM.md` and `docs/GLOSSARY.md` when you do.

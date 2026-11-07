@@ -1,0 +1,69 @@
+{
+  "runId": "20261107T093917Z-ced2",
+  "startedAt": "2026-11-07T09:39:17.991Z",
+  "rootHash": "62f8474d548ecaf4656b8884387a9e551421895c78314611427302d1ceb4abfa",
+  "verdicts": {
+    "E-LAB-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-SUITE-OFFLINE": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CHECK-FOUNDRY": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-RUST-CONTRACT": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-IFACE-MODEL": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ADVISOR-MODEL": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-AUCTION-PROGRAMS-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-POOL-PROGRAM-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-SIGNED-INPUT-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-TWO-ROOM-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 771,
+  "commit": "65c3229d2af7743841ae8a43c7b6fbc176959d51"
+}

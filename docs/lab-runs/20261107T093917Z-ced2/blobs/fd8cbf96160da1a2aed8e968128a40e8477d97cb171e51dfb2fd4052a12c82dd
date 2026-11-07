@@ -1,0 +1,114 @@
+   Compiling fly-coordinator v0.1.0 (/home/ubuntu/near/contracts/fly-coordinator)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.50s
+     Running unittests src/lib.rs (target/debug/deps/fly_coordinator-c68e1d78f5c935b3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/integration_tests.rs (target/debug/deps/integration_tests-9571f16529d36443)
+
+running 6 tests
+test test_integration_escape_hatch_and_storage_reclamation ... ok
+test test_integration_full_syndicate_lifecycle_with_payout ... ok
+test test_integration_hatch_out_failure_callback_rollback ... ok
+test test_integration_settlement_failure_callback_rollback ... ok
+test test_integration_theft_frontrun_fails ... ok
+test test_integration_repeat_deposit_and_exit_loop ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.37s
+
+     Running tests/invariants.rs (target/debug/deps/invariants-e5933ea976968463)
+
+running 5 tests
+test prop_pro_rata_deductions_at_near_scale ... ok
+test prop_pro_rata_deductions_exact_conservation ... ok
+test prop_release_policy_canonical_order_independence ... ok
+test test_overshoot_cap_50_limit_enforced_on_callback ... ok
+test prop_syndicate_escrow_and_flyer_invariants ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.72s
+
+     Running tests/unit_tests.rs (target/debug/deps/unit_tests-508a1be72aa89f3f)
+
+running 71 tests
+test a_charged_settlement_signature_cannot_authorise_a_plain_settlement - should panic ... ok
+test a_failed_charged_payout_leaves_every_members_escrow_untouched ... ok
+test a_one_room_syndicate_refuses_a_two_room_settlement - should panic ... ok
+test a_plain_settlement_signature_cannot_authorise_a_charged_settlement - should panic ... ok
+test a_two_room_syndicate_cannot_register_the_same_key_twice - should panic ... ok
+test a_two_room_syndicate_refuses_a_single_signature_charged_settlement - should panic ... ok
+test a_pruned_two_room_syndicate_forgets_its_second_key ... ok
+test a_two_room_syndicate_refuses_a_single_signature_settlement - should panic ... ok
+test after_a_charged_settlement_exit_returns_the_deposit_less_the_members_own_charge ... ok
+test charged_settlement_charges_each_member_their_own_amount ... ok
+test charged_settlement_rejects_a_charge_above_the_members_deposit - should panic ... ok
+test charged_settlement_rejects_a_member_charged_twice - should panic ... ok
+test charged_settlement_rejects_charges_other_than_the_ones_signed - should panic ... ok
+test charged_settlement_rejects_charges_that_do_not_sum_to_the_payout - should panic ... ok
+test charges_hash_matches_the_roosts_javascript_implementation ... ok
+test charged_settlement_rejects_charging_someone_who_never_deposited - should panic ... ok
+test exit_is_not_limited_by_the_release_policy_deadline_or_recipient_list ... ok
+test mul_div_floor_is_exact_across_the_u128_range ... ok
+test one_room_signing_twice_is_not_two_rooms - should panic ... ok
+test pro_rata_deductions_four_equal_deposits_of_005_near_partial_payout_of_010 ... ok
+test exit_is_refused_while_a_settlement_is_in_flight_so_a_late_signature_cannot_race_a_refund - should panic ... ok
+test test_bad_signature_fails - should panic ... ok
+test test_below_min_deposit_fails - should panic ... ok
+test test_below_quorum_fails - should panic ... ok
+test test_a_pruned_id_can_be_reused_and_the_old_signature_is_dead - should panic ... ok
+test test_dark_vault_epoch_rollover_resets_escape_hatch_timer ... ok
+test test_deposit_limit_exceeded_fails - should panic ... ok
+test test_compact_member_index_drops_ids_of_pruned_syndicates ... ok
+test test_deposit_to_non_active_fails - should panic ... ok
+test test_double_hatch_out_fails - should panic ... ok
+test test_get_syndicates_by_member ... ok
+test test_hatch_invalid_quorum_fails - should panic ... ok
+test test_hatch_and_ed25519_settle_with_payout ... ok
+test test_hatch_invalid_timeout_fails - should panic ... ok
+test test_hatch_out_after_settled_fails - should panic ... ok
+test test_hatch_out_after_timeout_refunds_only_caller ... ok
+test test_invalid_id_characters_fails - should panic ... ok
+test test_nep297_events_emission ... ok
+test test_on_hatch_out_payout_failure_restores_escrow_and_status ... ok
+test test_on_hatch_out_payout_failure_with_redeposit_prevents_double_counting ... ok
+test test_on_hatch_out_payout_rejects_external_caller - should panic ... ok
+test test_on_settlement_payout_failure_reverts_state ... ok
+test test_on_settlement_payout_rejects_external_caller - should panic ... ok
+test test_on_settlement_payout_success_cleans_up_flyer_storage ... ok
+test test_partial_flash_settlement_allows_a_fresh_signature_on_the_new_nonce ... ok
+test test_partial_flash_settlement_cannot_be_replayed - should panic ... ok
+test test_max_flyers_cap_enforced - should panic ... ok
+test test_premature_hatch_out_fails - should panic ... ok
+test test_partial_flash_settlement_rotates_nonce_but_keeps_epoch_and_timer ... ok
+test test_prune_refuses_an_active_syndicate - should panic ... ok
+test test_prune_an_aborted_refunded_syndicate ... ok
+test test_prune_refuses_an_unknown_syndicate - should panic ... ok
+test test_prune_removes_a_settled_syndicate_and_logs_it ... ok
+test test_repeat_deposit_withdraw_does_not_inflate_flyer_cap ... ok
+test test_settle_batch_rejects_altered_payout_recipient - should panic ... ok
+test test_signature_cross_contract_replay_fails - should panic ... ok
+test test_syndicate_discovery_and_pagination ... ok
+test test_wrong_nonce_fails - should panic ... ok
+test test_y1_deposit_with_wrong_policy_hash_fails - should panic ... ok
+test test_y1_hatch_out_blocked_while_settling - should panic ... ok
+test test_y1_settlement_after_deadline_fails - should panic ... ok
+test test_y1_settlement_exceeding_max_release_bps_fails - should panic ... ok
+test test_y1_settlement_to_recipient_outside_allowlist_fails - should panic ... ok
+test two_room_charged_settlement_pays_when_both_rooms_sign_the_charges ... ok
+test test_settle_batch_50_flyers_gas_budget ... ok
+test two_room_settlement_pays_when_both_rooms_sign_the_same_message ... ok
+test two_room_settlement_rejects_a_bad_first_signature - should panic ... ok
+test two_room_settlement_rejects_a_bad_second_signature - should panic ... ok
+test two_room_syndicate_exposes_its_second_key_and_a_one_room_one_does_not ... ok
+test two_rooms_that_computed_different_payouts_cannot_settle - should panic ... ok
+test two_rooms_that_disagree_on_who_pays_cannot_settle - should panic ... ok
+
+test result: ok. 71 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.92s
+
+   Doc-tests fly_coordinator
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

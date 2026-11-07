@@ -1,10 +1,10 @@
 {
- "generatedAt": "2026-11-07T09:24:07.823Z",
+ "generatedAt": "2026-11-07T09:52:09.780Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 59,
+  "settled": 61,
   "exit": 25,
   "other": 37,
   "rejected": 27
@@ -2384,6 +2384,24 @@
    "exp": "E-TWO-ROOM-LIVE-01",
    "run": "20261107T092049Z-2727",
    "error": "Smart contract panicked: [HAQ REJECT] This is a two-room syndicate: settle with settle_batch_two_room or settle_batch_charged_two_room, carr"
+  },
+  {
+   "hash": "5usNn64fXn2ZsVXsXwftYhhy36u8X4ozQDEjzKAW62Ny",
+   "label": "settle_batch gas4-mw67xt5s (4 members)",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CALLBACK-GAS-01",
+   "run": "20261107T094616Z-259e",
+   "error": null
+  },
+  {
+   "hash": "A7QdKtUhXAyFJ4RFeefTxdRffaXivaqEmcXHUmUAaoWL",
+   "label": "settle_batch gas20-mw67xt5s (20 members)",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CALLBACK-GAS-01",
+   "run": "20261107T094616Z-259e",
+   "error": null
   },
   {
    "hash": "Gsg1cvZyhPXVGBNva7oLwVgxrfTgjZmk81f4ueU8wQ36",

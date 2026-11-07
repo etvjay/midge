@@ -1,0 +1,15 @@
+{
+  "runId": "20261107T093948Z-2795",
+  "startedAt": "2026-11-07T09:39:48.577Z",
+  "rootHash": "4f60d17e454675717e8f07c1c2c4aeb92d82cf6a37c98ab34f15fa0047778da6",
+  "verdicts": {
+    "E-SIGNED-INPUT-CHAIN-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 11,
+  "commit": "65c3229d2af7743841ae8a43c7b6fbc176959d51"
+}

@@ -29,7 +29,7 @@
 * **Context:** Midge requires cross-chain intent execution across 210 assets. Upstream ChainDefuser 1Click Swap API operates primarily in a mainnet environment and does not provide an isolated public testnet cluster.
 * **Decision:** Implement live queries to `https://1click.chaindefuser.com/v0/tokens` during verification; if upstream returns HTTP 521 or times out, seamlessly fall back to an audited, cryptographic snapshot of the asset registry while logging a telemetry warning.
 * **Alternatives Rejected:** Failing tests whenever upstream has brief network maintenance (breaks CI and judge verification determinism); purely mocked static data (fails to verify real 1Click protocol compatibility).
-* **Consequences:** 100% deterministic, zero-flakiness test execution in under 2 seconds while retaining full live-endpoint compatibility.
+* **Consequences:** 100% deterministic, zero-flakiness test execution (originally under 2 seconds; now about 100 s with the added suites) while retaining full live-endpoint compatibility.
 
 ---
 

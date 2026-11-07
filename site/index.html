@@ -120,6 +120,7 @@
         <p class="step">3 · The exit</p>
         <h3>Anyone can leave with their share</h3>
         <p>If the room stops working, a timer starts. When it runs out, any member can take back exactly what they put in, on their own, without asking anyone.</p>
+        <p class="fine">One condition: the exit waits while a payout is being finished, which normally takes seconds. A fix so that a payout that never finishes cannot block the exit is built and tested, and not yet live.</p>
       </div>
       <figure class="stage-fig"><div class="stage stage-lg"><canvas class="stage-canvas" data-scene="exit" aria-hidden="true"></canvas></div><figcaption class="stage-cap">The room goes quiet. After the timer, a member walks out with their share.</figcaption></figure>
     </div>
@@ -253,7 +254,7 @@
       <h3 class="today-title">What works today</h3>
       <div class="grid-3">
         <div><h4>Running on testnet</h4><ul><li>The contract: rules, payouts and the exit</li><li>The host on Phala, and a host that seals to a NEAR AI Cloud model</li><li>The AI model proposing the split</li><li>NEAR AI, Phala and NEAR together in one round</li><li>Signed bids: only the member's own key can bid in their name</li><li>Two hosts that must both sign (run with two local hosts)</li><li>Investing together, compared with a public round and an organizer</li><li>Sealed auctions (first-price, second-price, uniform-price), compared with a public auction</li><li>Limited keys for AI agents</li><li>SDK, API and MCP tools</li></ul></div>
-        <div><h4>Built, not yet live</h4><ul><li>Ongoing groups (Dark Vault), tested in the contract</li><li>Auctions, signed bids and two hosts on real hardware (they run on local hosts today)</li><li>Lending, big trades and shared AI, as simulations</li></ul></div>
+        <div><h4>Built, not yet live</h4><ul><li>Ongoing groups (Dark Vault), tested in the contract</li><li>Auctions, signed bids and two hosts on real hardware (they run on local hosts today)</li><li>Lending, big trades and shared AI, as simulations</li><li>Letting anyone finish a payout that got stuck (tested, not yet deployed)</li></ul></div>
         <div><h4>Next</h4><ul><li>A playground in your browser</li><li>Voting and paying people</li><li>Paying out on Bitcoin, Ethereum and Solana</li></ul></div>
       </div>
       <p class="fine-dark">Testnet only, no audit yet. All test accounts were ours. Deposits and balances are public on NEAR; what stays private is what members bid and decide.</p>
