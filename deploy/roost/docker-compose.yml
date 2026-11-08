@@ -9,6 +9,11 @@ services:
       # Set as an encrypted environment variable in Phala Cloud; only the CVM can decrypt it.
       - ROOST_ADMIN_KEY=${ROOST_ADMIN_KEY}
       - PORT=8080
+      # The escrow check, ON, and written here on purpose: this file is measured by the attestation, so a member who verifies the
+      # Roost also verifies WHICH providers it asks and which contract it reads, and the coordinator cannot switch it off or point it
+      # elsewhere without changing the Roost's identity. Plain text is fine: nothing here is secret. Changing either line is a redeploy.
+      - ROOST_RPC_URLS=https://test.rpc.fastnear.com,https://rpc.testnet.near.org
+      - ROOST_CONTRACT_ID=c.fly-1793636729.testnet
     volumes:
       - /var/run/dstack.sock:/var/run/dstack.sock
     ports:

@@ -41,6 +41,11 @@ Two rooms must sign the same message. Each reads the chain on its own, so give b
 to `run` (or in the body of a Roost server route) and both read that block. Without it two rooms normally read different blocks and sign
 different order hashes, and the contract rejects the pair.
 
-## Not in `docker-compose.yml`
-These variables are deliberately not in `docker-compose.yml`: that file's hash is part of the attestation, so changing it is a
-deliberate step together with the image rebuild.
+## In `docker-compose.yml`, on purpose
+For the hosted Roost on Phala, both variables are written in `docker-compose.yml`, and that file's hash is part of the attestation. So a member who
+verifies the Roost also verifies **which providers it asks and which contract it reads**; the coordinator cannot switch the check off or
+point it elsewhere without changing the Roost's identity. Changing either line is a redeploy and a new attested identity.
+Nothing in those lines is secret (`tests/compose-escrow.test.js` checks that). What this does **not** give: the attestation says which
+providers are asked, not that they answer honestly.
+
+If both providers are unreachable the hosted Roost refuses charged rounds with 503 and keeps the queue; that is the intended failure.

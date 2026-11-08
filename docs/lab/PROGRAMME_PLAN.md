@@ -275,3 +275,17 @@ Run `20261108T103619Z-433a`, 3 repeats of each experiment, log verified (260 eve
 What changed between the two runs, openly: (1) every provider now vouches for the block by hash and every reply must come from it, which the live run confirmed against `test.rpc.fastnear.com` and `rpc.testnet.near.org`; (2) **`raceFree` was tightened** (prediction 3 and 4 of the live experiment said height + 30; the definition now also counts the read's age and the 30 s a read may be used, so it is stricter and the experiment's numbers were updated, not the prediction text); (3) auction and cross worst cases were corrected (an exact-boundary test per program now exists); (4) the offline experiment's stub providers had to be updated for the stricter reader and one assertion of mine was arithmetic-wrong (an exit at 4190 where I meant 4110). The live prediction text says a "10-block" exit timer; the experiment uses 12 blocks. Neither matters to the result: the timer ran out long before the read.
 
 **Still not shown.** The race itself, providers that lie, a two-room settlement run live, and the hosted Roost (the image is not rebuilt).
+
+
+## Hosted Roost with the escrow check on: predictions, written 2026-11-08 before the experiment exists or runs
+
+**What it is, in plain words.** The hosted Roost's image already contains the escrow check. Until now it was off on the VM, because turning it on means writing two settings into the compose file, and that file is part of what the VM's attestation measures. They are now written there on purpose. A member who verifies the Roost therefore also verifies which providers it asks and which contract it reads. The check was only ever tested with a local host; this tests it inside a real confidential VM.
+
+**E-HOSTED-ESCROW-LIVE-01 (hardware: a real Phala TDX VM, the real testnet contract, the real providers).** Three members A, B, C and a recipient. A and C deposit 0.02 NEAR; B never deposits. All three bid 0.01 into a pool round run by the VM.
+1. **The VM starts and attests on the new image.** The compose file in the repo is pinned to `cde03fef…` and carries the two escrow settings; Phala's app-compose contains our file byte for byte; the official verifier accepts the quote, with the compose hash derived from our file.
+2. **The attested identity covers the escrow settings.** The compose file the VM runs contains the two setting lines, so the compose hash the attestation measures is a hash over them.
+3. **The check works inside the VM.** The VM reads the contract's escrow through its own outbound network from two providers, leaves B out and names B, charges A and C 0.01 each, and signs; the contract accepts the settlement and it lands; the recipient receives exactly 0.02.
+4. **The VM reports the block it read** (a real height and hash), and `raceFree` is **false** (the exit timer ran out long ago).
+5. **Teardown leaves nothing:** the group is pruned, every account deleted, the VM deleted and the account empty, the session costing under $0.05.
+
+**Not tested:** the VM failing closed when both providers are down; the exit race itself; a lying provider; a two-room settlement. **Weakness I expect to remain:** one operator controls every account and the VM; the attestation proves which providers are asked, not that they are honest.

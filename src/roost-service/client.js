@@ -33,6 +33,8 @@ export class HostedRoostClient {
   runPayrun(params) { return this.#call('POST', '/payrun', params, true); }
   runRfq(params) { return this.#call('POST', '/rfq', params, true); }
   openRound(params) { return this.#call('POST', '/round', params, true); }
+  /** Give up a signed round the contract rejected so it can run again (coordinator only). The abandoned signature stays valid on chain. */
+  abandonRound() { return this.#call('POST', '/abandon', undefined, true); }
   inputDigests() { return this.#call('GET', '/digests', undefined, true); }
   excludeMembers(members) { return this.#call('POST', '/exclude', { members }, true); }
   submitSignedIntent(params) { return this.#call('POST', '/signed-intents', params); }
