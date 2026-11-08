@@ -32,6 +32,8 @@ Phase 08 states invariant `I-08-C` ("every claim must cite verifiable code and r
 - [ ] One script (`scripts/setup-env`) that installs or checks every tool, pinned by version: Node, Rust and the wasm target, `dcap-qvl`, and the cargo test tools. It reports what is missing and does not fail halfway through.
 - [ ] A container image (or devcontainer) with all of the above, built in CI, so `docker run` gives the judge path with no installs. Pin it by digest.
 - [ ] Offline by default: a marker separates tests that need the network (NEAR RPC, NEAR AI Cloud, Phala) from those that do not, and the offline set runs with the network off. Live checks are opt-in and say so.
+- [ ] Install and check `dcap-qvl` (pin 0.7.0, as in `ci.yml`). Since audit lead 10 the Intel chain check defaults to `required`, so a machine without it fails attestation on purpose instead of passing unchecked. The script should say so in plain words, not leave it to look like a new bug.
+- [ ] Check the settings that now refuse to run: the REST daemon will not start on a non-loopback address without `FLY_API_KEY` (audit lead 8), and refuses browser requests with a foreign Origin or Host (lead 7). The script prints which of these a given setup will hit.
 - [ ] Disk and time guards: the setup script checks free disk (the host is at 99%) before it builds, and prints expected run time.
 - [ ] A second machine, clean clone: run the setup script and `make verify` from scratch, and record the result as evidence.
 

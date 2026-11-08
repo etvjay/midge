@@ -59,3 +59,9 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (53 tes
 6. **Sybil Syndicate Capacity & Storage Staking (GAP-007):**
    - *Current State:* Fixed 50-flyer capacity cap with 0.01 NEAR minimum deposit to bound contract memory and gas costs. Storage deposit is statically allocated at hatch time.
    - *Roadmap:* Dynamic per-flyer storage deposit refundable upon hatch_out or settlement.
+
+## Behaviour changes from the security audit (2026-11-08, in the code, not yet on the live contract)
+- Attestation: the Intel certificate-chain check is `required` by default. A machine without `dcap-qvl` now fails model attestation; `chain: 'if-available'` and `'skip'` remain as explicit choices.
+- REST daemon: refuses to listen beyond loopback without `FLY_API_KEY`, and refuses state-changing requests with a foreign `Origin` and any request with a non-local `Host` on a loopback bind.
+- MCP over HTTP: every tool outside a short public list needs the coordinator key.
+- Contract (source only, live contract unchanged until redeployed): `:` is refused in an order hash, the code-hash string is capped at 128 bytes, and callbacks, exits and re-deposits keep their books consistent. See GAP-026 to GAP-038.
