@@ -53,7 +53,7 @@ export function checkInvariants({ root }) {
   }
 
   const files = [
-    ...walk(path.join(root, 'docs'), (p) => p.endsWith('.md')),
+    ...walk(path.join(root, 'docs'), (p) => p.endsWith('.md') && !rel(p).startsWith('docs/superpowers/')),
     ...walk(path.join(root, 'foundry'), (p) => /\.(md|json|jsonl)$/.test(p) && rel(p) !== 'foundry/invariants.json'),
     ...walk(path.join(root, 'tests'), (p) => p.endsWith('.js') && !/check-invariants.*\.test\.js$/.test(p)),
   ];

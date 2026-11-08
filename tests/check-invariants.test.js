@@ -60,3 +60,8 @@ test('phase documents may define their own I-NN-X invariants', () => {
   const r = checkInvariants({ root: fixture({ ...inv([good]), 'foundry/phases/01-x.md': '- `I-01-A`: something.\n', 'docs/y.md': 'see I-01-A' }) });
   assert.deepEqual(r.errors, []);
 });
+
+test('plans and specs under docs/superpowers may mention ids as examples', () => {
+  const r = checkInvariants({ root: fixture({ ...inv([good]), 'docs/superpowers/plans/p.md': 'for example C-99 is cited here' }) });
+  assert.deepEqual(r.errors, []);
+});
