@@ -73,7 +73,7 @@ export class HostedRoost {
   #intentSecret;
   #settleKey;
 
-  constructor({ provider, maxIntents = 50, requireSignedInputs = false, accountKeyCheck = null, deterministicOrder = false } = {}) {
+  constructor({ provider, maxIntents = 50, requireSignedInputs = false, accountKeyCheck = null, deterministicOrder = false, escrowReader = null } = {}) {
     if (!provider) throw new Error('HostedRoost needs an attestation provider');
     if (requireSignedInputs && typeof accountKeyCheck !== 'function') throw new Error('requireSignedInputs needs an accountKeyCheck(accountId, publicKey) that asks the chain');
     this.provider = provider;
@@ -82,6 +82,7 @@ export class HostedRoost {
     // arrival order, so two independent Roosts that see the same inputs sign byte-identical messages.
     this.deterministicOrder = Boolean(deterministicOrder);
     this.accountKeyCheck = accountKeyCheck;
+    this.escrowReader = escrowReader; // optional: see bindEscrow(). Without one, charged programs behave exactly as before.
     this.round = null; // { contractId, syndicateId, epoch, roundNonce }: what inputs must be signed for
     this.lastSeq = new Map(); // account -> highest accepted sequence number this round
     this.maxIntents = maxIntents;
@@ -176,6 +177,50 @@ export class HostedRoost {
     return { excluded: [...drop], remaining: this.sealedIntents.length };
   }
 
+  #escrow = null; // { key, blockHeight, blockHash, escrows, covered }: one read of the chain, used by at most one run
+  #lastEscrowHeight = new Map(); // round key -> newest block read, so a later read cannot go backwards
+  #roundKey() { const r = this.round; return r ? `${r.contractId}:${r.syndicateId}:${r.epoch}:${r.roundNonce}` : ''; }
+
+  /**
+   * Read, from the contract, what each queued bidder (and any extra paying account) holds in this group, at one final block.
+   * Call it after the last input of the round and before a charged `run*`. It fails closed: if the providers cannot be read, are
+   * behind, or disagree, it throws and the round does not run (the queue is kept). Without an escrowReader it throws too.
+   * @param {{accounts?: string[]}} [opts] accounts that will be charged but may have no queued input (a ballot's roll)
+   * @returns {Promise<{blockHeight:number, blockHash:string, bidders:number}>}
+   */
+  async bindEscrow({ accounts = [] } = {}) {
+    if (!this.escrowReader) throw new RoostAggregationError('this host has no escrow reader');
+    if (!this.round) throw new RoostAggregationError('no open round: call openRound first');
+    const key = this.#roundKey();
+    const ids = [...new Set([...this.sealedIntents.map((i) => i.flyerId), ...accounts])];
+    const out = await this.escrowReader.read(this.round.syndicateId, ids);
+    if (key !== this.#roundKey()) throw new RoostAggregationError('the round changed while escrow was being read: bind again');
+    const last = this.#lastEscrowHeight.get(key) ?? 0;
+    if (out.blockHeight < last) throw new RoostAggregationError(`could not read escrow: this read is from block ${out.blockHeight}, older than the earlier one (${last})`);
+    this.#lastEscrowHeight.set(key, out.blockHeight);
+    this.#escrow = { key, blockHeight: out.blockHeight, blockHash: out.blockHash, escrows: out.escrows, covered: new Set(ids) };
+    return { blockHeight: out.blockHeight, blockHash: out.blockHash, bidders: ids.length };
+  }
+
+  /**
+   * Keep only the items whose worst-case charge their escrow covers. With no reader it keeps everything. With one it needs a
+   * snapshot from bindEscrow() that covers every queued bidder and every `extraIds`; otherwise it throws. The snapshot is used up.
+   * @returns {{kept:any[], excluded:string[], tag:string}} tag goes into the signed order hash so the block is on record
+   */
+  #affordable(items, idOf, maxChargeYocto, extraIds = []) {
+    if (!this.escrowReader) return { kept: items, excluded: [], tag: '' };
+    const snap = this.#escrow;
+    if (!snap || snap.key !== this.#roundKey()) throw new RoostAggregationError('escrow not bound: call bindEscrow() after the last input of the round, then run');
+    for (const id of [...this.sealedIntents.map((i) => i.flyerId), ...extraIds]) if (!snap.covered.has(id)) throw new RoostAggregationError(`escrow is out of date (${id} was not read): a new input or account arrived after bindEscrow(); bind again`);
+    this.#escrow = null;
+    const kept = []; const excluded = [];
+    for (const it of items) {
+      const held = BigInt(snap.escrows[idOf(it)] ?? '0');
+      if (held >= BigInt(maxChargeYocto(it))) kept.push(it); else excluded.push(idOf(it));
+    }
+    return { kept, excluded, tag: `:escrow:${snap.blockHeight}:${snap.blockHash}` };
+  }
+
   #signedRounds = new Set(); // rounds this host has signed (newest 1000); a signed round cannot be re-opened with the same nonce
 
   /** Signing is once per round, not once per aggregate: after a signature, more inputs must not yield a second signed settlement for the same epoch and nonce. */
@@ -189,7 +234,7 @@ export class HostedRoost {
     if (!Number.isSafeInteger(epoch) || epoch < 0) throw new RoostAggregationError('epoch must be a non-negative integer');
     if (this.#signedRounds.has(`${contractId}:${syndicateId}:${epoch}:${roundNonce}`)) throw new RoostAggregationError('this round was already signed; open a new round with a new nonce');
     this.round = { contractId, syndicateId, epoch, roundNonce };
-    this.sealedIntents = []; this.lastSeq = new Map(); this.aggregate = null;
+    this.sealedIntents = []; this.lastSeq = new Map(); this.aggregate = null; this.#escrow = null;
     return { ...this.round };
   }
 
@@ -422,16 +467,24 @@ export class HostedRoost {
     this.#inRoundOrder().forEach((intent, order) => {
       try { const b = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); if (typeof b?.choice !== 'string') throw new Error('malformed'); ballots.push({ flyerId: intent.flyerId, choice: b.choice, order }); } catch { unreadable.push(intent.flyerId); }
     });
-    const out = clearBallot({ options: ids, roll, ballots, quorumBps, rule });
+    // Every roll member is charged a share whether or not they voted, so the roll is what must be able to pay.
+    const aff = this.#affordable(roll, (m) => m, () => shareMicro * YOCTO_PER_MICRO, roll);
+    const payingRoll = aff.kept;
+    if (payingRoll.length === 0) {
+      this.sealedIntents = []; this.aggregate = null;
+      const pubNone = { shape: 'ballot', rule, decided: false, winner: null, recipient: null, reason: 'no-eligible-members', quorumMet: false, outsiders: [], unreadable, excludedForEscrow: aff.excluded, executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+      return { outcome: pubNone, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey };
+    }
+    const out = clearBallot({ options: ids, roll: payingRoll, ballots, quorumBps, rule });
     this.sealedIntents = [];
     const recipient = out.decided ? options[out.winner] : null;
-    const pub = { shape: 'ballot', rule, decided: out.decided, winner: out.winner, recipient, reason: out.reason, quorumMet: out.quorumMet, outsiders: out.outsiders, unreadable, executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { shape: 'ballot', rule, decided: out.decided, winner: out.winner, recipient, reason: out.reason, quorumMet: out.quorumMet, outsiders: out.outsiders, unreadable, ...(this.escrowReader ? { excludedForEscrow: aff.excluded } : {}), executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (!out.decided) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
-    const poolMicro = shareMicro * BigInt(roll.length);
+    const poolMicro = shareMicro * BigInt(payingRoll.length);
     const allocations = [{ recipient, amount: String(poolMicro * YOCTO_PER_MICRO) }];
-    const charges = roll.map((m) => ({ member: m, amount: String(shareMicro * YOCTO_PER_MICRO) }));
-    const bound = Object.fromEntries(roll.map((m) => [m, shareMicro * YOCTO_PER_MICRO]));
-    const orderHash = sha256Hex(`midge-ballot-v1:${roundId}:${rule}:${out.winner}:${recipient}:${poolMicro}:${[...roll].sort().join(',')}:${this.#orderSalt()}`);
+    const charges = payingRoll.map((m) => ({ member: m, amount: String(shareMicro * YOCTO_PER_MICRO) }));
+    const bound = Object.fromEntries(payingRoll.map((m) => [m, shareMicro * YOCTO_PER_MICRO]));
+    const orderHash = sha256Hex(`midge-ballot-v1:${roundId}:${rule}:${out.winner}:${recipient}:${poolMicro}:${[...payingRoll].sort().join(',')}:${this.#orderSalt()}${aff.tag}`);
     this.aggregate = { orderHash, totalMicro: poolMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
