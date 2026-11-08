@@ -38,18 +38,25 @@ export class X402CommerceEngine {
     return invoice;
   }
 
+  /** PAYMENT_REQUIRED, PAID, EXPIRED or UNKNOWN. An unpaid invoice past its time reads EXPIRED even if nobody tried to pay it. */
+  invoiceStatus(invoiceId) {
+    const inv = this.invoices.get(invoiceId);
+    if (!inv) return 'UNKNOWN';
+    if (inv.status === 'PAYMENT_REQUIRED' && Date.now() > inv.expiresAt) inv.status = 'EXPIRED';
+    return inv.status;
+  }
+
   /**
    * Buyer Agent pays the 402 invoice using policy-bound micro-balance.
    */
   settleInvoice({ invoiceId, buyerFlyerId, maxAcceptablePrice }) {
     const inv = this.invoices.get(invoiceId);
+    const before = inv?.status;
+    if (this.invoiceStatus(invoiceId) === 'EXPIRED' && before === 'PAYMENT_REQUIRED') {
+      throw new Error(`[x402 REJECT] Invoice ${invoiceId} has expired.`);
+    }
     if (!inv || inv.status !== 'PAYMENT_REQUIRED') {
       throw new Error(`Invalid or already settled invoice: ${invoiceId}`);
-    }
-
-    if (Date.now() > inv.expiresAt) {
-      inv.status = 'EXPIRED';
-      throw new Error(`[x402 REJECT] Invoice ${invoiceId} has expired.`);
     }
 
     if (inv.priceUsdc > maxAcceptablePrice) {
