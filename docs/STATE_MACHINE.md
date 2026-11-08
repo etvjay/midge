@@ -82,4 +82,4 @@ Not allowed: signing the same aggregate twice; running again after a signature i
 | `signSettlement` | an aggregate exists and is unsigned; round fields match; order hash matches; charges and allocations match the outcome; each charge ≤ that bidder's bound; ≤ 8 recipients; payout ≤ what the bids support | signs once; sets `signed` | `lab/experiments/72-auction-programs.js` |
 
 ## The simulation mirror
-`src/contracts/nest.js` is a JavaScript simulation of the contract used in `model` mode. Its statuses (`ACTIVE`, `SETTLED`, `ABORTED_REFUNDED`) correspond to the contract's `Active`, `Settled`, `AbortedRefunded`. A test (`tests/nest-mirror.test.js`, Task 11) fails if the two sets of names drift.
+`src/contracts/nest.js` is a JavaScript simulation of the contract used in `model` mode. Its statuses (`ACTIVE`, `SETTLED`, `ABORTED_REFUNDED`) correspond to the contract's `Active`, `Settled`, `AbortedRefunded`. `tests/nest-mirror.test.js` (comparison in `scripts/status-drift.js`) fails if the two sets of names drift, in either direction.
