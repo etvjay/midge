@@ -28,6 +28,19 @@ function normalisePin(pin) {
   return out;
 }
 
+/**
+ * The owner's pin from the environment: MIDGE_MODEL_MEASUREMENTS, a JSON object of field -> list of accepted 96-hex-digit values,
+ * for example {"mrtd":["…"],"rtmr0":["…","…"]}. Unset or empty means nothing is pinned. A setting that cannot be read is an error:
+ * silently ignoring a typo would turn the pin off without telling anyone.
+ */
+export function measurementPinFromEnv(env = process.env) {
+  const raw = env.MIDGE_MODEL_MEASUREMENTS;
+  if (raw === undefined || String(raw).trim() === '') return null;
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { throw new Error('MIDGE_MODEL_MEASUREMENTS is not valid JSON'); }
+  try { return normalisePin(parsed); } catch (e) { throw new Error(`MIDGE_MODEL_MEASUREMENTS: ${e.message}`); }
+}
+
 export function parseTdxQuote(quoteHex) {
   const q = Buffer.from(String(quoteHex || ''), 'hex');
   if (q.length < 636) return { length: q.length, valid: false };
@@ -139,7 +152,7 @@ export async function fetchVerifiedModelKey({
   apiKey = null,
   chain = 'required',
   acceptedTcb = ['UpToDate'],
-  expectedMeasurements = null,
+  expectedMeasurements, // undefined: use MIDGE_MODEL_MEASUREMENTS if set; null: pin nothing; an object: pin exactly that
   fetchImpl = globalThis.fetch,
 }) {
   const nonce = crypto.randomBytes(32).toString('hex');
@@ -149,6 +162,38 @@ export async function fetchVerifiedModelKey({
   }).toString();
   const res = await fetchImpl(url, { headers: { 'x-no-aliasing': 'true', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) } });
   if (!res.ok) throw new RoostAggregationError(`attestation request answered ${res.status}`);
-  const accepted = selectVerifiedModelKey(await res.json(), { nonce, model, chain, acceptedTcb, expectedMeasurements });
+  const accepted = selectVerifiedModelKey(await res.json(), { nonce, model, chain, acceptedTcb, expectedMeasurements: expectedMeasurements === undefined ? measurementPinFromEnv() : expectedMeasurements });
   return { nonce, publicKey: accepted.publicKey, tcbStatus: accepted.tcbStatus, checks: accepted.checks, measurements: accepted.measurements, measurementsPinned: accepted.measurementsPinned };
+}
+
+const PIN_FIELDS = ['mrtd', 'rtmr0', 'rtmr1', 'rtmr2', 'rtmr3'];
+
+/**
+ * Read what a model host reports about itself, several times with a fresh nonce each time, and say whether the measurements held still.
+ * Read-only: it pins nothing. The quote's own checks (key, nonce, certificate chain) still run on every read.
+ */
+export async function readModelMeasurements({ baseUrl, model, apiKey = null, runs = 2, chain = 'if-available', fetchImpl = globalThis.fetch } = {}) {
+  const reads = [];
+  for (let i = 0; i < runs; i += 1) {
+    const r = await fetchVerifiedModelKey({ baseUrl, model, apiKey, chain, fetchImpl, expectedMeasurements: null });
+    reads.push(r);
+  }
+  const first = reads[0].measurements;
+  const differing = Object.keys(first).filter((f) => reads.some((r) => r.measurements[f] !== first[f]));
+  return { model, runs, measurements: first, stable: differing.length === 0, differing, tcbStatus: reads[0].tcbStatus };
+}
+
+/** Plain text for the owner: the values read and, only if they held still, a setting to paste. */
+export function formatPinSuggestion(result) {
+  const lines = [`Model ${result.model}: read ${result.runs} times, each with a fresh nonce.`];
+  for (const [f, v] of Object.entries(result.measurements)) lines.push(`  ${f.padEnd(6)} ${v}`);
+  if (!result.stable) {
+    lines.push('', `These measurements were NOT stable between reads (${result.differing.join(', ')} changed), so no setting is suggested.`);
+    return lines.join('\n');
+  }
+  const pin = Object.fromEntries(PIN_FIELDS.map((f) => [f, [result.measurements[f]]]));
+  lines.push('', 'To require this build, set:', `MIDGE_MODEL_MEASUREMENTS='${JSON.stringify(pin)}'`, '',
+    'These values are only what was observed when the host was read. They have not been checked against anything NEAR AI publishes, so pinning them trusts that this is the build you mean to trust.',
+    'If NEAR AI ships a new build, a pinned caller will refuse it until you add the new values to the lists (a list per field can hold the old and the new).');
+  return lines.join('\n');
 }
