@@ -52,3 +52,15 @@ test('a page on localhost, or on an origin the owner allowed, still works', asyn
     assert.equal(deposits.length, 2);
   });
 });
+
+// Audit run-1, lead 8: with no key, the Roost routes are open to whoever can reach the port.
+test('the daemon will not listen beyond loopback without an API key', async () => {
+  const d = new FlyApiDaemon({ port: 0, host: '0.0.0.0', mode: 'model' });
+  await assert.rejects(() => d.start(), /API key/);
+});
+
+test('the daemon listens beyond loopback when an API key is set', async () => {
+  const d = new FlyApiDaemon({ port: 0, host: '0.0.0.0', mode: 'model', apiKey: 'k'.repeat(16) });
+  await d.start();
+  await d.stop();
+});

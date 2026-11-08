@@ -52,6 +52,11 @@ export class FlyApiDaemon {
   }
 
   start() {
+    // With no key every route is open, including the ones that spend the operator's model credit. That is fine on loopback
+    // for local work; it is not fine on a network interface.
+    if (!this.apiKey && !/^(127\.|localhost$|::1$|\[::1\]$)/.test(this.host)) {
+      return Promise.reject(new Error(`Refusing to listen on ${this.host} without an API key. Set FLY_API_KEY, or bind to 127.0.0.1.`));
+    }
     return new Promise((resolve) => {
       this.server = http.createServer(async (req, res) => {
         try {
