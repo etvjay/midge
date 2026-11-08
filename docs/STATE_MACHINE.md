@@ -64,7 +64,7 @@ The host (`HostedRoost`) holds one round at a time in four fields: `round` (what
 
 `no round` → **open** (`openRound`; queue empty) → inputs queue → **aggregate computed** (a `run*`; queue cleared; `signed: false`) → **signed** (`signSettlement`; `signed: true`) → the next `openRound` starts over.
 
-Not allowed: signing the same aggregate twice; (target, hole H1 until Task 7) running again after a signature in the same round; accepting an input signed for another round.
+Not allowed: signing the same aggregate twice; running again after a signature in the same round (`R-01`, enforced by every `run*` since 2026-11-08); accepting an input signed for another round.
 
 | Method | Guard | Effect | Tests |
 |---|---|---|---|
@@ -72,13 +72,13 @@ Not allowed: signing the same aggregate twice; (target, hole H1 until Task 7) ru
 | `submitSignedIntent` | round open; account id valid; seq ≥ 1 and newer than before; ciphertext in size bounds; signature valid for this round; key belongs to the account; round unchanged while checking; queue not full | queues or replaces the account's input | `tests/hosted-roost-rounds.test.js` (lead 15), `lab/experiments/74-signed-inputs.js` |
 | `submitSealedIntent` | host not in signed-only mode; sealed hex valid; one bid per id; queue not full | queues the input | `lab/experiments/73-pool-program.js` |
 | `exclude` | none | removes named inputs from the queue | `lab/experiments/94-ongoing-groups.js` |
-| `runAuction` | readable bids; valid reserve | clears the queue; sets `aggregate` | `lab/experiments/72-auction-programs.js` |
-| `runPool` | readable contributions; min and cap valid | as above | `lab/experiments/73-pool-program.js` |
-| `runQuote` | pricing valid; shape valid | as above | `lab/experiments/77-quote-programs.js` |
-| `runBallot` | roll and options valid; quorum; rule | as above | `lab/experiments/78-ballot-program.js` |
-| `runRfq` | taker, makers, pricing valid | as above | `lab/experiments/80-rfq-program.js` |
-| `runPayrun` | employer, tax and benefits addresses; keys | as above | `lab/experiments/79-payrun-program.js` |
-| `runCross` | reference price valid; at most 8 sellers filled | clears the queue; **restores it if more than 8 sellers fill** | `tests/hosted-roost-rounds.test.js` (lead 13) |
+| `runAuction` | no signed aggregate yet in this round (`R-01`); readable bids; valid reserve | clears the queue; sets `aggregate` | `lab/experiments/72-auction-programs.js` |
+| `runPool` | no signed aggregate yet in this round (`R-01`); readable contributions; min and cap valid | as above | `lab/experiments/73-pool-program.js` |
+| `runQuote` | no signed aggregate yet in this round (`R-01`); pricing valid; shape valid | as above | `lab/experiments/77-quote-programs.js` |
+| `runBallot` | no signed aggregate yet in this round (`R-01`); roll and options valid; quorum; rule | as above | `lab/experiments/78-ballot-program.js` |
+| `runRfq` | no signed aggregate yet in this round (`R-01`); taker, makers, pricing valid | as above | `lab/experiments/80-rfq-program.js` |
+| `runPayrun` | no signed aggregate yet in this round (`R-01`); employer, tax and benefits addresses; keys | as above | `lab/experiments/79-payrun-program.js` |
+| `runCross` | no signed aggregate yet in this round (`R-01`); reference price valid; at most 8 sellers filled | clears the queue; **restores it if more than 8 sellers fill** | `tests/hosted-roost-rounds.test.js` (lead 13) |
 | `signSettlement` | an aggregate exists and is unsigned; round fields match; order hash matches; charges and allocations match the outcome; each charge ≤ that bidder's bound; ≤ 8 recipients; payout ≤ what the bids support | signs once; sets `signed` | `lab/experiments/72-auction-programs.js` |
 
 ## The simulation mirror

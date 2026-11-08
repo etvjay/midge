@@ -265,6 +265,23 @@
       "status": "superseded",
       "supersededBy": "C-09",
       "checks": []
+    },
+    {
+      "id": "R-01",
+      "statement": "A Roost round produces at most one signed settlement: once an aggregate is signed, no run* may replace it until a new round is opened.",
+      "plain": "The host signs once per round, so there are never two valid signed payouts for the same epoch and nonce.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "node",
+          "ref": "tests/hosted-roost-rounds.test.js::a run after a signed settlement in the same round is refused and the queue is kept"
+        },
+        {
+          "type": "node",
+          "ref": "tests/hosted-roost-rounds.test.js::running again before anything was signed is still allowed"
+        }
+      ]
     }
   ],
   "families": {

@@ -17,7 +17,7 @@ Plain words: a *state* is "where is this thing right now"; a *transition* is a m
 
 ## 2. The hosted Roost (`hosted-roost.js`)
 - **Round:** `round = null` → open (queue empty) → inputs → aggregate computed (queue cleared, `signed:false`) → signed → next `openRound` resets. Held in four fields (`round`, `sealedIntents`, `lastSeq`, `aggregate`) plus `aggregate.signed`.
-- **Hole H1 (read, not exploited):** none of the seven `run*` methods checks for an existing aggregate before replacing it. Signing is once **per aggregate**, not once **per round**. After a signature, new inputs plus another run yield a fresh unsigned aggregate for the same epoch and nonce, which can be signed again. The contract accepts only one per nonce, but "the host signs once per round" is not true today.
+- **Hole H1 (FIXED 2026-11-08, `R-01`, plan 09-1 Task 7 — was read, not exploited):** none of the seven `run*` methods checks for an existing aggregate before replacing it. Signing is once **per aggregate**, not once **per round**. After a signature, new inputs plus another run yield a fresh unsigned aggregate for the same epoch and nonce, which can be signed again. The contract accepts only one per nonce, but "the host signs once per round" is not true today.
 - **Per-account sequence:** `lastSeq[account]` is its own little machine (accepted seq only rises). Audit lead 15 was a race on it.
 
 ## 3. Services and adapters

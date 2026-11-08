@@ -138,7 +138,9 @@ export default {
         r = await api.post({ id: 53, method: 'ping' });
         s.assert('a message without jsonrpc "2.0" is -32600', r.json.error?.code === -32600);
         r = await api.post(call(54, 'midge_no_such_tool', {}));
-        s.assert('an unknown tool is a JSON-RPC error, not a crash', r.json.error?.code === -32000 && /Unknown/.test(r.json.error.message));
+        s.assert('an unknown tool without the coordinator key is refused (401, default-deny since the lead 6 fix)', r.status === 401 && r.json.error?.data?.code === 'NOT_AUTHORISED', { actual: r.json });
+        r = await api.post(call(54, 'midge_no_such_tool', {}), KEY);
+        s.assert('an unknown tool with the coordinator key is a JSON-RPC error, not a crash', r.json.error?.code === -32000 && /Unknown/.test(r.json.error.message));
         const g = await fetch(api.base + '/mcp'); s.assert('GET /mcp is 405 with Allow: POST', g.status === 405 && g.headers.get('allow') === 'POST');
         const other = await fetch(api.base + '/other'); s.assert('a path that is not /mcp is not handled here', other.status === 418);
         r = await api.post({ jsonrpc: '2.0', id: 1, method: 'ping' }, { origin: 'https://evil.example' });

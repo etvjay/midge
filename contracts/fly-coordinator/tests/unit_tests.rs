@@ -3805,9 +3805,22 @@ fn order_hash_may_not_contain_the_message_separator() {
     // of "<charges_hash>:<order>" would let a charged signature verify as an uncharged settlement.
     let (mut c, id, nonce, _m) = charged_setup("ord-colon");
     let allocations = pay_r(3);
-    let sig = sign_charged(&id, 1, &nonce, &compute_allocations_hash(&allocations), "", "x:y");
+    let sig = sign_charged(
+        &id,
+        1,
+        &nonce,
+        &compute_allocations_hash(&allocations),
+        "",
+        "x:y",
+    );
     testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(0), 120).build());
-    c.settle_batch(id.clone(), nonce.clone(), "x:y".to_string(), allocations, sig);
+    c.settle_batch(
+        id.clone(),
+        nonce.clone(),
+        "x:y".to_string(),
+        allocations,
+        sig,
+    );
 }
 
 #[test]
@@ -3817,10 +3830,18 @@ fn a_member_drained_to_zero_who_deposits_again_is_not_listed_twice() {
     assert_eq!(before.flyers.len() as u32, before.active_flyer_count);
     // m[0] pays everything they deposited
     let charges = vec![charge(&m[0], 10), charge(&m[1], 0), charge(&m[2], 0)];
-    let charges: Vec<Charge> = charges.into_iter().filter(|c| c.amount.as_yoctonear() > 0).collect();
+    let charges: Vec<Charge> = charges
+        .into_iter()
+        .filter(|c| c.amount.as_yoctonear() > 0)
+        .collect();
     settle_charged_as_owner(&mut c, &id, &nonce, pay_r(10), charges.clone(), &charges);
     testing_env_with_promise_results(
-        get_context("fly-coordinator.testnet".parse().unwrap(), NearToken::from_near(0), 121).build(),
+        get_context(
+            "fly-coordinator.testnet".parse().unwrap(),
+            NearToken::from_near(0),
+            121,
+        )
+        .build(),
         PromiseResult::Successful(vec![]),
     );
     assert!(c.on_settlement_payout(
@@ -3831,7 +3852,10 @@ fn a_member_drained_to_zero_who_deposits_again_is_not_listed_twice() {
         compute_allocations_hash(&pay_r(10)),
         "order".to_string(),
     ));
-    assert_eq!(c.get_syndicate(id.clone()).unwrap().status, SyndicateStatus::Active);
+    assert_eq!(
+        c.get_syndicate(id.clone()).unwrap().status,
+        SyndicateStatus::Active
+    );
     let ph = c.get_policy_hash(id.clone());
     testing_env!(get_context(m[0].clone(), NearToken::from_near(1), 130).build());
     c.deposit(id.clone(), ph);
@@ -3879,7 +3903,10 @@ fn a_late_callback_from_a_recovered_settlement_cannot_finish_the_next_one() {
         a.get_syndicate(id.clone()).unwrap().is_settling,
         "B must still be in flight"
     );
-    assert!(a.get_pending_settlement(id.clone()).is_some(), "B's record must survive");
+    assert!(
+        a.get_pending_settlement(id.clone()).is_some(),
+        "B's record must survive"
+    );
     assert_eq!(a.get_escrow(id, m[0].clone()), escrow_before);
 }
 
@@ -3889,7 +3916,7 @@ fn a_deposit_that_has_left_does_not_raise_the_release_cap() {
     // 4 members x 10 NEAR = 40 NEAR, cap 20% => 8 NEAR per window.
     let (mut c, id, m) = windowed("cap-base", "FLASH", 2_000);
     settle_window(&mut c, &id, 200, 1_000, &m[0], true); // 1 NEAR released, window opens at 200
-    // m[1] adds 90 NEAR (100 is the per-member limit), then takes everything back out (the exit timer has run)
+                                                         // m[1] adds 90 NEAR (100 is the per-member limit), then takes everything back out (the exit timer has run)
     let ph = c.get_policy_hash(id.clone());
     testing_env!(get_context(m[1].clone(), NearToken::from_near(90), 210).build());
     c.deposit(id.clone(), ph);
@@ -3903,7 +3930,8 @@ fn a_deposit_that_has_left_does_not_raise_the_release_cap() {
 #[should_panic(expected = "[Hatch REJECT] expected_code_hash is too long")]
 fn hatch_refuses_an_oversized_code_hash() {
     // The flat storage deposit pays for a small record only; a caller-sized string would be paid for by the pooled balance.
-    let (pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", "big-hash", 1, "", "", "");
+    let (pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", "big-hash", 1, "", "", "");
     testing_env!(get_context("alice.near".parse().unwrap(), NearToken::from_near(1), 100).build());
     let mut c = FlyCoordinator::new();
     c.hatch(

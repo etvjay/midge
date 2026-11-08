@@ -176,6 +176,11 @@ export class HostedRoost {
     return { excluded: [...drop], remaining: this.sealedIntents.length };
   }
 
+  /** Signing is once per round, not once per aggregate: after a signature, more inputs must not yield a second signed settlement for the same epoch and nonce. */
+  #assertNoSignedAggregate() {
+    if (this.aggregate?.signed) throw new RoostAggregationError('this round already has a signed settlement; open a new round');
+  }
+
   /** Fix the round that inputs must be signed for, and clear everything from any earlier round. */
   openRound({ contractId, syndicateId, epoch, roundNonce }) {
     for (const [k, v] of Object.entries({ contractId, syndicateId, roundNonce })) if (typeof v !== 'string' || v.length === 0 || v.includes(':')) throw new RoostAggregationError(`${k} must be a non-empty string without ':'`);
@@ -273,6 +278,7 @@ export class HostedRoost {
    * `flyerId` must be the NEAR account that deposited: bids are not yet authenticated to the account (see GAP-023).
    */
   runAuction({ format, lotUnits = 1, reserve = '0', seller, roundId = '' } = {}) {
+    this.#assertNoSignedAggregate();
     if (!FORMATS.includes(format)) throw new RoostAggregationError(`format must be one of ${FORMATS.join(', ')}`);
     if (typeof seller !== 'string' || seller.length === 0 || seller.includes(':') || seller.includes(',')) throw new RoostAggregationError('seller must be a plain account id');
     const reserveMicro = toMicro(reserve);
@@ -314,6 +320,7 @@ export class HostedRoost {
    * `min` or over the `cap`, is left out and its flyerId reported, never its content.
    */
   runPool({ recipient, min = '0', cap = null, roundId = '' } = {}) {
+    this.#assertNoSignedAggregate();
     if (typeof recipient !== 'string' || recipient.length === 0 || recipient.includes(':') || recipient.includes(',')) throw new RoostAggregationError('recipient must be a plain account id');
     const minMicro = toMicro(min); const capMicro = cap === null ? null : toMicro(cap);
     if (minMicro === null || (cap !== null && capMicro === null)) throw new RoostAggregationError('min and cap must be decimals with at most 6 places');
@@ -342,6 +349,7 @@ export class HostedRoost {
    * settle_batch_charged; only the cash leg moves (no repayment, collateral or asset delivery is enforced).
    */
   runQuote({ shape, pricing = 'first', counterparty, amount = null, units = null, limit, roundId = '' } = {}) {
+    this.#assertNoSignedAggregate();
     if (shape !== 'lend' && shape !== 'buy') throw new RoostAggregationError("shape must be 'lend' or 'buy'");
     if (pricing !== 'first' && pricing !== 'second') throw new RoostAggregationError("pricing must be 'first' or 'second'");
     if (typeof counterparty !== 'string' || counterparty.length === 0 || counterparty.includes(':') || counterparty.includes(',')) throw new RoostAggregationError('counterparty must be a plain account id');
@@ -396,6 +404,7 @@ export class HostedRoost {
    * winner or the reason nothing was decided, never a tally or a turnout. Refuses to run on a host that accepts unsigned inputs.
    */
   runBallot({ options, roll, share, quorumBps = 5000, rule = 'majority', roundId = '' } = {}) {
+    this.#assertNoSignedAggregate();
     if (!this.requireSignedInputs) throw new RoostAggregationError('a ballot is only counted on a host that requires signed inputs');
     if (!options || typeof options !== 'object') throw new RoostAggregationError('options must map option ids to recipients');
     const ids = Object.keys(options);
@@ -432,6 +441,7 @@ export class HostedRoost {
    * the taker's secret salt so an observer cannot recover them by trying every pair. Only the cash leg moves.
    */
   runRfq({ taker, makers, pricing = 'first', roundId = '' } = {}) {
+    this.#assertNoSignedAggregate();
     if (!this.requireSignedInputs) throw new RoostAggregationError('an RFQ is only run on a host that requires signed inputs');
     if (!isAccountId(taker)) throw new RoostAggregationError('taker must be a plain account id');
     if (pricing !== 'first' && pricing !== 'second') throw new RoostAggregationError("pricing must be 'first' or 'second'");
@@ -478,6 +488,7 @@ export class HostedRoost {
    * hides who a payee is (a one-time address only the room can map to a person), and adds a private paper trail.
    */
   runPayrun({ employer, taxAddress, benefitsAddress, employerKeyHex, auditorKeyHex, runId = 'run' } = {}) {
+    this.#assertNoSignedAggregate();
     if (!this.requireSignedInputs) throw new RoostAggregationError('a pay run is only run on a host that requires signed inputs');
     if (!isAccountId(employer)) throw new RoostAggregationError('employer must be a plain account id');
     for (const [k, v] of Object.entries({ employerKeyHex, auditorKeyHex })) if (!/^[0-9a-f]{64}$/i.test(String(v))) throw new RoostAggregationError(`${k} must be a 32-byte hex public key`);
@@ -513,6 +524,7 @@ export class HostedRoost {
    * cash leg moves; the asset is not delivered. The reference price is supplied, not verified.
    */
   runCross({ referencePrice, maxUnits = null, roundId = '' } = {}) {
+    this.#assertNoSignedAggregate();
     const referenceMicro = toMicro(referencePrice);
     if (referenceMicro === null || referenceMicro === 0n) throw new RoostAggregationError('referencePrice must be a positive decimal with at most 6 places');
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run a cross on an empty sealed queue');
