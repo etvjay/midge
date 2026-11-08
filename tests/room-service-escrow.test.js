@@ -78,3 +78,12 @@ test('abandon over HTTP needs the coordinator key', async () => {
     assert.equal((await ok.json()).abandoned, true);
   } finally { await new Promise((r) => server.close(r)); }
 });
+
+test('a roll member who never voted and cannot pay is still left out: the roll is read, not just the voters', async () => {
+  const host = new HostedRoost({ provider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader: reader({ ...everyone, 'm5.near': '0' }) });
+  const svc = new RoomService({ host }); svc.open(ROUND);
+  for (const i of voteInputs(host).slice(0, 4)) await svc.submit(i); // m5 submits nothing
+  const res = await runBallot(svc);
+  assert.deepEqual(res.outcome.excludedForEscrow, ['m5.near']);
+  assert.equal(res.settlement.args.charges.length, 4);
+});

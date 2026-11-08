@@ -37,13 +37,13 @@ test('POST /pool binds the escrow read itself, leaves out the bidder who cannot 
 
 test('POST /ballot reads the roll\'s escrow, so a roll member who never voted but cannot pay is left out', async () => {
   const { provider: fixProvider, keyCheck, ROUND, ROLL, VOTE_PARAMS, voteInputs } = await import('../lab/lib/room-fixtures.js');
-  const bal = Object.fromEntries(ROLL.map((m) => [m, NEAR(1)])); bal['m5.near'] = '0'; // m5 only abstained, but is still charged a share
+  const bal = Object.fromEntries(ROLL.map((m) => [m, NEAR(1)])); bal['m5.near'] = '0'; // m5 never votes, but is still on the roll and so is charged a share
   const roost = new HostedRoost({ provider: fixProvider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader: reader(bal) });
   const server = createRoostServer({ roost, adminKey: KEY });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   try {
     roost.openRound(ROUND);
-    for (const i of voteInputs(roost)) await roost.submitSignedIntent(i);
+    for (const i of voteInputs(roost).slice(0, 4)) await roost.submitSignedIntent(i); // m5 never votes
     const res = await fetch(`http://127.0.0.1:${server.address().port}/ballot`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-roost-admin-key': KEY }, body: JSON.stringify(VOTE_PARAMS) });
     const json = await res.json();
     assert.equal(res.status, 200, JSON.stringify(json));
