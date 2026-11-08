@@ -55,6 +55,7 @@ export class ConfidentialRfqFacility {
   matchAndBindLoan(rfqId) {
     const rfq = this.rfqs.get(rfqId);
     if (!rfq || rfq.quotes.length === 0) throw new Error('No quotes available to match');
+    if (rfq.status !== 'OPEN_IN_ROOST') throw new Error('RFQ not open: already matched or closed');
 
     // Sort by lowest APR offered
     rfq.quotes.sort((a, b) => a.offeredAprPercent - b.offeredAprPercent);

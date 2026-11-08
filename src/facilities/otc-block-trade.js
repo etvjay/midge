@@ -44,6 +44,10 @@ export class OtcBlockTradeFacility {
       throw new Error('One or both OTC block orders not found.');
     }
 
+    if (buyOrder.status !== 'SEALED_IN_ROOST' || sellOrder.status !== 'SEALED_IN_ROOST') {
+      throw new Error('[OTC REJECT] An order is already settled or not open.');
+    }
+
     if (buyOrder.side !== 'BUY' || sellOrder.side !== 'SELL') {
       throw new Error('Orders must be complementary (BUY and SELL).');
     }

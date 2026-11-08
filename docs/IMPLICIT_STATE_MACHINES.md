@@ -34,9 +34,9 @@ Plain words: a *state* is "where is this thing right now"; a *transition* is a m
 ## 4. Facilities (simulations)
 | Machine | States | Note |
 |---|---|---|
-| **RFQ** | `OPEN_IN_ROOST` → `MATCHED_BOUND`; loan `ACTIVE_SHIELDED` → `PRIVATE_LIQUIDATION`, plus a separate `marginCallActive` flag | **H2 (run, confirmed):** `matchAndBindLoan` checks only `!rfq \|\| quotes.length === 0`, never the status. A second call on a `MATCHED_BOUND` RFQ bound a second loan. The margin call is a flag beside the status, not a state. |
-| **OTC order** | `SEALED_IN_ROOST` → `MATCHED_SETTLED` | |
-| **FAR bridge** | `LOCKED_IN_PUBLIC_TREASURY` → `MINTED_SHIELDED` → `RELEASED_CLEAN` | |
+| **RFQ** | `OPEN_IN_ROOST` → `MATCHED_BOUND`; loan `ACTIVE_SHIELDED` → `PRIVATE_LIQUIDATION`, plus a separate `marginCallActive` flag | **H2 (FIXED 2026-11-08, plan 09-1 Task 8; was run, confirmed):** `matchAndBindLoan` checks only `!rfq \|\| quotes.length === 0`, never the status. A second call on a `MATCHED_BOUND` RFQ bound a second loan. The margin call is a flag beside the status, not a state. |
+| **OTC order** | `SEALED_IN_ROOST` → `MATCHED_SETTLED` | **Sibling of H2 (found and FIXED in Task 8):** `matchCrossingOrders` never checked order status, so the same pair could settle twice. |
+| **FAR bridge** | `LOCKED_IN_PUBLIC_TREASURY` → `MINTED_SHIELDED` → `RELEASED_CLEAN` | **Sibling of H2 (found and FIXED in Task 8):** `mintImtOnFar` trusted a caller-supplied receipt object, so a forged receipt, or one deposit used twice, minted private tokens. The bridge now remembers the receipts it issued and mints each once at the issued amount. |
 | **JS contract mirror** | `contracts/nest.js`: `ACTIVE` / `SETTLED` / `ABORTED_REFUNDED` | **H5:** a second copy of the contract's state machine, spelled differently. They can drift; nothing compares them. |
 
 ## 5. Process machines (not code, still states)

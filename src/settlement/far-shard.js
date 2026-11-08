@@ -10,6 +10,7 @@ export class FarPrivateShardBridge {
     this.publicTreasuryLocked = new Map(); // assetId -> amount
     this.privateImtBalances = new Map(); // account -> { assetId, amount }
     this.privateRelayTrades = [];
+    this.issuedReceipts = new Map(); // receiptId -> { assetId, amount, minted }: only these can mint, once each
   }
 
   /**
@@ -29,6 +30,7 @@ export class FarPrivateShardBridge {
       timestamp: Date.now(),
     };
 
+    this.issuedReceipts.set(depositReceipt.receiptId, { assetId, amount, minted: false });
     return depositReceipt;
   }
 
@@ -39,15 +41,21 @@ export class FarPrivateShardBridge {
     if (depositReceipt.status !== 'LOCKED_IN_PUBLIC_TREASURY') {
       throw new Error('Cannot mint IMT without verified public treasury lock.');
     }
+    // Trust what this bridge recorded, not what the caller's object says: the receipt must be one we issued, unused,
+    // and it mints the amount that was locked.
+    const issued = this.issuedReceipts.get(depositReceipt.receiptId);
+    if (!issued) throw new Error('Cannot mint IMT: this receipt was not issued by this bridge (unknown receipt).');
+    if (issued.minted) throw new Error('Cannot mint IMT: this deposit receipt has already minted.');
+    issued.minted = true;
 
-    const imtAssetId = `imt:${depositReceipt.assetId}`;
+    const imtAssetId = `imt:${issued.assetId}`;
     const current = this.privateImtBalances.get(privateAccount) || 0;
-    this.privateImtBalances.set(privateAccount, current + depositReceipt.amount);
+    this.privateImtBalances.set(privateAccount, current + issued.amount);
 
     return {
       imtAssetId,
       privateAccount,
-      mintedAmount: depositReceipt.amount,
+      mintedAmount: issued.amount,
       shard: 'FAR_PRIVATE_SHARD_01',
       consensus: 'PBFT_200MS',
       status: 'MINTED_SHIELDED',
