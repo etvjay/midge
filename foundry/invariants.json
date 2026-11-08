@@ -1,0 +1,51 @@
+{
+  "note": "Contract invariants are C-NN; the Roost round has R-NN; phase documents define their own I-NN-X. A bare I-NN means the whole phase family listed under families.",
+  "invariants": [],
+  "families": {
+    "I-01": [
+      "I-01-A",
+      "I-01-B",
+      "I-01-C"
+    ],
+    "I-02": [
+      "I-02-A",
+      "I-02-B",
+      "I-02-C"
+    ],
+    "I-03": [
+      "I-03-A",
+      "I-03-B",
+      "I-03-C"
+    ],
+    "I-04": [
+      "I-04-A",
+      "I-04-B",
+      "I-04-C"
+    ],
+    "I-05": [
+      "I-05-A",
+      "I-05-B",
+      "I-05-C"
+    ],
+    "I-06": [
+      "I-06-A",
+      "I-06-B",
+      "I-06-C"
+    ],
+    "I-07": [
+      "I-07-A",
+      "I-07-B",
+      "I-07-C"
+    ],
+    "I-08": [
+      "I-08-A",
+      "I-08-B",
+      "I-08-C"
+    ],
+    "I-09": [
+      "I-09-A",
+      "I-09-B",
+      "I-09-C"
+    ]
+  }
+}
