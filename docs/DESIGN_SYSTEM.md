@@ -196,5 +196,5 @@ Checks to run before shipping: the `ux-ui-audit` probes at 1440 and 390 (0 contr
 | `site/models/`, `site/img/` | GLB models, plates, drawings, hero |
 | `site/data/proof.json` | Real transactions and the security run (`node scripts/build-site-data.mjs`) |
 | `scripts/blender/` | Model, render and drawing scripts, and the MCP client |
-| `docs/superpowers/specs/2026-11-04-site-design.md` | The direction and the decisions behind this system |
+| *(not published)* | The direction and decisions behind this system are in a design spec kept on the author's machine |
 | *(not published)* | The research the motion and 3D choices rest on is kept on the author's machine, not in this repository |

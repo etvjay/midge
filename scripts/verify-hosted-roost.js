@@ -7,7 +7,7 @@
  *
  *   node scripts/verify-hosted-roost.js --url https://<roost> --verifier http://127.0.0.1:18080
  *
- * Needs the official dstack-verifier running (a container; see docs/roost-tee-plan.md):
+ * Needs the official dstack-verifier running (a container; see deploy/roost/README.md):
  *   docker run --rm -p 127.0.0.1:18080:8080 ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41
  *
  * Pinned expectations (compose hash of our build, production OS image hashes) live in

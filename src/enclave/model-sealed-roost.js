@@ -16,7 +16,7 @@ export { RoostAggregationError };
  *
  * What this protects: individual bids are visible only inside the model's TEE.
  * What it does not give: exact arithmetic. A language model does the sum, so we fail closed unless
- * every run agrees and the count matches what was submitted. See docs/roost-tee-plan.md section 3b.
+ * every run agrees and the count matches what was submitted. (Design notes: kept on the author's machine, not in this repository.)
  */
 
 const MIN_CIPHERTEXT_BYTES = 32 + 24 + 16;

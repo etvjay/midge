@@ -37,7 +37,7 @@ npm run verify
   - Architecture Decisions (ADRs): `docs/canonical/DECISIONS.md`
   - Submission Pack: `docs/hackathon-submission.md`
   - State machines and invariants: `docs/STATE_MACHINE.md` (kept true by `make check`), with `docs/IMPLICIT_STATE_MACHINES.md`
-  - Research and planning documents (SRS, RTM, architecture, implementation plan, use cases, research reports, session handoffs) are **not in this repository**: they went stale against the code and are kept only on the author's machine.
+  - Research and planning documents (SRS, RTM, architecture, implementation plan, use cases, research reports, session handoffs, the whitepaper, the Roost TEE plan, specs and plans) are **not in this repository**: they went stale against the code and are kept only on the author's machine.
 
 ---
 
@@ -65,7 +65,7 @@ npm run verify:api       # HTTP Gateway Daemon, SSE Streams, x402 & MCP Server
 
 ## Default Working Pipeline (every change, in this order)
 Set 2026-11-08. Skip a step only when the user says so, and say which step was skipped.
-1. **Shape it** — `superpowers:brainstorming`, then `mattpocock-skills:grilling` (or `domain-modeling` when terms are unclear) until the design is settled. Write the result down (spec in `docs/`, decision in `docs/canonical/DECISIONS.md`) and get the user's approval before building. Use `superpowers:writing-plans` for anything larger than one sitting.
+1. **Shape it** — `superpowers:brainstorming`, then `mattpocock-skills:grilling` (or `domain-modeling` when terms are unclear) until the design is settled. Write the result down and get the user's approval before building: the spec and plan are working documents in `docs/superpowers/` that are **kept locally and not published** (they go stale); anything lasting goes to a tracked place: `docs/canonical/DECISIONS.md` for a decision, `foundry/gaps.jsonl` and `foundry/claims.jsonl` for gaps and claims, `docs/STATE_MACHINE.md` for states and invariants. Use `superpowers:writing-plans` for anything larger than one sitting.
 2. **Build it test-first** — `superpowers:test-driven-development` / `mattpocock-skills:tdd`: a failing test, watch it fail for the right reason, then the fix. Bugs go through `mattpocock-skills:diagnosing-bugs` (a red loop first, then hypotheses) and `superpowers:systematic-debugging`.
 3. **Prove it with the lab method** — `research-sequence-lab`: predictions committed before the run, an experiment that can fail, mutation checks on the test, a hash-chained log, promoted with `node lab/verify-run.js`. Anything claimed as "live" or "verified" needs a promoted run, not a one-off script.
 4. **Record it** — gap ledger (`foundry/gaps.jsonl`), claims (`foundry/claims.jsonl`), ADR, evidence ledger, `docs/canonical/CURRENT_STATE.md`. A claim without a command someone can re-run is "unverified", never "verified".

@@ -2,7 +2,7 @@ import { roostReportData } from './hosted-roost.js';
 
 /**
  * Verify a hosted Roost attestation bundle. Delegates the hardware, event-log and OS image checks to the
- * official dstack-verifier (a container; see docs/roost-tee-plan.md) and adds the checks only we can make:
+ * official dstack-verifier (a container; see deploy/roost/README.md) and adds the checks only we can make:
  *   1. the report data in the quote equals sha512(domain, settle key, intent key, nonce), so the keys are
  *      bound to this exact quote and this fresh nonce
  *   2. the compose hash equals the pinned hash of our published build, so the code is the code we published

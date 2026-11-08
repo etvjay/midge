@@ -10,7 +10,7 @@ import { ModelSealedRoost } from './model-sealed-roost.js';
  *                 The default whenever a NEAR AI key is configured.
  *   local         a keyless simulation. Exact arithmetic, but whoever runs the process can read every bid.
  *                 Used only when no key is configured, or when asked for by name (tests, offline demos).
- *   hosted        the same code as local, run inside a TEE we can attest (built and run on a real Phala TDX machine; it is served by src/roost-service, not created here); see docs/roost-tee-plan.md
+ *   hosted        the same code as local, run inside a TEE we can attest (built and run on a real Phala TDX machine; it is served by src/roost-service, not created here); see deploy/roost/README.md
  */
 export const ROOST_BACKENDS = ['model-sealed', 'local'];
 

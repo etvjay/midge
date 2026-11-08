@@ -1,7 +1,7 @@
 # Hosted Roost: build, deploy, verify
 
 The Roost is deterministic code that runs inside a dstack confidential VM (Phala Cloud). Members seal
-bids to its intent key; only the attested VM can read them. See `docs/roost-tee-plan.md`.
+bids to its intent key; only the attested VM can read them. The design notes behind it are kept on the author's machine, not in this repository; the checks a member can run are in `src/roost-service/verify-hosted.js` and `ESCROW-READER.md`.
 
 ## Build
     deploy/roost/build.sh midge-roost:local     # minimal staged context, pinned Node base image
