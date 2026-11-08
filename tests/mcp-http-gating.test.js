@@ -21,7 +21,7 @@ async function withServer(fn) {
   try { await fn({ call, calls }); } finally { await new Promise((r) => server.close(r)); }
 }
 
-for (const tool of ['midge_hatch_syndicate', 'midge_deposit', 'midge_settle', 'midge_hatch_out', 'midge_get_my_syndicates', 'midge_submit_sealed_intent', 'midge_create_confidential_rfq', 'midge_match_otc_block', 'midge_open_room_round', 'midge_run_room', 'a_tool_nobody_has_heard_of']) {
+for (const tool of ['midge_hatch_syndicate', 'midge_deposit', 'midge_settle', 'midge_hatch_out', 'midge_get_my_syndicates', 'midge_submit_sealed_intent', 'midge_create_confidential_rfq', 'midge_match_otc_block', 'midge_open_room_round', 'midge_run_room', 'midge_abandon_room_round', 'a_tool_nobody_has_heard_of']) {
   test(`${tool} is refused without the coordinator key and never reaches the dispatcher`, async () => {
     await withServer(async ({ call, calls }) => {
       const r = await call(tool);

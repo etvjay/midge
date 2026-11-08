@@ -241,7 +241,8 @@ export class FlyMcpServer {
       case 'midge_describe_rooms': return this.formatOutput(await this.rooms.describe());
       case 'midge_open_room_round': return this.formatOutput(await this.rooms.open(args.round));
       case 'midge_submit_room_input': return this.formatOutput(await this.rooms.submit(args.input));
-      default: return this.formatOutput(await this.rooms.run({ program: args.program, params: args.params ?? {}, round: args.round, includeConfidential: args.includeConfidential === true }));
+      case 'midge_abandon_room_round': return this.formatOutput(await this.rooms.abandon(args.round));
+      default: return this.formatOutput(await this.rooms.run({ program: args.program, params: args.params ?? {}, round: args.round, includeConfidential: args.includeConfidential === true, escrowBlockHash: args.escrowBlockHash ?? null }));
     }
   }
 

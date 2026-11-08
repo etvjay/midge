@@ -59,10 +59,13 @@ export class RoomsClient {
   openApi() { return this.#request('GET', '/v1/rooms/openapi.json'); }
   openRound(round) { return this.#request('POST', '/v1/rooms/round', round); }
   submit(input) { return this.#request('POST', '/v1/rooms/inputs', input); }
-  run({ program, params = {}, round, includeConfidential = false }) { return this.#request('POST', '/v1/rooms/run', { program, params, round, includeConfidential }); }
+  /** `escrowBlockHash` (optional): read escrow at this block, so the two rooms of a two-room settlement read the same one. */
+  run({ program, params = {}, round, includeConfidential = false, escrowBlockHash = undefined }) { return this.#request('POST', '/v1/rooms/run', { program, params, round, includeConfidential, ...(escrowBlockHash ? { escrowBlockHash } : {}) }); }
+  /** Give up a signed round the contract rejected so it can run again (coordinator only). The abandoned signature stays valid on chain. */
+  abandon(round) { return this.#request('POST', '/v1/rooms/abandon', { round }); }
 }
 
 /** Lets anything that expects a RoomService (the MCP server, for one) use a remote rooms API instead. */
 export function remoteRooms(client) {
-  return { describe: () => client.describe(), open: (round) => client.openRound(round), submit: (input) => client.submit(input), run: (req) => client.run(req) };
+  return { describe: () => client.describe(), open: (round) => client.openRound(round), submit: (input) => client.submit(input), run: (req) => client.run(req), abandon: (round) => client.abandon(round) };
 }

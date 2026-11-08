@@ -1,5 +1,5 @@
 /**
- * MCP tools for rooms: four tools that mirror the four RoomService verbs. There is no tool per room kind and no tool takes a secret
+ * MCP tools for rooms: five tools that mirror the five RoomService verbs. There is no tool per room kind and no tool takes a secret
  * key: a member's input arrives already sealed and signed, and the coordinator's key stays in the transport (the HTTP header, or the
  * process that launched the stdio server).
  */
@@ -40,14 +40,20 @@ export const ROOM_TOOLS = [
         params: { type: 'object', description: 'The parameters that kind takes, as listed by midge_describe_rooms.' },
         round: ROUND,
         includeConfidential: { type: 'boolean', description: 'Also return plain detail meant only for the parties to a trade (an RFQ\'s units and price). Default false.' },
+        escrowBlockHash: { type: 'string', description: 'With an escrow reader: read escrow at this block hash instead of the latest final block, so the two rooms of a two-room settlement read the same block.' },
       },
       required: ['program', 'round'],
     },
   },
+  {
+    name: 'midge_abandon_room_round',
+    description: 'Gives up a signed round the contract rejected, so it can run again (coordinator only). Nothing changes on chain when a settlement is rejected, so the round\'s nonce is the same; this clears the host\'s mark and records what was abandoned. The abandoned signature stays valid on chain: if it reaches the chain first it can still land. Members re-submit with a higher seq.',
+    inputSchema: { type: 'object', properties: { round: ROUND }, required: ['round'] },
+  },
 ];
 
 export const ROOM_TOOL_NAMES = new Set(ROOM_TOOLS.map((t) => t.name));
-export const COORDINATOR_ONLY = new Set(['midge_open_room_round', 'midge_run_room']);
+export const COORDINATOR_ONLY = new Set(['midge_open_room_round', 'midge_run_room', 'midge_abandon_room_round']);
 
 /**
  * Tools anyone may call over HTTP: they read, or they hand in a member's own signed input. Every other tool, including any added

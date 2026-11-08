@@ -43,7 +43,7 @@ export default {
       const host = mkHost(); const svc = new RoomService({ host });
       const withRooms = new FlyMcpServer({ mode: 'model', rooms: svc }).listTools().tools; const without = new FlyMcpServer({ mode: 'model' }).listTools().tools;
       s.assert('without rooms the list is the original ten', without.length === FLY_MCP_TOOLS.length && FLY_MCP_TOOLS.length === 10 && ROOM_TOOLS.every((n) => !without.some((t) => t.name === n)), { actual: without.length });
-      s.assert('with rooms it adds exactly the four room tools', withRooms.length === 14 && ROOM_TOOLS.every((n) => withRooms.some((t) => t.name === n)), { actual: withRooms.map((t) => t.name) });
+      s.assert('with rooms it adds exactly the five room tools (the fifth, abandon, was added with the escrow work)', withRooms.length === 15 && ROOM_TOOLS.every((n) => withRooms.some((t) => t.name === n)), { actual: withRooms.map((t) => t.name) });
       const bad = []; for (const t of withRooms.filter((x) => ROOM_TOOLS.includes(x.name))) walk(t.inputSchema, (k, p) => { if (/secret|private|mnemonic|seed|password/i.test(k)) bad.push(`${t.name}${p}`); });
       s.assert('no room tool has a parameter that could carry a secret key', bad.length === 0, { actual: bad });
       s.assert('every room tool has a description and an object input schema', withRooms.filter((x) => ROOM_TOOLS.includes(x.name)).every((t) => t.description.length > 20 && t.inputSchema.type === 'object'));
@@ -100,7 +100,7 @@ export default {
         let r = await api.post({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} });
         s.assert('initialize answers with a protocol version, server info and the tools capability', r.status === 200 && r.json.id === 1 && r.json.result.protocolVersion && r.json.result.serverInfo?.name && 'tools' in r.json.result.capabilities, { actual: r.json });
         r = await api.post({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
-        s.assert('tools/list over HTTP shows 14 tools', r.json.result.tools.length === 14);
+        s.assert('tools/list over HTTP shows 15 tools', r.json.result.tools.length === 15);
         r = await api.post(call(3, 'midge_describe_rooms', {}));
         s.assert('describe needs no key', r.status === 200 && textOf(r.json).programs.length === 7);
         r = await api.post(call(4, 'midge_open_room_round', { round: ROUND }));
