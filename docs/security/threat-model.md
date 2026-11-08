@@ -104,7 +104,7 @@ It does not assume a trusted execution environment (TEE, a hardware-isolated com
 - **Attack:** the member is shown a valid Intel quote from a machine that is not the build they meant to trust.
 - **Defense:** the quote proves the signing key and a fresh nonce are inside a genuine TDX machine. A caller can additionally pin the measurements (MRTD, RTMR0 to RTMR3, MRSEAM); a mismatch fails and names the field (GAP-043). For the hosted Roost the measured compose file also names the container image digest and the settings.
 - **How to switch it on:** set `MIDGE_MODEL_MEASUREMENTS` to a list of accepted values per field; `npm run measure:model` (`scripts/measure-model.js`) prints what the host reports now and a setting to paste. A malformed setting stops the caller rather than turning the pin off.
-- **Limit:** nothing is pinned by default, because which build to trust is the owner's decision, and the values the script prints are only what was observed: they have not been checked against anything NEAR AI publishes. A pinned caller refuses a new NEAR AI build until its values are added.
+- **Limit:** nothing is pinned by default, because which build to trust is the owner's decision, and the values the script prints are only what was observed: they have not been checked against anything NEAR AI publishes. A pinned caller refuses a new NEAR AI build until its values are added. The live model check pins to a tracked baseline of what was observed (`docs/canonical/model-measurements.json`) unless `--no-pin`.
 
 ---
 
@@ -114,7 +114,7 @@ It does not assume a trusted execution environment (TEE, a hardware-isolated com
 2. **A creator who is also the operator.** The creator chooses the room key and the payout recipient. If a creator names their own wallet as the recipient and their own key as the room key, they can sign a payout to themselves. Members must inspect both before depositing. The tools surface the recipient list and room key for review; Midge cannot judge them.
 3. **The exit race** (T6).
 4. **Public deposits, refunds and payouts.** The funding accounts, amounts and timing are public.
-5. **A group that was hatched and never funded** has no member and so no exit, and on the live contract it cannot be removed. The code now lets its creator remove it at once, and anyone after about seven days (GAP-030); that change is not deployed yet.
+5. **A group that was hatched and never funded** has no member and so no exit. Its creator can remove it at once, and anyone can after about seven days (GAP-030, deployed 2026-11-09 and checked live; the path after the waiting period is unit-tested only).
 6. **A callback whose payload is identical to another's** can be matched to the wrong record. This was accepted and is recorded for the next contract change.
 7. **Execution quality.** The room proves a specific algorithm ran; it does not make a trade profitable.
 8. **Where the amounts of a payout are visible.** A settlement is a public transfer, so payroll hides who is paid, not how much.

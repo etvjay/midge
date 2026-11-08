@@ -22,7 +22,7 @@ Written 2026-11-08 from the source (`contracts/fly-coordinator/src/lib.rs`, `src
 | Payout in flight | Active | yes | yes | `settle_batch*` |
 | Settled | Settled | no | no | a settlement that paid out everything |
 | Refunded | AbortedRefunded | no | no | the last member's `hatch_out` |
-| Unfunded | Active | no | no | `hatch` with no deposit afterwards: it has no member, so no exit; its creator can remove it at once with `prune_syndicate`, and anyone after 604,800 blocks (about seven days) (GAP-030; fixed in the code, not yet on the live contract) |
+| Unfunded | Active | no | no | `hatch` with no deposit afterwards: it has no member, so no exit; its creator can remove it at once with `prune_syndicate`, and anyone after 604,800 blocks (about seven days) (GAP-030; deployed 2026-11-09 and checked live by `E-UNFUNDED-PRUNE-LIVE-01`) |
 
 Not allowed, ever: `Settled → Active` or `AbortedRefunded → Active` by any path except the failed-transfer rollback above (`C-12`), two settlements in flight, a pending record without `is_settling` (or the reverse), a member listed twice.
 

@@ -1,0 +1,15 @@
+{
+  "runId": "20261108T170650Z-a88e",
+  "startedAt": "2026-11-08T17:06:50.360Z",
+  "rootHash": "236dc9738d642df75f0e2c3dcc6d54d1bf072a32295cf08065e10cd3d420e76c",
+  "verdicts": {
+    "E-UNFUNDED-PRUNE-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 40,
+  "commit": "971797908f9f91b1b77ad370d31166d645ed8cff"
+}

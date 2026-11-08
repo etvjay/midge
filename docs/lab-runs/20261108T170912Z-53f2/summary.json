@@ -1,0 +1,15 @@
+{
+  "runId": "20261108T170912Z-53f2",
+  "startedAt": "2026-11-08T17:09:12.130Z",
+  "rootHash": "e414807c2990cd90eeb91d96e562794d61b05eee06f43e9de5f059c2428e7b79",
+  "verdicts": {
+    "E-MODEL-PIN-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 38,
+  "commit": "87378a8084af785822a9650d2556d6bae15fac70"
+}
