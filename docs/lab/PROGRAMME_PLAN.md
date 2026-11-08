@@ -315,3 +315,16 @@ Two things found on the way, openly: the first attempt at this hardware run, wit
 Run `20261108T131539Z-a3bd`, one run, 50 events, log verified, promoted to `docs/lab-runs/20261108T131539Z-a3bd`. **All five predictions held on the first run.** The VM attested with the fixture compose (byte for byte what Phala holds). A charged round was refused with 503 `could not read escrow: fetch failed` in 55 ms (the names never resolve, so it failed at once rather than waiting out the 30 s deadline), the retry gave the same answer, the bid's digest was the same before and after, and a settlement attempt was refused for want of an aggregate. The VM was deleted: 0 VMs left, about $0.0009.
 
 **Still not shown:** recovery when the providers come back; a slow (rather than absent) provider on hardware, which is the timeout path; and that the real compose, not the fixture, was run through an outage.
+
+## Nonce-checked follow-up and the phase view, live: predictions, written 2026-11-09 before the experiment exists or the contract is redeployed
+
+**What it is, in plain words.** The contract's follow-up step after a payout now names the round it belongs to and is ignored unless that is the settlement in flight (GAP-028), and a read-only view says which phase a group is in. Unit tests show this. This checks it on the real contract after the redeploy.
+
+**E-NONCE-CALLBACK-LIVE-01 (testnet).** After the new code is on the chain:
+1. **The chain runs the build:** the on-chain code hash equals the last entry in `docs/canonical/deployments.json`, and the contract still holds the same groups as before the deploy.
+2. **The phase view agrees with the records:** for every group on the contract, `get_group_phase` matches its status and escrow (Settled for Settled, Refunded for AbortedRefunded, Open or Unfunded for Active), and an id that does not exist gives null.
+3. **A real settlement uses the new follow-up:** the settlement's own receipts show the follow-up scheduled as `on_settlement_payout_for_round` carrying the round nonce that was signed; the group's phase is PayoutInFlight until it runs and Open afterwards; the pending record is gone.
+4. **A second settlement with a byte-identical payload also completes:** the case GAP-028 could not tell apart does not wedge a normal run.
+5. **Teardown leaves nothing:** all accounts deleted, groups pruned, the group count back to what it was.
+
+**Not tested live, and said so:** the late follow-up itself (a follow-up of an earlier settlement arriving while a newer one is in flight) cannot be produced on a real chain on demand; it is shown by the unit tests only. A settlement that was in flight at the moment of the upgrade (the legacy path) is also unit-tested only. **Weakness I expect to remain:** one operator controls every account, and a pass shows the new path works, not that the old defect was reachable on testnet.
