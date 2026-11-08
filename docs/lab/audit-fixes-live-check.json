@@ -1,0 +1,18 @@
+{
+ "takenAt": "2026-11-08T05:59:39.461Z",
+ "codeHash": "AFtZmiNSGMZjHsh12s9PT3hbyGRkAdUwtniXdVNnYJaL",
+ "countBefore": 15,
+ "countAfter": 15,
+ "oversizedCodeHash": {
+  "ok": false,
+  "refusedForTheRightReason": true,
+  "error": "Smart contract panicked: panicked at src/lib.rs:499:9:\n[Hatch REJECT] expected_code_hash is too long (128 bytes at most).",
+  "explorer": "https://testnet.nearblocks.io/txns/A2JjamQTY1wkcZnbLJTcAAbYXbVk9oKAqyJmLcXnUef5"
+ },
+ "colonInOrderHash": {
+  "ok": false,
+  "refusedForTheRightReason": true,
+  "error": "Smart contract panicked: panicked at src/lib.rs:867:9:\n[Settle REJECT] Invalid order hash",
+  "explorer": "https://testnet.nearblocks.io/txns/E4CgcDftnhyAfHCwCeqdjoLsPXSdfs9NBHvZRqKzKGJ8"
+ }
+}

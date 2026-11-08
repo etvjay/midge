@@ -54,7 +54,15 @@
       "from": "2026-11-07T14:25Z",
       "deployTx": "Eh8ZpeoKzGZtXxUX2B3EerXyBs7ALN6Dt7siQ1LvKYY3",
       "gitCommit": "c028f28",
-      "reason": "GAP-025 fix: the exit timer is part of the policy hash depositors consent to (version 2, for new groups); a timer below 10 blocks is refused at hatch; get_policy_terms view. The 15 earlier groups are intact (checked against a pre-deploy snapshot) and keep the version-1 hash. Deployed by scripts/deploy-contract.mjs."
+      "reason": "GAP-025 fix: the exit timer is part of the policy hash depositors consent to (version 2, for new groups); a timer below 10 blocks is refused at hatch; get_policy_terms view. The 15 earlier groups are intact (checked against a pre-deploy snapshot) and keep the version-1 hash. Deployed by scripts/deploy-contract.mjs.",
+      "until": "2026-11-08T05:58Z"
+    },
+    {
+      "codeHash": "AFtZmiNSGMZjHsh12s9PT3hbyGRkAdUwtniXdVNnYJaL",
+      "from": "2026-11-08T05:58Z",
+      "deployTx": "Do3gbthFQcmfuN1XNfP5hLsMfB6KMby1GRVDaRTvdR22",
+      "gitCommit": "580be2e",
+      "reason": "Security-audit fixes (GAP-026 to GAP-030): ':' refused in an order hash; a re-depositing member listed once; a settlement follow-up only finishes its own settlement; an exit lowers the release-cap base; expected_code_hash capped at 128 bytes. The 15 groups are intact (docs/lab/audit-fixes-pre-deploy-snapshot.json). Two refusals checked live (docs/lab/audit-fixes-live-check.json). The other three fixes are covered by unit tests only. Deployed by scripts/deploy-contract.mjs."
     }
   ]
 }
