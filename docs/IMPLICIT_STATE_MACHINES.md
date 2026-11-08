@@ -25,11 +25,11 @@ Plain words: a *state* is "where is this thing right now"; a *transition* is a m
 |---|---|---|---|
 | **Retry cache** | `RoomService.#last` | none → undecided result → decided (`signed:false`) → signed | Reset on new input and on `open`. Idempotency depends on it. |
 | **Model key** | `ModelSealedRoost` | no key → attested key → bids sealed to it → re-check at aggregate | The key can change between sealing and aggregating; checked, not named. |
-| **Daemon mode** | `FlyApiDaemon` | `chain` \| `model` | **H4:** the constructor silently switches `chain` → `model` (an in-memory simulation) if the chain client cannot be built. Responses carry `servedBy`, but it is a silent state change. |
+| **Daemon mode** | `FlyApiDaemon` | `chain` \| `model` | **H4 (FIXED 2026-11-08, plan 09-1 Task 10; the trigger is a malformed `NEAR_PRIVATE_KEY`, not missing credentials):** the constructor silently switched `chain` → `model` (an in-memory simulation) if the chain client cannot be built. Responses carry `servedBy`, but it is a silent state change. |
 | **Roost table** | `FlyApiDaemon.roosts` | grows to `maxRoosts`, never evicted | Audit lead 8. |
 | **Event stream** | `room-events.js`, `room-http.js` | connected → replay → live → dropped (slow) | Count cap, ring of 100. |
 | **Rate limit** | `rate-limit.js` | per-client bucket: tokens, `resetAt` | |
-| **x402 invoice** | `commerce/x402.js` | `PAYMENT_REQUIRED` → `PAID` \| `EXPIRED` | **H3 (low):** expiry is only recorded when someone tries to pay, so an invoice reads `PAYMENT_REQUIRED` past its time. |
+| **x402 invoice** | `commerce/x402.js` | `PAYMENT_REQUIRED` → `PAID` \| `EXPIRED` | **H3 (FIXED 2026-11-08, plan 09-1 Task 9; `invoiceStatus`):** expiry is only recorded when someone tries to pay, so an invoice reads `PAYMENT_REQUIRED` past its time. |
 
 ## 4. Facilities (simulations)
 | Machine | States | Note |

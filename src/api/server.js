@@ -19,14 +19,22 @@ export class FlyApiDaemon {
     this.host = host;
     this.allowedOrigins = allowedOrigins;
     this.apiKey = apiKey || process.env.FLY_API_KEY || null;
-    this.mode = mode || process.env.FLY_MODE || 'chain';
+    const asked = mode || process.env.FLY_MODE || null;
+    this.mode = asked || 'chain';
+    this.modeFallbackReason = null;
     this.nest = new FlyNestContract();
     this.chainClient = null;
     if (this.mode === 'chain') {
       try {
         this.chainClient = chainClient || new FlyChainClient();
       } catch (e) {
+        // A client that cannot be built (in practice a malformed NEAR_PRIVATE_KEY) must not quietly turn a daemon that was asked
+        // to talk to the chain into the in-memory simulation. If chain mode was asked for, say no. If nothing was asked for,
+        // fall back, but say so: once on the console, and on /health.
+        if (asked === 'chain') throw new Error(`Chain mode was requested but the chain client could not be built: ${e.message}`);
         this.mode = 'model';
+        this.modeFallbackReason = `the chain client could not be built (${e.message}); serving the in-memory simulation instead`;
+        console.warn(`[midge] ${this.modeFallbackReason}`);
       }
     }
     // One Roost per syndicate, created on first use. A single shared Roost kept one bid queue for every syndicate, so
@@ -299,6 +307,8 @@ export class FlyApiDaemon {
         uptime: process.uptime(),
         network: 'testnet',
         coordinatorContract: 'c.fly-1793636729.testnet',
+        mode: this.mode,
+        modeFallbackReason: this.modeFallbackReason,
         timestamp: Date.now(),
       }, req);
     }
