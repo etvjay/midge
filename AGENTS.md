@@ -36,8 +36,9 @@ npm run verify
   - Evidence Ledger: `docs/canonical/EVIDENCE_LEDGER.md`
   - Architecture Decisions (ADRs): `docs/canonical/DECISIONS.md`
   - Submission Pack: `docs/hackathon-submission.md`
+  - Whitepaper: `docs/WHITEPAPER.md` (kept true by `tests/whitepaper-true.test.js`)
   - State machines and invariants: `docs/STATE_MACHINE.md` (kept true by `make check`), with `docs/IMPLICIT_STATE_MACHINES.md`
-  - Research and planning documents (SRS, RTM, architecture, implementation plan, use cases, research reports, session handoffs, the whitepaper, the Roost TEE plan, specs and plans) are **not in this repository**: they went stale against the code and are kept only on the author's machine.
+  - Research and planning documents (SRS, RTM, architecture, implementation plan, use cases, research reports, session handoffs, the Roost TEE plan, specs and plans) are **not in this repository**: they went stale against the code and are kept only on the author's machine.
 
 ---
 
