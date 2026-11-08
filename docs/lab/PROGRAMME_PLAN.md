@@ -289,3 +289,11 @@ What changed between the two runs, openly: (1) every provider now vouches for th
 5. **Teardown leaves nothing:** the group is pruned, every account deleted, the VM deleted and the account empty, the session costing under $0.05.
 
 **Not tested:** the VM failing closed when both providers are down; the exit race itself; a lying provider; a two-room settlement. **Weakness I expect to remain:** one operator controls every account and the VM; the attestation proves which providers are asked, not that they are honest.
+
+
+### Results: hosted Roost with the escrow check on (written after the run; the predictions above were not edited)
+Run `20261108T124630Z-b8de`, one run, log verified (69 events), promoted to `docs/lab-runs/20261108T124630Z-b8de`. **All five predictions held on the first run.** The VM started and attested on image `cde03fef…`; Phala's app-compose equalled our compose file byte for byte, which now contains the two escrow settings, so the compose hash `edd3ff37…` that the official verifier accepted covers them. Inside the VM, in 10 seconds, the Roost read block 276777717 from the two providers through its own network, left out the unfunded member, and charged the other two 0.01 each; the contract accepted the settlement and the recipient received exactly 0.02; `raceFree` was false; the VM, the accounts and the group were all removed (0 VMs, 0 leftover accounts, 15 groups), at an estimated cost of $0.0019.
+
+Two things found on the way, openly: the first attempt at this hardware run, with the previous compose file, died when the host disk filled (see the incident in the ledger; the VM it had created was deleted after its ownership was proved), and the November 4 bundle is pinned in `roost.expected.json` beside the new build because that file previously held only one hash.
+
+**Still not shown.** The VM failing closed when both providers are down, the exit race, a lying provider, a two-room settlement, and a hosted Roost that stays up.
