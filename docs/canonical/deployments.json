@@ -62,7 +62,15 @@
       "from": "2026-11-08T05:58Z",
       "deployTx": "Do3gbthFQcmfuN1XNfP5hLsMfB6KMby1GRVDaRTvdR22",
       "gitCommit": "580be2e",
-      "reason": "Security-audit fixes (GAP-026 to GAP-030): ':' refused in an order hash; a re-depositing member listed once; a settlement follow-up only finishes its own settlement; an exit lowers the release-cap base; expected_code_hash capped at 128 bytes. The 15 groups are intact (docs/lab/audit-fixes-pre-deploy-snapshot.json). Two refusals checked live (docs/lab/audit-fixes-live-check.json). The other three fixes are covered by unit tests only. Deployed by scripts/deploy-contract.mjs."
+      "reason": "Security-audit fixes (GAP-026 to GAP-030): ':' refused in an order hash; a re-depositing member listed once; a settlement follow-up only finishes its own settlement; an exit lowers the release-cap base; expected_code_hash capped at 128 bytes. The 15 groups are intact (docs/lab/audit-fixes-pre-deploy-snapshot.json). Two refusals checked live (docs/lab/audit-fixes-live-check.json). The other three fixes are covered by unit tests only. Deployed by scripts/deploy-contract.mjs.",
+      "until": "2026-11-09"
+    },
+    {
+      "codeHash": "FMVXMpB3DmvYjeGojp84sKXDD9dkeDgzCoQWgbYupQF3",
+      "from": "2026-11-09",
+      "deployTx": "3RwxFCL9cmJt7VQrjQ1wBJ9Rb6vBP7emreBA2qETpH7d",
+      "gitCommit": "ae81933",
+      "reason": "GAP-028: the settlement follow-up names its round (on_settlement_payout_for_round, own nonce record n:<id>); the original on_settlement_payout is kept for a settlement in flight at upgrade time. Adds the read-only get_group_phase view. The 15 groups are intact and none was in flight (docs/lab/nonce-callback-pre-deploy-snapshot.json). Deployed by scripts/deploy-contract.mjs. Live check: E-NONCE-CALLBACK-LIVE-01."
     }
   ]
 }

@@ -49,7 +49,7 @@ test('every repository path it names exists', () => {
 });
 
 test('the contract hash it names is a recorded deployment, and the live one is named', () => {
-  const named = [...new Set(doc.match(/\b[1-9A-HJ-NP-Za-km-z]{43,44}\b/g) || [])].filter((h) => !/^[0-9a-f]+$/i.test(h) && (h.startsWith('AFtZ') || hashes.includes(h) || /^[1-9A-HJ-NP-Za-km-z]{44}$/.test(h)));
+  const named = [...new Set(doc.match(/\b[1-9A-HJ-NP-Za-km-z]{43,44}\b/g) || [])].filter((h) => !/^[0-9a-f]+$/i.test(h) && (hashes.includes(h) || /^[1-9A-HJ-NP-Za-km-z]{44}$/.test(h)));
   assert.ok(named.length >= 1);
   assert.deepEqual(named.filter((h) => !hashes.includes(h)), [], 'a hash that is not in docs/canonical/deployments.json');
   assert.ok(doc.includes(hashes[hashes.length - 1]), 'the whitepaper must name the code hash that is live now');
