@@ -11,6 +11,23 @@ import { RoostAggregationError } from './errors.js';
  * Candidates are never trusted until every check passes.
  */
 
+/** Byte ranges of each 48-byte measurement in a TDX v4 quote. */
+const MEASUREMENT_OFFSETS = { mrseam: [64, 112], mrtd: [184, 232], rtmr0: [376, 424], rtmr1: [424, 472], rtmr2: [472, 520], rtmr3: [520, 568] };
+export const MEASUREMENT_FIELDS = Object.keys(MEASUREMENT_OFFSETS);
+
+/** Normalise a pin like { mrtd: ['ab..'], rtmr3: ['..', '..'] }; throws on anything malformed so a typo cannot silently turn the pin off. */
+function normalisePin(pin) {
+  const bad = (why) => { throw new Error(`expectedMeasurements ${why}`); };
+  if (pin === null || typeof pin !== 'object' || Array.isArray(pin)) bad('must be an object of field -> list of 96-hex-digit values');
+  const out = {};
+  for (const [field, values] of Object.entries(pin)) {
+    if (!MEASUREMENT_FIELDS.includes(field)) bad(`has an unknown field "${field}" (known: ${MEASUREMENT_FIELDS.join(', ')})`);
+    if (!Array.isArray(values) || values.length === 0) bad(`field ${field} must be a non-empty list`);
+    out[field] = values.map((v) => { if (typeof v !== 'string' || !/^[0-9a-f]{96}$/i.test(v)) bad(`field ${field} has a value that is not 96 hex digits`); return v.toLowerCase(); });
+  }
+  return out;
+}
+
 export function parseTdxQuote(quoteHex) {
   const q = Buffer.from(String(quoteHex || ''), 'hex');
   if (q.length < 636) return { length: q.length, valid: false };
@@ -21,6 +38,8 @@ export function parseTdxQuote(quoteHex) {
     attKeyType: q.readUInt16LE(2),
     teeType: q.readUInt32LE(4),
     reportData: q.subarray(568, 632).toString('hex'),
+    // What the machine measured about itself at boot: the TDX module (MRSEAM), the initial guest (MRTD) and four runtime registers.
+    measurements: Object.fromEntries(Object.entries(MEASUREMENT_OFFSETS).map(([k, [a, b]]) => [k, q.subarray(a, b).toString('hex')])),
   };
 }
 
@@ -50,9 +69,10 @@ export function verifyQuoteChain(quoteHex) {
 
 /**
  * @param {object} candidate   one entry of report.model_attestations
- * @param {{nonce:string, model:string, chain?:'required'|'if-available'|'skip' (default 'required': a missing dcap-qvl fails closed), acceptedTcb?:string[]}} opts
+ * @param {{expectedMeasurements?: Record<string,string[]> (pin MRTD/RTMR0-3/MRSEAM: field -> accepted 96-hex values; without it the quote proves only that SOME genuine TDX machine holds the key), nonce:string, model:string, chain?:'required'|'if-available'|'skip' (default 'required': a missing dcap-qvl fails closed), acceptedTcb?:string[]}} opts
  */
-export function checkModelCandidate(candidate, { nonce, model, chain = 'required', acceptedTcb = ['UpToDate'] }) {
+export function checkModelCandidate(candidate, { nonce, model, chain = 'required', acceptedTcb = ['UpToDate'], expectedMeasurements = null }) {
+  const pin = expectedMeasurements === null || expectedMeasurements === undefined ? null : normalisePin(expectedMeasurements);
   const checks = [];
   const add = (name, ok, detail = '') => checks.push({ name, ok: Boolean(ok), detail });
   const pub = String(candidate.signing_public_key || '').toLowerCase();
@@ -67,6 +87,13 @@ export function checkModelCandidate(candidate, { nonce, model, chain = 'required
   add('signing key is a 32-byte public key', /^[0-9a-f]{64}$/.test(pub));
   add('signing key is inside the quote', quote.valid && quote.reportData.slice(0, 64) === pub);
   add('nonce is inside the quote', quote.valid && quote.reportData.slice(64, 128) === wantNonce);
+
+  if (pin) {
+    for (const [field, allowed] of Object.entries(pin)) {
+      const got = quote.valid ? quote.measurements[field] : '';
+      add(`measurement ${field} is one the owner pinned`, allowed.includes(got), got ? `${field} ${got.slice(0, 16)}… is not in the pinned list` : `${field} unreadable: quote too short`);
+    }
+  }
 
   let tcbStatus = 'not-checked';
   if (chain !== 'skip') {
@@ -83,7 +110,7 @@ export function checkModelCandidate(candidate, { nonce, model, chain = 'required
       tcbStatus = 'not-checked (dcap-qvl unavailable)';
     }
   }
-  return { ok: checks.every((c) => c.ok), checks, tcbStatus, publicKey: pub };
+  return { ok: checks.every((c) => c.ok), checks, tcbStatus, publicKey: pub, measurements: quote.valid ? quote.measurements : null, measurementsPinned: Boolean(pin) };
 }
 
 /** Pick the first candidate that passes every check, or throw with the reasons. */
@@ -112,6 +139,7 @@ export async function fetchVerifiedModelKey({
   apiKey = null,
   chain = 'required',
   acceptedTcb = ['UpToDate'],
+  expectedMeasurements = null,
   fetchImpl = globalThis.fetch,
 }) {
   const nonce = crypto.randomBytes(32).toString('hex');
@@ -121,6 +149,6 @@ export async function fetchVerifiedModelKey({
   }).toString();
   const res = await fetchImpl(url, { headers: { 'x-no-aliasing': 'true', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) } });
   if (!res.ok) throw new RoostAggregationError(`attestation request answered ${res.status}`);
-  const accepted = selectVerifiedModelKey(await res.json(), { nonce, model, chain, acceptedTcb });
-  return { nonce, publicKey: accepted.publicKey, tcbStatus: accepted.tcbStatus, checks: accepted.checks };
+  const accepted = selectVerifiedModelKey(await res.json(), { nonce, model, chain, acceptedTcb, expectedMeasurements });
+  return { nonce, publicKey: accepted.publicKey, tcbStatus: accepted.tcbStatus, checks: accepted.checks, measurements: accepted.measurements, measurementsPinned: accepted.measurementsPinned };
 }
