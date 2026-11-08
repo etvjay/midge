@@ -9,3 +9,13 @@ HANDOFF-9PLUS.md
 lab/runs/*
 !lab/runs/.gitkeep
 .lab/
+
+# Research and planning documents kept only on the author's machine (2026-11-08). They went stale against the code, so the repository does
+# not publish them; the evidence the claims rest on (docs/canonical, docs/lab, docs/lab-runs, foundry/) stays tracked.
+/docs/research/
+/docs/srs.md
+/docs/rtm.md
+/docs/architecture.md
+/docs/implementation-plan.md
+/docs/use-cases.md
+/HANDOFF-*.md

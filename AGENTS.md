@@ -36,10 +36,8 @@ npm run verify
   - Evidence Ledger: `docs/canonical/EVIDENCE_LEDGER.md`
   - Architecture Decisions (ADRs): `docs/canonical/DECISIONS.md`
   - Submission Pack: `docs/hackathon-submission.md`
-  - IEEE 29148 SRS: `docs/srs.md`
-  - Requirements Traceability (RTM): `docs/rtm.md`
-  - Software Architecture: `docs/architecture.md`
-  - Use Cases: `docs/use-cases.md`
+  - State machines and invariants: `docs/STATE_MACHINE.md` (kept true by `make check`), with `docs/IMPLICIT_STATE_MACHINES.md`
+  - Research and planning documents (SRS, RTM, architecture, implementation plan, use cases, research reports, session handoffs) are **not in this repository**: they went stale against the code and are kept only on the author's machine.
 
 ---
 

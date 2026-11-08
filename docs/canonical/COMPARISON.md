@@ -1,6 +1,6 @@
 # Exhaustive Architectural Comparison: Midge vs. Decentralized Coordination & Privacy Landscape
 
-**Research Context & Evidence Base:** `docs/research/parallel-competitive-landscape.json` and `docs/research/parallel-problem-evidence.json`.
+**Research Context & Evidence Base:** two Parallel Task API research reports (a competitive landscape and a problem-evidence report, November 2026). They are **not published in this repository** (they are kept on the author's machine), so the statements about other systems below are the author's reading of public material, to be checked against each project's own documentation before being relied on.
 
 ---
 
