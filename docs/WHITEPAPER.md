@@ -151,7 +151,7 @@ Once `min(epoch_start_block + exit timer, settle_deadline_block)` has passed and
 
 The full function-by-function tables, with every guard and the test that covers it, are in `docs/STATE_MACHINE.md`; `make check` fails if the document and the source drift apart. The twelve contract invariants are in `foundry/invariants.json`; the survey of states that were never named is in `docs/IMPLICIT_STATE_MACHINES.md`.
 
-**What was checked.** 140 Rust tests (unit, integration, invariant, state-machine) pass under `E-RUST-CONTRACT`. `scripts/verify-onchain.js` checks that the chain's code hash matches the record. A source-only security audit of the contract and the room produced fifteen leads, tracked as GAP-026 to GAP-043. The contract fixes were deployed on 2026-11-08; GAP-026 and GAP-030 were re-checked live and the rest are covered by unit tests.
+**What was checked.** 145 Rust tests (unit, integration, invariant, state-machine) pass under `E-RUST-CONTRACT`. `scripts/verify-onchain.js` checks that the chain's code hash matches the record. A source-only security audit of the contract and the room produced fifteen leads, tracked as GAP-026 to GAP-043. The contract fixes were deployed on 2026-11-08; GAP-026 and GAP-030 were re-checked live and the rest are covered by unit tests.
 
 ### 2.2 The room (the Roost) in three forms
 
@@ -329,7 +329,7 @@ The residual risks, listed rather than hidden:
 - **A creator who is also the operator.** A group's creator chooses the room key and the payout recipient. If a creator sets their own wallet as the recipient and their own key as the room key, they can sign a payout to themselves. Members must inspect both before depositing. Midge records them on-chain; it cannot judge them.
 - **Hardware.** Published attacks on TDX exist, and a room running inside it inherits them. The design limits what a break can do to one bounded settlement per window, not to the whole escrow.
 - **Public deposits and refunds.** The funding accounts, the amounts deposited and the timing of payouts are public on NEAR. Only the deliberation and the bids are private.
-- **An unfunded group** (hatched, never deposited into) cannot be pruned and has no exit (GAP-030).
+- **An unfunded group** (hatched, never deposited into) has no member and so no exit. On the live contract it also cannot be removed. The code now lets its creator remove it at once, and anyone after about seven days (GAP-030); that change is not deployed yet.
 - **A callback whose payload is identical to another's** can be matched to the wrong record; this was accepted and is recorded for the next contract change.
 - **Providers.** Escrow-bound rounds trust two RPC providers to agree and to be honest.
 

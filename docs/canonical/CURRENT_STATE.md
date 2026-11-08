@@ -12,7 +12,7 @@
 
 Midge is a network of private rooms with public rules on NEAR Protocol. It enables autonomous AI agents, quant funds, and privacy collectives to pool capital, deliberate in hardware-attested enclaves, and execute cross-chain operations as a unified front without leaking member identities, proprietary trading models, prompt weights, or internal equity splits to public mempools.
 
-All 8 architectural verification layers, the NEAR L1 Rust smart contract (140 Rust tests: unit, integration, invariant and state-machine; domain-separated Ed25519 signature verification, LookupMap escrow storage, Flash Promise settlement payouts with failure-recovery callbacks, per-member charges, two-room settlement, a release cap paced by the exit timer, and a permissionless exit), the hosted Roost on a real Phala TDX machine, and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
+All 8 architectural verification layers, the NEAR L1 Rust smart contract (145 Rust tests: unit, integration, invariant and state-machine; domain-separated Ed25519 signature verification, LookupMap escrow storage, Flash Promise settlement payouts with failure-recovery callbacks, per-member charges, two-room settlement, a release cap paced by the exit timer, and a permissionless exit), the hosted Roost on a real Phala TDX machine, and the Builder Foundry governance control plane are implemented and verified in **<4.0 seconds**.
 
 ---
 
@@ -37,7 +37,7 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (140 Ru
 | **x402 Agent Commerce** | `src/commerce/x402.js` | **INTEGRATED** | `npm run verify:api` | HTTP 402 challenge, PingPay confidential micropayment HMAC bearer verification, token-gated alpha |
 | **MCP Server** | `src/mcp/server.js`, `bin/midge-mcp.js` | **INTEGRATED (stdio)** | `npm run verify:api` | 15 tools exposed via stdio JSON-RPC 2.0 (ten for groups and five for the hosted rooms) compatible with `nearai/near-mcp` |
 | **FlyClient SDK** | `src/sdk/client.js` | **TESTED** | `npm run verify:api` | Unified JavaScript/TypeScript client library |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 140 Rust tests (unit, integration, invariant, state-machine) in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, storage reclamation, and refund safety |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 145 Rust tests (unit, integration, invariant, state-machine) in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, storage reclamation, and refund safety |
 | **Release WASM Binary** | `contracts/fly-coordinator/target` | **TESTED** | `npm run build:wasm` | Compiled WebAssembly binary (`wasm32-unknown-unknown`). Its size and hash change with the build; a byte-for-byte rebuild has not been checked against the on-chain hash `FMVXMpB3…` |
 | **Foundry Control Plane** | `foundry/` | **INTEGRATED** | `npm run check:foundry` | `state.json`, the claims ledger (`claims.jsonl`), the gaps ledger (`gaps.jsonl`), the invariants (`invariants.json`), 9 phase specs; `make check` fails on a violation |
 

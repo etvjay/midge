@@ -113,7 +113,7 @@ It does not assume a trusted execution environment (TEE, a hardware-isolated com
 2. **A creator who is also the operator.** The creator chooses the room key and the payout recipient. If a creator names their own wallet as the recipient and their own key as the room key, they can sign a payout to themselves. Members must inspect both before depositing. The tools surface the recipient list and room key for review; Midge cannot judge them.
 3. **The exit race** (T6).
 4. **Public deposits, refunds and payouts.** The funding accounts, amounts and timing are public.
-5. **A group that was hatched and never funded** cannot be pruned and has no exit (GAP-030).
+5. **A group that was hatched and never funded** has no member and so no exit, and on the live contract it cannot be removed. The code now lets its creator remove it at once, and anyone after about seven days (GAP-030); that change is not deployed yet.
 6. **A callback whose payload is identical to another's** can be matched to the wrong record. This was accepted and is recorded for the next contract change.
 7. **Execution quality.** The room proves a specific algorithm ran; it does not make a trade profitable.
 8. **Where the amounts of a payout are visible.** A settlement is a public transfer, so payroll hides who is paid, not how much.

@@ -62,7 +62,7 @@ Midge provides a zero-setup, deterministic verification harness requiring standa
 # or: make verify
 # or: npm run verify
 ```
-*Total verification runtime: about **100 s** on the author's machine (deterministic; 140 Rust tests; the full node and lab suites; on-chain RPC read with an 8 s deadline; no external keys needed). The first version of this suite ran in under 2 s; it has grown since.*
+*Total verification runtime: about **100 s** on the author's machine (deterministic; 145 Rust tests; the full node and lab suites; on-chain RPC read with an 8 s deadline; no external keys needed). The first version of this suite ran in under 2 s; it has grown since.*
 
 ---
 
@@ -129,7 +129,7 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
   ./scripts/verify
   ```
 * **See:**
-  - `[STEP 1/5]` The NEAR L1 Rust smart contract tests (unit, integration, invariant and state-machine tests; 140 at the time of writing, pinned by lab experiment `E-RUST-CONTRACT`) pass with Clippy and Fmt (`near-sdk 5.1`).
+  - `[STEP 1/5]` The NEAR L1 Rust smart contract tests (unit, integration, invariant and state-machine tests; 145 at the time of writing, pinned by lab experiment `E-RUST-CONTRACT`) pass with Clippy and Fmt (`near-sdk 5.1`).
   - `[STEP 2/5]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm`.
   - `[STEP 3/5]` 8-layer cryptographic verification suite executes, validating live Intel TDX DCAP verification, 1Click asset registry, escape hatch FMEA, Dark Vault MPC, confidential RFQ & OTC, resilience matrix, and live NEAR AI Cloud TEE inference response signature.
   - `[STEP 4/5]` Independent on-chain verifier audits 10 live testnet transactions & cryptographic attack rejection proofs on `c.fly-1793636729.testnet`.
@@ -216,7 +216,7 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 | Component | Implementation File | Status | Nature | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet` (code hash `FMVXMpB3DmvYjeGojp84sKXDD9dkeDgzCoQWgbYupQF3`, deployed 2026-11-09). Written in Rust (`near-sdk 5.1`). 140 Rust tests (unit, integration, invariant, state-machine). Real on-chain settlements, escape-hatch refunds, and three rejection transactions recorded on an earlier deployment (a payout to an unlisted account, a payout over the cap, and a second settlement of an already-settled group). |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet` (code hash `FMVXMpB3DmvYjeGojp84sKXDD9dkeDgzCoQWgbYupQF3`, deployed 2026-11-09). Written in Rust (`near-sdk 5.1`). 145 Rust tests (unit, integration, invariant, state-machine). Real on-chain settlements, escape-hatch refunds, and three rejection transactions recorded on an earlier deployment (a payout to an unlisted account, a payout over the cap, and a second settlement of an already-settled group). |
 | **TEE Remote Attestation** | `verifications/01-hardware-attestation.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & DCAP-QVL** | Queries live NEAR AI Cloud (`cloud-api.near.ai/v1/attestation/report`) with fresh nonces. Parses binary Intel TDX Quote v4. Verified via `dcap-qvl` to Intel SGX Root CA with TCB `UpToDate`, 0 advisories, and tamper rejection. (GAP-006 CLOSED). |
 | **Chain Signatures MPC** | `scripts/testnet-mpc.js`, `src/multichain/chain-signatures.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & MPC SIGNED** | Executed live threshold signing on `v1.signer-prod.testnet` (tx: `6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk`). Derived BTC Taproot, EVM, and Solana addresses. Cryptographically verified ECDSA recovery. (GAP-005 CLOSED). |
 | **TEE Inference Attestation** | `scripts/verify-inference.js` | **LIVE (needs `NEARAI_API_KEY`)** | **LIVE EXTERNAL; opt-in.** `make verify` skips it and never uses a key. To run it, get your own key at https://cloud.near.ai, `export NEARAI_API_KEY=<key>`, then `npm run verify:inference` (one small paid request; rewrites `docs/canonical/inference-evidence.json`) | Sends one real completion to NEAR AI Cloud (`Qwen/Qwen3.6-35B-A3B-FP8`, a NEAR-hosted TEE model), fetches the response signature, reads `signature_kind`, rebuilds the signed text (`provider_tee`: `<model>:<req_hash>:<resp_hash>`; `gateway`: `<req_hash>:<resp_hash>`), recovers the EIP-191 signer and requires it to equal the matching signer address listed in the attestation report. A tampered hash is rejected. Saved to `docs/canonical/inference-evidence.json`. **Not yet verified:** the model attestation's own TDX quote and NVIDIA GPU evidence; the prompt is a one-line placeholder and the result is not yet part of a settlement. With no key the check is reported as SKIPPED, never as passed. |
