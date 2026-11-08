@@ -38,7 +38,7 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (145 Ru
 | **MCP Server** | `src/mcp/server.js`, `bin/midge-mcp.js` | **INTEGRATED (stdio)** | `npm run verify:api` | 15 tools exposed via stdio JSON-RPC 2.0 (ten for groups and five for the hosted rooms) compatible with `nearai/near-mcp` |
 | **FlyClient SDK** | `src/sdk/client.js` | **TESTED** | `npm run verify:api` | Unified JavaScript/TypeScript client library |
 | **NEAR L1 Smart Contract** | `contracts/fly-coordinator` | **TESTED** | `npm run verify:rust` | 145 Rust tests (unit, integration, invariant, state-machine) in `near-sdk` 5.1 with Ed25519 signature checks, LookupMap storage guards, Flash Promise payouts, storage reclamation, and refund safety |
-| **Release WASM Binary** | `contracts/fly-coordinator/target` | **TESTED** | `npm run build:wasm` | Compiled WebAssembly binary (`wasm32-unknown-unknown`). Its size and hash change with the build; a byte-for-byte rebuild has not been checked against the on-chain hash `FMVXMpB3…` |
+| **Release WASM Binary** | `contracts/fly-coordinator/target` | **TESTED** | `npm run build:wasm` | Compiled WebAssembly binary (`wasm32-unknown-unknown`). Its size and hash change with the build; a byte-for-byte rebuild has not been checked against the on-chain hash `854fzUj2…` |
 | **Foundry Control Plane** | `foundry/` | **INTEGRATED** | `npm run check:foundry` | `state.json`, the claims ledger (`claims.jsonl`), the gaps ledger (`gaps.jsonl`), the invariants (`invariants.json`), 9 phase specs; `make check` fails on a violation |
 
 ---
@@ -64,10 +64,15 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (145 Ru
 - Attestation: the Intel certificate-chain check is `required` by default. A machine without `dcap-qvl` now fails model attestation; `chain: 'if-available'` and `'skip'` remain as explicit choices.
 - REST daemon: refuses to listen beyond loopback without `FLY_API_KEY`, and refuses state-changing requests with a foreign `Origin` and any request with a non-local `Host` on a loopback bind.
 - MCP over HTTP: every tool outside a short public list needs the coordinator key.
-- Contract (deployed to testnet 2026-11-08, code hash AFtZmiNS…, since superseded by FMVXMpB3… on 2026-11-09 with the nonce-checked follow-up and the `get_group_phase` view; GAP-026 and GAP-030 checked live, the others unit-tested only): `:` is refused in an order hash, the code-hash string is capped at 128 bytes, and callbacks, exits and re-deposits keep their books consistent. See GAP-026 to GAP-038.
+- Contract (deployed to testnet 2026-11-08, code hash AFtZmiNS…, since superseded by FMVXMpB3… (2026-11-09, the nonce-checked follow-up and the `get_group_phase` view) and then by 854fzUj2… (2026-11-09, removing a never-funded group); GAP-026 and GAP-030 checked live, the others unit-tested only): `:` is refused in an order hash, the code-hash string is capped at 128 bytes, and callbacks, exits and re-deposits keep their books consistent. See GAP-026 to GAP-038.
 
-## Contract change of 2026-11-09 (deployed; code hash FMVXMpB3…, GAP-028)
+## Contract changes of 2026-11-09 (deployed; the live code hash is 854fzUj2…, and FMVXMpB3… is the earlier one that carried the first change below)
+
+### The settlement follow-up names its round (GAP-028)
 The follow-up step of a settlement now names the round nonce it was signed for (`on_settlement_payout_for_round`) and acts only if that is the settlement in flight, so a late follow-up of an earlier settlement with a byte-identical payload cannot finish a newer one. The original follow-up is kept for a settlement in flight at upgrade time. A read-only `get_group_phase` view reports Open, PayoutInFlight, Settled, Refunded or Unfunded. Verified on the real contract (`E-NONCE-CALLBACK-LIVE-01`, run `20261108T153206Z-a0f0`); the late-follow-up case itself is covered by the unit tests only (CLM-CONTRACT-NONCE-01). The deployed site's contract check still expects the previous hash until the site is redeployed.
+
+### A never-funded group can be removed (GAP-030, second part)
+`prune_syndicate` also removes a group that was hatched and never funded (Active, no member, no escrow, nothing in flight): its creator at once, anyone from 604,800 blocks (about seven days) after it was created. A funded or in-flight group is never removed this way. Verified on the real contract by `E-UNFUNDED-PRUNE-LIVE-01`; the path after the waiting period is covered by the unit tests only.
 
 ## State machine and invariants (2026-11-08, plan 09-1)
 `docs/STATE_MACHINE.md` documents every public contract function and Roost round method with guard, effect and tests; `foundry/invariants.json` defines C-01 to C-12; `make check` fails if they drift (`scripts/check-invariants.js`). The survey of unnamed states is `docs/IMPLICIT_STATE_MACHINES.md`. This proves the named tests exist, not that they are strong enough.

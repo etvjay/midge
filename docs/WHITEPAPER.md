@@ -5,7 +5,7 @@
 Written 2026-11-08, replacing the 2026-11-04 draft. It keeps that draft's argument and structure and corrects what the repository has since shown to be wrong or unprovable. Every claim cites a claim id (`foundry/claims.jsonl`), a gap (`foundry/gaps.jsonl`), a promoted lab run (`docs/lab-runs/`) or a file. `tests/whitepaper-true.test.js` fails if a cited id, run or path does not exist, if the live contract hash named here is not the last one recorded in `docs/canonical/deployments.json`, or if a statement the repository has contradicted comes back. That test cannot prove a sentence true; it stops the document drifting silently. Where a passage describes a design that is not built, it says **Design**.
 
 **Reference deployment:** NEAR testnet contract [`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet).
-**Live code hash:** `FMVXMpB3DmvYjeGojp84sKXDD9dkeDgzCoQWgbYupQF3` (deployed 2026-11-09). The previous one, `AFtZmiNSGMZjHsh12s9PT3hbyGRkAdUwtniXdVNnYJaL`, is superseded (2026-11-08, the security-audit fixes). Earlier code hashes, each with the defect it carried, are listed in `docs/canonical/deployments.json`; evidence recorded under an earlier hash cites that hash.
+**Live code hash:** `854fzUj2TxAmdmK6UtmbXBqGZvc2BgtfRdgUJXMBHGes` (deployed 2026-11-09). Earlier ones are superseded: `FMVXMpB3DmvYjeGojp84sKXDD9dkeDgzCoQWgbYupQF3` (2026-11-09, the round-naming follow-up) and `AFtZmiNSGMZjHsh12s9PT3hbyGRkAdUwtniXdVNnYJaL`, is superseded (2026-11-08, the security-audit fixes). Earlier code hashes, each with the defect it carried, are listed in `docs/canonical/deployments.json`; evidence recorded under an earlier hash cites that hash.
 **Scope:** a hackathon entry on testnet. Nothing here has run on mainnet.
 
 ---

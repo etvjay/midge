@@ -5,7 +5,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CONTRACT = 'c.fly-1793636729.testnet';
-const DEPLOYED_CODE_HASH = 'FMVXMpB3DmvYjeGojp84sKXDD9dkeDgzCoQWgbYupQF3';
+const DEPLOYED_CODE_HASH = '854fzUj2TxAmdmK6UtmbXBqGZvc2BgtfRdgUJXMBHGes';
 const RPCS = ['https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'];
 const NB = 'https://testnet.nearblocks.io';
 
