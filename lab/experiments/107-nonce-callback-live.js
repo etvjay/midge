@@ -58,8 +58,8 @@ export default {
       s.assert('the group was hatched', h.ok, { actual: h.error });
       await chain.waitFor(() => state(), { what: 'group' });
       s.assert('before any deposit the phase is Unfunded', (await phase()) === 'Unfunded', { actual: await phase() });
-      for (const m of people) { const r = await chain.send(m.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy, 16) }, { deposit: near('0.02'), gas: 30000000000000n, label: `deposit ${m.id}` }); s.assert(`${m.id} deposited`, r.ok, { actual: r.error }); }
-      await chain.waitFor(async () => BigInt((await state()).total_escrow) === near('0.06'), { what: 'deposits' });
+      for (const m of people) { const r = await chain.send(m.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(policy, 16) }, { deposit: near('0.03'), gas: 30000000000000n, label: `deposit ${m.id}` }); s.assert(`${m.id} deposited`, r.ok, { actual: r.error }); }
+      await chain.waitFor(async () => BigInt((await state()).total_escrow) === near('0.09'), { what: 'deposits' });
       s.assert('after deposits the phase is Open', (await phase()) === 'Open', { actual: await phase() });
     }, { critical: true });
 

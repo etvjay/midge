@@ -84,7 +84,7 @@ It does not assume a trusted execution environment (TEE, a hardware-isolated com
 
 - **Attack:** a captured signature is replayed on another group or another epoch, or a settlement is submitted twice.
 - **Defense:** the signed message binds `contract : group : epoch : round_nonce : allocations_hash : order_hash`; the nonce changes after every settlement, so a signature works once (C-04, C-05). The order hash may not contain `:` (GAP-026), so two messages cannot be written the same way. The room itself signs at most one settlement per round (R-01).
-- **On-chain evidence:** a settlement submitted again for a group that had already settled was **rejected on-chain** (transaction `FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg`, "Syndicate is not active"). That shows a replay cannot pay twice because the group was already settled. It is **not** a demonstration of the nonce check, which is covered by the contract's tests (C-05), and an earlier version of this document wrongly described the transaction as a rejection for a stale nonce.
+- **On-chain evidence:** a settlement submitted again for a group that had already settled was **rejected on-chain** (transaction `FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg`, "Syndicate is not active"). That shows a replay cannot pay twice because the group was already settled. It is **not** a demonstration of the nonce check. That is covered by the contract's tests (C-05) and was exercised live in a separate experiment: an earlier round's signed settlement replayed after a later round was refused for a nonce mismatch (`docs/lab/ONGOING_RESULTS.md`, `E-ONGOING-01`). An earlier version of this document wrongly described the transaction as a rejection for a stale nonce.
 
 ### T5: Rounding and accounting exploits
 

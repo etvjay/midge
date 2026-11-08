@@ -563,7 +563,7 @@ async function main() {
       action: 'attack_rejected:wrong_nonce_replay',
       txHash: res3.txHash,
       status: 'ON_CHAIN_REJECTED',
-      reason: 'Nonce mismatch replay attack blocked',
+      reason: 'A settled group refuses a second settlement (Syndicate is not active). This is not a nonce-mismatch rejection; that check is exercised live by E-ONGOING-01',
       explorer: `https://testnet.nearblocks.io/txns/${res3.txHash}`
     });
     console.log(`      ✓ Attack 3 REJECTED on-chain! Nonce replay blocked (tx: ${res3.txHash})`);

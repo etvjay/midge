@@ -1,0 +1,15 @@
+{
+  "runId": "20261108T153041Z-4486",
+  "startedAt": "2026-11-08T15:30:41.987Z",
+  "rootHash": "9d35755e3d6a75999445f7c56667aa5df8cd7aadff0b2a80b18887f14cdd4598",
+  "verdicts": {
+    "E-NONCE-CALLBACK-LIVE-01": {
+      "attempts": [
+        "FAIL"
+      ],
+      "verdict": "FAIL"
+    }
+  },
+  "events": 50,
+  "commit": "6bc9b2a1be3a29f28324e0f16655196bb528b14e"
+}

@@ -133,7 +133,7 @@
       "action": "attack_rejected:wrong_nonce_replay",
       "txHash": "9h5nm41PfjaRUA3cBKu6p1ihEp2u9pyzdkzYyQZrY4gN",
       "status": "ON_CHAIN_REJECTED",
-      "reason": "Nonce mismatch replay attack blocked",
+      "reason": "A settled group refuses a second settlement (Syndicate is not active). This is not a nonce-mismatch rejection; that check is exercised live by E-ONGOING-01",
       "explorer": "https://testnet.nearblocks.io/txns/9h5nm41PfjaRUA3cBKu6p1ihEp2u9pyzdkzYyQZrY4gN"
     },
     {

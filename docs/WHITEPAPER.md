@@ -313,7 +313,7 @@ The defences were exercised on testnet, against the live contract of the time. T
 
 1. **A stolen room key signs a payout to a stranger.** The contract checks the recipient against the allowed list and aborts. The escrow does not move.
 2. **A settlement over the cap.** The contract rejects it ("Allocation sum exceeds max_release_bps_per_epoch cap").
-3. **A second settlement of a group that had already settled.** The contract rejects it because the group is no longer active. This shows a replay cannot pay twice. It is not a demonstration of the nonce check, which is covered by the contract's tests (C-05); earlier drafts described this transaction as a stale-nonce rejection, which it was not.
+3. **A second settlement of a group that had already settled.** The contract rejects it because the group is no longer active. This shows a replay cannot pay twice. It is not a demonstration of the nonce check. That is covered by the contract's tests (C-05) and was exercised live in `E-ONGOING-01` (an earlier round's signed settlement replayed after a later round was refused for a nonce mismatch; `docs/lab/ONGOING_RESULTS.md`); earlier drafts described this transaction as a stale-nonce rejection, which it was not.
 
 These ran against an earlier code hash. The checks they exercise are still in the current code and its tests, but the transactions are not re-runs against the live hash.
 
