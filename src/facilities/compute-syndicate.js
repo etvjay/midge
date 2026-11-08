@@ -8,8 +8,9 @@ import crypto from 'node:crypto';
  * logging or exposing prompts to external node operators.
  */
 export class ConfidentialComputeSyndicate {
-  constructor({ cloudApiUrl = 'https://cloud-api.near.ai/v1', model = 'Qwen/Qwen3.6-35B-A3B-FP8' } = {}) {
+  constructor({ cloudApiUrl = 'https://cloud-api.near.ai/v1', model = 'Qwen/Qwen3.6-35B-A3B-FP8', fetchImpl = globalThis.fetch } = {}) {
     this.cloudApiUrl = cloudApiUrl;
+    this.fetchImpl = fetchImpl; // a verification may pass one that falls back to a recorded fixture; the library itself never fakes an attestation
     this.model = model;
     this.pooledCredits = new Map(); // flyerId -> credits
     this.totalPooled = 0;
@@ -42,7 +43,7 @@ export class ConfidentialComputeSyndicate {
     const sessionNonce = crypto.randomBytes(32).toString('hex');
     const attestationUrl = `${this.cloudApiUrl}/attestation/report?model=${encodeURIComponent(this.model)}&signing_algo=ecdsa&nonce=${sessionNonce}`;
 
-    const res = await fetch(attestationUrl);
+    const res = await this.fetchImpl(attestationUrl);
     if (!res.ok) {
       throw new Error(`Failed to verify TEE compute enclave: status ${res.status}`);
     }

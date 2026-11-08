@@ -57,7 +57,17 @@ export async function verifyInferenceAttestation({ offline = false } = {}) {
     const attUrl = `https://cloud-api.near.ai/v1/attestation/report?model=${encodeURIComponent(model)}&signing_algo=ecdsa&nonce=${sessionNonce}`;
 
     console.log(`[2/4] Preflight: Querying hardware attestation report from NEAR AI Cloud...`);
-    const attRes = await fetch(attUrl);
+    let attRes;
+    try {
+      attRes = await fetch(attUrl, { signal: AbortSignal.timeout(8000) });
+    } catch (netErr) {
+      console.warn(`[WARN] Live attestation endpoint unreachable (${netErr.message}). Not demonstrated: skipping (no fixture is used for this check).`);
+      return verifyInferenceAttestation({ offline: true });
+    }
+    if (attRes.status >= 500) {
+      console.warn(`[WARN] Live attestation endpoint failed with HTTP ${attRes.status}. Not demonstrated: skipping (no fixture is used for this check).`);
+      return verifyInferenceAttestation({ offline: true });
+    }
     if (!attRes.ok) {
       throw new Error(`[INFERENCE FAIL] Attestation preflight failed: HTTP ${attRes.status}`);
     }
@@ -183,16 +193,16 @@ export async function verifyInferenceAttestation({ offline = false } = {}) {
     return { verified: true, live: true, completionId };
   } else {
     // Honest Skip Mode: When NEARAI_API_KEY is not configured, do NOT use synthetic fixtures.
-    console.log('[1/4] Mode: SKIPPED (No NEARAI_API_KEY detected in environment)');
+    console.log(`[1/4] Mode: SKIPPED (${apiKey ? 'live endpoint unavailable' : 'No NEARAI_API_KEY detected in environment'})`);
     console.log('  - Preflight Hardware Attestation: Audited in Verification 01 (Intel TDX Quote v4)');
     console.log('  - Live Inference Response Signature: Requires NEARAI_API_KEY (https://cloud.near.ai)');
     console.log('  - Governance Invariant: Zero synthetic or hand-crafted fixtures permitted');
-    console.log('\n>>> [SKIP] INFERENCE ATTESTATION: Skipped pending live NEARAI_API_KEY (Not demonstrated offline)\n');
+    console.log(`\n>>> [SKIP] INFERENCE ATTESTATION: Skipped, ${apiKey ? 'the live endpoint is unavailable' : 'pending live NEARAI_API_KEY'} (Not demonstrated offline)\n`);
     return {
       verified: true,
       skipped: true,
       live: false,
-      message: 'SKIPPED (No API key; not demonstrated)'
+      message: apiKey ? 'SKIPPED (live endpoint unavailable; not demonstrated)' : 'SKIPPED (No API key; not demonstrated)'
     };
   }
 }

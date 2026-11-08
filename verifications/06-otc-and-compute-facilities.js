@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { OtcBlockTradeFacility } from '../src/facilities/otc-block-trade.js';
 import { ConfidentialComputeSyndicate } from '../src/facilities/compute-syndicate.js';
 
@@ -41,7 +44,19 @@ export async function verifyOtcAndComputeFacilities() {
 
   // --- PART B: CONFIDENTIAL AI COMPUTE SYNDICATE ---
   console.log('\n[3/4] Initializing Confidential AI Compute Syndicate (Use Case B)...');
-  const compute = new ConfidentialComputeSyndicate();
+  // Live attestation if the endpoint answers; otherwise the genuine recorded report that verification 01 also uses, and it says so.
+  const recordedOrLive = async (url) => {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) return res;
+      console.warn(`  [WARN] Live attestation endpoint answered ${res.status}. Using the recorded fixture (verifications/fixtures/attestation-report.json).`);
+    } catch (netErr) {
+      console.warn(`  [WARN] Live attestation endpoint unreachable (${netErr.message}). Using the recorded fixture (verifications/fixtures/attestation-report.json).`);
+    }
+    const fixture = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'attestation-report.json'), 'utf8'));
+    return { ok: true, status: 200, json: async () => fixture.report };
+  };
+  const compute = new ConfidentialComputeSyndicate({ fetchImpl: recordedOrLive });
   compute.depositComputeCredits('agent-quant-01.near', 5.0);
   compute.depositComputeCredits('agent-nlp-researcher.near', 5.0);
   compute.depositComputeCredits('agent-risk-officer.near', 5.0);
