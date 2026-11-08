@@ -30,7 +30,7 @@ cargo clippy --quiet -- -D warnings
 cargo fmt --check
 cargo test --quiet
 cd "$ROOT_DIR"
-echo ">>> [PASS] Rust L1 Contract Tests & Lints Passed (53 tests: 43 unit, 6 integration, 4 invariant ok)."
+echo ">>> [PASS] Rust L1 Contract Tests & Lints Passed (unit, integration, invariant and state-machine tests; clippy and fmt ok)."
 echo ""
 
 # STEP 2: WebAssembly Build Check
@@ -96,7 +96,7 @@ rm -f "$VERIFY_ALL_LOG"
 echo "╔══════════════════════════════════════════════════════════════════════════════╗"
 echo "║                          FINAL EVALUATION VERDICT                            ║"
 echo "╠══════════════════════════════════════════════════════════════════════════════╣"
-echo "║  1. NEAR L1 Rust Smart Contract:              ✅ PASS (53 tests, clippy/fmt ok)║"
+echo "║  1. NEAR L1 Rust Smart Contract:              ✅ PASS (tests, clippy/fmt ok)   ║"
 echo "║  2. WebAssembly Contract Binary ($WASM_SIZE):      ✅ PASS (wasm32 release ready) ║"
 echo "║  3. Live TEE Hardware Attestation (HAQ):      ✅ PASS (TDX DCAP Root CA Bound)║"
 echo "║  4. 1Click Swap API & Asset Registry:         ✅ PASS (210 Assets Audited)   ║"

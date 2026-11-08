@@ -62,7 +62,7 @@ Midge provides a zero-setup, deterministic verification harness requiring standa
 # or: make verify
 # or: npm run verify
 ```
-*Total verification runtime: **<20.0s** (Deterministic, 53 Rust tests, DCAP Root CA bound, on-chain RPC verified, zero external keys needed).*
+*Total verification runtime: about **100 s** on the author's machine (deterministic; 129 Rust tests; the full node and lab suites; on-chain RPC read with an 8 s deadline; no external keys needed). The first version of this suite ran in under 2 s; it has grown since.*
 
 ---
 
@@ -77,10 +77,10 @@ Midge provides a zero-setup, deterministic verification harness requiring standa
   - An autonomous agent discovers syndicates via Model Context Protocol (MCP) tool `midge_list_syndicates`.
   - Hatches a syndicate with bounded `ReleasePolicy` (allowlisted recipient, 10,000 BPS cap, block deadline).
   - Autonomous flyers deposit escrow with cryptographic policy consent.
-  - **Security Proof A:** Enclave signature attempting to route funds to an unauthorized address (`thief.near`) is **rejected on-chain** with failure receipt ([`ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh`](https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh)).
+  - **Security Proof A:** Enclave signature attempting to route funds to an account that is not on the allowed list is **rejected on-chain** with failure receipt (the payout named a recipient, `f2.fly-1793636729.testnet`, that was not on the allowed list; [`ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh`](https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh)).
   - **Security Proof B:** Enclave signature attempting to exceed the per-epoch release cap is **rejected on-chain** ([`pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW`](https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW)).
-  - **Valid Settlement:** Deliberation inside Intel TDX Roost settles batch payout in 5.92 TGas ([`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF)).
-  - **Sovereign Escape Hatch:** Stalled enclave exits unilaterally via `midge_hatch_out`, refunding 100% of escrow in 5.10 TGas ([`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB)).
+  - **Valid Settlement:** Deliberation inside Intel TDX Roost settles a batch payout (6.14 TGas burnt across the transaction and its receipts, read from an archival node on 2026-11-08; [`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF)).
+  - **Sovereign Escape Hatch:** Stalled enclave exits unilaterally via `midge_hatch_out`, refunding 100% of the member's escrow (5.32 TGas burnt the same way; [`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB)).
 
 ---
 
@@ -94,9 +94,8 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
   ```bash
   cd contracts/fly-coordinator && RUSTFLAGS="-C link-arg=-s" cargo build --target wasm32-unknown-unknown --release
   ```
-* **Release Binary:** `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (304 KB, 311,421 bytes)
-* **Binary SHA-256:** `ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1`
-* **On-Chain Code Hash:** `4Zzj8DuTxwJnLv1c3jXfKRvQrxAYUFFfeMnAgSHJjevx` (deployed 2026-11-05 with per-member charges; earlier runs cite `Gh8NAA2e…` and `9y8w4PU5…`, see docs/canonical/deployments.json)
+* **Release Binary:** `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (its size and hash change with the build; a byte-for-byte rebuild has **not** been checked against the on-chain hash)
+* **On-Chain Code Hash:** `AFtZmiNSGMZjHsh12s9PT3hbyGRkAdUwtniXdVNnYJaL` (deployed 2026-11-08 with the security-audit fixes). Earlier hashes (`Gh8NAA2e…`, `9y8w4PU5…`, `4Zzj8DuT…` and others) are superseded; each is listed with the defect it carried in `docs/canonical/deployments.json`, and evidence recorded earlier cites the hash that was live then.
 * **Contract Specification:** [`contracts/fly-coordinator/README.md`](contracts/fly-coordinator/README.md)
 
 * **Do (Independent On-Chain Verification):**
@@ -109,15 +108,15 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
     1. **Syndicate Hatch:** [`3x3WcdZeZn8hKeQ3JMUp5QZUzLSqibE93JcTTxCszbht`](https://testnet.nearblocks.io/txns/3x3WcdZeZn8hKeQ3JMUp5QZUzLSqibE93JcTTxCszbht) — Binds immutable `ReleasePolicy` whitelist and records policy hash `a21710781748478e...`.
     2. **Flyer 1 Deposit (0.02 NEAR):** [`6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT`](https://testnet.nearblocks.io/txns/6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT) — Depositor explicitly consents to `policy_hash`.
     3. **Flyer 2 Deposit (0.02 NEAR):** [`3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm`](https://testnet.nearblocks.io/txns/3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm) — Depositor explicitly consents to `policy_hash`.
-    4. **Batch Settlement (5.92 TGas):** [`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF) — Verifies Ed25519 6-tuple signature over sorted `allocations_hash`, applies pro-rata balance deductions with exact dust conservation, and dispatches 0.04 NEAR payout.
+    4. **Batch Settlement (6.14 TGas burnt in total):** [`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF) — Verifies Ed25519 6-tuple signature over sorted `allocations_hash`, applies pro-rata balance deductions with exact dust conservation, and dispatches 0.04 NEAR payout.
   - **Security Track Attack Demos (On-Chain Rejection Proofs):**
     5. **[Security Proof] Non-Whitelisted Recipient Rejection:** [`ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh`](https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh) — Enclave signature attempting to route funds to an unauthorized address was **rejected on-chain** with failure receipt.
-    6. **[Security Proof] Over-Cap BPS Release Rejection:** [`pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW`](https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW) — Settlement attempting to exceed the 25% max epoch release cap was **rejected on-chain**.
-    7. **[Security Proof] Wrong Nonce Replay Rejection:** [`FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg`](https://testnet.nearblocks.io/txns/FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg) — Replayed settlement with stale nonce was **rejected on-chain**.
+    6. **[Security Proof] Over-Cap BPS Release Rejection:** [`pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW`](https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW) — Settlement attempting to exceed the group's release cap was **rejected on-chain** ("Allocation sum exceeds max_release_bps_per_epoch cap").
+    7. **[Security Proof] Second Settlement Rejection:** [`FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg`](https://testnet.nearblocks.io/txns/FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg) — A settlement submitted again for a group that had already settled was **rejected on-chain** because the group was already settled ("Syndicate is not active"). That shows a replay cannot pay twice; the nonce check itself (C-05) is covered by the contract's tests, not by this transaction.
   - **Stalled Enclave Escape Hatch (`hatch_out`):**
     8. **Escape Hatch Syndicate Hatch:** [`GEWxs59E2xxnDTUQajBzTNvUKgRgzsKFCcrQxVpgjmmp`](https://testnet.nearblocks.io/txns/GEWxs59E2xxnDTUQajBzTNvUKgRgzsKFCcrQxVpgjmmp)
     9. **Flyer 2 Escape Deposit:** [`DzQvbzpfwPhS59CyESMAwW2YMcBTkzYV341utodbwYAh`](https://testnet.nearblocks.io/txns/DzQvbzpfwPhS59CyESMAwW2YMcBTkzYV341utodbwYAh)
-    10. **Non-Custodial Escape Hatch (5.10 TGas):** [`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB) — Sovereign refund of 100% escrow balance executed without operator action.
+    10. **Non-Custodial Escape Hatch (5.32 TGas burnt in total):** [`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB) — Sovereign refund of 100% escrow balance executed without operator action.
   - **Multi-Syndicate Discovery:**
     - `list_syndicates()` returned 6 active/settled syndicates on testnet.
     - `list_syndicates_by_member("f2.fly-1793636729.testnet")` returned 3 syndicates on testnet.
@@ -130,11 +129,11 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
   ./scripts/verify
   ```
 * **See:**
-  - `[STEP 1/5]` 53 NEAR L1 Rust smart contract tests (43 unit, 6 integration, 4 proptest property-based fuzzing tests across 10,000+ transitions) pass cleanly with Clippy and Fmt (`near-sdk 5.1`).
-  - `[STEP 2/5]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (305 KB).
+  - `[STEP 1/5]` The NEAR L1 Rust smart contract tests (unit, integration, invariant and state-machine tests; 129 at the time of writing, pinned by lab experiment `E-RUST-CONTRACT`) pass with Clippy and Fmt (`near-sdk 5.1`).
+  - `[STEP 2/5]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm`.
   - `[STEP 3/5]` 8-layer cryptographic verification suite executes, validating live Intel TDX DCAP verification, 1Click asset registry, escape hatch FMEA, Dark Vault MPC, confidential RFQ & OTC, resilience matrix, and live NEAR AI Cloud TEE inference response signature.
   - `[STEP 4/5]` Independent on-chain verifier audits 10 live testnet transactions & cryptographic attack rejection proofs on `c.fly-1793636729.testnet`.
-  - `[STEP 5/5]` Builder Foundry Control Plane passes with 0 invariant violations across 13 claims and 8 gaps.
+  - `[STEP 5/5]` Builder Foundry Control Plane passes with 0 invariant violations across the claims and gaps ledgers (`foundry/claims.jsonl`, `foundry/gaps.jsonl`).
 
 ---
 
@@ -191,7 +190,7 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
   - Boots `FlyApiDaemon` on ephemeral port.
   - Verifies Server-Sent Events (SSE) streaming at `/v1/stream/syndicate/{id}`.
   - Executes x402 micro-commerce flow: initial HTTP 402, payment invoice generation, HMAC bearer proof verification, and protected resource release.
-  - Audits Model Context Protocol (MCP) server: 10 tools exposed to LLM agents (`midge_hatch_syndicate`, `midge_deposit`, `midge_settle`, `midge_hatch_out`, `midge_list_syndicates`, `midge_get_my_syndicates`, `midge_submit_sealed_intent`, `midge_verify_haq_attestation`, `midge_create_confidential_rfq`, `midge_match_otc_block`). The first five are chain-backed in `FLY_MODE=chain` (they need write credentials and refuse otherwise); the RFQ and OTC tools drive the simulated facilities; `midge_verify_haq_attestation` reports `NOT_VERIFIED` for a local simulation Roost.
+  - Audits Model Context Protocol (MCP) server: 15 tools exposed to LLM agents, of which the syndicate tools are (`midge_hatch_syndicate`, `midge_deposit`, `midge_settle`, `midge_hatch_out`, `midge_list_syndicates`, `midge_get_my_syndicates`, `midge_submit_sealed_intent`, `midge_verify_haq_attestation`, `midge_create_confidential_rfq`, `midge_match_otc_block`), and the rest drive the hosted rooms (`midge_describe_rooms`, `midge_open_room_round`, `midge_submit_room_input`, `midge_run_room`, `midge_abandon_room_round`). The first five syndicate tools are chain-backed in `FLY_MODE=chain` (they need write credentials and refuse otherwise); the RFQ and OTC tools drive the simulated facilities; `midge_verify_haq_attestation` reports `NOT_VERIFIED` for a local simulation Roost.
   - Verifies Security Controls: public `/health`, protected `/v1/roost/session-key?syndicateId={id}` returning HTTP 401 without `X-Midge-Api-Key` and HTTP 200 with it, and payload limit guard (>512KB rejected with HTTP 413).
 
 ---
@@ -217,15 +216,15 @@ To ensure complete transparency and intellectual honesty for human and automated
 
 | Component | Implementation File | Status | Nature | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet` (code hash `4Zzj8DuTxwJnLv1c3jXfKRvQrxAYUFFfeMnAgSHJjevx`). Written in Rust (`near-sdk 5.1`). Compiles to 304 KB release WASM (`ece45a939ac5cfcf4754b8fe8437facc70c11b0f0f45a30c3cc1133a3217b6a1`). 53 tests (43 unit, 6 integration, 4 proptest invariant fuzzers). Real on-chain settlements (5.92 TGas), escape hatch refunds (5.10 TGas), and 3 security track rejection proofs verified on-chain. |
+| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet` (code hash `AFtZmiNSGMZjHsh12s9PT3hbyGRkAdUwtniXdVNnYJaL`, deployed 2026-11-08). Written in Rust (`near-sdk 5.1`). 129 Rust tests (unit, integration, invariant, state-machine). Real on-chain settlements, escape-hatch refunds, and three rejection transactions recorded on an earlier deployment (a payout to an unlisted account, a payout over the cap, and a second settlement of an already-settled group). |
 | **TEE Remote Attestation** | `verifications/01-hardware-attestation.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & DCAP-QVL** | Queries live NEAR AI Cloud (`cloud-api.near.ai/v1/attestation/report`) with fresh nonces. Parses binary Intel TDX Quote v4. Verified via `dcap-qvl` to Intel SGX Root CA with TCB `UpToDate`, 0 advisories, and tamper rejection. (GAP-006 CLOSED). |
 | **Chain Signatures MPC** | `scripts/testnet-mpc.js`, `src/multichain/chain-signatures.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & MPC SIGNED** | Executed live threshold signing on `v1.signer-prod.testnet` (tx: `6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk`). Derived BTC Taproot, EVM, and Solana addresses. Cryptographically verified ECDSA recovery. (GAP-005 CLOSED). |
 | **TEE Inference Attestation** | `scripts/verify-inference.js` | **LIVE (needs `NEARAI_API_KEY`)** | **LIVE EXTERNAL; opt-in.** `make verify` skips it and never uses a key. To run it, get your own key at https://cloud.near.ai, `export NEARAI_API_KEY=<key>`, then `npm run verify:inference` (one small paid request; rewrites `docs/canonical/inference-evidence.json`) | Sends one real completion to NEAR AI Cloud (`Qwen/Qwen3.6-35B-A3B-FP8`, a NEAR-hosted TEE model), fetches the response signature, reads `signature_kind`, rebuilds the signed text (`provider_tee`: `<model>:<req_hash>:<resp_hash>`; `gateway`: `<req_hash>:<resp_hash>`), recovers the EIP-191 signer and requires it to equal the matching signer address listed in the attestation report. A tampered hash is rejected. Saved to `docs/canonical/inference-evidence.json`. **Not yet verified:** the model attestation's own TDX quote and NVIDIA GPU evidence; the prompt is a one-line placeholder and the result is not yet part of a settlement. With no key the check is reported as SKIPPED, never as passed. |
 | **1Click Asset Registry** | `verifications/02-confidential-intents.js` | **VERIFIED** | **LIVE EXTERNAL** | Audits 210 cross-chain assets from live 1Click Swap API with deterministic snapshot fallback for test resilience. |
 | **The Hatch & OutLayer** | `src/contracts/nest.js`, `src/policies/outlayer.js` | **TESTED** | **LOCAL & ON-CHAIN AUDITED** | OutLayer policy guard enforces deposit limits. Escape hatch logic verified both in local state machine and on deployed testnet contract. |
 | **Syndicate Network & Discovery** | `scripts/network-demo.js` | **DEMONSTRATED** | **REAL SCRIPT & DISCOVERY** | Demonstrates 3 specialized syndicates in one coordinator contract, cross-syndicate member discovery (`list_syndicates`, `get_syndicates_by_member`), x402 inter-syndicate commerce, and escape hatch exit. |
-| **API Daemon & SSE** | `src/api/server.js` | **INTEGRATED** | **REAL SERVER** | 20 HTTP REST endpoints bound to `127.0.0.1`, `X-Midge-Api-Key` enforcement, origin-restricted CORS, 512KB body size limits, real-time SSE streams, and HMAC-verified x402 payment proofs. |
-| **Model Context Protocol** | `src/mcp/server.js`, `bin/midge-mcp.js` | **INTEGRATED** | **REAL TOOLING** | 10 syndicate tools exposed over stdio JSON-RPC 2.0 with dual `chain` and `model` mode support, compatible with Claude Code, Codex, and Claude Desktop. |
+| **API Daemon & SSE** | `src/api/server.js` | **INTEGRATED** | **REAL SERVER** | A localhost REST daemon bound to `127.0.0.1`, `X-Midge-Api-Key` enforcement, origin-restricted CORS, 512KB body size limits, real-time SSE streams, and HMAC-verified x402 payment proofs. |
+| **Model Context Protocol** | `src/mcp/server.js`, `bin/midge-mcp.js` | **INTEGRATED** | **REAL TOOLING** | 15 tools exposed over stdio JSON-RPC 2.0 with dual `chain` and `model` mode support, compatible with Claude Code, Codex, and Claude Desktop. |
 | **Local Roost (keyless simulation)** | `src/enclave/roost.js` | **TESTED** | **LOCAL PROCESS** | Used only without a NEAR AI key, or when asked for with `MIDGE_ROOST_BACKEND=local`. Exact sums, but the process that runs it can read every bid, and it says so at startup (GAP-004). A Roost hosted in a TEE we can attest is not built. |
 | **Model-Sealed Roost** | `src/enclave/model-sealed-roost.js`, `src/enclave/e2ee.js` | **LIVE DEMONSTRATED** | **NEAR AI CLOUD (E2EE)** | Bids are sealed by each member to a NEAR AI Cloud model's attested key (Intel TDX chain verified, TCB `UpToDate`); the coordinator relays ciphertext only. Three runs must agree and the count must match, so it fails closed. 8 of 8 live rounds exact (3 to 50 bids, 4 injection attempts), receipts verified. The sum is done by a language model, not exact code, and a hardware-isolated Roost of our own is still not built. This is the default whenever `NEARAI_API_KEY` is set; members verify the model key themselves (no key needed) and refuse one the coordinator merely asserts. Evidence: `docs/canonical/roost-model-evidence.json`. |
 | **Hosted Roost (dstack CVM)** | `src/roost-service/`, `deploy/roost/` | **LIVE DEMONSTRATED (attestation)** | `npm run verify:hosted-bundle` | Exact aggregation, in-process keys bound into the TDX report data, settlement signed only for what the sealed bids support (64 offline checks). Deployed on a real Phala TDX VM on 2026-11-04: the official `dstack-verifier` accepted its attestation on all 12 checks (Intel quote, event-log replay, published production OS image, TCB UpToDate, report data = sha512(our keys, a fresh nonce), compose hash derived from our own compose file). Verified from a saved bundle (`docs/canonical/roost-hosted-evidence.json`); the VM was deleted to stay inside a small credit. A full member round on a live VM is not yet demonstrated, and the model-sealed Roost stays the default with a NEAR AI key. |
@@ -332,7 +331,7 @@ Much of this code, documentation and the verification scripts were written with 
 ```
 ├── Makefile                      # Targets: make verify, make test, make wasm, make demo, make check
 ├── scripts/
-│   ├── verify                    # Canonical judge verification script (<20.0s runtime)
+│   ├── verify                    # Canonical judge verification script (about 100 s)
 │   ├── demo.js                   # Primary testnet agent demo runner (hatch to exit via MCP)
 │   ├── baseline.js               # Measured economic baseline Monte Carlo simulation (CPMM vs SIA)
 │   ├── security-review.js        # Independent Gemini-powered automated security auditor
@@ -343,8 +342,8 @@ Much of this code, documentation and the verification scripts were written with 
 │   └── testnet-mpc.js            # Live NEAR Chain Signatures MPC threshold signing script
 ├── foundry/                      # Builder Foundry Control Plane (v1.0 Standard)
 │   ├── state.json                # Project status & verification git head
-│   ├── claims.jsonl              # 12 audited claims with evidence paths and states
-│   ├── gaps.jsonl                # 8 recorded gaps with closure conditions and guards
+│   ├── claims.jsonl              # audited claims with evidence paths, states and limitations
+│   ├── gaps.jsonl                # gaps with closure conditions, evidence and regression guards
 │   ├── assumptions.md            # Documented assumptions & resolutions
 │   └── contradictions.md         # Documented contradictions & mitigation strategies
 ├── contracts/
@@ -353,23 +352,26 @@ Much of this code, documentation and the verification scripts were written with 
 │       ├── Cargo.toml
 │       ├── src/lib.rs            # hatch(), deposit(), settle_batch(), hatch_out(), list_syndicates()
 │       ├── tests/
-│       │   ├── unit_tests.rs     # 34 comprehensive unit tests
-│       │   ├── integration_tests.rs # 6 multi-agent lifecycle & safety tests
-│       │   └── invariants.rs     # 4 proptest property-based fuzzing invariant suites
-│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm (304 KB)
+│       │   ├── unit_tests.rs     # unit tests
+│       │   ├── integration_tests.rs # multi-agent lifecycle & safety tests
+│       │   ├── invariants.rs     # property-based invariant suites
+│       │   └── state_machine_tests.rs # the state-machine table's tests
+│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm
 ├── src/
 │   ├── chain/
 │   │   └── client.js             # On-chain NEAR client wrapping RPC view and change calls
 │   ├── contracts/nest.js         # Nest coordinator contract state machine mirror
 │   ├── enclave/
-│   │   ├── crypto.js             # Asymmetric RSA-2048 encryption & zeroing helpers
-│   │   └── roost.js              # Roost TEE daemon with TDX Quote v4 byte verification
+│   │   ├── roost.js              # Local simulation of the Roost (no secrecy claim)
+│   │   ├── model-sealed-roost.js # Bids sealed to a NEAR AI Cloud model's attested key (X25519 + XChaCha20-Poly1305)
+│   │   └── attestation.js        # TDX quote v4 checks, Intel chain, optional measurement pin
+│   ├── roost-service/            # The hosted Roost (Phala TDX), room programs, escrow reader
 │   ├── multichain/
 │   │   └── chain-signatures.js   # NEAR Chain Signatures MPC (EVM, Bitcoin Taproot, Solana)
 │   ├── api/
-│   │   └── server.js             # 20 REST endpoints, SSE streams, X-Midge-Api-Key, 512KB limit
+│   │   └── server.js             # localhost REST daemon, SSE streams, X-Midge-Api-Key, 512KB limit
 │   ├── mcp/
-│   │   └── server.js             # Standalone MCP server (10 tools for AI agent swarms)
+│   │   └── server.js             # Standalone MCP server (15 tools for AI agent swarms)
 │   ├── sdk/
 │   │   └── client.js             # Midge TypeScript/JavaScript SDK client
 │   └── facilities/               # RFQ, OTC dark pool, and compute credit syndicate modules
