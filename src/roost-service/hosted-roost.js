@@ -208,7 +208,7 @@ export class HostedRoost {
    * @returns {{kept:any[], excluded:string[], tag:string}} tag goes into the signed order hash so the block is on record
    */
   #affordable(items, idOf, maxChargeYocto, extraIds = []) {
-    if (!this.escrowReader) return { kept: items, excluded: [], tag: '' };
+    if (!this.escrowReader) return { kept: items, excluded: [], tag: '', block: null };
     const snap = this.#escrow;
     if (!snap || snap.key !== this.#roundKey()) throw new RoostAggregationError('escrow not bound: call bindEscrow() after the last input of the round, then run');
     for (const id of [...this.sealedIntents.map((i) => i.flyerId), ...extraIds]) if (!snap.covered.has(id)) throw new RoostAggregationError(`escrow is out of date (${id} was not read): a new input or account arrived after bindEscrow(); bind again`);
@@ -218,7 +218,7 @@ export class HostedRoost {
       const held = BigInt(snap.escrows[idOf(it)] ?? '0');
       if (held >= BigInt(maxChargeYocto(it))) kept.push(it); else excluded.push(idOf(it));
     }
-    return { kept, excluded, tag: `:escrow:${snap.blockHeight}:${snap.blockHash}` };
+    return { kept, excluded, tag: `:escrow:${snap.blockHeight}:${snap.blockHash}`, block: { height: snap.blockHeight, hash: snap.blockHash } };
   }
 
   #signedRounds = new Set(); // rounds this host has signed (newest 1000); a signed round cannot be re-opened with the same nonce
@@ -345,10 +345,11 @@ export class HostedRoost {
       } catch { excluded.push(intent.flyerId); }
     });
     if (bids.length === 0) throw new RoostAggregationError('no valid bids in this round');
-    const outcome = clearAuction({ format, bids, lotUnits, reserveMicro });
+    const aff = this.#affordable(bids, (b) => b.flyerId, (b) => b.priceMicro * BigInt(Math.min(b.quantity, lotUnits)) * YOCTO_PER_MICRO);
+    const outcome = clearAuction({ format, bids: aff.kept, lotUnits, reserveMicro });
     this.sealedIntents = []; // plaintext never outlives this call
     const pub = {
-      format, lotUnits, reserve: formatMicro(reserveMicro), sold: outcome.sold, bidsReceived: outcome.bidsReceived, bidsEligible: outcome.bidsEligible, excludedFlyers: excluded,
+      ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), format, lotUnits, reserve: formatMicro(reserveMicro), sold: outcome.sold, bidsReceived: outcome.bidsReceived, bidsEligible: outcome.bidsEligible, excludedFlyers: excluded,
       clearingPrice: outcome.sold ? formatMicro(outcome.clearingPriceMicro) : null,
       fills: outcome.fills.map((f) => ({ member: f.flyerId, units: f.units, pays: formatMicro(f.payMicro) })),
       proceeds: formatMicro(outcome.proceedsMicro),
@@ -358,7 +359,7 @@ export class HostedRoost {
     const allocations = [{ recipient: seller, amount: String(outcome.proceedsMicro * YOCTO_PER_MICRO) }];
     const charges = outcome.fills.map((f) => ({ member: f.flyerId, amount: String(f.payMicro * YOCTO_PER_MICRO) }));
     const bound = Object.fromEntries(outcome.fills.map((f) => [f.flyerId, f.bidMicro * YOCTO_PER_MICRO]));
-    const orderHash = sha256Hex(`midge-auction-v1:${roundId}:${format}:${lotUnits}:${formatMicro(reserveMicro)}:${seller}:${JSON.stringify(pub.fills)}:${pub.clearingPrice}:${excluded.length}:${this.#orderSalt()}`);
+    const orderHash = sha256Hex(`midge-auction-v1:${roundId}:${format}:${lotUnits}:${formatMicro(reserveMicro)}:${seller}:${JSON.stringify(pub.fills)}:${pub.clearingPrice}:${excluded.length}:${this.#orderSalt()}${aff.tag}`);
     this.aggregate = { orderHash, totalMicro: outcome.proceedsMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
@@ -378,14 +379,15 @@ export class HostedRoost {
     this.#inRoundOrder().forEach((intent, order) => {
       try { const payload = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); const amountMicro = toMicro(payload?.amount); if (amountMicro === null) throw new Error('malformed'); bids.push({ flyerId: intent.flyerId, amountMicro, order }); } catch { unreadable.push(intent.flyerId); }
     });
-    const out = clearPool({ bids, minMicro, capMicro });
+    const aff = this.#affordable(bids, (b) => b.flyerId, (b) => b.amountMicro * YOCTO_PER_MICRO);
+    const out = clearPool({ bids: aff.kept, minMicro, capMicro });
     this.sealedIntents = [];
-    const pub = { format: 'pool', recipient, sold: out.sold, members: out.contributions.length, total: formatMicro(out.totalMicro), leftOut: [...unreadable, ...out.leftOut], executionModel: 'HOSTED_SEALED_POOL', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), format: 'pool', recipient, sold: out.sold, members: out.contributions.length, total: formatMicro(out.totalMicro), leftOut: [...unreadable, ...out.leftOut], executionModel: 'HOSTED_SEALED_POOL', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (!out.sold) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     const allocations = [{ recipient, amount: String(out.totalMicro * YOCTO_PER_MICRO) }];
     const charges = out.contributions.map((c) => ({ member: c.flyerId, amount: String(c.amountMicro * YOCTO_PER_MICRO) }));
     const bound = Object.fromEntries(out.contributions.map((c) => [c.flyerId, c.amountMicro * YOCTO_PER_MICRO]));
-    const orderHash = sha256Hex(`midge-pool-v1:${roundId}:${recipient}:${pub.total}:${out.contributions.length}:${pub.leftOut.length}:${this.#orderSalt()}`);
+    const orderHash = sha256Hex(`midge-pool-v1:${roundId}:${recipient}:${pub.total}:${out.contributions.length}:${pub.leftOut.length}:${this.#orderSalt()}${aff.tag}`);
     this.aggregate = { orderHash, totalMicro: out.totalMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
@@ -424,9 +426,15 @@ export class HostedRoost {
         quotes.push({ flyerId: intent.flyerId, valueMicro, order });
       } catch { unreadable.push(intent.flyerId); }
     });
-    const out = clearBestQuote({ direction: 'lowest', quotes, limitMicro, pricing });
+    let aff;
+    if (shape === 'lend') aff = this.#affordable(quotes, (q) => q.flyerId, () => fixedMicro * YOCTO_PER_MICRO);
+    else {
+      aff = this.#affordable([counterparty], (c) => c, () => BigInt(units) * limitMicro * YOCTO_PER_MICRO, [counterparty]);
+      if (aff.excluded.length) throw new RoostAggregationError(`${counterparty} cannot cover the most this round could charge (units x limit); the queue is kept`);
+    }
+    const out = clearBestQuote({ direction: 'lowest', quotes: shape === 'lend' ? aff.kept : quotes, limitMicro, pricing });
     this.sealedIntents = [];
-    const pub = { shape, pricing, counterparty, won: out.won, winner: out.winner, quotesReceived: out.quotesReceived, quotesEligible: out.quotesEligible, unreadable, executionModel: 'HOSTED_SEALED_QUOTE', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { ...(this.escrowReader ? { excludedForEscrow: shape === 'lend' ? aff.excluded : [], escrowBlock: aff.block } : {}), shape, pricing, counterparty, won: out.won, winner: out.winner, quotesReceived: out.quotesReceived, quotesEligible: out.quotesEligible, unreadable, executionModel: 'HOSTED_SEALED_QUOTE', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (!out.won) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     let payMicro; let allocations; let charges; let bound;
     if (shape === 'lend') {
@@ -440,7 +448,7 @@ export class HostedRoost {
       charges = [{ member: counterparty, amount: String(payMicro * YOCTO_PER_MICRO) }];
       bound = { [counterparty]: BigInt(units) * limitMicro * YOCTO_PER_MICRO };
     }
-    const orderHash = sha256Hex(`midge-quote-v1:${roundId}:${shape}:${pricing}:${counterparty}:${out.winner}:${out.priceMicro}:${payMicro}:${this.#orderSalt()}`);
+    const orderHash = sha256Hex(`midge-quote-v1:${roundId}:${shape}:${pricing}:${counterparty}:${out.winner}:${out.priceMicro}:${payMicro}:${this.#orderSalt()}${aff.tag}`);
     this.aggregate = { orderHash, totalMicro: payMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
@@ -522,15 +530,20 @@ export class HostedRoost {
         quotes.push({ flyerId: intent.flyerId, valueMicro: req.side === 'buy' ? ask : bid, order });
       } catch { unreadable.push(intent.flyerId); }
     });
-    const out = clearBestQuote({ direction: req.side === 'buy' ? 'lowest' : 'highest', quotes, limitMicro, pricing });
+    let aff;
+    if (req.side === 'buy') {
+      aff = this.#affordable([taker], (t) => t, () => BigInt(req.units) * limitMicro * YOCTO_PER_MICRO, [taker]);
+      if (aff.excluded.length) throw new RoostAggregationError(`${taker} cannot cover the most this request could charge (units x limit); the queue is kept`);
+    } else aff = this.#affordable(quotes, (q) => q.flyerId, (q) => BigInt(req.units) * q.valueMicro * YOCTO_PER_MICRO);
+    const out = clearBestQuote({ direction: req.side === 'buy' ? 'lowest' : 'highest', quotes: req.side === 'buy' ? quotes : aff.kept, limitMicro, pricing });
     this.sealedIntents = [];
-    const pub = { shape: 'rfq', pricing, taker, won: out.won, winner: out.winner, quotesReceived: out.quotesReceived, quotesEligible: out.quotesEligible, outsiders, unreadable, executionModel: 'HOSTED_SEALED_RFQ', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { ...(this.escrowReader ? { excludedForEscrow: req.side === 'buy' ? [] : aff.excluded, escrowBlock: aff.block } : {}), shape: 'rfq', pricing, taker, won: out.won, winner: out.winner, quotesReceived: out.quotesReceived, quotesEligible: out.quotesEligible, outsiders, unreadable, executionModel: 'HOSTED_SEALED_RFQ', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (!out.won) { this.aggregate = null; return { outcome: pub, terms: null, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     const costMicro = BigInt(req.units) * out.priceMicro; const amount = String(costMicro * YOCTO_PER_MICRO);
     let allocations; let charges; let bound;
     if (req.side === 'buy') { allocations = [{ recipient: out.winner, amount }]; charges = [{ member: taker, amount }]; bound = { [taker]: BigInt(req.units) * limitMicro * YOCTO_PER_MICRO }; }
     else { allocations = [{ recipient: taker, amount }]; charges = [{ member: out.winner, amount }]; bound = { [out.winner]: BigInt(req.units) * out.winnerQuoteMicro * YOCTO_PER_MICRO }; }
-    const orderHash = sha256Hex(`midge-rfq-v1:${roundId}:${req.side}:${taker}:${out.winner}:${out.priceMicro}:${req.units}:${req.salt}`);
+    const orderHash = sha256Hex(`midge-rfq-v1:${roundId}:${req.side}:${taker}:${out.winner}:${out.priceMicro}:${req.units}:${req.salt}${aff.tag}`);
     this.aggregate = { orderHash, totalMicro: costMicro, signed: false, program: { allocations, charges, bound } };
     const terms = { side: req.side, units: req.units, price: formatMicro(out.priceMicro), notional: formatMicro(costMicro) };
     return { outcome: pub, terms, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
@@ -557,6 +570,9 @@ export class HostedRoost {
     try { body = JSON.parse(openFromModel(mine.cipherTextHex, this.#intentSecret)); } catch { throw new RoostAggregationError('the employer\'s pay run could not be read'); }
     let built;
     try { built = buildPayrun({ lines: body?.lines, taxAddress, benefitsAddress, runId }); } catch (e) { throw new RoostAggregationError(e.message); }
+    // One payer: the employer. There is nobody to leave out, so a payer who cannot cover the gross pay stops the run (queue kept).
+    const aff = this.#affordable([employer], (e) => e, () => built.grossMicro * YOCTO_PER_MICRO, [employer]);
+    if (aff.excluded.length) throw new RoostAggregationError(`${employer} cannot cover the gross pay of this run; the queue is kept`);
     const leaves = built.receipts.map((r) => leafHash(r));
     const root = merkleRoot(leaves);
     const sign = (leaf) => crypto.sign(null, Buffer.from(receiptSigningMessage(leaf), 'utf8'), this.#settleKey).toString('hex');
@@ -570,7 +586,7 @@ export class HostedRoost {
     const charges = [{ member: employer, amount: String(built.grossMicro * YOCTO_PER_MICRO) }];
     const bound = { [employer]: built.grossMicro * YOCTO_PER_MICRO };
     this.aggregate = { orderHash, totalMicro: built.grossMicro, signed: false, program: { allocations: built.allocations, charges, bound } };
-    const outcome = { shape: 'payrun', runId, receiptsRoot: root, lines: built.totals.headcount, recipients: built.allocations.length, gross: fmtMicro(built.grossMicro), ignored, executionModel: 'HOSTED_SEALED_PAYRUN', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const outcome = { ...(this.escrowReader ? { escrowBlock: aff.block } : {}), shape: 'payrun', runId, receiptsRoot: root, lines: built.totals.headcount, recipients: built.allocations.length, gross: fmtMicro(built.grossMicro), ignored, executionModel: 'HOSTED_SEALED_PAYRUN', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     return { outcome, orderHash, allocations: built.allocations, charges, statements, receiptsRoot: root, settlePublicKey: this.settlePublicKey };
   }
 
@@ -594,17 +610,18 @@ export class HostedRoost {
         (b.side === 'buy' ? buys : sells).push({ flyerId: intent.flyerId, units: b.units, limitMicro, order });
       } catch { unreadable.push(intent.flyerId); }
     });
-    const out = clearCross({ buys, sells, referenceMicro, maxUnits });
+    const aff = this.#affordable(buys, (b) => b.flyerId, (b) => BigInt(b.units) * b.limitMicro * YOCTO_PER_MICRO);
+    const out = clearCross({ buys: aff.kept, sells, referenceMicro, maxUnits });
     const queued = this.sealedIntents; // kept so a cross that cannot be settled does not cost every member their order
     this.sealedIntents = [];
     const cashTotal = out.matchedUnits * referenceMicro;
-    const pub = { shape: 'cross', referencePrice: formatMicro(referenceMicro), maxUnits, matchedUnits: Number(out.matchedUnits), cash: formatMicro(cashTotal), buyers: out.buyFills.length, sellers: out.sellFills.length, ordersReceived: out.buysReceived + out.sellsReceived, unreadable, executionModel: 'HOSTED_SEALED_CROSS', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), shape: 'cross', referencePrice: formatMicro(referenceMicro), maxUnits, matchedUnits: Number(out.matchedUnits), cash: formatMicro(cashTotal), buyers: out.buyFills.length, sellers: out.sellFills.length, ordersReceived: out.buysReceived + out.sellsReceived, unreadable, executionModel: 'HOSTED_SEALED_CROSS', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (out.matchedUnits === 0n) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     if (out.sellFills.length > 8) { this.sealedIntents = queued; throw new RoostAggregationError('a settlement can pay at most 8 sellers'); }
     const allocations = out.sellFills.map((f) => ({ recipient: f.flyerId, amount: String(f.cashMicro * YOCTO_PER_MICRO) }));
     const charges = out.buyFills.map((f) => ({ member: f.flyerId, amount: String(f.cashMicro * YOCTO_PER_MICRO) }));
     const bound = Object.fromEntries(out.buyFills.map((f) => [f.flyerId, f.ordered * f.limitMicro * YOCTO_PER_MICRO]));
-    const orderHash = sha256Hex(`midge-cross-v1:${roundId}:${referenceMicro}:${out.matchedUnits}:${out.buyFills.map((f) => `${f.flyerId}=${f.units}`).sort().join(',')}:${out.sellFills.map((f) => `${f.flyerId}=${f.units}`).sort().join(',')}:${this.#orderSalt()}`);
+    const orderHash = sha256Hex(`midge-cross-v1:${roundId}:${referenceMicro}:${out.matchedUnits}:${out.buyFills.map((f) => `${f.flyerId}=${f.units}`).sort().join(',')}:${out.sellFills.map((f) => `${f.flyerId}=${f.units}`).sort().join(',')}:${this.#orderSalt()}${aff.tag}`);
     this.aggregate = { orderHash, totalMicro: cashTotal, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }

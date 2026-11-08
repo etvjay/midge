@@ -109,3 +109,87 @@ test('with no reader configured nothing changes and bindEscrow says there is non
   assert.equal(h.runBallot(VOTE_PARAMS).outcome.excludedForEscrow, undefined);
   await assert.rejects(() => h.bindEscrow(), /no escrow reader/);
 });
+
+// ---- Lead 9, Task 3: the other six programs ----
+import { sealToModel, generateClientKey } from '../src/enclave/e2ee.js';
+import { signedInput as signedIn, mkHost as mkSigned } from '../lab/lib/room-fixtures.js';
+
+const NEAR = (n) => `${n}000000000000000000000000`;
+const sealedTo = (h, id, body) => h.submitSealedIntent({ flyerId: id, cipherTextHex: sealToModel(JSON.stringify(body), h.intentPublicKey) });
+const plainHost = (reader) => new HostedRoost({ provider, deterministicOrder: true, escrowReader: reader });
+const signedHost = (reader) => new HostedRoost({ provider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader: reader });
+const sign = (h, out) => h.signSettlement({ ...ROUND, allocations: out.allocations, orderHash: out.orderHash, charges: out.charges });
+const richPlus = (ids, poor) => Object.fromEntries(ids.map((i) => [i, i === poor ? '0' : NEAR(1000)]));
+const SALT = 'f'.repeat(32);
+const er = generateClientKey(); const au = generateClientKey(); const pe = generateClientKey();
+
+const BIDDER = {
+  pool: { host: plainHost, ids: ['a.near', 'b.near', 'c.near'], poor: 'b.near', fill: (h) => { sealedTo(h, 'a.near', { amount: '0.01' }); sealedTo(h, 'b.near', { amount: '0.02' }); sealedTo(h, 'c.near', { amount: '0.03' }); }, run: (h) => h.runPool({ recipient: 'r.near', min: '0' }), charged: (o) => o.charges.map((c) => c.member).sort() , expect: ['a.near', 'c.near'] },
+  auction: { host: plainHost, ids: ['a.near', 'b.near', 'c.near'], poor: 'a.near', fill: (h) => { sealedTo(h, 'a.near', { price: '0.009' }); sealedTo(h, 'b.near', { price: '0.007' }); sealedTo(h, 'c.near', { price: '0.006' }); }, run: (h) => h.runAuction({ format: 'second-price', seller: 's.near', lotUnits: 1, reserve: '0' }), charged: (o) => o.charges.map((c) => c.member), expect: ['b.near'] },
+  'quote (lend)': { host: plainHost, ids: ['l1.near', 'l2.near', 'l3.near'], poor: 'l2.near', fill: (h) => { sealedTo(h, 'l1.near', { rateBps: 450 }); sealedTo(h, 'l2.near', { rateBps: 400 }); sealedTo(h, 'l3.near', { rateBps: 500 }); }, run: (h) => h.runQuote({ shape: 'lend', counterparty: 'borrower.near', amount: '5', limit: 700 }), charged: (o) => o.charges.map((c) => c.member), expect: ['l1.near'] },
+  cross: { host: plainHost, ids: ['b1.near', 'b2.near', 's1.near'], poor: 'b1.near', fill: (h) => { sealedTo(h, 'b1.near', { side: 'buy', units: 10, limit: '1.10' }); sealedTo(h, 'b2.near', { side: 'buy', units: 5, limit: '1.05' }); sealedTo(h, 's1.near', { side: 'sell', units: 8, limit: '0.95' }); }, run: (h) => h.runCross({ referencePrice: '1.00' }), charged: (o) => o.charges.map((c) => c.member), expect: ['b2.near'] },
+  'rfq (sell)': { host: signedHost, ids: ['taker.near', 'maker1.near', 'maker2.near'], poor: 'maker1.near', signed: true, fill: async (h) => { await h.submitSignedIntent(signedIn(h, 'taker.near', { side: 'sell', units: 10, limit: '0.0018', salt: SALT })); await h.submitSignedIntent(signedIn(h, 'maker1.near', { bid: '0.00195', ask: '0.00205' })); await h.submitSignedIntent(signedIn(h, 'maker2.near', { bid: '0.0019', ask: '0.002' })); }, run: (h) => h.runRfq({ taker: 'taker.near', makers: ['maker1.near', 'maker2.near'], pricing: 'first' }), charged: (o) => o.charges.map((c) => c.member), expect: ['maker2.near'] },
+};
+
+for (const [name, p] of Object.entries(BIDDER)) {
+  test(`${name}: a bidder who cannot cover their worst case is left out and named, and the rest settle`, async () => {
+    const h = p.host(stub(richPlus(p.ids, p.poor))); h.openRound(ROUND); await p.fill(h);
+    await h.bindEscrow();
+    const out = p.run(h);
+    assert.deepEqual(out.outcome.excludedForEscrow, [p.poor]);
+    assert.deepEqual(p.charged(out).sort(), p.expect);
+    assert.doesNotThrow(() => sign(h, out), 'the contract-side check cannot trip on an unescrowed charge');
+  });
+  test(`${name}: with everyone able to pay nothing is left out`, async () => {
+    const h = p.host(stub(richPlus(p.ids, null))); h.openRound(ROUND); await p.fill(h);
+    await h.bindEscrow();
+    assert.deepEqual(p.run(h).outcome.excludedForEscrow, []);
+  });
+  test(`${name}: without bindEscrow the run throws and the queue is kept`, async () => {
+    const h = p.host(stub(richPlus(p.ids, null))); h.openRound(ROUND); await p.fill(h);
+    const q = h.sealedIntents.length;
+    assert.throws(() => p.run(h), /bind/i);
+    assert.equal(h.sealedIntents.length, q);
+  });
+}
+
+test('quote (buy): the paying counterparty must cover units x limit, otherwise the round refuses and keeps the queue', async () => {
+  const mk = async (bal) => { const h = plainHost(stub({ 'buyer.near': bal, 'l1.near': NEAR(1), 'l2.near': NEAR(1) })); h.openRound(ROUND); sealedTo(h, 'l1.near', { price: '1.5' }); sealedTo(h, 'l2.near', { price: '1.2' }); await h.bindEscrow({ accounts: ['buyer.near'] }); return h; };
+  const run = (h) => h.runQuote({ shape: 'buy', counterparty: 'buyer.near', units: 3, limit: '2' }); // worst case 6 NEAR
+  const poor = await mk(NEAR(5)); const q = poor.sealedIntents.length;
+  assert.throws(() => run(poor), /cannot cover/);
+  assert.equal(poor.sealedIntents.length, q);
+  const rich = await mk(NEAR(6)); assert.doesNotThrow(() => run(rich));
+});
+
+test('rfq (buy): the taker must cover units x limit, otherwise the round refuses and keeps the queue', async () => {
+  const mk = async (bal) => { const h = signedHost(stub({ 'taker.near': bal, 'maker1.near': NEAR(9), 'maker2.near': NEAR(9) })); h.openRound(ROUND); await h.submitSignedIntent(signedIn(h, 'taker.near', { side: 'buy', units: 10, limit: '0.0022', salt: SALT })); await h.submitSignedIntent(signedIn(h, 'maker1.near', { bid: '0.00195', ask: '0.00205' })); await h.submitSignedIntent(signedIn(h, 'maker2.near', { bid: '0.0019', ask: '0.002' })); await h.bindEscrow(); return h; };
+  const run = (h) => h.runRfq({ taker: 'taker.near', makers: ['maker1.near', 'maker2.near'], pricing: 'first' }); // worst case 0.022 NEAR
+  const poor = await mk('0'); const q = poor.sealedIntents.length;
+  assert.throws(() => run(poor), /cannot cover/);
+  assert.equal(poor.sealedIntents.length, q);
+  const rich = await mk(NEAR(1));
+  assert.doesNotThrow(() => run(rich));
+});
+
+test('payrun: the employer must cover the gross pay, otherwise the run refuses and keeps the queue', async () => {
+  const LINES = [{ payee: 'm2.near', person: 'Alice', invoiceId: 'INV-1', period: '2026-11', gross: '0.05', tax: '0.0075', benefits: '0.0025', payeeKey: pe.publicKeyHex }];
+  const mk = async (bal) => { const h = signedHost(stub({ 'm1.near': bal })); h.openRound(ROUND); await h.submitSignedIntent(signedIn(h, 'm1.near', { lines: LINES })); await h.bindEscrow(); return h; };
+  const run = (h) => h.runPayrun({ employer: 'm1.near', taxAddress: 'tax.near', benefitsAddress: 'ben.near', employerKeyHex: er.publicKeyHex, auditorKeyHex: au.publicKeyHex, runId: 'run-1' });
+  const poor = await mk('1000'); const q = poor.sealedIntents.length;
+  assert.throws(() => run(poor), /cannot cover/);
+  assert.equal(poor.sealedIntents.length, q);
+  const rich = await mk(NEAR(1));
+  assert.doesNotThrow(() => run(rich));
+});
+
+for (const [name, p] of Object.entries(BIDDER)) {
+  test(`${name}: if nobody can pay, the round is undecided, names everyone, and there is nothing to sign`, async () => {
+    const h = p.host(stub(Object.fromEntries(p.ids.map((i) => [i, '0'])))); h.openRound(ROUND); await p.fill(h);
+    await h.bindEscrow();
+    const out = p.run(h);
+    assert.equal(out.orderHash, null);
+    assert.deepEqual(out.allocations, []);
+    assert.ok(out.outcome.excludedForEscrow.length >= 1);
+  });
+}
