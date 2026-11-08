@@ -3,6 +3,8 @@
 **Status:** DRAFT for the user's review. Nothing is built. Path: architectural (it changes how every charged program decides who may bid).
 **Date:** 2026-11-08. **Owner decision recorded:** the list of allowed bidders comes from the contract, read at a pinned block; an explicit `roll` may narrow it.
 
+> **Amendment 2026-11-08 (in the plan, pending the user's yes):** the programs stay synchronous. A separate `await host.bindEscrow()` reads the chain once and stores a snapshot; the existing `run*` methods use it and throw if it is missing. Reason: about 30 promoted lab experiments call `run*` synchronously. See `docs/superpowers/plans/2026-11-08-escrow-bound-charged-rounds.md`.
+
 ## 1. Intent
 One bad bid must not cost a whole round. The contract refuses a charged settlement if any single charge is above that account's escrow (`lib.rs`, charge validation in `settle_inner`). Today pool, auction, quote, cross and RFQ turn every readable sealed bid into a charge, and the Roost keeps no list of who deposited. So one bidder with no escrow, or too little, makes the contract reject the settlement; the queue was already cleared, so everyone resubmits. Funds are never at risk. The loss is the round.
 
