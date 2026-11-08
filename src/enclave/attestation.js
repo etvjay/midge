@@ -212,3 +212,35 @@ export function loadMeasurementBaseline(file) {
   try { pin = normalisePin(doc.measurements); } catch (e) { bad(e.message); }
   return { pin, model: doc.model, observedAt: doc.observedAt, runs: doc.runs, note: doc.note };
 }
+
+/** True when the ONLY reason every candidate failed is that its measurements are not in the owner's pin. */
+function onlyMeasurementMismatch(err) {
+  const m = /^\[?[A-Z ]*\]? ?no model attestation candidate passed: (.*)$/s.exec(String(err && err.message));
+  if (!m) return false;
+  const failed = m[1].split('; ').map((x) => x.trim()).filter(Boolean);
+  return failed.length > 0 && failed.every((x) => x.startsWith('measurement '));
+}
+
+/**
+ * Attests a model host against the recorded baseline without letting a NEAR AI update turn a live check into a failure.
+ *   - noPin: nothing is pinned.
+ *   - the owner already set MIDGE_MODEL_MEASUREMENTS: that pin is theirs and is strict (a mismatch fails).
+ *   - otherwise the baseline is pinned; a host that differs ONLY in its measurements is attested without the pin and a plain warning says so,
+ *     unless requirePin is set. Any other failed check (key, nonce, certificate chain, TCB) still stops, with or without the pin.
+ * `attest` must read the pin from the environment when it is called (fetchVerifiedModelKey does). Returns { mode, attestation } with mode one of
+ * 'unpinned', 'env', 'pinned' (matched the baseline) or 'differs' (verified, but not the recorded build).
+ */
+export async function attestAgainstBaseline({ attest, baseline, requirePin = false, noPin = false, env = process.env, log = console.log } = {}) {
+  if (noPin) { delete env.MIDGE_MODEL_MEASUREMENTS; return { mode: 'unpinned', attestation: await attest() }; }
+  if (env.MIDGE_MODEL_MEASUREMENTS) return { mode: 'env', attestation: await attest() };
+  env.MIDGE_MODEL_MEASUREMENTS = JSON.stringify(baseline.pin);
+  try {
+    return { mode: 'pinned', attestation: await attest() };
+  } catch (e) {
+    if (requirePin || !onlyMeasurementMismatch(e)) throw e;
+    delete env.MIDGE_MODEL_MEASUREMENTS;
+    log(`[pin] WARNING: the host differs from the baseline observed ${baseline.observedAt} (${baseline.runs} reads) in its measurements. It is attested and verified (Intel certificate chain, TCB status, key and nonce), but it is not the build that was recorded. If NEAR AI shipped a new build this is expected: run \`npm run measure:model\` to look at it. Continuing without the pin; pass --require-pin to make this a failure.`);
+    return { mode: 'differs', attestation: await attest() };
+  }
+}
+
