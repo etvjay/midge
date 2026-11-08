@@ -1,0 +1,24 @@
+{
+  "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+  "observedAt": "2026-11-08",
+  "runs": 3,
+  "note": "These values are only what was observed when the host was read with scripts/measure-model.js (identical across the reads). They have not been checked or verified against anything NEAR AI publishes. Pinning them means trusting that this is the build you mean to trust; a new NEAR AI build will be refused until its values are added to the lists.",
+  "mrseamNotPinned": "MRSEAM (the TDX module) is read and shown but not pinned here: it describes the platform rather than the model host and can change when the platform is updated.",
+  "measurements": {
+    "mrtd": [
+      "df4d77c857de652bd0fafa343a2026b51071ee03773d076d283abf1a7d36ff91ffa279ee4a617ac664f7e2a2c8d5891b"
+    ],
+    "rtmr0": [
+      "bc122d143ab768565ba5c3774ff5f03a63c89a4df7c1f5ea38d3bd173409d14f8cbdcc36d40e703cccb996a9d9687590"
+    ],
+    "rtmr1": [
+      "4ae609807c765916a31d724786ed74bcb97e168a9d937b04936aeef2015c907eba5ac352c6bcd749c246fd62ffb659ec"
+    ],
+    "rtmr2": [
+      "bd67ab7554dc27ab03a077bc1447a1a67d0624ff547c4c809a8626f12d6a89712f8ec60e781e99b98208574065d21a71"
+    ],
+    "rtmr3": [
+      "bbada8ce4eb49dcf9d67f987f8ce6a3a3a59e8e86374180075aa12b4cdad6b06234acb1e044902cbcac130993ef9bb46"
+    ]
+  }
+}

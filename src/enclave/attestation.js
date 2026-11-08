@@ -197,3 +197,18 @@ export function formatPinSuggestion(result) {
     'If NEAR AI ships a new build, a pinned caller will refuse it until you add the new values to the lists (a list per field can hold the old and the new).');
   return lines.join('\n');
 }
+
+/**
+ * Loads the tracked baseline of what a model host reported on a given day (docs/canonical/model-measurements.json) as a pin.
+ * The file must say that the values are only observed and not verified: it records a sighting, not a decision that the build is trustworthy.
+ */
+export function loadMeasurementBaseline(file) {
+  let doc;
+  try { doc = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { throw new Error(`measurement baseline ${file} could not be read: ${e.message}`); }
+  const bad = (why) => { throw new Error(`measurement baseline ${file}: ${why}`); };
+  if (!doc || typeof doc !== 'object' || typeof doc.model !== 'string' || !/^\d{4}-\d\d-\d\d/.test(String(doc.observedAt)) || !Number.isInteger(doc.runs) || doc.runs < 1) bad('needs a model, an observedAt date and a number of runs');
+  if (!/observed/i.test(String(doc.note)) || !/not (been )?(checked|verified)/i.test(String(doc.note))) bad('its note must say the values are only observed and have not been checked or verified');
+  let pin;
+  try { pin = normalisePin(doc.measurements); } catch (e) { bad(e.message); }
+  return { pin, model: doc.model, observedAt: doc.observedAt, runs: doc.runs, note: doc.note };
+}

@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ModelSealedRoost, RoostAggregationError } from '../src/enclave/model-sealed-roost.js';
+import { loadMeasurementBaseline } from '../src/enclave/attestation.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -42,8 +43,21 @@ console.log('\n======================================================');
 console.log(' MODEL-SEALED ROOST: LIVE CHECK AGAINST NEAR AI CLOUD');
 console.log('======================================================');
 
+// The host's measurements are pinned to the baseline observed on a given day (docs/canonical/model-measurements.json), unless the owner
+// passes --no-pin or has set MIDGE_MODEL_MEASUREMENTS themselves. The baseline is only what was observed, not a verified build.
+if (!process.argv.includes('--no-pin') && !process.env.MIDGE_MODEL_MEASUREMENTS) {
+  const baseline = loadMeasurementBaseline(path.join(rootDir, 'docs/canonical/model-measurements.json'));
+  process.env.MIDGE_MODEL_MEASUREMENTS = JSON.stringify(baseline.pin);
+  console.log(`[pin] measurements pinned to the baseline observed ${baseline.observedAt} (${baseline.runs} reads; only observed, not verified). --no-pin to skip.`);
+}
 const roost = new ModelSealedRoost({ apiKey: key, chain: 'required', runs: 3 });
-const att = await roost.attest();
+let att;
+try {
+  att = await roost.attest();
+} catch (e) {
+  if (/measurement/i.test(e.message)) console.error('\n>>> The host no longer matches the pinned measurements. If NEAR AI shipped a new build, run `npm run measure:model` to look at it, add its values to docs/canonical/model-measurements.json if you trust it, or pass --no-pin.');
+  throw e;
+}
 console.log(`[attest] model key ${att.publicKey.slice(0, 16)}…  TCB ${att.tcbStatus}`);
 for (const c of att.checks) console.log(`  ${c.ok ? '✓' : '✗'} ${c.name}${c.detail ? ` (${c.detail})` : ''}`);
 
