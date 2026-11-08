@@ -17,11 +17,12 @@ function provider_(url, { balances, height = 4000, exits = { epoch_start_block: 
     const body = JSON.parse(init.body);
     const j = (o) => ({ ok: true, status: 200, json: async () => ({ jsonrpc: '2.0', id: 1, ...o }) });
     if (body.method === 'block') return j({ result: { header: { height, hash: `HASH${height}`, timestamp: String((NOW - behindMs) * 1_000_000) } } });
+    const echo = { block_height: height, block_hash: `HASH${height}` };
     const m = body.params.method_name;
-    if (m === 'get_syndicate') return j({ result: { result: [...Buffer.from(JSON.stringify({ ...exits, release_policy: { settle_deadline_block: 9_000_000 } }))] } });
+    if (m === 'get_syndicate') return j({ result: { result: [...Buffer.from(JSON.stringify({ ...exits, release_policy: { settle_deadline_block: 9_000_000 } }))], ...echo } });
     const who = JSON.parse(Buffer.from(body.params.args_base64, 'base64').toString()).account_id;
     const v = tell ? tell(who) : (balances[who] ?? '0');
-    return j({ result: { result: [...Buffer.from(JSON.stringify(v))] } });
+    return j({ result: { result: [...Buffer.from(JSON.stringify(v))], ...echo } });
   };
 }
 const net = (...ps) => async (url, init) => { for (const p of ps) { const r = await p(url, init); if (r) return r; } throw new Error(`no provider at ${url}`); };
@@ -30,7 +31,7 @@ const BAL = { 'a.near': YOCTO(1), 'b.near': '0', 'c.near': YOCTO(1) };
 
 const sealed = (host, id, body) => host.submitSealedIntent({ flyerId: id, cipherTextHex: sealToModel(JSON.stringify(body), host.intentPublicKey) });
 async function poolRoom(escrowReader, bidders = ['a.near', 'b.near', 'c.near']) {
-  const host = new HostedRoost({ provider, deterministicOrder: true, escrowReader });
+  const host = new HostedRoost({ provider, deterministicOrder: true, escrowReader, clock: () => NOW }); // the same clock the stub blocks are stamped with
   const svc = new RoomService({ host }); svc.open(ROUND);
   for (const id of bidders) sealed(host, id, { amount: '0.01' });
   return { host, svc };
@@ -75,12 +76,15 @@ export default {
       }
     });
 
-    await ctx.step('prediction 3: raceFree only when no member could leave before the payout lands', async (s) => {
-      const free = async (exits) => { const { host } = await poolRoom(reader(net(provider_('https://a.rpc', { balances: BAL, exits }), provider_('https://b.rpc', { balances: BAL, exits })))); return (await host.bindEscrow()).raceFree; };
-      s.assert('exit opens at block 4100 (the timer ends 100 blocks on): race-free', (await free({ epoch_start_block: 4090, timeout_blocks: 10 + 90 })) === true);
+    await ctx.step('prediction 3: raceFree only when no member could leave before the payout is likely to land (the definition was tightened after review: the read\'s age and the snapshot\'s allowed age count too)', async (s) => {
+      const free = async (exits, behindMs = 0) => { const { host } = await poolRoom(reader(net(provider_('https://a.rpc', { balances: BAL, exits, behindMs }), provider_('https://b.rpc', { balances: BAL, exits, behindMs })))); return (await host.bindEscrow()).raceFree; };
+      // height 4000, the read may be used for 30 s, the payout needs 30 blocks: an exit must open after block 4060
+      s.assert('exit opens at block 4100 (timer ends 100 blocks on): race-free', (await free({ epoch_start_block: 4090, timeout_blocks: 10 + 90 })) === true);
       s.assert('exit opened long ago (block 110): not race-free', (await free({ epoch_start_block: 100, timeout_blocks: 10 })) === false);
-      s.assert('exit opens at 4030, exactly height + 30: not race-free (the margin is strict)', (await free({ epoch_start_block: 4020, timeout_blocks: 10 })) === false);
-      s.assert('exit opens at 4031: race-free', (await free({ epoch_start_block: 4021, timeout_blocks: 10 })) === true);
+      s.assert('exit opens at exactly 4060: not race-free (strict)', (await free({ epoch_start_block: 4050, timeout_blocks: 10 })) === false);
+      s.assert('exit opens at 4061: race-free', (await free({ epoch_start_block: 4051, timeout_blocks: 10 })) === true);
+      s.assert('an exit at 4110 with a fresh block: race-free', (await free({ epoch_start_block: 4090, timeout_blocks: 20 }, 0)) === true);
+      s.assert('the same exit at 4110 but the block was read 50 s ago (about 50 blocks behind the head): not race-free', (await free({ epoch_start_block: 4090, timeout_blocks: 20 }, 50_000)) === false);
     });
 
     await ctx.step('prediction 4: a signed round cannot be re-opened; abandon makes it possible and leaves a record', async (s) => {
@@ -101,7 +105,7 @@ export default {
     await ctx.step('prediction 5: a roll member who never voted and cannot pay is left out of a ballot', async (s) => {
       const { keyCheck, ROLL, VOTE_PARAMS, ROUND: R2, voteInputs } = await import('../lib/room-fixtures.js');
       const bal = Object.fromEntries(ROLL.map((m) => [m, YOCTO(1)])); bal['m5.near'] = '0';
-      const host = new HostedRoost({ provider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader: reader(net(provider_('https://a.rpc', { balances: bal }), provider_('https://b.rpc', { balances: bal }))) });
+      const host = new HostedRoost({ clock: () => NOW, provider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader: reader(net(provider_('https://a.rpc', { balances: bal }), provider_('https://b.rpc', { balances: bal }))) });
       const svc = new RoomService({ host }); svc.open(R2);
       for (const i of voteInputs(host).slice(0, 4)) await svc.submit(i);
       const res = await svc.run({ program: 'ballot', params: VOTE_PARAMS, round: R2 });
