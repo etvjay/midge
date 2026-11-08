@@ -65,6 +65,15 @@ npm run verify:api       # HTTP Gateway Daemon, SSE Streams, x402 & MCP Server
 
 ---
 
+## Default Working Pipeline (every change, in this order)
+Set 2026-11-08. Skip a step only when the user says so, and say which step was skipped.
+1. **Shape it** — `superpowers:brainstorming`, then `mattpocock-skills:grilling` (or `domain-modeling` when terms are unclear) until the design is settled. Write the result down (spec in `docs/`, decision in `docs/canonical/DECISIONS.md`) and get the user's approval before building. Use `superpowers:writing-plans` for anything larger than one sitting.
+2. **Build it test-first** — `superpowers:test-driven-development` / `mattpocock-skills:tdd`: a failing test, watch it fail for the right reason, then the fix. Bugs go through `mattpocock-skills:diagnosing-bugs` (a red loop first, then hypotheses) and `superpowers:systematic-debugging`.
+3. **Prove it with the lab method** — `research-sequence-lab`: predictions committed before the run, an experiment that can fail, mutation checks on the test, a hash-chained log, promoted with `node lab/verify-run.js`. Anything claimed as "live" or "verified" needs a promoted run, not a one-off script.
+4. **Record it** — gap ledger (`foundry/gaps.jsonl`), claims (`foundry/claims.jsonl`), ADR, evidence ledger, `docs/canonical/CURRENT_STATE.md`. A claim without a command someone can re-run is "unverified", never "verified".
+5. **Check before saying done** — `superpowers:verification-before-completion`, then `mattpocock-skills:code-review` / `superpowers:requesting-code-review`. Report what ran and what did not.
+6. **Gates that stay human** — push, deploy, redeploy, X post, submission, mainnet: ask first, and run `git push` as its own command. Say "fixed in the code" until it is live.
+
 ## Environment & Security Rules
 - All API keys and secrets belong in `.env`. The NEAR chain client does not read `.env` on its own: pass credentials in the environment or point `MIDGE_ENV_FILE` at the file. Without write credentials, chain-mode writes are refused.
 - Never commit private keys or API credentials to git.
