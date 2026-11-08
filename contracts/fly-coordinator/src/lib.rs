@@ -246,7 +246,8 @@ pub enum GroupPhase {
     Settled,
     /// The last member left.
     Refunded,
-    /// Active with no member and no escrow: hatched and never funded. It has no exit and cannot be pruned (GAP-030).
+    /// Active with no member and no escrow: hatched and never funded. Its creator can remove it at once with
+    /// `prune_syndicate`, and anyone can after `UNFUNDED_PRUNE_BLOCKS` (GAP-030).
     Unfunded,
 }
 
@@ -320,6 +321,9 @@ pub const STUCK_SETTLEMENT_BLOCKS: u64 = 100;
 /// would make the release window (twice the timer) meaningless. It is NOT a recommendation: a real group must choose its timer on
 /// purpose, and depositors consent to the chosen value through the policy hash (GAP-025).
 pub const MIN_TIMEOUT_BLOCKS: u64 = 10;
+/// How long a group that was hatched and never funded must wait before anyone (not only its creator) may remove it:
+/// about seven days at one block a second. It frees storage and an id that someone is squatting on (GAP-030).
+pub const UNFUNDED_PRUNE_BLOCKS: u64 = 604_800;
 /// Gas given to the follow-up step: a base plus a little per member, so a 50-member settlement cannot starve it.
 const CALLBACK_BASE_TGAS: u64 = 25;
 const CALLBACK_PER_MEMBER_TGAS: u64 = 1;
@@ -1669,7 +1673,8 @@ impl FlyCoordinator {
         self.syndicates.get(&syndicate_id).cloned()
     }
 
-    /// prune_syndicate(): permissionless garbage collection of a finished syndicate.
+    /// prune_syndicate(): garbage collection of a finished syndicate (permissionless), or of a never-funded one (its
+    /// creator at once, anyone after UNFUNDED_PRUNE_BLOCKS).
     ///
     /// A Settled or AbortedRefunded syndicate with no escrow left keeps its record in contract storage forever, and the
     /// contract account pays for that storage out of the same balance that holds everyone's escrow. Anyone may remove
@@ -1681,13 +1686,28 @@ impl FlyCoordinator {
             .syndicates
             .get(&syndicate_id)
             .unwrap_or_else(|| env::panic_str("Syndicate not found"));
-        assert!(
-            matches!(
-                syn.status,
-                SyndicateStatus::Settled | SyndicateStatus::AbortedRefunded
-            ),
-            "[Prune REJECT] Only a Settled or AbortedRefunded syndicate can be pruned."
+        let finished = matches!(
+            syn.status,
+            SyndicateStatus::Settled | SyndicateStatus::AbortedRefunded
         );
+        // Hatched and never funded: Active, nobody listed, nothing held, nothing in flight. It has no member who could
+        // exit, so without this it would stay for ever (GAP-030).
+        let never_funded = syn.status == SyndicateStatus::Active
+            && !syn.is_settling
+            && syn.flyers.is_empty()
+            && syn.total_escrow.as_yoctonear() == 0;
+        assert!(
+            finished || never_funded,
+            "[Prune REJECT] Only a Settled or AbortedRefunded syndicate, or one that was never funded, can be pruned."
+        );
+        if never_funded {
+            let open_to_all_from = syn.created_at_block.saturating_add(UNFUNDED_PRUNE_BLOCKS);
+            assert!(
+                env::predecessor_account_id() == syn.owner || env::block_height() >= open_to_all_from,
+                "[Prune REJECT] A never-funded syndicate can be pruned by its creator, or by anyone from block {}.",
+                open_to_all_from
+            );
+        }
         assert!(
             syn.total_escrow.as_yoctonear() == 0,
             "[Prune REJECT] The syndicate still holds escrow."

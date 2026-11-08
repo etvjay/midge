@@ -2235,11 +2235,11 @@ fn test_prune_removes_a_settled_syndicate_and_logs_it() {
 
 #[test]
 #[should_panic(
-    expected = "[Prune REJECT] Only a Settled or AbortedRefunded syndicate can be pruned."
+    expected = "[Prune REJECT] Only a Settled or AbortedRefunded syndicate, or one that was never funded, can be pruned."
 )]
 fn test_prune_refuses_an_active_syndicate() {
     let owner: AccountId = "alice.near".parse().unwrap();
-    testing_env!(get_context(owner, NearToken::from_near(1), 100).build());
+    testing_env!(get_context(owner.clone(), NearToken::from_near(1), 100).build());
     let mut contract = FlyCoordinator::new();
     let (enclave_pk, _) =
         make_enclave_key_and_signature("fly-coordinator.testnet", "live-swarm", 1, "", "", "");
@@ -2254,6 +2254,11 @@ fn test_prune_refuses_an_active_syndicate() {
         None,
         None,
     );
+    // funded, so it is a live group and not a never-funded one
+    let p_hash = contract.get_policy_hash(id.clone());
+    testing_env!(get_context("bob.near".parse().unwrap(), NearToken::from_near(1), 101).build());
+    contract.deposit(id.clone(), p_hash);
+    testing_env!(get_context(owner, NearToken::from_near(0), 102).build());
     contract.prune_syndicate(id);
 }
 
@@ -4186,4 +4191,98 @@ fn a_group_whose_last_member_left_is_refunded() {
         let _ = c.hatch_out(id.clone());
     }
     assert_eq!(c.get_group_phase(id), Some(GroupPhase::Refunded));
+}
+
+// ---- GAP-030: a group that was hatched and never funded can be removed ----
+
+fn hatch_unfunded(name: &str) -> (FlyCoordinator, String, AccountId) {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner.clone(), NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let (pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", name, 1, "", "", "");
+    let id = c.hatch(
+        name.to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        pk,
+        "hash".to_string(),
+        Some(30),
+        None,
+        None,
+    );
+    (c, id, owner)
+}
+
+#[test]
+fn the_creator_can_remove_a_group_nobody_funded_at_once() {
+    let (mut c, id, owner) = hatch_unfunded("gap30-creator");
+    assert_eq!(c.get_group_phase(id.clone()), Some(GroupPhase::Unfunded));
+    testing_env!(get_context(owner.clone(), NearToken::from_near(0), 101).build());
+    c.prune_syndicate(id.clone());
+    assert!(c.get_syndicate(id.clone()).is_none());
+    assert!(c.get_group_phase(id).is_none());
+    assert!(
+        c.get_syndicates_by_member(owner, None, None).is_empty(),
+        "the creator's index no longer lists it"
+    );
+}
+
+#[test]
+#[should_panic(expected = "never-funded")]
+fn a_stranger_cannot_remove_an_unfunded_group_before_the_waiting_period() {
+    let (mut c, id, _) = hatch_unfunded("gap30-early");
+    testing_env!(get_context(
+        "stranger.near".parse().unwrap(),
+        NearToken::from_near(0),
+        100 + 604_799
+    )
+    .build());
+    c.prune_syndicate(id);
+}
+
+#[test]
+fn anyone_can_remove_an_unfunded_group_after_the_waiting_period() {
+    let (mut c, id, _) = hatch_unfunded("gap30-late");
+    testing_env!(get_context(
+        "stranger.near".parse().unwrap(),
+        NearToken::from_near(0),
+        100 + 604_800
+    )
+    .build());
+    c.prune_syndicate(id.clone());
+    assert!(c.get_syndicate(id).is_none());
+}
+
+#[test]
+fn a_removed_unfunded_id_can_be_hatched_again() {
+    let (mut c, id, owner) = hatch_unfunded("gap30-reuse");
+    testing_env!(get_context(owner.clone(), NearToken::from_near(0), 101).build());
+    c.prune_syndicate(id.clone());
+    testing_env!(get_context(owner, NearToken::from_near(1), 102).build());
+    let (pk, _) = make_enclave_key_and_signature("fly-coordinator.testnet", &id, 1, "", "", "");
+    let again = c.hatch(
+        id.clone(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        pk,
+        "hash".to_string(),
+        Some(30),
+        None,
+        None,
+    );
+    assert_eq!(again, id);
+    assert_eq!(c.get_group_phase(id), Some(GroupPhase::Unfunded));
+}
+
+#[test]
+#[should_panic(expected = "can be pruned")]
+fn a_funded_group_is_not_removed_even_by_its_creator_after_the_waiting_period() {
+    let (mut c, id, owner) = hatch_unfunded("gap30-funded");
+    let p_hash = c.get_policy_hash(id.clone());
+    testing_env!(get_context("bob.near".parse().unwrap(), NearToken::from_near(1), 101).build());
+    c.deposit(id.clone(), p_hash);
+    testing_env!(get_context(owner, NearToken::from_near(0), 100 + 604_900).build());
+    c.prune_syndicate(id);
 }
