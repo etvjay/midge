@@ -256,6 +256,24 @@ export class FlyApiDaemon {
       return res.end();
     }
 
+    // A web page must not be able to drive this server. A cross-site POST can be a CORS-simple request that needs no preflight,
+    // and a rebound hostname reaches a loopback server from the user's own browser. Refuse a state-changing request from an origin
+    // that is not allowed, and (on a loopback bind) any request whose Host is not a local name. Scripts and agents send no Origin.
+    const origin = req.headers.origin;
+    if (origin !== undefined && method !== 'GET' && method !== 'HEAD' && !this.getCorsOrigin(req)) {
+      const err = new Error('Forbidden: this origin is not allowed to make changes');
+      err.statusCode = 403;
+      throw err;
+    }
+    if (/^(127\.|localhost$|::1$|\[::1\]$)/.test(this.host)) {
+      const hostName = String(req.headers.host || '').replace(/:\d+$/, '').toLowerCase();
+      if (hostName && !['localhost', '127.0.0.1', '[::1]'].includes(hostName)) {
+        const err = new Error('Forbidden: unexpected Host header');
+        err.statusCode = 403;
+        throw err;
+      }
+    }
+
     // Optional API Key authentication enforcement when FLY_API_KEY is configured
     if (this.apiKey && pathname !== '/health' && pathname !== '/v1/health' && method !== 'OPTIONS') {
       const authHeader = req.headers['authorization'];
