@@ -122,15 +122,24 @@ export class RoostEnclave {
     }
 
     // 1. Decrypt each intent strictly inside the TEE memory boundary
-    const decryptedIntents = this.sealedEncryptedIntents.map((item) => {
-      const payload = EnclaveCrypto.decryptIntent(item.cipherText, this.privateKeyPem);
-      return {
-        flyerId: item.flyerId,
-        amount: payload.amount || 0,
-        maxSlippage: payload.maxSlippage || 0.01,
-        pair: payload.pair || 'USDC/NEAR',
-      };
-    });
+    // An intent that cannot be read (garbage, a foreign key, a null payload) is dropped. It must not stay at the head of the
+    // queue and block every later aggregation for this syndicate.
+    const decryptedIntents = [];
+    for (const item of this.sealedEncryptedIntents) {
+      try {
+        const payload = EnclaveCrypto.decryptIntent(item.cipherText, this.privateKeyPem);
+        decryptedIntents.push({
+          flyerId: item.flyerId,
+          amount: payload.amount || 0,
+          maxSlippage: payload.maxSlippage || 0.01,
+          pair: payload.pair || 'USDC/NEAR',
+        });
+      } catch { /* unreadable: dropped */ }
+    }
+    if (decryptedIntents.length === 0) {
+      this.sealedEncryptedIntents = [];
+      throw new Error('Cannot aggregate: no readable sealed intents in the queue');
+    }
 
     const totalAllocated = decryptedIntents.reduce((sum, item) => sum + item.amount, 0);
     const participantCount = decryptedIntents.length;
