@@ -1,0 +1,28 @@
+# TEST FIXTURE, not a deployment: the real compose file with its two escrow providers replaced by hosts that can never resolve (.invalid),
+# used by lab experiment E-HOSTED-FAILCLOSED-LIVE-01 to show the Roost refuses a charged round when it cannot read the chain.
+# A test checks that it differs from deploy/roost/docker-compose.yml in those two URLs only.
+# Compose file for the hosted Roost on a Phala dstack CVM (production image, no shell).
+# The image reference must be a digest of a PUSHED image. Its digest becomes part of the compose hash
+# that the attestation measures, so editing this file changes the code identity on purpose.
+services:
+  roost:
+    image: ghcr.io/etvjay/midge-roost@sha256:cde03fef9c7fa13ab921cb860c86f98b504d1422df54b782691259c8832de9a9
+    restart: unless-stopped
+    environment:
+      # Set as an encrypted environment variable in Phala Cloud; only the CVM can decrypt it.
+      - ROOST_ADMIN_KEY=${ROOST_ADMIN_KEY}
+      - PORT=8080
+      # The escrow check, ON, and written here on purpose: this file is measured by the attestation, so a member who verifies the
+      # Roost also verifies WHICH providers it asks and which contract it reads, and the coordinator cannot switch it off or point it
+      # elsewhere without changing the Roost's identity. Plain text is fine: nothing here is secret. Changing either line is a redeploy.
+      - ROOST_RPC_URLS=https://provider-a.invalid,https://provider-b.invalid
+      - ROOST_CONTRACT_ID=c.fly-1793636729.testnet
+    volumes:
+      - /var/run/dstack.sock:/var/run/dstack.sock
+    ports:
+      - "8080:8080"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

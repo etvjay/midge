@@ -297,3 +297,16 @@ Run `20261108T124630Z-b8de`, one run, log verified (69 events), promoted to `doc
 Two things found on the way, openly: the first attempt at this hardware run, with the previous compose file, died when the host disk filled (see the incident in the ledger; the VM it had created was deleted after its ownership was proved), and the November 4 bundle is pinned in `roost.expected.json` beside the new build because that file previously held only one hash.
 
 **Still not shown.** The VM failing closed when both providers are down, the exit race, a lying provider, a two-room settlement, and a hosted Roost that stays up.
+
+## Hosted Roost fails closed: predictions, written 2026-11-08 before the experiment exists or runs
+
+**What it is, in plain words.** With the escrow check on, a Roost that cannot read the chain must refuse to run a charged round, and must not lose the bids it was holding. This was tested only on a local host. This tests it inside a real confidential VM whose two providers are deliberately unreachable.
+
+**E-HOSTED-FAILCLOSED-LIVE-01 (hardware).** The VM runs the same pinned image with a compose file that differs from the real one only in its two provider URLs, which are on the reserved `.invalid` domain and can never resolve. No testnet funds are needed.
+1. **The VM starts and attests**, and the attestation covers the unreachable settings (the compose the VM runs equals the variant file byte for byte).
+2. **A charged round is refused with 503** (`could not read escrow`), in a bounded time (under the 30 s total deadline plus slack), not a hang.
+3. **The bid is not lost:** the coordinator's digest list shows the same one input before and after the refusal, and nothing was signed (a settlement attempt is refused for want of an aggregate).
+4. **Retrying gives the same answer**, so the failure is stable and not a one-off.
+5. **Teardown leaves nothing:** the VM is deleted, the account is empty, the cost is under $0.05.
+
+**Not tested:** that the Roost recovers when the providers come back (the VM's providers are fixed in its measured compose, so a recovery test needs a second VM); partial failure (one provider up, one down), covered offline; the exit race. **Weakness I expect to remain:** this shows the refusal, not that refusing is always the right availability trade-off.
