@@ -27,7 +27,7 @@ Plain words: *escrow* is the money a member has put into the group on the contra
 4. Clear with the remaining bids.
 5. Put the block height and hash into the signed `orderHash`, so the choice is checkable later.
 
-Programs become `async` (they read the chain). `room-service.js` already awaits `host.run*` through its dispatch; the adapters keep their one `{error, code}` shape, with a new code `ESCROW_UNAVAILABLE` (HTTP 503) for the fail-closed case.
+Programs become `async` (they read the chain). `room-service.js` line 164 calls `prog.run(h, normal)` **without** `await` today, so that call and its try/catch must change to `await` (this is part of the work, not a given), and every caller of the `run*` methods in `hosted-roost.js`, the Roost server and the labs is checked. The adapters keep their one `{error, code}` shape and reuse the existing `UNAVAILABLE` code (HTTP 503) for the fail-closed case; no new code.
 
 **Optional `roll`:** for named groups, a program's existing `roll` narrows the set further (intersection). Ballot and payrun keep theirs.
 
