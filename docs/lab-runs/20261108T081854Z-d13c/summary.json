@@ -1,0 +1,25 @@
+{
+  "runId": "20261108T081854Z-d13c",
+  "startedAt": "2026-11-08T08:18:54.563Z",
+  "rootHash": "78891c5dd183ce35afdb9e517de26f02407c6fe4b789c3e6792b9a498d446136",
+  "verdicts": {
+    "E-ESCROWBOUND-01": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ESCROWBOUND-LIVE-01": {
+      "attempts": [
+        "PASS",
+        "PASS",
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 254,
+  "commit": "5d2815df8563b975959a70192c14153d80f390d4"
+}

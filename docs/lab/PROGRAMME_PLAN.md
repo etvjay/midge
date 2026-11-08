@@ -259,3 +259,11 @@ In plain words: the one door (`RoomService`) now gets four ways in (web API, AI-
 6. Teardown leaves nothing behind: the group is pruned, every account deleted, the group count equals the count before the run.
 
 **Not tested live:** the race itself (a member exiting between the read and the payout); that two providers can disagree in practice; behaviour under a provider that lies. **Weakness I expect to remain:** the check trusts the providers to answer honestly, and one operator controls every account in the run.
+
+
+### Results: escrow-bound charged rounds (written after the runs; the predictions above were not edited)
+Run `20261108T081854Z-d13c`, 3 repeats of each experiment, log verified (254 events), promoted to `docs/lab-runs/20261108T081854Z-d13c`. **All predictions held.** E-ESCROWBOUND-01 (offline) 3/3 PASS. E-ESCROWBOUND-LIVE-01 (testnet) 3/3 PASS: the baseline settlement that charged the unfunded member was rejected by the contract and left the group unchanged; the host refused to re-open the signed round and `abandon` recorded it; with the reader (test.rpc.fastnear.com + rpc.testnet.near.org) the unfunded member was left out, the settlement landed and the recipient received exactly 0.02; `raceFree` was false; one dead provider failed the read closed with the queue kept; every account was deleted and the group count returned to its starting value.
+
+**One of my own assertions was wrong, not a prediction:** the first offline run failed because I had asserted the second settlement must differ from the first, which the committed prediction did not say; with the deterministic test mode the same inputs at the same block give the identical settlement, which is harmless. I changed the experiment to re-submit a changed bid.
+
+**What this does not show.** The race itself, a provider that lies, or the hosted Roost (the image is not rebuilt). It trusts the providers.
