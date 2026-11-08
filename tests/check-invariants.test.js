@@ -65,3 +65,19 @@ test('plans and specs under docs/superpowers may mention ids as examples', () =>
   const r = checkInvariants({ root: fixture({ ...inv([good]), 'docs/superpowers/plans/p.md': 'for example C-99 is cited here' }) });
   assert.deepEqual(r.errors, []);
 });
+
+test('a public contract function with no row in STATE_MACHINE.md is an error', () => {
+  const lib = 'impl FlyCoordinator {\n pub fn alpha(&self) {}\n pub fn beta(&self) {}\n}\n';
+  const doc = '## Contract transitions\n| Function | Who |\n|---|---|\n| `alpha` | anyone |\n';
+  const r = checkInvariants({ root: fixture({ ...inv([good]), 'contracts/fly-coordinator/src/lib.rs': lib, 'docs/STATE_MACHINE.md': doc }) });
+  assert.ok(r.errors.some((e) => e.includes('beta') && e.includes('STATE_MACHINE.md')), JSON.stringify(r.errors));
+  const full = checkInvariants({ root: fixture({ ...inv([good]), 'contracts/fly-coordinator/src/lib.rs': lib, 'docs/STATE_MACHINE.md': doc + '| `beta` | anyone |\n' }) });
+  assert.deepEqual(full.errors, []);
+});
+
+test('a row for a function the contract no longer has is an error', () => {
+  const lib = 'impl FlyCoordinator {\n pub fn alpha(&self) {}\n}\n';
+  const doc = '## Contract transitions\n| `alpha` | a |\n| `gone` | a |\n';
+  const r = checkInvariants({ root: fixture({ ...inv([good]), 'contracts/fly-coordinator/src/lib.rs': lib, 'docs/STATE_MACHINE.md': doc }) });
+  assert.ok(r.errors.some((e) => e.includes('gone')));
+});

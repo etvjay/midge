@@ -16,8 +16,8 @@ Phase 08 states invariant `I-08-C` ("every claim must cite verifiable code and r
 - [ ] **Evidence ledger (`docs/canonical/EVIDENCE_LEDGER.md`)**: every row points to a promoted lab run that `node lab/verify-run.js` accepts, and its commit exists. Reject a row whose run is missing, tampered with or from a different commit than the claim says.
 - [ ] **Gaps (`foundry/gaps.jsonl`)**: a gap marked `VERIFIED_*` names a regression guard that exists and passes; a closed gap's `closed_by_commit` exists in git.
 - [ ] **ADRs (`docs/canonical/DECISIONS.md`)**: one record per decision with a status (accepted, superseded, stale), the code it governs, and a test or check that fails if the code departs from it. The 7 current ADRs are stale and must be rewritten or superseded first.
-- [ ] **Invariants**: define every invariant ID that is cited (`I-07` is cited and undefined), give each a stated test, and fail the check on an ID that is cited but not defined.
-- [ ] **State machine**: write the contract's states and transitions down once (Active, Settled, AbortedRefunded, settling, pending settlement, release window, second key, epoch) and test the contract against that table.
+- [x] **Invariants** (done in 09-1, 2026-11-08): define every invariant ID that is cited (`I-07` is cited and undefined), give each a stated test, and fail the check on an ID that is cited but not defined.
+- [x] **State machine** (done in 09-1; contract table in `docs/STATE_MACHINE.md`, transition tests in `state_machine_tests.rs`): write the contract's states and transitions down once (Active, Settled, AbortedRefunded, settling, pending settlement, release window, second key, epoch) and test the contract against that table.
 - [ ] **Docs numbers**: figures in README, `CURRENT_STATE.md` and the submission pack (test counts, run counts, timings) come from a generated file, not typed by hand. Today `AGENTS.md` still says about 100 s in one place and `~1.1 s` in another.
 - [ ] **Deployment record**: `docs/canonical/deployments.json`, `docs/DEPLOYMENTS.md` and the site pin agree with each other, and with the chain when online.
 

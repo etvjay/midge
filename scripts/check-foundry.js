@@ -12,6 +12,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { checkInvariants } from './check-invariants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -203,6 +204,12 @@ function runCheck() {
   } else {
     warnings.push('foundry/phases directory is missing.');
   }
+
+  // 5. Invariants and the state machine document (plan 09-1)
+  const inv = checkInvariants({ root: rootDir });
+  errors.push(...inv.errors);
+  if (inv.warnings.length) warnings.push(`${inv.warnings.length} citation(s) of a whole phase family such as I-07; run node scripts/check-invariants.js to see which ids to use instead.`);
+  console.log(`✓ Checked invariants and docs/STATE_MACHINE.md: ${inv.errors.length} error(s).`);
 
   finish(errors, warnings);
 }

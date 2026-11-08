@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { contractPublicFns } from './contract-api.js';
 
 const ID = /\b[CIR]-\d{2}(?:-[A-Z])?\b/g;
 
@@ -50,6 +51,17 @@ export function checkInvariants({ root }) {
         else if (name && !read(fp).includes(name)) errors.push(`${inv.id} cites test "${name}" in ${p}, which is not there`);
       } else errors.push(`${inv.id} has a check of unknown type ${c.type}`);
     }
+  }
+
+  // docs/STATE_MACHINE.md must have a row for every public contract function, and none for a function that is gone.
+  const lib = path.join(root, 'contracts', 'fly-coordinator', 'src', 'lib.rs'); const sm = path.join(root, 'docs', 'STATE_MACHINE.md');
+  if (fs.existsSync(lib) && fs.existsSync(sm)) {
+    const doc = read(sm); const i = doc.indexOf('## Contract transitions'); const j = doc.indexOf('\n## ', i + 1);
+    const section = i < 0 ? '' : doc.slice(i, j < 0 ? undefined : j);
+    const rows = new Set([...section.matchAll(/^\|\s*`([a-zA-Z_][a-zA-Z0-9_]*)`\s*\|/gm)].map((m) => m[1]));
+    const fns = contractPublicFns(read(lib));
+    for (const f of fns) if (!rows.has(f)) errors.push(`docs/STATE_MACHINE.md has no row for the public contract function ${f}`);
+    for (const r of rows) if (!fns.includes(r)) errors.push(`docs/STATE_MACHINE.md has a row for ${r}, which the contract no longer has`);
   }
 
   const files = [
