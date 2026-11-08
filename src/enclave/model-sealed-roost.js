@@ -74,7 +74,7 @@ export class ModelSealedRoost {
     model = 'Qwen/Qwen3.6-35B-A3B-FP8',
     baseUrl = 'https://cloud-api.near.ai',
     runs = 3,
-    chain = 'if-available',
+    chain = 'required',
     acceptedTcb = ['UpToDate'],
     verifyReceipts = true,
     maxIntents = 50,

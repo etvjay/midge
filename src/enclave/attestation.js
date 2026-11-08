@@ -50,9 +50,9 @@ export function verifyQuoteChain(quoteHex) {
 
 /**
  * @param {object} candidate   one entry of report.model_attestations
- * @param {{nonce:string, model:string, chain?:'required'|'if-available'|'skip', acceptedTcb?:string[]}} opts
+ * @param {{nonce:string, model:string, chain?:'required'|'if-available'|'skip' (default 'required': a missing dcap-qvl fails closed), acceptedTcb?:string[]}} opts
  */
-export function checkModelCandidate(candidate, { nonce, model, chain = 'if-available', acceptedTcb = ['UpToDate'] }) {
+export function checkModelCandidate(candidate, { nonce, model, chain = 'required', acceptedTcb = ['UpToDate'] }) {
   const checks = [];
   const add = (name, ok, detail = '') => checks.push({ name, ok: Boolean(ok), detail });
   const pub = String(candidate.signing_public_key || '').toLowerCase();
@@ -110,7 +110,7 @@ export async function fetchVerifiedModelKey({
   baseUrl = 'https://cloud-api.near.ai',
   model,
   apiKey = null,
-  chain = 'if-available',
+  chain = 'required',
   acceptedTcb = ['UpToDate'],
   fetchImpl = globalThis.fetch,
 }) {
