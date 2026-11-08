@@ -1,0 +1,15 @@
+{
+  "runId": "20261108T131539Z-a3bd",
+  "startedAt": "2026-11-08T13:15:39.617Z",
+  "rootHash": "30d5decd67981419e00eccef392541c52272863a735423d1cef4010c2030b573",
+  "verdicts": {
+    "E-HOSTED-FAILCLOSED-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 50,
+  "commit": "d5c7612ac853487fc1b07100803192db6cf9a694"
+}

@@ -310,3 +310,8 @@ Two things found on the way, openly: the first attempt at this hardware run, wit
 5. **Teardown leaves nothing:** the VM is deleted, the account is empty, the cost is under $0.05.
 
 **Not tested:** that the Roost recovers when the providers come back (the VM's providers are fixed in its measured compose, so a recovery test needs a second VM); partial failure (one provider up, one down), covered offline; the exit race. **Weakness I expect to remain:** this shows the refusal, not that refusing is always the right availability trade-off.
+
+### Results: hosted Roost fails closed (written after the run; the predictions above were not edited)
+Run `20261108T131539Z-a3bd`, one run, 50 events, log verified, promoted to `docs/lab-runs/20261108T131539Z-a3bd`. **All five predictions held on the first run.** The VM attested with the fixture compose (byte for byte what Phala holds). A charged round was refused with 503 `could not read escrow: fetch failed` in 55 ms (the names never resolve, so it failed at once rather than waiting out the 30 s deadline), the retry gave the same answer, the bid's digest was the same before and after, and a settlement attempt was refused for want of an aggregate. The VM was deleted: 0 VMs left, about $0.0009.
+
+**Still not shown:** recovery when the providers come back; a slow (rather than absent) provider on hardware, which is the timeout path; and that the real compose, not the fixture, was run through an outage.
