@@ -13,6 +13,9 @@
 ## Deviation from the approved spec (needs the user's yes)
 The spec said the programs become `async`. About 30 promoted lab experiments call `run*` synchronously (roughly 100 call sites), so that would break committed, hash-chained runs. This plan keeps every `run*` synchronous and adds an explicit `await host.bindEscrow()` step beforehand; `RoomService.run` does it for the API. Same guarantees, far smaller blast radius. When an `escrowReader` is configured and no valid snapshot exists, `run*` **throws** (fail closed). Without a reader, nothing changes.
 
+## Order
+Run plan 09-1 first (its Task 7 adds a guard at the start of every `run*`; this plan edits the same methods). The escrow snapshot is also dropped when a signed aggregate exists, consistent with that guard.
+
 ## Global Constraints
 - The contract and its tests are not modified. No redeploy for this plan. The Phala image is rebuilt once, after this plan, not inside it.
 - Default `minAgree` = all configured URLs; a block older than `maxAgeMs` = 60000 is rejected; `timeoutMs` = 8000.

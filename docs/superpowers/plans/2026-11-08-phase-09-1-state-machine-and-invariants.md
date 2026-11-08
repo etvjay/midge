@@ -2,16 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Write the contract's state machine down once, define every invariant that is cited, and make a check fail when the two drift from the code.
+**Goal:** Write the contract's and the Roost round's state machines down once, define every invariant that is cited, make a check fail when they drift from the code, and close the five holes the implicit-state survey found (H1 to H5).
 
 **Architecture:** A small parser lists the contract's public functions. `docs/STATE_MACHINE.md` has one table row per function. `foundry/invariants.json` defines each invariant and names the tests that check it. `scripts/check-invariants.js` enforces both, and `make check` runs it. Missing transition tests are added in a new Rust test file. No contract behaviour changes.
 
 **Tech Stack:** Node 24 (`node:test`), Rust (`cargo test`, existing `near-sdk` unit-test harness), Markdown/JSON.
 
-**Spec:** `docs/superpowers/specs/2026-11-08-phase-09-decomposition-design.md` (sub-project 09-1).
+**Spec:** `docs/superpowers/specs/2026-11-08-phase-09-decomposition-design.md` (sub-project 09-1). Survey that adds Tasks 7 to 11: `docs/IMPLICIT_STATE_MACHINES.md`.
 
 ## Global Constraints
-- The contract source `contracts/fly-coordinator/src/lib.rs` is **not modified** by this plan; only tests, docs and checkers are added.
+- The contract source `contracts/fly-coordinator/src/lib.rs` is **not modified** by this plan; only tests, docs and checkers are added. Naming the composite states in the contract (survey item 4) needs a contract change and a redeploy, so it is deferred to its own spec.
+- Tasks 7 to 11 change JavaScript only. They must come **before** the lead 9 plan, which edits the same `hosted-roost.js`.
 - Offline only; no network, no keys. Host disk is at 99%: reuse the existing `target/`, never `cargo clean`.
 - Invariant ids: new contract invariants are `C-01` … `C-12`; old `I-NN-X` ids stay valid where defined. A bare `I-NN` means "the family of phase NN" (see Task 3).
 - Test-first: each task writes its failing test, watches it fail for the right reason, then implements.
@@ -24,6 +25,7 @@
 3. A `pub fn` that appears only inside a comment or a string is not counted as a contract function.
 4. A bare `I-07` in the gap ledger (18 citations) → reported as a warning with the specific `C-xx` ids to use; history is not rewritten.
 5. A superseded invariant (`I-07-B`) cited as if it still held → fails.
+6. (Tasks 7 to 11) a `run*` after a signed aggregate in the same round; matching or releasing the same facility record twice; an invoice read after its expiry time; a daemon asked for `chain` with no credentials; a status renamed on one side of the contract/JS mirror only.
 
 ---
 
@@ -54,7 +56,7 @@
 
 - [ ] **Step 1: Write the failing test.** `tests/state-machine-doc.test.js` reads `docs/STATE_MACHINE.md` and asserts every name from `contractPublicFns` has a table row, and that no row names a function that does not exist.
 - [ ] **Step 2: Run it** — Expected: FAIL, file missing.
-- [ ] **Step 3: Write the document.** Sections: *Words* (plain meanings: syndicate = group, escrow, epoch, round nonce, release window, pending settlement, second key); *States* (`Active`, `Settled`, `AbortedRefunded`, plus the `is_settling` flag); *Stored records* (`p:<id>` pending settlement, `w:<id>` release window, `k2:<id>` second key, member index) with when each is written and removed; *Transitions* (the table, one row per public function, guard and effect read from the function body, `tests` filled by grepping `contracts/fly-coordinator/tests/*.rs`); *Not allowed* (a short list of transitions that must never occur, e.g. `Settled → Active`).
+- [ ] **Step 3: Write the document.** Sections: *Words* (plain meanings: syndicate = group, escrow, epoch, round nonce, release window, pending settlement, second key); *States* (`Active`, `Settled`, `AbortedRefunded`, plus the `is_settling` flag); *Stored records* (`p:<id>` pending settlement, `w:<id>` release window, `k2:<id>` second key, member index) with when each is written and removed; *Transitions* (the table, one row per public function, guard and effect read from the function body, `tests` filled by grepping `contracts/fly-coordinator/tests/*.rs`); *Not allowed* (a short list of transitions that must never occur, e.g. `Settled → Active`); and a second section, *The Roost round*, with the machine `no round → open → aggregate computed → signed → next round`, its four fields (`round`, `sealedIntents`, `lastSeq`, `aggregate`) and one row per `HostedRoost` public method (`openRound`, `submitSignedIntent`, `submitSealedIntent`, `exclude`, the seven `run*`, `signSettlement`) with guard, effect and test.
 - [ ] **Step 4: Run the test** — Expected: PASS.
 - [ ] **Step 5: Commit** the doc and test.
 
@@ -124,3 +126,65 @@
 - [ ] **Step 3: Call `checkInvariants({root})` from `scripts/check-foundry.js`**; print its warnings (the bare `I-07` citations) without failing.
 - [ ] **Step 4: Run** `make check` and `node --test tests/*.test.js` — Expected: 0 violations; all tests pass.
 - [ ] **Step 5: Record and commit.** Add a claim to `foundry/claims.jsonl` (command: `node scripts/check-invariants.js`), a GAP-style note in `docs/canonical/CURRENT_STATE.md`, and tick the 09-1 items in `foundry/phases/09-reproducibility-and-prebuilt-environment.md`.
+
+### Task 7: One signed settlement per round (hole H1)
+
+**Files:**
+- Modify: `src/roost-service/hosted-roost.js` (new private `#assertNoSignedAggregate()` called first in `runAuction`, `runPool`, `runQuote`, `runBallot`, `runRfq`, `runPayrun`, `runCross`)
+- Test: `tests/hosted-roost-rounds.test.js` (extend)
+
+- [ ] **Step 1: Write failing tests**, one per `run*` method, reusing the setup from experiments 72 to 80: run, sign, queue a new input, run again → rejects `/already has a signed settlement/` and `sealedIntents.length` is unchanged. Plus: after `openRound` the same run works; a second run while the first aggregate is **unsigned** is still allowed (unchanged behaviour); `signSettlement` twice on one aggregate still rejects.
+- [ ] **Step 2: Run** `node --test tests/hosted-roost-rounds.test.js` — Expected: FAIL for all seven.
+- [ ] **Step 3: Implement** `#assertNoSignedAggregate(): void` — throws `RoostAggregationError('this round already has a signed settlement; open a new round')` when `this.aggregate?.signed`. Call it before the clear in each method so the queue is kept.
+- [ ] **Step 4: Run** the new tests, then experiments 72 to 80 and 85 to 94 — Expected: PASS unchanged.
+- [ ] **Step 5: Add a row to the Roost-round table** in `docs/STATE_MACHINE.md` and invariant `R-01` ("one signed settlement per round") to `foundry/invariants.json` with this test as its check. Commit.
+
+### Task 8: Facility transitions are guarded (hole H2)
+
+**Files:**
+- Modify: `src/facilities/rfq-adjudication.js` (`matchAndBindLoan`), and `otc-block-trade.js` / `settlement/far-shard.js` only if their tests fail
+- Test: `tests/facilities-status.test.js`
+
+- [ ] **Step 1: Write failing tests**, table-driven over the facilities: calling the same transition twice is refused the second time — RFQ `matchAndBindLoan` (second call rejects `/not open/`, only one loan exists), OTC match, FAR release; a loan that is `PRIVATE_LIQUIDATION` cannot be margin-checked back to active.
+- [ ] **Step 2: Run** — Expected: the RFQ test FAILS (confirmed by hand on 2026-11-08); report any other failure.
+- [ ] **Step 3: Implement** in `matchAndBindLoan`: `if (rfq.status !== 'OPEN_IN_ROOST') throw new Error('RFQ not open: already matched or closed')`. Fix any other facility the tests expose the same way.
+- [ ] **Step 4: Run** `node --test tests/*.test.js`, `npm run verify:rfq` and `npm run verify:otc` — Expected: PASS.
+- [ ] **Step 5: Commit.**
+
+### Task 9: An expired invoice reads as expired (hole H3)
+
+**Files:**
+- Modify: `src/commerce/x402.js` (new `invoiceStatus(invoiceId: string): 'PAYMENT_REQUIRED'|'PAID'|'EXPIRED'|'UNKNOWN'`; `settleInvoice` uses it)
+- Test: `tests/x402-expiry.test.js`
+
+- [ ] **Step 1: Write failing tests** with `t.mock.method(Date, 'now')`: at issue → `PAYMENT_REQUIRED`; 61 s later → `EXPIRED` without anyone paying; paying after expiry rejects `/expired/`; a paid invoice stays `PAID` after expiry; unknown id → `UNKNOWN`.
+- [ ] **Step 2: Run** — Expected: FAIL, method missing.
+- [ ] **Step 3: Implement** `invoiceStatus`; keep the stored status in step with it.
+- [ ] **Step 4: Run** the test and `npm run verify:api` — Expected: PASS.
+- [ ] **Step 5: Commit.**
+
+### Task 10: The daemon does not silently change mode (hole H4)
+
+**Files:**
+- Modify: `src/api/server.js` (constructor at lines ~22-31, `/health`)
+- Test: `tests/api-mode.test.js`
+
+- [ ] **Step 1: Write failing tests** (env `NEAR_ACCOUNT_ID`, `NEAR_PRIVATE_KEY`, `FLY_MODE` cleared): `new FlyApiDaemon({ mode: 'chain' })` with no credentials **throws** `/chain mode needs/`; `FLY_MODE=chain` the same; no mode given → falls back to `model`, `daemon.modeFallbackReason` is a non-empty string and `GET /health` reports `mode: 'model'`; `mode: 'model'` works with no warning.
+- [ ] **Step 2: Run** — Expected: FAIL.
+- [ ] **Step 3: Implement.** `const asked = mode || process.env.FLY_MODE`; if `asked === 'chain'` and the client cannot be built, rethrow with the reason; if nothing was asked, keep today's fallback but record `modeFallbackReason`, print one `console.warn`, and add `mode` to `/health`.
+- [ ] **Step 4: Run** the test, `npm run verify:api` and `make test` — Expected: PASS.
+- [ ] **Step 5: Commit.**
+
+### Task 11: The JavaScript mirror cannot drift from the contract (hole H5)
+
+**Files:**
+- Test: `tests/nest-mirror.test.js`; Modify `src/contracts/nest.js` only if the test fails
+
+- [ ] **Step 1: Write the test:** read the variants of `enum SyndicateStatus` from `lib.rs` and the status strings used in `nest.js`; assert a fixed map `{ Active: 'ACTIVE', Settled: 'SETTLED', AbortedRefunded: 'ABORTED_REFUNDED' }` covers every contract variant and `nest.js` uses no status outside it. Add a case where a variant is added to a copy of `lib.rs` → the test fails.
+- [ ] **Step 2: Run** — Expected: PASS today (names agree) and FAIL on the injected variant.
+- [ ] **Step 3: Note in `docs/STATE_MACHINE.md`** that `nest.js` is a simulation of the contract and name this test as the drift guard.
+- [ ] **Step 4: Run** `node --test tests/*.test.js` — Expected: all pass.
+- [ ] **Step 5: Commit**, then tick H1 to H5 in `docs/IMPLICIT_STATE_MACHINES.md` and add the claims to `foundry/claims.jsonl`.
+
+## Deferred (own spec, needs a contract change and a redeploy)
+Name the composite states in the contract (a `get_group_phase` view returning `Open | PayoutInFlight | Settled | Refunded | UnfundedStuck`, and a member phase `Listed | Drained | Exited`), so the next audit does not have to infer them.
