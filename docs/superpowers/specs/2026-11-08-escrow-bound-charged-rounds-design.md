@@ -38,6 +38,7 @@ Programs become `async` (they read the chain). `room-service.js` line 164 calls 
 **Why exclude and not cap:** a charged settlement's payout must equal the sum of its charges. Capping a charge after the program clears would break that equality and change who wins. Excluding before the clear keeps every program's own rules intact.
 
 ## 3. What this does not give you
+- **The exit race.** The read is a few blocks old when the settlement lands. A member whose exit timer has run can leave in between, and the contract then rejects the round. This makes that **much rarer, not impossible**. Where no exit can open before the settlement lands, `raceFree` says so. After a rejection the coordinator can `abandon` the signed round and run again (see the plan's amendment).
 - It trusts the RPC providers to answer honestly. The TEE protects the Roost's code, not the node it asks. Two independent providers that must agree, and a recorded block, narrow this; they do not remove it. A light-client proof would, and is out of scope.
 - A coordinator can still choose to start a round late or exclude someone by name via `/exclude`; that stays visible in the output.
 - The contract's check remains the hard bound if any of this is wrong.

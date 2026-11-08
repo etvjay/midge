@@ -73,7 +73,7 @@ export class HostedRoost {
   #intentSecret;
   #settleKey;
 
-  constructor({ provider, maxIntents = 50, requireSignedInputs = false, accountKeyCheck = null, deterministicOrder = false, escrowReader = null } = {}) {
+  constructor({ provider, maxIntents = 50, requireSignedInputs = false, accountKeyCheck = null, deterministicOrder = false, escrowReader = null, clock = Date.now, maxSnapshotAgeMs = 30000, settleMarginBlocks = 30 } = {}) {
     if (!provider) throw new Error('HostedRoost needs an attestation provider');
     if (requireSignedInputs && typeof accountKeyCheck !== 'function') throw new Error('requireSignedInputs needs an accountKeyCheck(accountId, publicKey) that asks the chain');
     this.provider = provider;
@@ -82,6 +82,8 @@ export class HostedRoost {
     // arrival order, so two independent Roosts that see the same inputs sign byte-identical messages.
     this.deterministicOrder = Boolean(deterministicOrder);
     this.accountKeyCheck = accountKeyCheck;
+    this.clock = clock; this.maxSnapshotAgeMs = maxSnapshotAgeMs; this.settleMarginBlocks = settleMarginBlocks;
+    this.abandoned = []; // signed rounds the coordinator gave up on (newest 100), so the second signature is on record
     this.escrowReader = escrowReader; // optional: see bindEscrow(). Without one, charged programs behave exactly as before.
     this.round = null; // { contractId, syndicateId, epoch, roundNonce }: what inputs must be signed for
     this.lastSeq = new Map(); // account -> highest accepted sequence number this round
@@ -186,7 +188,8 @@ export class HostedRoost {
    * Call it after the last input of the round and before a charged `run*`. It fails closed: if the providers cannot be read, are
    * behind, or disagree, it throws and the round does not run (the queue is kept). Without an escrowReader it throws too.
    * @param {{accounts?: string[]}} [opts] accounts that will be charged but may have no queued input (a ballot's roll)
-   * @returns {Promise<{blockHeight:number, blockHash:string, bidders:number}>}
+   * @returns {Promise<{blockHeight:number, blockHash:string, bidders:number, raceFree:boolean}>} raceFree: no member could leave before the
+   *   settlement is likely to land (otherwise a member may still exit in between and make the contract reject the round: much rarer, not impossible)
    */
   async bindEscrow({ accounts = [] } = {}) {
     if (!this.escrowReader) throw new RoostAggregationError('this host has no escrow reader');
@@ -198,8 +201,10 @@ export class HostedRoost {
     const last = this.#lastEscrowHeight.get(key) ?? 0;
     if (out.blockHeight < last) throw new RoostAggregationError(`could not read escrow: this read is from block ${out.blockHeight}, older than the earlier one (${last})`);
     this.#lastEscrowHeight.set(key, out.blockHeight);
-    this.#escrow = { key, blockHeight: out.blockHeight, blockHash: out.blockHash, escrows: out.escrows, covered: new Set(ids) };
-    return { blockHeight: out.blockHeight, blockHash: out.blockHash, bidders: ids.length };
+    // No member can leave before exitsOpenFromBlock; if the settlement is likely to land before then, the read cannot go stale this way.
+    const raceFree = Number.isSafeInteger(out.exitsOpenFromBlock) && out.blockHeight + this.settleMarginBlocks < out.exitsOpenFromBlock;
+    this.#escrow = { key, at: this.clock(), blockHeight: out.blockHeight, blockHash: out.blockHash, raceFree, escrows: out.escrows, covered: new Set(ids) };
+    return { blockHeight: out.blockHeight, blockHash: out.blockHash, bidders: ids.length, raceFree };
   }
 
   /**
@@ -212,16 +217,32 @@ export class HostedRoost {
     const snap = this.#escrow;
     if (!snap || snap.key !== this.#roundKey()) throw new RoostAggregationError('escrow not bound: call bindEscrow() after the last input of the round, then run');
     for (const id of [...this.sealedIntents.map((i) => i.flyerId), ...extraIds]) if (!snap.covered.has(id)) throw new RoostAggregationError(`escrow is out of date (${id} was not read): a new input or account arrived after bindEscrow(); bind again`);
+    if (this.clock() - snap.at > this.maxSnapshotAgeMs) throw new RoostAggregationError(`escrow read is stale (${Math.round((this.clock() - snap.at) / 1000)} s old): bind again`);
     this.#escrow = null;
     const kept = []; const excluded = [];
     for (const it of items) {
       const held = BigInt(snap.escrows[idOf(it)] ?? '0');
       if (held >= BigInt(maxChargeYocto(it))) kept.push(it); else excluded.push(idOf(it));
     }
-    return { kept, excluded, tag: `:escrow:${snap.blockHeight}:${snap.blockHash}`, block: { height: snap.blockHeight, hash: snap.blockHash } };
+    return { kept, excluded, tag: `:escrow:${snap.blockHeight}:${snap.blockHash}`, block: { height: snap.blockHeight, hash: snap.blockHash, raceFree: snap.raceFree } };
   }
 
   #signedRounds = new Set(); // rounds this host has signed (newest 1000); a signed round cannot be re-opened with the same nonce
+
+  /**
+   * The contract can reject a signed settlement (a member left, a cap, a deadline). Nothing on chain changes, so the round's nonce
+   * is the same, and the host would refuse to sign it again. The coordinator can give the signed round up here and run it again.
+   * It is a deliberate act and it is recorded; the contract still lets only one settlement land per nonce.
+   */
+  abandonSignedRound() {
+    const agg = this.aggregate;
+    if (!this.round || !agg?.signed) throw new RoostAggregationError('nothing to abandon: this round has no signed settlement');
+    const record = { orderHash: agg.orderHash, roundNonce: this.round.roundNonce, epoch: this.round.epoch, syndicateId: this.round.syndicateId, at: this.clock() };
+    this.#signedRounds.delete(this.#roundKey());
+    this.aggregate = null; this.#escrow = null;
+    this.abandoned.push(record); if (this.abandoned.length > 100) this.abandoned.shift();
+    return record;
+  }
 
   /** Signing is once per round, not once per aggregate: after a signature, more inputs must not yield a second signed settlement for the same epoch and nonce. */
   #assertNoSignedAggregate() {
@@ -480,13 +501,13 @@ export class HostedRoost {
     const payingRoll = aff.kept;
     if (payingRoll.length === 0) {
       this.sealedIntents = []; this.aggregate = null;
-      const pubNone = { shape: 'ballot', rule, decided: false, winner: null, recipient: null, reason: 'no-eligible-members', quorumMet: false, outsiders: [], unreadable, excludedForEscrow: aff.excluded, executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+      const pubNone = { shape: 'ballot', rule, decided: false, winner: null, recipient: null, reason: 'no-eligible-members', quorumMet: false, outsiders: [], unreadable, excludedForEscrow: aff.excluded, escrowBlock: aff.block, executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
       return { outcome: pubNone, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey };
     }
     const out = clearBallot({ options: ids, roll: payingRoll, ballots, quorumBps, rule });
     this.sealedIntents = [];
     const recipient = out.decided ? options[out.winner] : null;
-    const pub = { shape: 'ballot', rule, decided: out.decided, winner: out.winner, recipient, reason: out.reason, quorumMet: out.quorumMet, outsiders: out.outsiders, unreadable, ...(this.escrowReader ? { excludedForEscrow: aff.excluded } : {}), executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { shape: 'ballot', rule, decided: out.decided, winner: out.winner, recipient, reason: out.reason, quorumMet: out.quorumMet, outsiders: out.outsiders, unreadable, ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (!out.decided) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     const poolMicro = shareMicro * BigInt(payingRoll.length);
     const allocations = [{ recipient, amount: String(poolMicro * YOCTO_PER_MICRO) }];

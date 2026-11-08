@@ -276,8 +276,8 @@
     },
     {
       "id": "R-01",
-      "statement": "A Roost round produces at most one signed settlement: once an aggregate is signed, no run* may replace it until a new round is opened.",
-      "plain": "The host signs once per round, so there are never two valid signed payouts for the same epoch and nonce.",
+      "statement": "A Roost round produces at most one signed settlement: once an aggregate is signed, no run* may replace it and the round cannot be re-opened with the same nonce, unless the coordinator deliberately calls abandonSignedRound (which is recorded in host.abandoned). The contract still lets only one settlement land per nonce.",
+      "plain": "The host signs once per round, unless the coordinator knowingly gives a rejected round up and tries again; that is on record.",
       "kind": "safety",
       "status": "holds",
       "checks": [
@@ -288,6 +288,10 @@
         {
           "type": "node",
           "ref": "tests/hosted-roost-rounds.test.js::running again before anything was signed is still allowed"
+        },
+        {
+          "type": "node",
+          "ref": "tests/hosted-roost-escrow.test.js::abandonSignedRound lets the same round run and sign again"
         }
       ]
     }

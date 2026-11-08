@@ -6,7 +6,8 @@
  *   const reader = createEscrowReader({ rpcUrls: ['https://a.rpc', 'https://b.rpc'], contractId: 'c.near' });
  *   const { blockHeight, blockHash, escrows } = await reader.read('my-group', ['a.near', 'b.near']);
  *
- * Plain words: a "provider" is a server that answers questions about the chain. If any provider fails, is slow, is behind, or
+ * It also reads when members could first leave (`exitsOpenFromBlock`), so a caller can tell when no exit can slip in between this
+ * read and the settlement. Plain words: a "provider" is a server that answers questions about the chain. If any provider fails, is slow, is behind, or
  * disagrees with another, the read throws and the round does not run. It cannot make a provider honest; two independent ones
  * that must agree, and a recorded block anyone can look up later, narrow the trust without removing it.
  */
@@ -64,18 +65,24 @@ export function createEscrowReader({ rpcUrls, contractId, fetchImpl = globalThis
           if (typeof v !== 'string' || !/^\d{1,40}$/.test(v)) throw new Error(`${url} returned a malformed balance for ${account}`);
           return [account, v];
         }));
-        return { url, map: Object.fromEntries(values) };
+        // When could any member leave? The exit timer runs from epoch_start_block for timeout_blocks, and the deadline opens it too.
+        const g = await rpc(url, 'query', { request_type: 'call_function', block_id: header.hash, account_id: contractId, method_name: 'get_syndicate', args_base64: Buffer.from(JSON.stringify({ syndicate_id: syndicateId })).toString('base64') });
+        const group = JSON.parse(Buffer.from(g.result).toString('utf8'));
+        if (group === null) throw new Error(`${url}: the group does not exist`);
+        const start = Number(group.epoch_start_block); const timer = Number(group.timeout_blocks); const deadline = Number(group.release_policy?.settle_deadline_block);
+        if (![start, timer, deadline].every(Number.isSafeInteger)) throw new Error(`${url} returned malformed timing for the group`);
+        return { url, map: Object.fromEntries(values), exits: Math.min(start + timer, deadline) };
       } catch (e) { return { url, error: e.message }; }
     }));
 
     const groups = new Map();
-    for (const r of perUrl) if (!r.error) { const k = JSON.stringify(Object.entries(r.map).sort()); groups.set(k, [...(groups.get(k) || []), r]); }
+    for (const r of perUrl) if (!r.error) { const k = JSON.stringify([Object.entries(r.map).sort(), r.exits]); groups.set(k, [...(groups.get(k) || []), r]); }
     const best = [...groups.values()].sort((a, b) => b.length - a.length)[0];
     if (!best || best.length < need) {
       const errors = perUrl.filter((r) => r.error).map((r) => r.error);
       throw fail(errors.length ? `${perUrl.length - errors.length} of ${perUrl.length} providers answered, ${need} needed: ${errors.join('; ')}` : `the providers disagree (${groups.size} different answers, ${need} must agree)`);
     }
-    return { blockHeight: Number(header.height), blockHash: header.hash, escrows: { ...escrows, ...best[0].map } };
+    return { blockHeight: Number(header.height), blockHash: header.hash, escrows: { ...escrows, ...best[0].map }, exitsOpenFromBlock: best[0].exits };
   }
 
   return { read };

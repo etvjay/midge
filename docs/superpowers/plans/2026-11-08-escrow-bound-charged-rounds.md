@@ -16,6 +16,15 @@ The spec said the programs become `async`. About 30 promoted lab experiments cal
 ## Order
 Run plan 09-1 first (its Task 7 adds a guard at the start of every `run*`; this plan edits the same methods). The escrow snapshot is also dropped when a signed aggregate exists, consistent with that guard.
 
+## Amendment (2026-11-08, approved by the user): the exit race and the stuck round
+Raised by a side agent and confirmed by running it. The reader sees the chain a few blocks in the past, so a member whose exit timer has run can leave between the read and the settlement and the contract rejects the whole round. The check makes that **much rarer, not impossible**; the contract's own check remains the hard limit and no funds are at risk. Worse, plan 09-1's R-01 fix left a round whose signed settlement the contract rejected **stuck**: the nonce does not change on rejection, and the host refused to re-open it. Three tasks, built before Task 4:
+
+- **Task 3b: `abandonSignedRound()`.** `HostedRoost.abandonSignedRound(): { orderHash, roundNonce, epoch, syndicateId, at }` clears the signed mark so the same round can be run again; it records what was abandoned (`host.abandoned`, newest 100). `RoomService.abandon(round)` and `POST /v1/rooms/abandon` (coordinator only) expose it and publish a `round_abandoned` event. R-01 stays: the second signature is now a deliberate, logged act.
+- **Task 3c: fresh reads.** The snapshot carries its age; a run more than `maxSnapshotAgeMs` (default 30000) after `bindEscrow` throws "bind again". `RoomService.run` binds and runs in one call.
+- **Task 3d: say when the race is impossible.** The reader also reads the group's timing at the same block and returns `exitsOpenFromBlock = min(epoch_start_block + timeout_blocks, settle_deadline_block)`. `bindEscrow` reports `raceFree = blockHeight + settleMarginBlocks < exitsOpenFromBlock` (default margin 30 blocks); the outcome's `escrowBlock` carries it. Unknown timing counts as not race-free.
+
+Wording everywhere: "much rarer", never "impossible".
+
 ## Global Constraints
 - The contract and its tests are not modified. No redeploy for this plan. The Phala image is rebuilt once, after this plan, not inside it.
 - Default `minAgree` = all configured URLs; a block older than `maxAgeMs` = 60000 is rejected; `timeoutMs` = 8000.

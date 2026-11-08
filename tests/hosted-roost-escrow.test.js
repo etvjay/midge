@@ -8,11 +8,11 @@ const SHARE = '10000000000000000000000'; // 0.01 NEAR in yocto: VOTE_PARAMS.shar
 const BIG = '50000000000000000000000';
 let height = 1000;
 /** A stub reader: balances per account, a rising block height by default. */
-function stub(balances, { fixedHeight = null, calls = [] } = {}) {
-  return { read: async (syndicateId, ids) => { const h = fixedHeight ?? ++height; calls.push({ syndicateId, ids: [...ids] }); return { blockHeight: h, blockHash: `HASH${h}`, escrows: Object.fromEntries(ids.map((i) => [i, balances[i] ?? '0'])) }; } };
+function stub(balances, { fixedHeight = null, calls = [], exitsOpenFromBlock = undefined } = {}) {
+  return { read: async (syndicateId, ids) => { const h = fixedHeight ?? ++height; calls.push({ syndicateId, ids: [...ids] }); return { blockHeight: h, blockHash: `HASH${h}`, escrows: Object.fromEntries(ids.map((i) => [i, balances[i] ?? '0'])), ...(exitsOpenFromBlock === undefined ? {} : { exitsOpenFromBlock }) }; } };
 }
-const host = (reader) => new HostedRoost({ provider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader: reader });
-async function filled(reader) { const h = host(reader); h.openRound(ROUND); for (const i of voteInputs(h)) await h.submitSignedIntent(i); return h; }
+const host = (reader, extra = {}) => new HostedRoost({ provider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader: reader, ...extra });
+async function filled(reader, extra = {}) { const h = host(reader, extra); h.openRound(ROUND); for (const i of voteInputs(h)) await h.submitSignedIntent(i); return h; }
 const everyone = Object.fromEntries(ROLL.map((m) => [m, BIG]));
 
 test('a roll member with no escrow is left out, named, and the rest settle', async () => {
@@ -193,3 +193,72 @@ for (const [name, p] of Object.entries(BIDDER)) {
     assert.ok(out.outcome.excludedForEscrow.length >= 1);
   });
 }
+
+
+// ---- Amendment, Task 3d: say when the exit race cannot happen ----
+test('raceFree is true only when no exit can open before the settlement is likely to land', async () => {
+  const mk = async (exits) => { const h = await filled(stub(everyone, { fixedHeight: 1000, exitsOpenFromBlock: exits })); const b = await h.bindEscrow({ accounts: ROLL }); return { b, out: h.runBallot(VOTE_PARAMS) }; };
+  const far = await mk(1100); assert.equal(far.b.raceFree, true); assert.equal(far.out.outcome.escrowBlock.raceFree, true);
+  const near = await mk(1020); assert.equal(near.b.raceFree, false); assert.equal(near.out.outcome.escrowBlock.raceFree, false);
+  const edge = await mk(1030); assert.equal(edge.b.raceFree, false, 'the margin is strict: height + 30 must be below the first exit block');
+  const unknown = await mk(undefined); assert.equal(unknown.b.raceFree, false, 'unknown timing is never race-free');
+});
+
+// ---- Amendment, Task 3c: a read goes stale ----
+test('a run more than maxSnapshotAgeMs after bindEscrow throws and keeps the queue; just inside is fine', async () => {
+  let now = 1_000_000;
+  const h = await filled(stub(everyone), { clock: () => now, maxSnapshotAgeMs: 30000 });
+  await h.bindEscrow({ accounts: ROLL });
+  now += 29_900;
+  const ok = await filled(stub(everyone), { clock: () => now, maxSnapshotAgeMs: 30000 });
+  await ok.bindEscrow({ accounts: ROLL }); now += 29_900;
+  assert.doesNotThrow(() => ok.runBallot(VOTE_PARAMS));
+  now += 31_000;
+  const q = h.sealedIntents.length;
+  assert.throws(() => h.runBallot(VOTE_PARAMS), /stale|bind again/i);
+  assert.equal(h.sealedIntents.length, q);
+});
+
+// ---- Amendment, Task 3b: a rejected settlement must not strand the round ----
+async function signedRound(reader) {
+  const h = await filled(reader); await h.bindEscrow({ accounts: ROLL });
+  const out = h.runBallot(VOTE_PARAMS); sign(h, out); return { h, out };
+}
+test('abandonSignedRound lets the same round run and sign again, and records what was abandoned', async () => {
+  const { h, out } = await signedRound(stub(everyone));
+  assert.throws(() => h.openRound(ROUND), /already signed/);
+  const rec = h.abandonSignedRound();
+  assert.equal(rec.orderHash, out.orderHash);
+  assert.equal(rec.roundNonce, ROUND.roundNonce);
+  assert.equal(h.abandoned.length, 1);
+  assert.doesNotThrow(() => h.openRound(ROUND));
+  for (const i of voteInputs(h)) await h.submitSignedIntent(i);
+  await h.bindEscrow({ accounts: ROLL });
+  const second = h.runBallot(VOTE_PARAMS);
+  assert.doesNotThrow(() => sign(h, second));
+});
+test('abandonSignedRound refuses when there is nothing signed to abandon', async () => {
+  const h = await filled(stub(everyone));
+  assert.throws(() => h.abandonSignedRound(), /nothing to abandon/);
+  h.openRound(ROUND);
+  assert.throws(() => h.abandonSignedRound(), /nothing to abandon/);
+  assert.equal(h.abandoned.length, 0);
+});
+test('abandoning also drops the escrow read, so the next run must read again', async () => {
+  const { h } = await signedRound(stub(everyone));
+  h.abandonSignedRound();
+  assert.throws(() => h.runBallot(VOTE_PARAMS), /no aggregate|bind|queue|empty/i);
+});
+test('the abandoned list keeps only the newest 100', async () => {
+  const p = new HostedRoost({ provider, deterministicOrder: true });
+  for (let i = 0; i < 105; i += 1) {
+    const r = { ...ROUND, roundNonce: i.toString(16).padStart(64, '0') };
+    p.openRound(r);
+    p.submitSealedIntent({ flyerId: 'a.near', cipherTextHex: sealToModel(JSON.stringify({ amount: '0.01' }), p.intentPublicKey) });
+    const a = p.aggregateAndClear();
+    p.signSettlement({ ...r, allocations: [{ recipient: 'r.near', amount: '1000' }], orderHash: a.orderHash });
+    p.abandonSignedRound();
+  }
+  assert.equal(p.abandoned.length, 100);
+  assert.equal(p.abandoned[99].roundNonce, (104).toString(16).padStart(64, '0'), 'newest last');
+});

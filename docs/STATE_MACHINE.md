@@ -64,7 +64,7 @@ The host (`HostedRoost`) holds one round at a time in four fields: `round` (what
 
 `no round` → **open** (`openRound`; queue empty) → inputs queue → **aggregate computed** (a `run*`; queue cleared; `signed: false`) → **signed** (`signSettlement`; `signed: true`) → the next `openRound` starts over.
 
-Not allowed: signing the same aggregate twice; running again after a signature in the same round (`R-01`, enforced by every `run*` since 2026-11-08); accepting an input signed for another round.
+Not allowed: signing the same aggregate twice; running again after a signature in the same round (`R-01`, enforced by every `run*` since 2026-11-08) except after a deliberate, recorded `abandonSignedRound`; accepting an input signed for another round.
 
 | Method | Guard | Effect | Tests |
 |---|---|---|---|
@@ -73,6 +73,7 @@ Not allowed: signing the same aggregate twice; running again after a signature i
 | `submitSealedIntent` | host not in signed-only mode; sealed hex valid; one bid per id; queue not full | queues the input | `lab/experiments/73-pool-program.js` |
 | `excludeMembers` | none | removes the named members' inputs from the queue | `lab/experiments/94-ongoing-groups.js` |
 | `bindEscrow` | host has an escrow reader; a round is open; the read agrees across providers, is recent, and is not older than an earlier read of this round | reads, at one final block, what each queued bidder and each extra paying account holds; stores one snapshot (used up by the next charged `run*`) | `tests/hosted-roost-escrow.test.js`, `tests/escrow-reader.test.js` |
+| `abandonSignedRound` | the round has a signed settlement | gives up the signed round so the same nonce can run and be signed again (the contract rejected the first one, so nothing changed on chain); records the abandoned order hash in `host.abandoned` (newest 100); drops the escrow read | `tests/hosted-roost-escrow.test.js` |
 | `aggregateAndClear` | no signed aggregate yet in this round (`R-01`); queue not empty; at least one readable bid | adds up every readable bid exactly; unreadable bids are named by account and dropped; clears the queue; sets `aggregate` | `tests/hosted-roost-rounds.test.js` (R-01) |
 | `runAuction` | no signed aggregate yet in this round (`R-01`); readable bids; valid reserve | clears the queue; sets `aggregate` | `lab/experiments/72-auction-programs.js` |
 | `runPool` | no signed aggregate yet in this round (`R-01`); readable contributions; min and cap valid | as above | `lab/experiments/73-pool-program.js` |
