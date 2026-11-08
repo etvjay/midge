@@ -17,7 +17,7 @@ Provides the on-chain canonical state anchor for syndicate lifecycles, deposit e
 
 ## Invariants
 - `I-07-A`: `hatch_out()` execution before timelock expiration must panic and reject fund unlocking.
-- `I-07-B`: Only registered member accounts may deposit into syndicate escrow.
+- `I-07-B`: ~~Only registered member accounts may deposit into syndicate escrow.~~ **Superseded** (2026-11-08) by `C-09` in `foundry/invariants.json`: the contract has no member registry; any account may deposit if it names the current policy hash. See `docs/STATE_MACHINE.md`.
 - `I-07-C`: Contract must compile cleanly to WebAssembly without exceeding NEAR contract size limits (238 KB achieved vs 4 MB limit).
 
 ## Deliverables

@@ -1,6 +1,256 @@
 {
   "note": "Contract invariants are C-NN; the Roost round has R-NN; phase documents define their own I-NN-X. A bare I-NN means the whole phase family listed under families.",
-  "invariants": [],
+  "invariants": [
+    {
+      "id": "C-01",
+      "statement": "While no settlement is in flight, the sum of the members' escrows equals the group's total escrow.",
+      "plain": "The books balance: the group's total is exactly what its members hold.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "prop_syndicate_escrow_and_flyer_invariants"
+        },
+        {
+          "type": "rust",
+          "ref": "after_recovery_members_can_exit_and_the_books_balance"
+        },
+        {
+          "type": "rust",
+          "ref": "charged_settlement_charges_each_member_their_own_amount"
+        }
+      ]
+    },
+    {
+      "id": "C-02",
+      "statement": "Within a release window, the total released never exceeds the cap times the window's base escrow.",
+      "plain": "However often a room signs, it can only drain a fixed share per window.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "a_third_settlement_that_takes_the_window_over_the_cap_is_refused"
+        },
+        {
+          "type": "rust",
+          "ref": "the_allowance_does_not_return_inside_the_same_window"
+        },
+        {
+          "type": "rust",
+          "ref": "a_deposit_that_has_left_does_not_raise_the_release_cap"
+        }
+      ]
+    },
+    {
+      "id": "C-03",
+      "statement": "A settlement pays only recipients on the group's allowed list.",
+      "plain": "Money can only go where the public rules say.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "test_y1_settlement_to_recipient_outside_allowlist_fails"
+        },
+        {
+          "type": "rust",
+          "ref": "test_settle_batch_rejects_altered_payout_recipient"
+        }
+      ]
+    },
+    {
+      "id": "C-04",
+      "statement": "A settlement needs a valid signature over the exact message: contract, group, epoch, nonce, allocation hash, (charges hash), order hash. A signature for one kind of settlement cannot authorise another.",
+      "plain": "A signature means exactly one thing.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "test_bad_signature_fails"
+        },
+        {
+          "type": "rust",
+          "ref": "test_signature_cross_contract_replay_fails"
+        },
+        {
+          "type": "rust",
+          "ref": "a_plain_settlement_signature_cannot_authorise_a_charged_settlement"
+        },
+        {
+          "type": "rust",
+          "ref": "a_charged_settlement_signature_cannot_authorise_a_plain_settlement"
+        },
+        {
+          "type": "rust",
+          "ref": "order_hash_may_not_contain_the_message_separator"
+        }
+      ]
+    },
+    {
+      "id": "C-05",
+      "statement": "A round nonce works once: after a settlement finishes the nonce changes, and the old signature is dead.",
+      "plain": "A signed payout cannot be replayed.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "test_wrong_nonce_fails"
+        },
+        {
+          "type": "rust",
+          "ref": "test_partial_flash_settlement_cannot_be_replayed"
+        },
+        {
+          "type": "rust",
+          "ref": "test_partial_flash_settlement_allows_a_fresh_signature_on_the_new_nonce"
+        }
+      ]
+    },
+    {
+      "id": "C-06",
+      "statement": "At most one settlement is in flight per group, and a pending record exists exactly while one is.",
+      "plain": "Only one payout at a time, and the contract always knows what it still owes.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "exit_is_refused_while_a_settlement_is_in_flight_so_a_late_signature_cannot_race_a_refund"
+        },
+        {
+          "type": "rust",
+          "ref": "a_finished_settlement_leaves_no_pending_record"
+        },
+        {
+          "type": "rust",
+          "ref": "a_settlement_in_flight_records_when_it_started"
+        },
+        {
+          "type": "rust",
+          "ref": "test_y1_hatch_out_blocked_while_settling"
+        }
+      ]
+    },
+    {
+      "id": "C-07",
+      "statement": "Once the timer or deadline has passed and nothing is in flight, a member can take their own escrow out, whatever the release policy says.",
+      "plain": "Every member has a solo exit.",
+      "kind": "liveness",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "test_hatch_out_after_timeout_refunds_only_caller"
+        },
+        {
+          "type": "rust",
+          "ref": "exit_is_not_limited_by_the_release_policy_deadline_or_recipient_list"
+        }
+      ]
+    },
+    {
+      "id": "C-08",
+      "statement": "An exit lowers the group's total and the release-cap base together.",
+      "plain": "Money that has left stops counting toward what may be released.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "a_deposit_that_has_left_does_not_raise_the_release_cap"
+        }
+      ]
+    },
+    {
+      "id": "C-09",
+      "statement": "The policy hash a depositor names covers the recipients, the cap, the deadline and the exit timer; a deposit that misstates any of them is refused.",
+      "plain": "You can only deposit into rules you agreed to, including how long the exit takes.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "a_new_groups_hash_covers_the_exit_timer"
+        },
+        {
+          "type": "rust",
+          "ref": "a_deposit_with_a_hash_that_omits_the_timer_is_refused"
+        },
+        {
+          "type": "rust",
+          "ref": "two_groups_that_differ_only_in_the_timer_have_different_hashes"
+        }
+      ]
+    },
+    {
+      "id": "C-10",
+      "statement": "A member is listed once, and the active count never exceeds 50.",
+      "plain": "Nobody is counted twice, so quorum and capacity mean what they say.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "a_member_drained_to_zero_who_deposits_again_is_not_listed_twice"
+        },
+        {
+          "type": "rust",
+          "ref": "test_repeat_deposit_withdraw_does_not_inflate_flyer_cap"
+        },
+        {
+          "type": "rust",
+          "ref": "test_max_flyers_cap_enforced"
+        }
+      ]
+    },
+    {
+      "id": "C-11",
+      "statement": "In a charged settlement each charge is at most that member's escrow and the charges sum to exactly the payout.",
+      "plain": "Nobody pays more than they hold, and what is paid out is what was charged.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "charged_settlement_rejects_a_charge_above_the_members_deposit"
+        },
+        {
+          "type": "rust",
+          "ref": "charged_settlement_rejects_charges_that_do_not_sum_to_the_payout"
+        }
+      ]
+    },
+    {
+      "id": "C-12",
+      "statement": "A group's status only moves forward: Active to Settled or AbortedRefunded; those two stay.",
+      "plain": "A finished group cannot be reopened.",
+      "kind": "safety",
+      "status": "holds",
+      "checks": [
+        {
+          "type": "rust",
+          "ref": "test_hatch_out_after_settled_fails"
+        },
+        {
+          "type": "rust",
+          "ref": "test_prune_refuses_an_active_syndicate"
+        }
+      ]
+    },
+    {
+      "id": "I-07-B",
+      "statement": "Only registered member accounts may deposit into syndicate escrow.",
+      "plain": "Old rule from phase 07. The contract has no member registry: any account may deposit if it names the current policy hash.",
+      "kind": "safety",
+      "status": "superseded",
+      "supersededBy": "C-09",
+      "checks": []
+    }
+  ],
   "families": {
     "I-01": [
       "I-01-A",
@@ -34,8 +284,19 @@
     ],
     "I-07": [
       "I-07-A",
-      "I-07-B",
-      "I-07-C"
+      "I-07-C",
+      "C-01",
+      "C-02",
+      "C-03",
+      "C-04",
+      "C-05",
+      "C-06",
+      "C-07",
+      "C-08",
+      "C-09",
+      "C-10",
+      "C-11",
+      "C-12"
     ],
     "I-08": [
       "I-08-A",
