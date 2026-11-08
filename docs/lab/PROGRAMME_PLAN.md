@@ -316,7 +316,7 @@ Run `20261108T131539Z-a3bd`, one run, 50 events, log verified, promoted to `docs
 
 **Still not shown:** recovery when the providers come back; a slow (rather than absent) provider on hardware, which is the timeout path; and that the real compose, not the fixture, was run through an outage.
 
-## Nonce-checked follow-up and the phase view, live: predictions, written 2026-11-09 before the experiment exists or the contract is redeployed
+## Nonce-checked follow-up and the phase view, live: predictions, written 2026-11-08 before the experiment exists or the contract is redeployed
 
 **What it is, in plain words.** The contract's follow-up step after a payout now names the round it belongs to and is ignored unless that is the settlement in flight (GAP-028), and a read-only view says which phase a group is in. Unit tests show this. This checks it on the real contract after the redeploy.
 
@@ -329,16 +329,16 @@ Run `20261108T131539Z-a3bd`, one run, 50 events, log verified, promoted to `docs
 
 **Not tested live, and said so:** the late follow-up itself (a follow-up of an earlier settlement arriving while a newer one is in flight) cannot be produced on a real chain on demand; it is shown by the unit tests only. A settlement that was in flight at the moment of the upgrade (the legacy path) is also unit-tested only. **Weakness I expect to remain:** one operator controls every account, and a pass shows the new path works, not that the old defect was reachable on testnet.
 
-**Amendment to prediction 4, written 2026-11-09 before any run and before the deploy (the text above is left as it was written).** An offline check shows this host's order hash includes the round, so two rounds cannot produce byte-identical settlements; the exact case GAP-028 could not tell apart cannot be created live by this host. Prediction 4 becomes: **two consecutive settlements on one group both complete, and each follow-up names its own signed round nonce (the two nonces differ)**. The identical-payload case stays covered by the unit tests only, and this is said in the results.
+**Amendment to prediction 4, written 2026-11-08 before any run and before the deploy (the text above is left as it was written).** An offline check shows this host's order hash includes the round, so two rounds cannot produce byte-identical settlements; the exact case GAP-028 could not tell apart cannot be created live by this host. Prediction 4 becomes: **two consecutive settlements on one group both complete, and each follow-up names its own signed round nonce (the two nonces differ)**. The identical-payload case stays covered by the unit tests only, and this is said in the results.
 
-**First run of E-NONCE-CALLBACK-LIVE-01 (run `20261108T153041Z-4486`, FAIL, kept as evidence), written 2026-11-09.** Predictions 1, 2, 3 and 5 held. Prediction 4 failed on two assertions, and the cause was **my experiment, not the contract**: I deposited 0.06 in total and paid 0.03 in each of two settlements, so the second settlement paid out the whole group. The contract correctly marked it Settled and did not rotate the nonce (a final settlement has no next round), which the unit tests also show. The experiment is fixed to deposit 0.09 so the group is still Open after both settlements, and is re-run as a new run; the prediction itself is unchanged.
+**First run of E-NONCE-CALLBACK-LIVE-01 (run `20261108T153041Z-4486`, FAIL, kept as evidence), written 2026-11-08.** Predictions 1, 2, 3 and 5 held. Prediction 4 failed on two assertions, and the cause was **my experiment, not the contract**: I deposited 0.06 in total and paid 0.03 in each of two settlements, so the second settlement paid out the whole group. The contract correctly marked it Settled and did not rotate the nonce (a final settlement has no next round), which the unit tests also show. The experiment is fixed to deposit 0.09 so the group is still Open after both settlements, and is re-run as a new run; the prediction itself is unchanged.
 
 ### Results: nonce-checked follow-up and phase view, live (written after the runs; the predictions above were not edited)
 Run `20261108T153206Z-a0f0`, PASS, 50 events, log verified, promoted (`docs/lab-runs/20261108T153206Z-a0f0`), after the first run `20261108T153041Z-4486` failed on my own funding error (above). **All five predictions held in the second run.** The chain's code hash was the last recorded deployment (`FMVXMpB3…`), still 15 groups; the phase view agreed with every group and gave null for an unknown id; a group read Unfunded before any deposit and Open after; each of two real settlements was followed by `on_settlement_payout_for_round` carrying the round nonce that was signed (two different nonces), the pending record was gone afterwards and the phase was Open again; the teardown left no account and no group behind (15 groups).
 
 **Not shown live, as stated beforehand:** the late follow-up itself, a settlement in flight at the moment of the upgrade, and byte-identical settlements. Those are unit-tested only. A separate finding while checking the README: the transaction recorded as the "wrong nonce replay" proof was refused because the group was already settled, not for a nonce mismatch; the real live nonce evidence is `E-ONGOING-01`. The labels were corrected.
 
-## Removing a never-funded group, live: predictions, written 2026-11-09 before the experiment exists or the contract is redeployed
+## Removing a never-funded group, live: predictions, written 2026-11-08 before the experiment exists or the contract is redeployed
 
 **What it is, in plain words.** A group that someone hatched and nobody ever funded has no member, so it has no exit and could not be removed; it sat in the contract's storage for ever. The new rule lets its creator remove it at once, and anyone remove it after about seven days (GAP-030). Unit tests show this. This checks it on the real contract after the redeploy.
 
@@ -352,7 +352,7 @@ Run `20261108T153206Z-a0f0`, PASS, 50 events, log verified, promoted (`docs/lab-
 
 **Not tested live, and said so:** the path after the waiting period (anyone removes it), because it needs about seven days of blocks and cannot be made to pass faster on a real chain; it is shown by the unit tests only. **Weakness I expect to remain:** one operator controls every account.
 
-## The measurement pin against the real NEAR AI host: predictions, written 2026-11-09 before the experiment exists or runs
+## The measurement pin against the real NEAR AI host: predictions, written 2026-11-08 before the experiment exists or runs
 
 **What it is, in plain words.** A pin makes a caller accept only a model host whose boot measurements are ones the owner listed. The tests show this with a fake host. This checks it against the real NEAR AI host, using the recorded baseline (`docs/canonical/model-measurements.json`). It needs no API key and spends nothing.
 

@@ -5,7 +5,7 @@
 Written 2026-11-08, replacing the 2026-11-04 draft. It keeps that draft's argument and structure and corrects what the repository has since shown to be wrong or unprovable. Every claim cites a claim id (`foundry/claims.jsonl`), a gap (`foundry/gaps.jsonl`), a promoted lab run (`docs/lab-runs/`) or a file. `tests/whitepaper-true.test.js` fails if a cited id, run or path does not exist, if the live contract hash named here is not the last one recorded in `docs/canonical/deployments.json`, or if a statement the repository has contradicted comes back. That test cannot prove a sentence true; it stops the document drifting silently. Where a passage describes a design that is not built, it says **Design**.
 
 **Reference deployment:** NEAR testnet contract [`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet).
-**Live code hash:** `854fzUj2TxAmdmK6UtmbXBqGZvc2BgtfRdgUJXMBHGes` (deployed 2026-11-09). Earlier ones are superseded: `FMVXMpB3DmvYjeGojp84sKXDD9dkeDgzCoQWgbYupQF3` (2026-11-09, the round-naming follow-up) and `AFtZmiNSGMZjHsh12s9PT3hbyGRkAdUwtniXdVNnYJaL`, is superseded (2026-11-08, the security-audit fixes). Earlier code hashes, each with the defect it carried, are listed in `docs/canonical/deployments.json`; evidence recorded under an earlier hash cites that hash.
+**Live code hash:** `854fzUj2TxAmdmK6UtmbXBqGZvc2BgtfRdgUJXMBHGes` (deployed 2026-11-08). Earlier ones are superseded: `FMVXMpB3DmvYjeGojp84sKXDD9dkeDgzCoQWgbYupQF3` (2026-11-08, the round-naming follow-up) and `AFtZmiNSGMZjHsh12s9PT3hbyGRkAdUwtniXdVNnYJaL`, is superseded (2026-11-08, the security-audit fixes). Earlier code hashes, each with the defect it carried, are listed in `docs/canonical/deployments.json`; evidence recorded under an earlier hash cites that hash.
 **Scope:** a hackathon entry on testnet. Nothing here has run on mainnet.
 
 ---
@@ -329,7 +329,7 @@ The residual risks, listed rather than hidden:
 - **A creator who is also the operator.** A group's creator chooses the room key and the payout recipient. If a creator sets their own wallet as the recipient and their own key as the room key, they can sign a payout to themselves. Members must inspect both before depositing. Midge records them on-chain; it cannot judge them.
 - **Hardware.** Published attacks on TDX exist, and a room running inside it inherits them. The design limits what a break can do to one bounded settlement per window, not to the whole escrow.
 - **Public deposits and refunds.** The funding accounts, the amounts deposited and the timing of payouts are public on NEAR. Only the deliberation and the bids are private.
-- **An unfunded group** (hatched, never deposited into) has no member and so no exit. Its creator can remove it at once, and anyone can after about seven days (GAP-030, deployed 2026-11-09 and checked live by `E-UNFUNDED-PRUNE-LIVE-01`; the path after the waiting period is unit-tested only).
+- **An unfunded group** (hatched, never deposited into) has no member and so no exit. Its creator can remove it at once, and anyone can after about seven days (GAP-030, deployed 2026-11-08 and checked live by `E-UNFUNDED-PRUNE-LIVE-01`; the path after the waiting period is unit-tested only).
 - **A callback whose payload is identical to another's** can be matched to the wrong record; this was accepted and is recorded for the next contract change.
 - **Providers.** Escrow-bound rounds trust two RPC providers to agree and to be honest.
 

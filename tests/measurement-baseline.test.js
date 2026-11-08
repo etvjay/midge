@@ -29,12 +29,12 @@ test('it records which model, when it was read, how many times, and that it is o
 
 test('a baseline that is not an object of pins, or has a bad value, is refused', () => {
   assert.throws(() => loadMeasurementBaseline(tmp('not json')), /baseline/i);
-  assert.throws(() => loadMeasurementBaseline(tmp({ model: 'm', observedAt: '2026-11-09', runs: 3, note: 'observed; not verified', measurements: { mrtd: ['zz'] } })), /baseline/i);
-  assert.throws(() => loadMeasurementBaseline(tmp({ model: 'm', observedAt: '2026-11-09', runs: 3, note: 'observed; not verified', measurements: { nonsense: [hex48(1)] } })), /baseline/i);
+  assert.throws(() => loadMeasurementBaseline(tmp({ model: 'm', observedAt: '2026-11-08', runs: 3, note: 'observed; not verified', measurements: { mrtd: ['zz'] } })), /baseline/i);
+  assert.throws(() => loadMeasurementBaseline(tmp({ model: 'm', observedAt: '2026-11-08', runs: 3, note: 'observed; not verified', measurements: { nonsense: [hex48(1)] } })), /baseline/i);
 });
 
 test('a baseline that does not say it is only observed is refused', () => {
-  assert.throws(() => loadMeasurementBaseline(tmp({ model: 'm', observedAt: '2026-11-09', runs: 3, note: 'trusted', measurements: { mrtd: [hex48(1)] } })), /observed|note/i);
+  assert.throws(() => loadMeasurementBaseline(tmp({ model: 'm', observedAt: '2026-11-08', runs: 3, note: 'trusted', measurements: { mrtd: [hex48(1)] } })), /observed|note/i);
 });
 
 test('the live model check pins to the baseline unless told not to', () => {
