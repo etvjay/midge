@@ -42,5 +42,7 @@ for (const [i, r] of records.entries()) {
   });
   for (const c of rep.checks) { console.log(`  ${c.ok ? '✓' : '✗'} ${c.name}`); if (!c.ok) bad += 1; }
 }
-console.log(bad ? `\n${bad} check(s) FAILED: do not trust this record.` : `\nALL CHECKS PASSED for ${records.length} record(s). The allocations paid on chain are the attested model's answer.`);
+console.log(bad ? `\n${bad} check(s) FAILED: do not trust this record.`
+  : fresh ? `\nALL CHECKS PASSED for ${records.length} record(s). The allocations paid on chain are the answer of the model key a fresh attestation just vouched for.`
+  : `\nThe record is internally consistent (${records.length} record(s)), but WITHOUT --fresh nothing ties its model key to a real attestation: a producer could have signed it with a key of their own. Run again with --fresh to check the key.`);
 process.exit(bad ? 1 : 0);

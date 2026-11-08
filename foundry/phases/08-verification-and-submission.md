@@ -36,3 +36,6 @@ Guarantees that both automated AI evaluators (Claude Code, Cursor, Codex) and hu
 
 ## Exit gate
 Phase is PASS when all 8 verification checks pass, Rust contract unit tests pass, WASM builds, and `check-foundry` reports 0 violations.
+
+## Follow-up
+`I-08-C` is stated but not yet enforced by a check, and the judge path assumes a machine that already has its tools. Both are scheduled in `09-reproducibility-and-prebuilt-environment.md`.
