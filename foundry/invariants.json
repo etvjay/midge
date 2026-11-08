@@ -277,7 +277,7 @@
     {
       "id": "R-01",
       "statement": "A Roost round produces at most one signed settlement: once an aggregate is signed, no run* may replace it and the round cannot be re-opened with the same nonce, unless the coordinator deliberately calls abandonSignedRound (which is recorded in host.abandoned). The contract still lets only one settlement land per nonce.",
-      "plain": "The host signs once per round, unless the coordinator knowingly gives a rejected round up and tries again; that is on record.",
+      "plain": "The host signs once per round, unless the coordinator knowingly gives a rejected round up and tries again. That is recorded (in memory), but the abandoned signature stays valid on chain, so it is a record and not a revocation.",
       "kind": "safety",
       "status": "holds",
       "checks": [

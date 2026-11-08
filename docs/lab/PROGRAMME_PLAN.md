@@ -267,3 +267,11 @@ Run `20261108T081854Z-d13c`, 3 repeats of each experiment, log verified (254 eve
 **One of my own assertions was wrong, not a prediction:** the first offline run failed because I had asserted the second settlement must differ from the first, which the committed prediction did not say; with the deterministic test mode the same inputs at the same block give the identical settlement, which is harmless. I changed the experiment to re-submit a changed bid.
 
 **What this does not show.** The race itself, a provider that lies, or the hosted Roost (the image is not rebuilt). It trusts the providers.
+
+
+### Results, second run (after a fresh review of the branch; the predictions above were still not edited)
+Run `20261108T103619Z-433a`, 3 repeats of each experiment, log verified (260 events), promoted to `docs/lab-runs/20261108T103619Z-433a`. **All predictions held again**, now against the reader as corrected by the review. It supersedes `20261108T081854Z-d13c` as the evidence for this feature.
+
+What changed between the two runs, openly: (1) every provider now vouches for the block by hash and every reply must come from it, which the live run confirmed against `test.rpc.fastnear.com` and `rpc.testnet.near.org`; (2) **`raceFree` was tightened** (prediction 3 and 4 of the live experiment said height + 30; the definition now also counts the read's age and the 30 s a read may be used, so it is stricter and the experiment's numbers were updated, not the prediction text); (3) auction and cross worst cases were corrected (an exact-boundary test per program now exists); (4) the offline experiment's stub providers had to be updated for the stricter reader and one assertion of mine was arithmetic-wrong (an exit at 4190 where I meant 4110). The live prediction text says a "10-block" exit timer; the experiment uses 12 blocks. Neither matters to the result: the timer ran out long before the read.
+
+**Still not shown.** The race itself, providers that lie, a two-room settlement run live, and the hosted Roost (the image is not rebuilt).
