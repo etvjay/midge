@@ -51,7 +51,7 @@ export default [
         const total = results.reduce((a, m) => a + Number(m[2]), 0); const failed = results.reduce((a, m) => a + Number(m[3]), 0);
         s.assert('no Rust test failed', failed === 0, { actual: failed });
         // A pinned count on purpose: it catches tests being deleted. Raised 53 -> 66 on 2026-11-07 for the pro-rata overflow fix (GAP-022), the charged settlement and the cross-language hash vector.
-        s.assert('the expected number of Rust tests ran (129: 112 unit, 6 integration, 5 invariant, 6 state machine)', total === 129, { expected: 129, actual: total }); // raised 66 -> 79 -> 82 -> 92 -> 106 -> 118 on 2026-11-07 (two-room agreement, the exit-rule tests, GAP-008) -> 129 on 2026-11-08: audit-fix tests (+5 unit) and tests/state_machine_tests.rs (+6) recovery, GAP-024 release window, then GAP-025 timer consent
+        s.assert('the expected number of Rust tests ran (140: 123 unit, 6 integration, 5 invariant, 6 state machine)', total === 140, { expected: 140, actual: total }); // raised 129 -> 140 for the nonce-checked follow-up (GAP-028) and the phase view; // raised 66 -> 79 -> 82 -> 92 -> 106 -> 118 on 2026-11-07 (two-room agreement, the exit-rule tests, GAP-008) -> 129 on 2026-11-08: audit-fix tests (+5 unit) and tests/state_machine_tests.rs (+6) recovery, GAP-024 release window, then GAP-025 timer consent
       });
     },
   },

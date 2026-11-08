@@ -51,7 +51,7 @@ export default {
       const burnt = Number(BigInt(cb.outcome.gas_burnt)) / 1e12;
       const afterPending = await chain.view('get_pending_settlement', { syndicate_id: id }).catch(() => 'n/a');
       // the gas actually allotted to the follow-up step, read from the settlement's own receipts
-      const allotted = (() => { for (const r of status?.receipts || []) for (const act of r.receipt?.Action?.actions || []) if (act.FunctionCall?.method_name === 'on_settlement_payout') return Number(BigInt(act.FunctionCall.gas)) / 1e12; return null; })();
+      const allotted = (() => { for (const r of status?.receipts || []) for (const act of r.receipt?.Action?.actions || []) if (['on_settlement_payout', 'on_settlement_payout_for_round'].includes(act.FunctionCall?.method_name)) return Number(BigInt(act.FunctionCall.gas)) / 1e12; return null; })();
       s.assert('the allotted gas for the follow-up step could be read from the receipts', allotted !== null);
       s.assert('the follow-up step burnt less than it was allotted (it did not run out)', allotted !== null && burnt < allotted, { burnt, allotted });
       if (afterPending !== 'n/a') {

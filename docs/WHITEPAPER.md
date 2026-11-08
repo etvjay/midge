@@ -151,7 +151,7 @@ Once `min(epoch_start_block + exit timer, settle_deadline_block)` has passed and
 
 The full function-by-function tables, with every guard and the test that covers it, are in `docs/STATE_MACHINE.md`; `make check` fails if the document and the source drift apart. The twelve contract invariants are in `foundry/invariants.json`; the survey of states that were never named is in `docs/IMPLICIT_STATE_MACHINES.md`.
 
-**What was checked.** 129 Rust tests (unit, integration, invariant, state-machine) pass under `E-RUST-CONTRACT`. `scripts/verify-onchain.js` checks that the chain's code hash matches the record. A source-only security audit of the contract and the room produced fifteen leads, tracked as GAP-026 to GAP-043. The contract fixes were deployed on 2026-11-08; GAP-026 and GAP-030 were re-checked live and the rest are covered by unit tests.
+**What was checked.** 140 Rust tests (unit, integration, invariant, state-machine) pass under `E-RUST-CONTRACT`. `scripts/verify-onchain.js` checks that the chain's code hash matches the record. A source-only security audit of the contract and the room produced fifteen leads, tracked as GAP-026 to GAP-043. The contract fixes were deployed on 2026-11-08; GAP-026 and GAP-030 were re-checked live and the rest are covered by unit tests.
 
 ### 2.2 The room (the Roost) in three forms
 
