@@ -32,6 +32,7 @@ export function buildOpenApi(description, routes) {
     openRound: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/Round' } } } },
     submitInput: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/SignedInput' } } } },
     runRoom: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/RunRequest' } } } },
+    abandonRound: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/AbandonRequest' } } } },
   };
   const ok = {
     describeRooms: { description: 'What this room can do, and its public keys.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Description' } } } },
@@ -39,13 +40,15 @@ export function buildOpenApi(description, routes) {
     openRound: { description: 'The round is open.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Round' } } } },
     submitInput: { description: 'The input was accepted.', content: { 'application/json': { schema: { $ref: '#/components/schemas/InputAccepted' } } } },
     runRoom: { description: 'The outcome, and the finished contract call when the room decided something.', content: { 'application/json': { schema: { $ref: '#/components/schemas/RunResult' } } } },
+    abandonRound: { description: 'The signed round was given up; it can run again.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Abandoned' } } } },
     events: { description: 'A server-sent event stream. Each event has an id, an event name and JSON data. Nothing sealed is ever sent: no member id, ciphertext, choice or trade term.', content: { 'text/event-stream': { schema: { type: 'string' } } } },
   };
   const errorsFor = (r) => ({
     ...(bodies[r.op] ? { 400: ref('BadRequest'), 413: ref('TooLarge') } : {}),
     ...(r.auth === 'coordinator' ? { 401: ref('Unauthorised') } : {}),
     ...(r.op === 'submitInput' ? { 403: ref('Forbidden') } : {}),
-    ...(r.op === 'runRoom' ? { 404: ref('NotFound'), 409: ref('Conflict') } : {}),
+    ...(r.op === 'runRoom' ? { 404: ref('NotFound'), 409: ref('Conflict'), 503: ref('Unavailable') } : {}),
+    ...(r.op === 'abandonRound' ? { 409: ref('Conflict') } : {}),
     ...(r.op === 'events' ? { 503: ref('Unavailable') } : {}),
     429: ref('RateLimited'), 500: ref('Internal'),
   });
@@ -66,6 +69,8 @@ export function buildOpenApi(description, routes) {
     SignedInput: { type: 'object', required: ['flyerId', 'cipherTextHex'], description: 'A member\'s input, sealed to the room\'s key and signed with the member\'s NEAR key for the open round. The secret key never reaches this API.', properties: { flyerId: { type: 'string' }, cipherTextHex: { type: 'string' }, publicKey: { type: 'string' }, signature: { type: 'string' }, seq: { type: 'integer', minimum: 1 } } },
     InputAccepted: { type: 'object', properties: { accepted: { type: 'boolean' }, count: { type: 'integer' }, replaced: { type: 'boolean' } } },
     Description: { type: 'object', properties: { settlePublicKey: { type: 'string' }, intentPublicKey: { type: 'string' }, simulated: { type: 'boolean' }, requiresSignedInputs: { type: 'boolean' }, programs: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, summary: { type: 'string' }, needsSignedInputs: { type: 'boolean' }, params: { type: 'object' } } } } } },
+    AbandonRequest: { type: 'object', required: ['round'], properties: { round: { $ref: '#/components/schemas/Round' } } },
+    Abandoned: { type: 'object', required: ['abandoned', 'orderHash', 'roundNonce'], properties: { abandoned: { type: 'boolean' }, orderHash: { type: 'string' }, roundNonce: { type: 'string' } } },
     RunRequest: { type: 'object', required: ['program', 'round'], properties: { program: { type: 'string', enum: programs.map((p) => p.id) }, params: { oneOf: programs.map((p) => ({ $ref: `#/components/schemas/Params_${p.id}` })) }, round: { $ref: '#/components/schemas/Round' }, includeConfidential: { type: 'boolean', default: false, description: 'Ask for plain detail meant only for the parties to a trade (for example an RFQ\'s units and price). Needs the coordinator key.' } } },
     RunResult: { type: 'object', properties: { outcome: { type: 'object' }, orderHash: { type: 'string', nullable: true }, settlement: { type: 'object', nullable: true, description: 'The contract call, ready to send: a method and its arguments, including the room\'s signature. Null when the room decided nothing.', properties: { method: { type: 'string', enum: ['settle_batch', 'settle_batch_charged'] }, args: { type: 'object' } } }, statements: { type: 'object', description: 'Pay run only: receipts, each sealed to its reader.' }, confidential: { type: 'object' } } },
     EventRoundOpened: { type: 'object', description: 'A round was opened.', properties: { contractId: { type: 'string' }, syndicateId: { type: 'string' }, epoch: { type: 'integer' }, roundNonce: { type: 'string' } } },
@@ -90,7 +95,7 @@ export function buildOpenApi(description, routes) {
         NotFound: ERR('NotFound', 'Unknown program (UNKNOWN_PROGRAM), or unknown route (NOT_FOUND).'),
         Conflict: ERR('Conflict', 'ROUND_NOT_OPEN, NO_INPUTS or ALREADY_SIGNED.'),
         RateLimited: ERR('RateLimited', 'Too many requests (RATE_LIMITED); see Retry-After.'),
-        Unavailable: ERR('Unavailable', 'Too many open event streams (UNAVAILABLE); see Retry-After.'),
+        Unavailable: ERR('Unavailable', 'UNAVAILABLE: too many open event streams (see Retry-After), or the chain could not be read for the escrow check; the queue is kept and the call can be repeated.'),
         Internal: ERR('Internal', 'Unexpected failure (INTERNAL); the body never carries internal detail.'),
       },
       schemas,

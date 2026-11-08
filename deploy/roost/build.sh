@@ -18,7 +18,7 @@ stage() {
 # Programs and helpers that hosted-roost.js imports. tests/roost-image-stage.test.js fails if one is missing.
 cp src/roost-service/auction-programs.js src/roost-service/ballot-program.js src/roost-service/payrun-program.js \
    src/roost-service/pool-program.js src/roost-service/quote-programs.js src/roost-service/receipts.js \
-   src/roost-service/signed-input.js "$ctx/src/roost-service/"
+   src/roost-service/signed-input.js src/roost-service/escrow-reader.js "$ctx/src/roost-service/"
   find "$ctx" -exec touch -h -d '2026-01-01T00:00:00Z' {} +
 }
 

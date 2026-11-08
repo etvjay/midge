@@ -20,6 +20,7 @@ export const ROUTES = [
   { method: 'POST', path: '/v1/rooms/round', auth: 'coordinator', op: 'openRound', summary: 'Open a round (coordinator only); signed inputs are bound to it' },
   { method: 'POST', path: '/v1/rooms/inputs', auth: 'none', op: 'submitInput', summary: 'Submit one sealed, signed input to the open round' },
   { method: 'GET', path: '/v1/rooms/events', auth: 'none', op: 'events', summary: 'A live server-sent event stream of rounds opening, inputs arriving (a count) and rooms running' },
+  { method: 'POST', path: '/v1/rooms/abandon', auth: 'coordinator', op: 'abandonRound', summary: 'Give up a signed round the contract rejected, so it can run again (coordinator only; recorded and announced)' },
   { method: 'POST', path: '/v1/rooms/run', auth: 'coordinator', op: 'runRoom', summary: 'Run a room and receive the outcome and the finished contract call (coordinator only)' },
 ];
 
@@ -94,6 +95,7 @@ export function createRoomHandler(service, { adminKey, maxBody = 256 * 1024, rat
         case 'openapi': return send(200, buildOpenApi(service.describe(), ROUTES));
         case 'openRound': return send(200, service.open(body));
         case 'submitInput': return send(200, await service.submit(body));
+        case 'abandonRound': return send(200, service.abandon(body?.round));
         case 'runRoom': return send(200, await service.run({ program: body.program, params: body.params ?? {}, round: body.round, includeConfidential: body.includeConfidential === true }));
         default: return fail(500, 'INTERNAL', 'internal error');
       }

@@ -206,6 +206,60 @@
         }
       }
     },
+    "/v1/rooms/abandon": {
+      "post": {
+        "summary": "Give up a signed round the contract rejected, so it can run again (coordinator only; recorded and announced)",
+        "operationId": "abandonRound",
+        "security": [
+          {
+            "coordinatorKey": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbandonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The signed round was given up; it can run again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Abandoned"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorised"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        }
+      }
+    },
     "/v1/rooms/run": {
       "post": {
         "summary": "Run a room and receive the outcome and the finished contract call (coordinator only)",
@@ -259,6 +313,9 @@
           },
           "500": {
             "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
           }
         }
       }
@@ -350,7 +407,7 @@
         }
       },
       "Unavailable": {
-        "description": "Too many open event streams (UNAVAILABLE); see Retry-After.",
+        "description": "UNAVAILABLE: too many open event streams (see Retry-After), or the chain could not be read for the escrow check; the queue is kept and the call can be repeated.",
         "content": {
           "application/json": {
             "schema": {
@@ -496,6 +553,36 @@
                 }
               }
             }
+          }
+        }
+      },
+      "AbandonRequest": {
+        "type": "object",
+        "required": [
+          "round"
+        ],
+        "properties": {
+          "round": {
+            "$ref": "#/components/schemas/Round"
+          }
+        }
+      },
+      "Abandoned": {
+        "type": "object",
+        "required": [
+          "abandoned",
+          "orderHash",
+          "roundNonce"
+        ],
+        "properties": {
+          "abandoned": {
+            "type": "boolean"
+          },
+          "orderHash": {
+            "type": "string"
+          },
+          "roundNonce": {
+            "type": "string"
           }
         }
       },

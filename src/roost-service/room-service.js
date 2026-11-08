@@ -17,7 +17,7 @@ import { RoostAggregationError } from '../enclave/errors.js';
 import { createEventHub } from './room-events.js';
 
 export class RoomError extends Error {
-  /** @param {'INVALID_PARAMS'|'UNKNOWN_PROGRAM'|'ROUND_NOT_OPEN'|'NO_INPUTS'|'ALREADY_SIGNED'|'NOT_AUTHORISED'|'INTERNAL'} code */
+  /** @param {'INVALID_PARAMS'|'UNKNOWN_PROGRAM'|'ROUND_NOT_OPEN'|'NO_INPUTS'|'ALREADY_SIGNED'|'NOT_AUTHORISED'|'UNAVAILABLE'|'INTERNAL'} code */
   constructor(code, message) {
     super(message);
     this.name = 'RoomError';
@@ -54,6 +54,8 @@ const ballot = {
     return Number.isInteger(p.quorumBps) && p.quorumBps >= 0 && p.quorumBps <= 10000 && ['majority', 'plurality'].includes(p.rule);
   },
   run: (host, p) => host.runBallot({ options: p.options, roll: p.roll, share: p.share, quorumBps: p.quorumBps, rule: p.rule }),
+  // Everyone on the roll is charged a share whether or not they voted, so their escrow must be read too.
+  payers: (p) => (Array.isArray(p.roll) ? p.roll : []),
 };
 
 /** A plain pass-through entry: the host's own run method owns every value rule; the service adds only the contract call around it. */
@@ -74,7 +76,8 @@ const auction = hostProgram('auction',
 const quote = hostProgram('quote',
   'Sealed best quote: the lowest rate (lending) or lowest price (buying) at or under the limit wins and is paid by the counterparty. Decides nothing if no quote is eligible.',
   { shape: { type: 'string', required: true, enum: ['lend', 'buy'] }, pricing: { type: 'string', required: false, default: 'first', enum: ['first', 'second'] }, counterparty: { type: 'string', required: true }, amount: { type: 'string', required: false, description: 'lend: the amount borrowed' }, units: { type: 'integer', required: false, description: 'buy: how many units' }, limit: { type: ['string', 'integer'], required: true, description: 'lend: the highest rate in basis points; buy: the highest price' } },
-  (h, p) => h.runQuote(p));
+  (h, p) => h.runQuote(p),
+  { payers: (p) => (p.shape === 'buy' && typeof p.counterparty === 'string' ? [p.counterparty] : []) });
 
 const cross = hostProgram('cross',
   'A sealed block trade: buy and sell orders cross at a public reference price, matched pro rata on the long side. Only the cash leg settles.',
@@ -91,7 +94,7 @@ const payrun = hostProgram('payrun',
   'A sealed pay run: the employer seals the lines; the room pays each person their net, the tax and benefits addresses their totals, and returns signed receipts sealed to each payee, the employer and the auditor.',
   { employer: { type: 'string', required: true }, taxAddress: { type: 'string', required: true }, benefitsAddress: { type: 'string', required: true }, employerKeyHex: { type: 'string', required: true }, auditorKeyHex: { type: 'string', required: true }, runId: { type: 'string', required: false, default: 'run' } },
   (h, p) => h.runPayrun(p),
-  { needsSignedInputs: true, sealed: ['statements'] });
+  { needsSignedInputs: true, sealed: ['statements'], payers: (p) => (typeof p.employer === 'string' ? [p.employer] : []) });
 
 export class RoomService {
   static defaultPrograms = Object.freeze([ballot, pool, auction, quote, cross, rfq, payrun]);
@@ -130,6 +133,21 @@ export class RoomService {
     } catch (e) { throw this.#translate(e, 'INVALID_PARAMS'); }
   }
 
+  /**
+   * The contract can reject a signed settlement and nothing on chain changes, so the round cannot move on. The coordinator gives the
+   * signed round up here (recorded by the host and announced as round_abandoned) and runs it again. Members re-submit with a higher seq.
+   */
+  abandon(round) {
+    const h = this.#host;
+    if (!h.round || !sameRound(h.round, round)) throw new RoomError('ROUND_NOT_OPEN', 'that round is not the open round');
+    try {
+      const rec = h.abandonSignedRound();
+      this.#last = null;
+      this.events.publish('round_abandoned', { orderHash: rec.orderHash });
+      return { abandoned: true, orderHash: rec.orderHash, roundNonce: rec.roundNonce };
+    } catch (e) { throw this.#translate(e, 'INVALID_PARAMS'); }
+  }
+
   async submit(input) {
     const h = this.#host;
     if (!h.round) throw new RoomError('ROUND_NOT_OPEN', 'no open round: call open first');
@@ -160,6 +178,13 @@ export class RoomService {
     if (this.#last?.signed) throw new RoomError('ALREADY_SIGNED', 'this round has already been settled; repeat the same call to read the result, or open a new round');
     if (!prog.validate(normal)) throw new RoomError('INVALID_PARAMS', `parameters for "${program}" are missing or out of range`);
     if (h.sealedIntents.length === 0) throw new RoomError('NO_INPUTS', 'no inputs have been submitted this round');
+    // With an escrow reader, read what the payers hold now, at one block, and run straight after, so the read cannot go stale.
+    if (h.escrowReader) {
+      try { await h.bindEscrow({ accounts: (prog.payers ? prog.payers(normal) : []).filter((a) => typeof a === 'string') }); } catch (e) {
+        if (e instanceof RoostAggregationError && /could not read escrow|round changed while escrow/.test(e.message)) throw new RoomError('UNAVAILABLE', e.message);
+        throw this.#translate(e, 'INVALID_PARAMS');
+      }
+    }
     let ran;
     try { ran = prog.run(h, normal); } catch (e) { throw this.#translate(e, 'INVALID_PARAMS'); }
     let settlement = null;
