@@ -45,14 +45,14 @@ Columns: **who** may call, **guard** (the refusals, quoted from the source), **e
 | `on_hatch_out_payout` | the contract itself (callback) | only the contract | if the transfer failed: escrow, status, count and window base restored | `test_on_hatch_out_payout_failure_restores_escrow_and_status`, `test_on_hatch_out_payout_rejects_external_caller` |
 | `prune_syndicate` | anyone | status Settled or Refunded; no escrow left; nothing in flight | record, window, second key removed; id can be reused | `test_prune_removes_a_settled_syndicate_and_logs_it`, `test_prune_refuses_an_active_syndicate`, `test_a_pruned_id_can_be_reused_and_the_old_signature_is_dead` |
 | `compact_member_index` | anyone | none | drops pruned ids from a member's index | `test_compact_member_index_drops_ids_of_pruned_syndicates` |
-| `get_escrow` | view | none | a member's balance | NONE |
-| `get_syndicate` | view | none | the group record | NONE |
-| `get_syndicate_count` | view | none | number of groups | NONE |
-| `list_syndicates` | view | none | a page of groups | NONE |
+| `get_escrow` | view | none | a member's balance | `st_views_describe_a_new_group` |
+| `get_syndicate` | view | none | the group record | `st_views_describe_a_new_group`, `st_views_say_nothing_about_a_group_that_does_not_exist` |
+| `get_syndicate_count` | view | none | number of groups | `st_views_describe_a_new_group` |
+| `list_syndicates` | view | none | a page of groups | `st_views_describe_a_new_group` |
 | `list_syndicates_by_member` | view | none | groups a member is in | `test_get_syndicates_by_member` |
 | `get_syndicates_by_member` | view | none | alias of the above | `test_get_syndicates_by_member` |
-| `get_member_syndicate_count` | view | none | how many groups a member is in | NONE |
-| `get_release_policy` | view | none | recipients, cap, deadline | NONE |
+| `get_member_syndicate_count` | view | none | how many groups a member is in | `st_views_describe_a_new_group` |
+| `get_release_policy` | view | none | recipients, cap, deadline | `st_views_describe_a_new_group`, `st_views_say_nothing_about_a_group_that_does_not_exist` |
 | `get_policy_hash` | view | none | the hash a depositor must name | `a_new_groups_hash_covers_the_exit_timer` |
 | `get_policy_terms` | view | none | the terms and whether the timer is covered | `the_terms_view_shows_what_a_depositor_consents_to_and_that_the_timer_is_covered` |
 | `get_release_window` | view | none | the open window, if any | `two_settlements_that_together_stay_within_the_cap_are_both_allowed` |

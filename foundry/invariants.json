@@ -19,6 +19,10 @@
         {
           "type": "rust",
           "ref": "charged_settlement_charges_each_member_their_own_amount"
+        },
+        {
+          "type": "rust",
+          "ref": "inv_c01_the_books_balance_after_every_transition"
         }
       ]
     },
@@ -107,6 +111,10 @@
         {
           "type": "rust",
           "ref": "test_partial_flash_settlement_allows_a_fresh_signature_on_the_new_nonce"
+        },
+        {
+          "type": "rust",
+          "ref": "inv_c05_the_nonce_changes_when_a_settlement_finishes"
         }
       ]
     },
@@ -238,6 +246,14 @@
         {
           "type": "rust",
           "ref": "test_prune_refuses_an_active_syndicate"
+        },
+        {
+          "type": "rust",
+          "ref": "inv_c12_a_settled_group_takes_no_more_deposits"
+        },
+        {
+          "type": "rust",
+          "ref": "inv_c12_a_refunded_group_stays_refunded"
         }
       ]
     },
