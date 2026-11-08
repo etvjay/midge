@@ -9,7 +9,7 @@ import { sealToModel } from '../src/enclave/e2ee.js';
 const provider = { simulated: true, attest: async () => Buffer.from('t'), info: async () => ({}) };
 const KEY = 'k'.repeat(30);
 let h = 9000;
-const reader = (balances, fail = false) => ({ read: async (_s, ids) => { if (fail) throw new RoostAggregationError('could not read escrow: down'); h += 1; return { blockHeight: h, blockHash: `H${h}`, escrows: Object.fromEntries(ids.map((i) => [i, balances[i] ?? '0'])), exitsOpenFromBlock: h + 500 }; } });
+const reader = (balances, fail = false) => ({ read: async (_s, ids, opts) => { if (fail) throw new RoostAggregationError('could not read escrow: down'); h += 1; return { blockHeight: h, blockHash: opts?.blockHash ?? `H${h}`, blockTimeMs: Date.now(), escrows: Object.fromEntries(ids.map((i) => [i, balances[i] ?? '0'])), exitsOpenFromBlock: h + 500 }; } });
 const NEAR = (n) => `${n}000000000000000000000000`;
 
 async function serve(escrowReader) {
@@ -74,4 +74,29 @@ test('POST /abandon gives up a signed round and needs the admin key', async () =
     assert.equal(r.json.abandoned, true);
     assert.equal((await s.post('/abandon', {})).status, 400, 'a second abandon has nothing to abandon');
   } finally { await s.close(); }
+});
+
+test('POST /pool accepts a pinned block hash and uses it', async () => {
+  const s = await serve(reader({ 'a.near': NEAR(1) }));
+  try {
+    s.seal('a.near', { amount: '0.01' });
+    const r = await s.post('/pool', { recipient: 'r.near', min: '0', escrowBlockHash: 'HPIN' });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.outcome.escrowBlock.hash, 'HPIN');
+  } finally { await s.close(); }
+});
+
+// ---- Review of lead 9, minor: configuration cannot silently weaken the guarantee ----
+import { escrowReaderFromEnv } from '../src/roost-service/server.js';
+test('no URLs means no reader; one URL is refused; two or more build a reader', () => {
+  assert.equal(escrowReaderFromEnv({}), null);
+  assert.equal(escrowReaderFromEnv({ ROOST_RPC_URLS: '', ROOST_CONTRACT_ID: 'c.near' }), null);
+  assert.throws(() => escrowReaderFromEnv({ ROOST_RPC_URLS: 'https://a.rpc', ROOST_CONTRACT_ID: 'c.near' }), /two or more|at least two/i);
+  assert.equal(typeof escrowReaderFromEnv({ ROOST_RPC_URLS: 'https://a.rpc, https://b.rpc', ROOST_CONTRACT_ID: 'c.near' }).read, 'function');
+});
+test('URLs without a contract id are refused, not ignored', () => {
+  assert.throws(() => escrowReaderFromEnv({ ROOST_RPC_URLS: 'https://a.rpc,https://b.rpc' }), /ROOST_CONTRACT_ID/);
+});
+test('duplicate URLs do not count as two providers', () => {
+  assert.throws(() => escrowReaderFromEnv({ ROOST_RPC_URLS: 'https://a.rpc,https://a.rpc/', ROOST_CONTRACT_ID: 'c.near' }), /two or more|at least two/i);
 });

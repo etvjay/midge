@@ -10,7 +10,8 @@ import { provider, keyCheck, ROUND, ROLL, VOTE_PARAMS, voteInputs, signedInput, 
 
 const BIG = '50000000000000000000000';
 let height = 5000;
-const reader = (balances, { fail = false } = {}) => ({ read: async (_s, ids) => { if (fail) throw new RoostAggregationError('could not read escrow: providers disagree'); const h = ++height; return { blockHeight: h, blockHash: `H${h}`, escrows: Object.fromEntries(ids.map((i) => [i, balances[i] ?? '0'])), exitsOpenFromBlock: h + 1000 }; } });
+const seen = [];
+const reader = (balances, { fail = false } = {}) => ({ read: async (_s, ids, opts) => { if (fail) throw new RoostAggregationError('could not read escrow: providers disagree'); seen.push(opts); const h = opts?.blockHash ? 7000 : ++height; return { blockHeight: h, blockHash: opts?.blockHash ?? `H${h}`, blockTimeMs: Date.now(), escrows: Object.fromEntries(ids.map((i) => [i, balances[i] ?? '0'])), exitsOpenFromBlock: h + 1000 }; } });
 const everyone = Object.fromEntries(ROLL.map((m) => [m, BIG]));
 async function room(escrowReader) {
   const host = new HostedRoost({ provider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader });
@@ -86,4 +87,34 @@ test('a roll member who never voted and cannot pay is still left out: the roll i
   const res = await runBallot(svc);
   assert.deepEqual(res.outcome.excludedForEscrow, ['m5.near']);
   assert.equal(res.settlement.args.charges.length, 4);
+});
+
+test('run accepts a pinned block, so the two rooms of a two-room settlement read the same one', async () => {
+  const { svc } = await room(reader(everyone));
+  const res = await svc.run({ program: 'ballot', params: VOTE_PARAMS, round: ROUND, escrowBlockHash: 'HASH7000' });
+  assert.equal(seen.at(-1).blockHash, 'HASH7000');
+  assert.equal(res.outcome.escrowBlock.hash, 'HASH7000');
+});
+test('a pinned block that is not a string is INVALID_PARAMS and nothing is read', async () => {
+  const { host, svc } = await room(reader(everyone));
+  const before = seen.length;
+  await assert.rejects(() => svc.run({ program: 'ballot', params: VOTE_PARAMS, round: ROUND, escrowBlockHash: 42 }), (e) => e.code === 'INVALID_PARAMS');
+  assert.equal(seen.length, before);
+  assert.equal(host.sealedIntents.length, 5);
+});
+
+test('abandon returns, and announces, what exactly was given up: the message hash, not just the order hash', async () => {
+  const { svc } = await room(reader(everyone));
+  await runBallot(svc);
+  const seenEvents = [];
+  svc.events.subscribe((e) => seenEvents.push(e));
+  const a = svc.abandon(ROUND);
+  assert.match(a.messageSha256, /^[0-9a-f]{64}$/);
+  assert.match(a.allocationsHash, /^[0-9a-f]{64}$/);
+  assert.match(a.signature, /^[0-9a-f]+$/);
+  const ev = seenEvents.find((e) => e.event === 'round_abandoned' || e.type === 'round_abandoned');
+  assert.ok(ev, 'a round_abandoned event is published');
+  const data = JSON.stringify(ev);
+  assert.ok(data.includes(a.messageSha256), 'the event names the message hash');
+  assert.ok(!data.includes(a.signature), 'the signature itself is not broadcast on the public stream');
 });

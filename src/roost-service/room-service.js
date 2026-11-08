@@ -143,8 +143,9 @@ export class RoomService {
     try {
       const rec = h.abandonSignedRound();
       this.#last = null;
-      this.events.publish('round_abandoned', { orderHash: rec.orderHash });
-      return { abandoned: true, orderHash: rec.orderHash, roundNonce: rec.roundNonce };
+      // The public stream names what was given up by hash; the signature itself goes only to the coordinator who asked.
+      this.events.publish('round_abandoned', { orderHash: rec.orderHash, messageSha256: rec.messageSha256 });
+      return { abandoned: true, orderHash: rec.orderHash, roundNonce: rec.roundNonce, messageSha256: rec.messageSha256, allocationsHash: rec.allocationsHash, chargesHash: rec.chargesHash, signature: rec.signature };
     } catch (e) { throw this.#translate(e, 'INVALID_PARAMS'); }
   }
 
@@ -166,12 +167,13 @@ export class RoomService {
     }
   }
 
-  async run({ program, params = {}, round, includeConfidential = false } = {}) {
+  async run({ program, params = {}, round, includeConfidential = false, escrowBlockHash = null } = {}) {
     const h = this.#host;
     const prog = this.#programs.get(program);
     if (!prog) throw new RoomError('UNKNOWN_PROGRAM', `unknown program "${program}"; available: ${[...this.#programs.keys()].join(', ')}`);
     if (!h.round || !sameRound(h.round, round)) throw new RoomError('ROUND_NOT_OPEN', 'that round is not the open round');
     if (prog.needsSignedInputs && !h.requireSignedInputs) throw new RoomError('NOT_AUTHORISED', `"${program}" needs signed inputs and this room does not require them`);
+    if (escrowBlockHash !== null && escrowBlockHash !== undefined && (typeof escrowBlockHash !== 'string' || escrowBlockHash.length === 0 || escrowBlockHash.length > 128)) throw new RoomError('INVALID_PARAMS', 'escrowBlockHash must be a block hash string');
     const normal = prog.normalise ? prog.normalise(params) : { ...params };
     const key = digest({ program, params: normal });
     if (this.#last && this.#last.key === key) return this.#shape(this.#last, includeConfidential); // an identical retry: same answer, no second signature
@@ -180,7 +182,7 @@ export class RoomService {
     if (h.sealedIntents.length === 0) throw new RoomError('NO_INPUTS', 'no inputs have been submitted this round');
     // With an escrow reader, read what the payers hold now, at one block, and run straight after, so the read cannot go stale.
     if (h.escrowReader) {
-      try { await h.bindEscrow({ accounts: (prog.payers ? prog.payers(normal) : []).filter((a) => typeof a === 'string') }); } catch (e) {
+      try { await h.bindEscrow({ accounts: (prog.payers ? prog.payers(normal) : []).filter((a) => typeof a === 'string'), blockHash: escrowBlockHash || null }); } catch (e) {
         if (e instanceof RoostAggregationError && /could not read escrow|round changed while escrow/.test(e.message)) throw new RoomError('UNAVAILABLE', e.message);
         throw this.#translate(e, 'INVALID_PARAMS');
       }

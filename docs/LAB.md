@@ -4,6 +4,8 @@ A research harness for the repository. Every check is an **experiment**: a hypot
 
 ```bash
 node lab/run.js --list                       # experiments, tier and what each needs
+node lab/run.js --print-plan                 # list what WOULD run and exit (nothing runs)
+node lab/run.js                              # with neither --tier nor --only: the offline tier only
 node lab/run.js --tier offline               # no keys, no network (~minute, includes Rust)
 node lab/run.js --only E-CHAIN-ROUND-LOCAL   # one experiment (testnet, needs the NEAR key)
 node lab/run.js --only X --repeat 3          # repeat in one run to expose flakiness
@@ -11,7 +13,7 @@ node lab/verify-run.js docs/lab-runs/<id>    # re-check a log's integrity and re
 node lab/promote.js lab/runs/<id>            # copy a verified run into docs/lab-runs/
 ```
 
-Runs go to `lab/runs/` (gitignored). `lab/promote.js` copies a run you want to keep into `docs/lab-runs/`. Promote only after scanning for secrets; the recorder redacts known secret shapes but the scan is the check.
+Testnet, cloud and hardware experiments run only when asked for by `--tier` or `--only <id>`, and the runner says what the selection will spend first. An unknown option is an error, never "run everything". Runs go to `lab/runs/` (gitignored). `lab/promote.js` copies a run you want to keep into `docs/lab-runs/`. Promote only after scanning for secrets; the recorder redacts known secret shapes but the scan is the check.
 
 ## Run it yourself, from nothing
 

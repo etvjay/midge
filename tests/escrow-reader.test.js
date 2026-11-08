@@ -15,15 +15,18 @@ function node(url, balances, opts = {}) {
     opts.log?.push({ url, method: body.method, params: body.params });
     if (opts.fail) throw new Error('node down');
     if (opts.hang) return new Promise(() => {});
-    if (body.method === 'block') return json({ result: { header: { height: 777, hash: HASH, timestamp: String((opts.blockTime ?? NOW) * 1_000_000) } } });
+    if (body.method === 'block') {
+      if (body.params.block_id !== undefined && body.params.block_id !== HASH && body.params.block_id !== (opts.knownHash ?? HASH)) return json({ error: { message: 'UNKNOWN_BLOCK' } });
+      return json({ result: { header: { height: opts.height ?? 777, hash: HASH, timestamp: String((opts.blockTime ?? NOW) * 1_000_000) } } });
+    }
     if (body.method === 'query' && body.params.method_name === 'get_syndicate') {
       const g = opts.group === undefined ? { epoch_start_block: 700, timeout_blocks: 100, release_policy: { settle_deadline_block: 900 } } : opts.group;
-      return json({ result: { result: [...Buffer.from(JSON.stringify(g))] } });
+      return json({ result: { result: [...Buffer.from(JSON.stringify(g))], block_height: opts.height ?? 777, block_hash: opts.replyHash ?? HASH } });
     }
     if (body.method === 'query') {
       const args = JSON.parse(Buffer.from(body.params.args_base64, 'base64').toString());
       const v = balances[args.account_id] ?? YOCTO(0).replace(/^0+/, '0');
-      return json({ result: { result: [...Buffer.from(JSON.stringify(v))] } });
+      return json({ result: { result: [...Buffer.from(JSON.stringify(v))], block_height: opts.height ?? 777, block_hash: opts.replyHash ?? HASH } });
     }
     return json({ error: { message: 'unknown method' } });
   };
@@ -36,7 +39,7 @@ const B = { 'a.near': YOCTO(10), 'b.near': YOCTO(2) };
 test('when every provider agrees it returns the block and each account\'s escrow', async () => {
   const r = reader(net(node('https://a.rpc', B), node('https://b.rpc', B)));
   const out = await r.read('grp', ['a.near', 'b.near']);
-  assert.deepEqual(out, { blockHeight: 777, blockHash: HASH, escrows: { 'a.near': YOCTO(10), 'b.near': YOCTO(2) }, exitsOpenFromBlock: 800 });
+  assert.deepEqual(out, { blockHeight: 777, blockHash: HASH, blockTimeMs: NOW, escrows: { 'a.near': YOCTO(10), 'b.near': YOCTO(2) }, exitsOpenFromBlock: 800 });
 });
 
 test('every provider is asked about the same block', async () => {
@@ -62,9 +65,14 @@ test('with minAgree 1 a single failed provider is tolerated', async () => {
   assert.equal((await r.read('grp', ['a.near'])).escrows['a.near'], YOCTO(10));
 });
 
-test('a block older than maxAgeMs is rejected', async () => {
-  const r = reader(net(node('https://a.rpc', B, { blockTime: NOW - 61_000 }), node('https://b.rpc', B)), { maxAgeMs: 60_000 });
+test('a block older than maxAgeMs is rejected when the providers agree on it', async () => {
+  const r = reader(net(node('https://a.rpc', B, { blockTime: NOW - 61_000 }), node('https://b.rpc', B, { blockTime: NOW - 61_000 })), { maxAgeMs: 60_000 });
   await assert.rejects(() => r.read('grp', ['a.near']), /could not read escrow.*old/);
+});
+
+test('providers that disagree about the time of the block fail the read', async () => {
+  const r = reader(net(node('https://a.rpc', B, { blockTime: NOW - 61_000 }), node('https://b.rpc', B)), { maxAgeMs: 60_000 });
+  await assert.rejects(() => r.read('grp', ['a.near']), /could not read escrow.*disagree/);
 });
 
 test('a provider that never answers hits the timeout instead of hanging', async () => {
@@ -125,4 +133,58 @@ test('providers that disagree about the exit timing fail the read', async () => 
 test('malformed timing fields make the read fail instead of guessing', async () => {
   const r = reader(net(node('https://a.rpc', B, { group: { epoch_start_block: 'x' } }), node('https://b.rpc', B, { group: { epoch_start_block: 'x' } })));
   await assert.rejects(() => r.read('grp', ['a.near']), /could not read escrow/);
+});
+
+
+// ---- Review of lead 9, I2: no single provider picks and vouches for the block ----
+test('every provider is asked for the block by its hash, not just the first', async () => {
+  const log = [];
+  await reader(net(node('https://a.rpc', B, { log }), node('https://b.rpc', B, { log }))).read('grp', ['a.near']);
+  const byHash = log.filter((l) => l.method === 'block' && l.params.block_id === HASH);
+  assert.deepEqual(byHash.map((l) => l.url).sort(), ['https://a.rpc', 'https://b.rpc']);
+});
+
+test('a provider that reports a different height for the same block fails the read', async () => {
+  const r = reader(net(node('https://a.rpc', B), node('https://b.rpc', B, { height: 700 })));
+  await assert.rejects(() => r.read('grp', ['a.near']), /could not read escrow/);
+});
+
+test('a provider that does not know the block fails the read', async () => {
+  const r = reader(net(node('https://a.rpc', B), node('https://b.rpc', B, { knownHash: 'other' , replyHash: HASH })));
+  const ok = await r.read('grp', ['a.near']).then(() => true, () => false);
+  assert.equal(ok, true, 'a provider that does know the hash is fine');
+  const unknown = reader(net(node('https://a.rpc', B), (url, init) => (url === 'https://b.rpc' ? Promise.resolve({ ok: true, status: 200, json: async () => ({ error: { message: 'UNKNOWN_BLOCK' } }) }) : null)));
+  await assert.rejects(() => unknown.read('grp', ['a.near']), /could not read escrow/);
+});
+
+test('a reply that is not from the block asked about fails the read', async () => {
+  const r = reader(net(node('https://a.rpc', B), node('https://b.rpc', B, { replyHash: 'SOMEOTHER' })));
+  await assert.rejects(() => r.read('grp', ['a.near']), /could not read escrow/);
+});
+
+test('a pinned block is used instead of asking for the latest, and the age check still applies', async () => {
+  const log = [];
+  const out = await reader(net(node('https://a.rpc', B, { log }), node('https://b.rpc', B, { log }))).read('grp', ['a.near'], { blockHash: HASH });
+  assert.equal(out.blockHash, HASH);
+  assert.ok(!log.some((l) => l.method === 'block' && l.params.finality === 'final'), 'no request for the latest block');
+  const old = reader(net(node('https://a.rpc', B, { blockTime: NOW - 61_000 }), node('https://b.rpc', B, { blockTime: NOW - 61_000 })), { maxAgeMs: 60_000 });
+  await assert.rejects(() => old.read('grp', ['a.near'], { blockHash: HASH }), /too old/);
+});
+
+// ---- Review of lead 9, minors: time is bounded in total, and a timed-out call is aborted ----
+test('a timed-out request is aborted, not left running', async () => {
+  let aborted = false;
+  const hang = (url, init) => { if (url !== 'https://b.rpc') return null; return new Promise((_, rej) => { init.signal?.addEventListener('abort', () => { aborted = true; rej(new Error('aborted')); }); }); };
+  const r = reader(net(node('https://a.rpc', B), hang), { timeoutMs: 40 });
+  await assert.rejects(() => r.read('grp', ['a.near']), /could not read escrow/);
+  assert.equal(aborted, true);
+});
+
+test('the whole read has a deadline, however many accounts there are', async () => {
+  const slow = async (url, init) => { await new Promise((r) => setTimeout(r, 30)); return node('https://a.rpc', {})(url, init); };
+  const accounts = Array.from({ length: 50 }, (_, i) => `m${i}.near`);
+  const r = createEscrowReader({ rpcUrls: ['https://a.rpc'], contractId: 'c.near', fetchImpl: slow, now: () => NOW, concurrency: 1, totalTimeoutMs: 200, timeoutMs: 1000 });
+  const t0 = Date.now();
+  await assert.rejects(() => r.read('grp', accounts), /too long|deadline/);
+  assert.ok(Date.now() - t0 < 1500);
 });

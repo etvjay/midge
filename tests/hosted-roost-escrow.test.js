@@ -8,8 +8,12 @@ const SHARE = '10000000000000000000000'; // 0.01 NEAR in yocto: VOTE_PARAMS.shar
 const BIG = '50000000000000000000000';
 let height = 1000;
 /** A stub reader: balances per account, a rising block height by default. */
-function stub(balances, { fixedHeight = null, calls = [], exitsOpenFromBlock = undefined } = {}) {
-  return { read: async (syndicateId, ids) => { const h = fixedHeight ?? ++height; calls.push({ syndicateId, ids: [...ids] }); return { blockHeight: h, blockHash: `HASH${h}`, escrows: Object.fromEntries(ids.map((i) => [i, balances[i] ?? '0'])), ...(exitsOpenFromBlock === undefined ? {} : { exitsOpenFromBlock }) }; } };
+function stub(balances, { fixedHeight = null, calls = [], exitsOpenFromBlock = undefined, blockAgeMs = 0, nowMs = null } = {}) {
+  return { read: async (syndicateId, ids, opts) => {
+    const h = opts?.blockHash ? Number(String(opts.blockHash).replace(/\D/g, '')) : (fixedHeight ?? ++height);
+    calls.push({ syndicateId, ids: [...ids], opts });
+    return { blockHeight: h, blockHash: opts?.blockHash ?? `HASH${h}`, blockTimeMs: (nowMs ?? Date.now()) - blockAgeMs, escrows: Object.fromEntries(ids.map((i) => [i, balances[i] ?? '0'])), ...(exitsOpenFromBlock === undefined ? {} : { exitsOpenFromBlock }) };
+  } };
 }
 const host = (reader, extra = {}) => new HostedRoost({ provider, requireSignedInputs: true, accountKeyCheck: keyCheck, deterministicOrder: true, escrowReader: reader, ...extra });
 async function filled(reader, extra = {}) { const h = host(reader, extra); h.openRound(ROUND); for (const i of voteInputs(h)) await h.submitSignedIntent(i); return h; }
@@ -196,12 +200,45 @@ for (const [name, p] of Object.entries(BIDDER)) {
 
 
 // ---- Amendment, Task 3d: say when the exit race cannot happen ----
-test('raceFree is true only when no exit can open before the settlement is likely to land', async () => {
-  const mk = async (exits) => { const h = await filled(stub(everyone, { fixedHeight: 1000, exitsOpenFromBlock: exits })); const b = await h.bindEscrow({ accounts: ROLL }); return { b, out: h.runBallot(VOTE_PARAMS) }; };
+test('raceFree is true only when no exit can open before the payout is likely to land, counting the read\'s age and the snapshot\'s allowed age', async () => {
+  // height 1000; the snapshot may be 30 s old and the payout needs 30 blocks: an exit must open after block 1060
+  const T = 5_000_000; const mk = async (exits, blockAgeMs = 0) => { const h = await filled(stub(everyone, { fixedHeight: 1000, exitsOpenFromBlock: exits, blockAgeMs, nowMs: T }), { clock: () => T }); const b = await h.bindEscrow({ accounts: ROLL }); return { b, out: h.runBallot(VOTE_PARAMS) }; };
   const far = await mk(1100); assert.equal(far.b.raceFree, true); assert.equal(far.out.outcome.escrowBlock.raceFree, true);
-  const near = await mk(1020); assert.equal(near.b.raceFree, false); assert.equal(near.out.outcome.escrowBlock.raceFree, false);
-  const edge = await mk(1030); assert.equal(edge.b.raceFree, false, 'the margin is strict: height + 30 must be below the first exit block');
-  const unknown = await mk(undefined); assert.equal(unknown.b.raceFree, false, 'unknown timing is never race-free');
+  assert.equal((await mk(1020)).b.raceFree, false);
+  assert.equal((await mk(1060)).b.raceFree, false, 'strict: 1000 + 30 (snapshot) + 30 (margin) must be BELOW the first exit block');
+  assert.equal((await mk(1061)).b.raceFree, true);
+  assert.equal((await mk(1100, 100_000)).b.raceFree, false, 'a block read 100 s ago is ~100 blocks behind the head, which uses up the margin');
+  assert.equal((await mk(undefined)).b.raceFree, false, 'unknown timing is never race-free');
+});
+
+// ---- Review of lead 9, I6: two rooms that must sign the same message are given one block ----
+test('a pinned block is passed to the reader and the outcome names it, so two rooms can read the same block', async () => {
+  const calls = [];
+  const h = await filled(stub(everyone, { calls }));
+  const b = await h.bindEscrow({ accounts: ROLL, blockHash: 'HASH5000' });
+  assert.equal(b.blockHash, 'HASH5000');
+  assert.equal(calls.at(-1).opts.blockHash, 'HASH5000');
+  assert.equal(h.runBallot(VOTE_PARAMS).outcome.escrowBlock.hash, 'HASH5000');
+});
+test('two deterministic rooms reading the pinned block sign the same order hash (two-room settlement needs this)', async () => {
+  const mk = async () => { const h = await filled(stub(everyone)); await h.bindEscrow({ accounts: ROLL, blockHash: 'HASH5000' }); return h.runBallot(VOTE_PARAMS).orderHash; };
+  assert.equal(await mk(), await mk());
+});
+test('without a pin, two rooms that read different blocks sign different order hashes (documented)', async () => {
+  const mk = async () => { const h = await filled(stub(everyone)); await h.bindEscrow({ accounts: ROLL }); return h.runBallot(VOTE_PARAMS).orderHash; };
+  assert.notEqual(await mk(), await mk());
+});
+
+// ---- Review of lead 9, minor: the per-round height record is bounded ----
+test('the record of the newest block read per round is bounded to the latest 100 rounds', async () => {
+  const h = host(stub(everyone, { fixedHeight: 9000 }));
+  const nonce = (i) => i.toString(16).padStart(64, '0');
+  h.openRound({ ...ROUND, roundNonce: nonce(0) }); await h.bindEscrow({ accounts: ROLL }); // block 9000 recorded for round 0
+  for (let i = 1; i <= 101; i += 1) { h.openRound({ ...ROUND, roundNonce: nonce(i) }); await h.bindEscrow({ accounts: ROLL }); }
+  h.openRound({ ...ROUND, roundNonce: nonce(0) });
+  const lower = host(stub(everyone, { fixedHeight: 100 })); void lower;
+  h.escrowReader = stub(everyone, { fixedHeight: 100 });
+  await assert.doesNotReject(() => h.bindEscrow({ accounts: ROLL }), 'round 0 was forgotten, so a lower block is no longer compared against it');
 });
 
 // ---- Amendment, Task 3c: a read goes stale ----
@@ -244,10 +281,14 @@ test('abandonSignedRound refuses when there is nothing signed to abandon', async
   assert.throws(() => h.abandonSignedRound(), /nothing to abandon/);
   assert.equal(h.abandoned.length, 0);
 });
-test('abandoning also drops the escrow read, so the next run must read again', async () => {
+test('abandoning also drops an escrow read taken after the run, so the next run must read again', async () => {
   const { h } = await signedRound(stub(everyone));
+  await h.bindEscrow({ accounts: ROLL }); // a read taken between the signed run and the abandon (the run had consumed the first one)
   h.abandonSignedRound();
-  assert.throws(() => h.runBallot(VOTE_PARAMS), /no aggregate|bind|queue|empty/i);
+  for (const i of voteInputs(h, undefined, { seq: 2 })) await h.submitSignedIntent(i); // the same five members re-submit
+  assert.throws(() => h.runBallot(VOTE_PARAMS), /bind/i, 'that read belongs to the abandoned round: a fresh bindEscrow is required');
+  await h.bindEscrow({ accounts: ROLL });
+  assert.doesNotThrow(() => h.runBallot(VOTE_PARAMS));
 });
 test('the abandoned list keeps only the newest 100', async () => {
   const p = new HostedRoost({ provider, deterministicOrder: true });
@@ -261,4 +302,75 @@ test('the abandoned list keeps only the newest 100', async () => {
   }
   assert.equal(p.abandoned.length, 100);
   assert.equal(p.abandoned[99].roundNonce, (104).toString(16).padStart(64, '0'), 'newest last');
+});
+
+// ---- Review of lead 9, C1 and I1: the exact worst-case boundary for EVERY program ----
+const Y = 10n ** 18n; // yocto per micro-NEAR
+const micro = (n) => BigInt(Math.round(Number(n) * 1e6));
+// each case: who is tested, their worst-case charge in yocto, how to build and run the round
+const WORST = {
+  pool: { who: 'a.near', worst: micro('0.01') * Y, bidder: true, host: plainHost, ids: ['a.near', 'b.near'], fill: (h) => { sealedTo(h, 'a.near', { amount: '0.01' }); sealedTo(h, 'b.near', { amount: '0.02' }); }, run: (h) => h.runPool({ recipient: 'r.near', min: '0' }) },
+  'auction first-price, lot of 5': { who: 'a.near', worst: micro('0.01') * 5n * Y, bidder: true, host: plainHost, ids: ['a.near', 'b.near'], fill: (h) => { sealedTo(h, 'a.near', { price: '0.01' }); sealedTo(h, 'b.near', { price: '0.001' }); }, run: (h) => h.runAuction({ format: 'first-price', seller: 's.near', lotUnits: 5, reserve: '0' }) },
+  'auction second-price, lot of 5': { who: 'a.near', worst: micro('0.01') * 5n * Y, bidder: true, host: plainHost, ids: ['a.near', 'b.near'], fill: (h) => { sealedTo(h, 'a.near', { price: '0.01' }); sealedTo(h, 'b.near', { price: '0.001' }); }, run: (h) => h.runAuction({ format: 'second-price', seller: 's.near', lotUnits: 5, reserve: '0' }) },
+  'auction uniform, quantity 3 of 5': { who: 'a.near', worst: micro('0.01') * 3n * Y, bidder: true, host: plainHost, ids: ['a.near', 'b.near'], fill: (h) => { sealedTo(h, 'a.near', { price: '0.01', quantity: 3 }); sealedTo(h, 'b.near', { price: '0.001', quantity: 3 }); }, run: (h) => h.runAuction({ format: 'uniform', seller: 's.near', lotUnits: 5, reserve: '0' }) },
+  'auction uniform, quantity 9 of 5': { who: 'a.near', worst: micro('0.01') * 5n * Y, bidder: true, host: plainHost, ids: ['a.near', 'b.near'], fill: (h) => { sealedTo(h, 'a.near', { price: '0.01', quantity: 9 }); sealedTo(h, 'b.near', { price: '0.001', quantity: 1 }); }, run: (h) => h.runAuction({ format: 'uniform', seller: 's.near', lotUnits: 5, reserve: '0' }) },
+  'quote (lend)': { who: 'l1.near', worst: micro('5') * Y, bidder: true, host: plainHost, ids: ['l1.near', 'l2.near'], fill: (h) => { sealedTo(h, 'l1.near', { rateBps: 450 }); sealedTo(h, 'l2.near', { rateBps: 400 }); }, run: (h) => h.runQuote({ shape: 'lend', counterparty: 'borrower.near', amount: '5', limit: 700 }) },
+  'cross, buyer': { who: 'b1.near', worst: 10n * micro('1.00') * Y, bidder: true, host: plainHost, ids: ['b1.near', 's1.near'], fill: (h) => { sealedTo(h, 'b1.near', { side: 'buy', units: 10, limit: '1.10' }); sealedTo(h, 's1.near', { side: 'sell', units: 10, limit: '0.95' }); }, run: (h) => h.runCross({ referencePrice: '1.00' }) },
+  'cross, buyer with maxUnits 4': { who: 'b1.near', worst: 4n * micro('1.00') * Y, bidder: true, host: plainHost, ids: ['b1.near', 's1.near'], fill: (h) => { sealedTo(h, 'b1.near', { side: 'buy', units: 10, limit: '1.10' }); sealedTo(h, 's1.near', { side: 'sell', units: 10, limit: '0.95' }); }, run: (h) => h.runCross({ referencePrice: '1.00', maxUnits: 4 }) },
+  'rfq (sell), maker': { who: 'maker1.near', worst: 10n * micro('0.00195') * Y, bidder: true, host: signedHost, ids: ['taker.near', 'maker1.near'], fill: async (h) => { await h.submitSignedIntent(signedIn(h, 'taker.near', { side: 'sell', units: 10, limit: '0.0018', salt: SALT })); await h.submitSignedIntent(signedIn(h, 'maker1.near', { bid: '0.00195', ask: '0.00205' })); }, run: (h) => h.runRfq({ taker: 'taker.near', makers: ['maker1.near'], pricing: 'first' }) },
+  'quote (buy), the counterparty': { who: 'buyer.near', worst: 3n * micro('2') * Y, bidder: false, extra: ['buyer.near'], host: plainHost, ids: ['l1.near'], fill: (h) => { sealedTo(h, 'l1.near', { price: '1.5' }); }, run: (h) => h.runQuote({ shape: 'buy', counterparty: 'buyer.near', units: 3, limit: '2' }) },
+  'rfq (buy), the taker': { who: 'taker.near', worst: 10n * micro('0.0022') * Y, bidder: false, host: signedHost, ids: ['taker.near', 'maker1.near'], fill: async (h) => { await h.submitSignedIntent(signedIn(h, 'taker.near', { side: 'buy', units: 10, limit: '0.0022', salt: SALT })); await h.submitSignedIntent(signedIn(h, 'maker1.near', { bid: '0.00195', ask: '0.00205' })); }, run: (h) => h.runRfq({ taker: 'taker.near', makers: ['maker1.near'], pricing: 'first' }) },
+};
+for (const [name, c] of Object.entries(WORST)) {
+  const round = async (held) => {
+    const bal = Object.fromEntries([...c.ids, ...(c.extra || [])].map((i) => [i, NEAR(1000)])); bal[c.who] = String(held);
+    const h = c.host(stub(bal)); h.openRound(ROUND); await c.fill(h); await h.bindEscrow({ accounts: c.extra || [] }); return h;
+  };
+  test(`worst case, ${name}: holding exactly the worst case is enough`, async () => {
+    const h = await round(c.worst);
+    const out = c.run(h);
+    if (c.bidder) assert.ok(!(out.outcome.excludedForEscrow || []).includes(c.who), `${c.who} must be kept`);
+    else assert.ok(out.outcome); // a single payer: the run goes ahead
+  });
+  test(`worst case, ${name}: one yocto less is not`, async () => {
+    const h = await round(c.worst - 1n);
+    if (c.bidder) assert.ok(c.run(h).outcome.excludedForEscrow.includes(c.who), `${c.who} must be left out`);
+    else assert.throws(() => c.run(h), /cannot cover/);
+  });
+}
+
+// ---- Review of lead 9, I4: leaving someone out must not publish that they voted ----
+test('a roll member left out for escrow is not also published as an outsider (that would reveal that they voted)', async () => {
+  const h = await filled(stub({ ...everyone, 'm4.near': '0' })); // m4 submitted a ballot and cannot pay
+  await h.bindEscrow({ accounts: ROLL });
+  const out = h.runBallot(VOTE_PARAMS);
+  assert.deepEqual(out.outcome.excludedForEscrow, ['m4.near']);
+  assert.deepEqual(out.outcome.outsiders, [], 'the only public trace is the exclusion list, which says nothing about voting');
+  const quiet = await filled(stub({ ...everyone, 'm4.near': '0' })); // the same, but m4 never voted
+  quiet.sealedIntents = quiet.sealedIntents.filter((i) => i.flyerId !== 'm4.near');
+  await quiet.bindEscrow({ accounts: ROLL });
+  const q = quiet.runBallot(VOTE_PARAMS);
+  assert.deepEqual({ ...out.outcome, unreadable: undefined }, { ...q.outcome, unreadable: undefined, escrowBlock: out.outcome.escrowBlock }, 'whether or not m4 voted, the public outcome is the same');
+});
+
+// ---- Review of lead 9, I5: the record of an abandoned round identifies exactly what was given up ----
+import crypto from 'node:crypto';
+test('the abandoned record carries the message hash, the allocation and charge hashes and the signature', async () => {
+  const h = await filled(stub(everyone)); await h.bindEscrow({ accounts: ROLL });
+  const out = h.runBallot(VOTE_PARAMS);
+  const signed = sign(h, out);
+  const rec = h.abandonSignedRound();
+  assert.equal(rec.orderHash, out.orderHash);
+  assert.equal(rec.messageSha256, crypto.createHash('sha256').update(signed.message).digest('hex'));
+  assert.equal(rec.allocationsHash, signed.allocationsHash);
+  assert.match(rec.chargesHash, /^[0-9a-f]{64}$/, 'a charged settlement records its charges hash');
+  assert.equal(rec.signature, signed.signature, 'the signature that stays valid on chain is on record');
+});
+test('a plain (uncharged) settlement records no charges hash', async () => {
+  const p = new HostedRoost({ provider, deterministicOrder: true });
+  p.openRound(ROUND);
+  p.submitSealedIntent({ flyerId: 'a.near', cipherTextHex: sealToModel(JSON.stringify({ amount: '0.01' }), p.intentPublicKey) });
+  const a = p.aggregateAndClear();
+  p.signSettlement({ ...ROUND, allocations: [{ recipient: 'r.near', amount: '1000' }], orderHash: a.orderHash });
+  assert.equal(p.abandonSignedRound().chargesHash, null);
 });

@@ -96,7 +96,7 @@ export function createRoomHandler(service, { adminKey, maxBody = 256 * 1024, rat
         case 'openRound': return send(200, service.open(body));
         case 'submitInput': return send(200, await service.submit(body));
         case 'abandonRound': return send(200, service.abandon(body?.round));
-        case 'runRoom': return send(200, await service.run({ program: body.program, params: body.params ?? {}, round: body.round, includeConfidential: body.includeConfidential === true }));
+        case 'runRoom': return send(200, await service.run({ program: body.program, params: body.params ?? {}, round: body.round, includeConfidential: body.includeConfidential === true, escrowBlockHash: body.escrowBlockHash ?? null }));
         default: return fail(500, 'INTERNAL', 'internal error');
       }
     } catch (e) {

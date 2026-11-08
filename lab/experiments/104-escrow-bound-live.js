@@ -17,7 +17,7 @@ export default {
   tier: 'testnet',
   requires: ['near-key', 'network'],
   hypothesis: 'Predictions are in docs/lab/PROGRAMME_PLAN.md, committed before this file existed. On the real contract, a pooled round with one unfunded member is rejected; after the coordinator abandons the signed round, the room reads the escrow from two real providers at one block, leaves the unfunded member out, and the settlement lands.',
-  limits: ['One operator controls every account in the run, and the room is a local host, not a TEE.', 'It does not show the race itself: a member leaving between the read and the payout. The room reports raceFree false here, and says so.', 'Two providers agreeing on one block is not proof they are honest or independent.', 'The unfunded member is simply an account that never deposited; other ways to be unable to pay (a partial balance) are covered offline.'],
+  limits: ['One operator controls every account in the run, and the room is a local host, not a TEE.', 'It does not show the race itself: a member leaving between the read and the payout. The room reports raceFree false here, and says so.', 'Two providers agreeing on one block is not proof they are honest or independent.', 'The unfunded member is simply an account that never deposited; other ways to be unable to pay (a partial balance) are covered offline.', 'If createMembers fails part-way the accounts it made are only in the lab ledger (run node scripts/lab-env.mjs cleanup), and a group that was hatched but never deposited into stays Active and cannot be pruned (audit lead 5).', 'raceFree here is the reader\'s estimate, not a guarantee.'],
   async run(ctx) {
     const chain = await connect(ctx.rootDir);
     const coord = chain.sub('c');

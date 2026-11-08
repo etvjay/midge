@@ -2,7 +2,8 @@
 /**
  * Midge lab runner.
  *   node lab/run.js --list
- *   node lab/run.js [--only E-A,E-B] [--tier offline,sandbox,testnet,hardware] [--repeat N] [--dir <runs dir>]
+ *   node lab/run.js [--only E-A,E-B] [--tier offline,sandbox,testnet,hardware] [--repeat N] [--dir <runs dir>] [--print-plan]
+ *   With neither --only nor --tier only the offline tier runs. --print-plan lists what WOULD run and exits. Unknown options are an error.
  * Each run writes lab/runs/<id>/ (events.jsonl hash chain, summary.json, report.md, blobs/).
  * Exit code 1 if any experiment FAILS or is FLAKY. Skips are reported with a reason and do not fail a run.
  */
@@ -18,6 +19,11 @@ const rootDir = path.resolve(here, '..');
 const arg = (n, d = null) => { const i = process.argv.indexOf(`--${n}`); return i > -1 ? process.argv[i + 1] : d; };
 const flag = (n) => process.argv.includes(`--${n}`);
 
+// An unknown option must never silently turn into "run everything": a typo (or a flag from a newer version) stops here.
+const KNOWN = new Set(['list', 'only', 'tier', 'repeat', 'dir', 'quiet', 'print-plan']);
+const unknown = process.argv.slice(2).filter((a) => a.startsWith('--') && !KNOWN.has(a.slice(2)));
+if (unknown.length) { console.error(`unknown option ${unknown.join(', ')}; known: ${[...KNOWN].map((k) => `--${k}`).join(' ')}`); process.exit(2); }
+
 const files = fs.readdirSync(path.join(here, 'experiments')).filter((f) => f.endsWith('.js')).sort();
 let experiments = [];
 for (const f of files) {
@@ -32,7 +38,19 @@ if (flag('list')) {
 const only = arg('only'); const tiers = arg('tier');
 if (only) experiments = experiments.filter((e) => only.split(',').includes(e.id));
 if (tiers) experiments = experiments.filter((e) => tiers.split(',').includes(e.tier));
+// With neither flag, run the offline tier only. Going further (testnet spends testnet NEAR, cloud spends API credit, hardware rents a VM)
+// has to be asked for by tier or by experiment id.
+if (!only && !tiers) {
+  experiments = experiments.filter((e) => e.tier === 'offline');
+  console.log('No --tier or --only given: the offline tier only. Use --tier testnet (spends testnet NEAR), --tier cloud or hardware (spend credit), or --only <id>.');
+}
 if (!experiments.length) { console.error('no experiments selected'); process.exit(2); }
+const costly = experiments.filter((e) => e.tier !== 'offline');
+if (costly.length) console.log(`This selection will spend: ${costly.map((e) => `${e.id} (${e.tier})`).join(', ')}`);
+if (flag('print-plan')) {
+  for (const e of experiments) console.log(`plan ${e.id.padEnd(26)} ${e.tier}`);
+  process.exit(0);
+}
 
 const runsDir = path.resolve(arg('dir', path.join(here, 'runs')));
 fs.mkdirSync(runsDir, { recursive: true });

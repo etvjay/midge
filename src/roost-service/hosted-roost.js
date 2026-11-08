@@ -187,22 +187,28 @@ export class HostedRoost {
    * Read, from the contract, what each queued bidder (and any extra paying account) holds in this group, at one final block.
    * Call it after the last input of the round and before a charged `run*`. It fails closed: if the providers cannot be read, are
    * behind, or disagree, it throws and the round does not run (the queue is kept). Without an escrowReader it throws too.
-   * @param {{accounts?: string[]}} [opts] accounts that will be charged but may have no queued input (a ballot's roll)
-   * @returns {Promise<{blockHeight:number, blockHash:string, bidders:number, raceFree:boolean}>} raceFree: no member could leave before the
+   * @param {{accounts?: string[], blockHash?: string}} [opts] accounts that will be charged but may have no queued input (a ballot's roll);
+   *   blockHash reads at THAT block, so the two rooms of a two-room settlement can be given one block and sign the same message
+   * @returns {Promise<{blockHeight:number, blockHash:string, bidders:number, raceFree:boolean}>} raceFree: by an estimate (the read's age at one block
+   *   a second, the snapshot's allowed age, and a margin for the payout), no member could leave before the
    *   settlement is likely to land (otherwise a member may still exit in between and make the contract reject the round: much rarer, not impossible)
    */
-  async bindEscrow({ accounts = [] } = {}) {
+  async bindEscrow({ accounts = [], blockHash = null } = {}) {
     if (!this.escrowReader) throw new RoostAggregationError('this host has no escrow reader');
     if (!this.round) throw new RoostAggregationError('no open round: call openRound first');
     const key = this.#roundKey();
     const ids = [...new Set([...this.sealedIntents.map((i) => i.flyerId), ...accounts])];
-    const out = await this.escrowReader.read(this.round.syndicateId, ids);
+    const out = await this.escrowReader.read(this.round.syndicateId, ids, blockHash ? { blockHash } : undefined);
     if (key !== this.#roundKey()) throw new RoostAggregationError('the round changed while escrow was being read: bind again');
     const last = this.#lastEscrowHeight.get(key) ?? 0;
     if (out.blockHeight < last) throw new RoostAggregationError(`could not read escrow: this read is from block ${out.blockHeight}, older than the earlier one (${last})`);
     this.#lastEscrowHeight.set(key, out.blockHeight);
+    if (this.#lastEscrowHeight.size > 100) this.#lastEscrowHeight.delete(this.#lastEscrowHeight.keys().next().value);
     // No member can leave before exitsOpenFromBlock; if the settlement is likely to land before then, the read cannot go stale this way.
-    const raceFree = Number.isSafeInteger(out.exitsOpenFromBlock) && out.blockHeight + this.settleMarginBlocks < out.exitsOpenFromBlock;
+    // The block that was read is already behind the head (at most one block per second is assumed, so this over-counts), the read may be used
+    // up to maxSnapshotAgeMs later, and the payout needs settleMarginBlocks to land. An exit must open after all of that.
+    const readAgeBlocks = Number.isFinite(out.blockTimeMs) ? Math.max(0, Math.ceil((this.clock() - out.blockTimeMs) / 1000)) : Infinity;
+    const raceFree = Number.isSafeInteger(out.exitsOpenFromBlock) && out.blockHeight + readAgeBlocks + Math.ceil(this.maxSnapshotAgeMs / 1000) + this.settleMarginBlocks < out.exitsOpenFromBlock;
     this.#escrow = { key, at: this.clock(), blockHeight: out.blockHeight, blockHash: out.blockHash, raceFree, escrows: out.escrows, covered: new Set(ids) };
     return { blockHeight: out.blockHeight, blockHash: out.blockHash, bidders: ids.length, raceFree };
   }
@@ -237,7 +243,7 @@ export class HostedRoost {
   abandonSignedRound() {
     const agg = this.aggregate;
     if (!this.round || !agg?.signed) throw new RoostAggregationError('nothing to abandon: this round has no signed settlement');
-    const record = { orderHash: agg.orderHash, roundNonce: this.round.roundNonce, epoch: this.round.epoch, syndicateId: this.round.syndicateId, at: this.clock() };
+    const record = { orderHash: agg.orderHash, ...agg.proof, roundNonce: this.round.roundNonce, epoch: this.round.epoch, syndicateId: this.round.syndicateId, at: this.clock() };
     this.#signedRounds.delete(this.#roundKey());
     this.aggregate = null; this.#escrow = null;
     this.abandoned.push(record); if (this.abandoned.length > 100) this.abandoned.shift();
@@ -366,7 +372,8 @@ export class HostedRoost {
       } catch { excluded.push(intent.flyerId); }
     });
     if (bids.length === 0) throw new RoostAggregationError('no valid bids in this round');
-    const aff = this.#affordable(bids, (b) => b.flyerId, (b) => b.priceMicro * BigInt(Math.min(b.quantity, lotUnits)) * YOCTO_PER_MICRO);
+    const aff = this.#affordable(bids, (b) => b.flyerId, // first- and second-price: the winner takes the WHOLE lot (price x lotUnits at most); uniform: price x the units it can be filled
+      (b) => b.priceMicro * BigInt(format === 'uniform' ? Math.min(b.quantity, lotUnits) : lotUnits) * YOCTO_PER_MICRO);
     const outcome = clearAuction({ format, bids: aff.kept, lotUnits, reserveMicro });
     this.sealedIntents = []; // plaintext never outlives this call
     const pub = {
@@ -504,7 +511,9 @@ export class HostedRoost {
       const pubNone = { shape: 'ballot', rule, decided: false, winner: null, recipient: null, reason: 'no-eligible-members', quorumMet: false, outsiders: [], unreadable, excludedForEscrow: aff.excluded, escrowBlock: aff.block, executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
       return { outcome: pubNone, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey };
     }
-    const out = clearBallot({ options: ids, roll: payingRoll, ballots, quorumBps, rule });
+    // A member left out for escrow is gone from the vote entirely: counting their ballot as an 'outsider' would publish that they voted.
+    const leftOut = new Set(aff.excluded);
+    const out = clearBallot({ options: ids, roll: payingRoll, ballots: ballots.filter((b) => !leftOut.has(b.flyerId)), quorumBps, rule });
     this.sealedIntents = [];
     const recipient = out.decided ? options[out.winner] : null;
     const pub = { shape: 'ballot', rule, decided: out.decided, winner: out.winner, recipient, reason: out.reason, quorumMet: out.quorumMet, outsiders: out.outsiders, unreadable, ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
@@ -631,7 +640,8 @@ export class HostedRoost {
         (b.side === 'buy' ? buys : sells).push({ flyerId: intent.flyerId, units: b.units, limitMicro, order });
       } catch { unreadable.push(intent.flyerId); }
     });
-    const aff = this.#affordable(buys, (b) => b.flyerId, (b) => BigInt(b.units) * b.limitMicro * YOCTO_PER_MICRO);
+    const aff = this.#affordable(buys, (b) => b.flyerId, // a buyer is charged at the public reference price for at most min(units, maxUnits), never at their own limit
+      (b) => BigInt(maxUnits === null ? b.units : Math.min(b.units, maxUnits)) * referenceMicro * YOCTO_PER_MICRO);
     const out = clearCross({ buys: aff.kept, sells, referenceMicro, maxUnits });
     const queued = this.sealedIntents; // kept so a cross that cannot be settled does not cost every member their order
     this.sealedIntents = [];
@@ -686,6 +696,8 @@ export class HostedRoost {
       : `${contractId}:${syndicateId}:${epoch}:${roundNonce}:${allocationsHash}:${computeChargesHash(charges)}:${agg.orderHash}`;
     const signature = crypto.sign(null, Buffer.from(message, 'utf8'), this.#settleKey).toString('hex');
     agg.signed = true;
+    // What a later abandon must be able to name: the signature stays valid on chain even if the coordinator gives the round up.
+    agg.proof = { messageSha256: sha256Hex(message), allocationsHash, chargesHash: charges === undefined ? null : computeChargesHash(charges), signature };
     this.#signedRounds.add(`${contractId}:${syndicateId}:${epoch}:${roundNonce}`);
     if (this.#signedRounds.size > 1000) this.#signedRounds.delete(this.#signedRounds.values().next().value);
     return { message, signature, allocationsHash, orderHash: agg.orderHash, settlePublicKey: this.settlePublicKey };

@@ -572,8 +572,12 @@
         "required": [
           "abandoned",
           "orderHash",
-          "roundNonce"
+          "roundNonce",
+          "messageSha256",
+          "allocationsHash",
+          "signature"
         ],
+        "description": "What was given up. The signature stays valid on chain: if conditions change it could still land if it reaches the chain first; the contract lets only one settlement land per round nonce.",
         "properties": {
           "abandoned": {
             "type": "boolean"
@@ -582,6 +586,21 @@
             "type": "string"
           },
           "roundNonce": {
+            "type": "string"
+          },
+          "messageSha256": {
+            "type": "string"
+          },
+          "allocationsHash": {
+            "type": "string"
+          },
+          "chargesHash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "signature": {
             "type": "string"
           }
         }
@@ -593,6 +612,10 @@
           "round"
         ],
         "properties": {
+          "escrowBlockHash": {
+            "type": "string",
+            "description": "Read escrow at this block hash instead of the latest final block, so the two rooms of a two-room settlement read the same block (only with an escrow reader)."
+          },
           "program": {
             "type": "string",
             "enum": [
