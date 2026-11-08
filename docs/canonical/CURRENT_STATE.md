@@ -55,7 +55,7 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (145 Ru
 4. **Hardware hosting of the room (GAP-004):**
    - *Current State:* The default room is the local simulation and is not in hardware. The model-sealed Roost seals bids to a NEAR AI Cloud model's attested key. The hosted Roost has been attested on real Phala TDX machines (2026-11-04, and 2026-11-08 with the escrow check on). Those VMs were ephemeral and were deleted; **no hosted Roost is running now**.
 5. **Intel DCAP-QVL Verification (GAP-006, closed):**
-   - *Current State:* The Intel certificate chain to the Intel root and the TCB status are checked with `dcap-qvl`, and a machine without it now fails closed (GAP-035). An optional pin of the host's measurements (MRTD, RTMR0 to RTMR3, MRSEAM) exists (GAP-043) but nothing is pinned by default, because deciding which build to trust is the owner's decision.
+   - *Current State:* The Intel certificate chain to the Intel root and the TCB status are checked with `dcap-qvl`, and a machine without it now fails closed (GAP-035). An optional pin of the host's measurements (MRTD, RTMR0 to RTMR3, MRSEAM) exists (GAP-043): set `MIDGE_MODEL_MEASUREMENTS`, and read the current values with `npm run measure:model`. Nothing is pinned by default, because deciding which build to trust is the owner's decision and the values it prints are only what was observed.
 6. **Sybil Syndicate Capacity & Storage Staking (GAP-007):**
    - *Current State:* Fixed 50-flyer capacity cap with 0.01 NEAR minimum deposit to bound contract memory and gas costs. Storage deposit is statically allocated at hatch time.
    - *Roadmap:* Dynamic per-flyer storage deposit refundable upon hatch_out or settlement.

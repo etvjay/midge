@@ -103,7 +103,8 @@ It does not assume a trusted execution environment (TEE, a hardware-isolated com
 
 - **Attack:** the member is shown a valid Intel quote from a machine that is not the build they meant to trust.
 - **Defense:** the quote proves the signing key and a fresh nonce are inside a genuine TDX machine. A caller can additionally pin the measurements (MRTD, RTMR0 to RTMR3, MRSEAM); a mismatch fails and names the field (GAP-043). For the hosted Roost the measured compose file also names the container image digest and the settings.
-- **Limit:** nothing is pinned by default, because which build to trust is the owner's decision.
+- **How to switch it on:** set `MIDGE_MODEL_MEASUREMENTS` to a list of accepted values per field; `npm run measure:model` (`scripts/measure-model.js`) prints what the host reports now and a setting to paste. A malformed setting stops the caller rather than turning the pin off.
+- **Limit:** nothing is pinned by default, because which build to trust is the owner's decision, and the values the script prints are only what was observed: they have not been checked against anything NEAR AI publishes. A pinned caller refuses a new NEAR AI build until its values are added.
 
 ---
 
