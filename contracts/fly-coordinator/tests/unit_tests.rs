@@ -2,7 +2,7 @@
 
 use ed25519_dalek::{Signer, SigningKey};
 use fly_coordinator::{
-    compute_allocations_hash, compute_charges_hash, Allocation, Charge, FlyCoordinator,
+    compute_allocations_hash, compute_charges_hash, Allocation, Charge, FlyCoordinator, GroupPhase,
     ReleasePolicy, SyndicateStatus,
 };
 use near_sdk::test_utils::testing_env_with_promise_results;
@@ -3284,7 +3284,7 @@ fn the_follow_up_step_is_given_gas_in_proportion_to_the_members() {
                     ..
                 } = a
                 {
-                    if method_name == b"on_settlement_payout" {
+                    if method_name == b"on_settlement_payout_for_round" {
                         gas = prepaid_gas.as_gas();
                     }
                 }
@@ -3945,4 +3945,245 @@ fn hatch_refuses_an_oversized_code_hash() {
         Some("r.near".parse().unwrap()),
         None,
     );
+}
+
+// ---- GAP-028: the follow-up names the settlement it finishes (its round nonce) ----
+
+fn follow_up_for_round(
+    c: &mut FlyCoordinator,
+    id: &str,
+    m: &[AccountId; 3],
+    block: u64,
+    nonce: &str,
+    amounts: [u128; 3],
+) -> bool {
+    let total: u128 = amounts.iter().sum();
+    let charges = vec![
+        charge(&m[0], amounts[0]),
+        charge(&m[1], amounts[1]),
+        charge(&m[2], amounts[2]),
+    ];
+    testing_env_with_promise_results(
+        get_context(
+            "fly-coordinator.testnet".parse().unwrap(),
+            NearToken::from_near(0),
+            block,
+        )
+        .build(),
+        PromiseResult::Successful(vec![]),
+    );
+    c.on_settlement_payout_for_round(
+        id.to_string(),
+        pay_r(total),
+        charges,
+        NearToken::from_near(total),
+        compute_allocations_hash(&pay_r(total)),
+        "order".to_string(),
+        nonce.to_string(),
+    )
+}
+
+/// Two settlements with byte-identical payloads, the first finished by recovery: the situation GAP-028 could not tell apart.
+fn identical_second_settlement(
+    name: &str,
+) -> (FlyCoordinator, String, [AccountId; 3], String, String) {
+    let (mut c, id, nonce_a, m) = charged_setup(name);
+    let charges = vec![charge(&m[0], 1), charge(&m[1], 2), charge(&m[2], 3)];
+    settle_charged_as_owner(&mut c, &id, &nonce_a, pay_r(6), charges.clone(), &charges);
+    testing_env!(get_context("anyone.near".parse().unwrap(), NearToken::from_near(0), 300).build());
+    c.recover_stuck_settlement(id.clone());
+    let nonce_b = c.get_syndicate(id.clone()).unwrap().round_nonce;
+    assert_ne!(nonce_a, nonce_b, "the nonce must change after a settlement");
+    settle_charged_as_owner(&mut c, &id, &nonce_b, pay_r(6), charges.clone(), &charges);
+    assert!(c.get_syndicate(id.clone()).unwrap().is_settling);
+    (c, id, m, nonce_a, nonce_b)
+}
+
+#[test]
+fn a_late_follow_up_from_an_earlier_identical_settlement_changes_nothing() {
+    let (mut c, id, m, nonce_a, _) = identical_second_settlement("gap28-late");
+    let before = c.get_escrow(id.clone(), m[0].clone());
+    assert!(follow_up_for_round(
+        &mut c,
+        &id,
+        &m,
+        310,
+        &nonce_a,
+        [1, 2, 3]
+    ));
+    let syn = c.get_syndicate(id.clone()).unwrap();
+    assert!(syn.is_settling, "the second settlement is still in flight");
+    assert!(
+        c.get_pending_settlement(id.clone()).is_some(),
+        "its record is untouched"
+    );
+    assert_eq!(c.get_escrow(id, m[0].clone()), before, "no balance moved");
+}
+
+#[test]
+fn the_follow_up_that_names_the_settlement_in_flight_finishes_it() {
+    let (mut c, id, m, _, nonce_b) = identical_second_settlement("gap28-right");
+    assert!(follow_up_for_round(
+        &mut c,
+        &id,
+        &m,
+        310,
+        &nonce_b,
+        [1, 2, 3]
+    ));
+    assert!(!c.get_syndicate(id.clone()).unwrap().is_settling);
+    assert!(c.get_pending_settlement(id).is_none());
+}
+
+#[test]
+fn the_follow_up_is_still_the_late_one_after_the_right_one_finished() {
+    let (mut c, id, m, nonce_a, nonce_b) = identical_second_settlement("gap28-after");
+    assert!(follow_up_for_round(
+        &mut c,
+        &id,
+        &m,
+        310,
+        &nonce_b,
+        [1, 2, 3]
+    ));
+    let escrow = c.get_escrow(id.clone(), m[2].clone());
+    assert!(follow_up_for_round(
+        &mut c,
+        &id,
+        &m,
+        311,
+        &nonce_a,
+        [1, 2, 3]
+    ));
+    assert_eq!(
+        c.get_escrow(id, m[2].clone()),
+        escrow,
+        "a repeat changes nothing"
+    );
+}
+
+#[test]
+fn a_settlement_in_flight_from_the_old_code_is_still_finished_by_the_old_follow_up() {
+    // An in-flight settlement at deploy time has no nonce record; its follow-up is the original method.
+    let (mut c, id, m) = stuck_after_charged_settlement("gap28-legacy");
+    near_sdk::env::storage_remove(format!("n:{id}").as_bytes());
+    assert!(run_the_callback(&mut c, &id, &m, 121));
+    assert!(!c.get_syndicate(id).unwrap().is_settling);
+}
+
+#[test]
+fn a_follow_up_with_no_nonce_on_record_is_not_the_one_in_flight() {
+    let (mut c, id, m) = stuck_after_charged_settlement("gap28-norecord");
+    near_sdk::env::storage_remove(format!("n:{id}").as_bytes());
+    assert!(follow_up_for_round(&mut c, &id, &m, 121, "any", [2, 4, 6]));
+    assert!(c.get_syndicate(id).unwrap().is_settling, "nothing changed");
+}
+
+#[test]
+fn recovery_clears_the_nonce_record_too() {
+    let (mut c, id, _) = stuck_after_charged_settlement("gap28-recover");
+    assert!(near_sdk::env::storage_read(format!("n:{id}").as_bytes()).is_some());
+    testing_env!(get_context("anyone.near".parse().unwrap(), NearToken::from_near(0), 300).build());
+    c.recover_stuck_settlement(id.clone());
+    assert!(near_sdk::env::storage_read(format!("n:{id}").as_bytes()).is_none());
+}
+
+#[test]
+fn the_follow_up_scheduled_by_a_settlement_is_the_one_that_names_its_round() {
+    use near_sdk::test_utils::get_created_receipts;
+    let (_c, _id, _) = stuck_after_charged_settlement("gap28-sched");
+    let mut names = vec![];
+    for r in get_created_receipts() {
+        for a in r.actions {
+            if let near_sdk::mock::MockAction::FunctionCallWeight { method_name, .. } = a {
+                names.push(String::from_utf8(method_name).unwrap());
+            }
+        }
+    }
+    assert!(
+        names.iter().any(|n| n == "on_settlement_payout_for_round"),
+        "scheduled: {names:?}"
+    );
+    assert!(
+        !names.iter().any(|n| n == "on_settlement_payout"),
+        "the old follow-up is not scheduled any more: {names:?}"
+    );
+}
+
+// ---- get_group_phase: the composite states of docs/STATE_MACHINE.md as a view ----
+
+#[test]
+fn the_phase_of_a_group_that_does_not_exist_is_nothing() {
+    let (c, _, _, _) = charged_setup("phase-none");
+    assert!(c.get_group_phase("nope".to_string()).is_none());
+}
+
+#[test]
+fn a_group_nobody_has_funded_is_unfunded() {
+    let owner: AccountId = "alice.near".parse().unwrap();
+    testing_env!(get_context(owner, NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let (pk, _) =
+        make_enclave_key_and_signature("fly-coordinator.testnet", "phase-unf", 1, "", "", "");
+    let id = c.hatch(
+        "phase-unf".to_string(),
+        Some("FLASH".to_string()),
+        Some(1),
+        Some(50),
+        pk,
+        "hash".to_string(),
+        Some(30),
+        Some("r.near".parse().unwrap()),
+        None,
+    );
+    assert_eq!(c.get_group_phase(id), Some(GroupPhase::Unfunded));
+}
+
+#[test]
+fn a_funded_group_is_open_then_in_flight_then_open_again_then_settled() {
+    let (mut c, id, nonce, m) = charged_setup("phase-life");
+    assert_eq!(c.get_group_phase(id.clone()), Some(GroupPhase::Open));
+    let charges = vec![charge(&m[0], 2), charge(&m[1], 4), charge(&m[2], 6)];
+    settle_charged_as_owner(&mut c, &id, &nonce, pay_r(12), charges.clone(), &charges);
+    assert_eq!(
+        c.get_group_phase(id.clone()),
+        Some(GroupPhase::PayoutInFlight)
+    );
+    let nonce_in_flight = nonce.clone();
+    assert!(follow_up_for_round(
+        &mut c,
+        &id,
+        &m,
+        121,
+        &nonce_in_flight,
+        [2, 4, 6]
+    ));
+    assert_eq!(c.get_group_phase(id.clone()), Some(GroupPhase::Open));
+    // pay everything that is left
+    let nonce2 = c.get_syndicate(id.clone()).unwrap().round_nonce;
+    let rest = vec![charge(&m[0], 8), charge(&m[1], 6), charge(&m[2], 4)];
+    settle_charged_as_owner(&mut c, &id, &nonce2, pay_r(18), rest.clone(), &rest);
+    assert_eq!(
+        c.get_group_phase(id.clone()),
+        Some(GroupPhase::PayoutInFlight)
+    );
+    assert!(follow_up_for_round(
+        &mut c,
+        &id,
+        &m,
+        122,
+        &nonce2,
+        [8, 6, 4]
+    ));
+    assert_eq!(c.get_group_phase(id), Some(GroupPhase::Settled));
+}
+
+#[test]
+fn a_group_whose_last_member_left_is_refunded() {
+    let (mut c, id, _, m) = charged_setup("phase-refund");
+    for (i, who) in m.iter().enumerate() {
+        testing_env!(get_context(who.clone(), NearToken::from_near(0), 400 + i as u64).build());
+        let _ = c.hatch_out(id.clone());
+    }
+    assert_eq!(c.get_group_phase(id), Some(GroupPhase::Refunded));
 }

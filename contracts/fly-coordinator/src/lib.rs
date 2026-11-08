@@ -233,6 +233,23 @@ pub enum SyndicateStatus {
     AbortedRefunded,
 }
 
+/// Where a group is in its life, in the words of docs/STATE_MACHINE.md. A view only; nothing is stored.
+#[near(serializers = [json])]
+#[derive(Clone, PartialEq, Debug)]
+pub enum GroupPhase {
+    /// Active, funded, nothing in flight: deposits, settlements and exits are possible.
+    Open,
+    /// A payout has been sent and its follow-up step has not run: settlements and exits wait. This includes a final payout
+    /// that will leave the group Settled, because a failed transfer would put it back to Active.
+    PayoutInFlight,
+    /// A settlement used the whole group.
+    Settled,
+    /// The last member left.
+    Refunded,
+    /// Active with no member and no escrow: hatched and never funded. It has no exit and cannot be pruned (GAP-030).
+    Unfunded,
+}
+
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug)]
 pub struct SyndicateRecord {
@@ -366,6 +383,15 @@ pub struct PendingSettlement {
 
 fn pending_slot(syndicate_id: &str) -> Vec<u8> {
     let mut k = b"p:".to_vec();
+    k.extend_from_slice(syndicate_id.as_bytes());
+    k
+}
+
+/// The round nonce the settlement in flight was signed for. The follow-up step names the nonce it belongs to and is
+/// ignored unless it matches, so a late follow-up from an earlier settlement with a byte-identical payload cannot finish a
+/// newer one (GAP-028). Kept in its own slot so the pending record's layout does not change.
+fn nonce_slot(syndicate_id: &str) -> Vec<u8> {
+    let mut k = b"n:".to_vec();
     k.extend_from_slice(syndicate_id.as_bytes());
     k
 }
@@ -1087,6 +1113,7 @@ impl FlyCoordinator {
             .total_settled_payouts
             .saturating_add(NearToken::from_yoctonear(total_payout_yocto));
         syn.is_settling = true;
+        let signed_nonce = syn.round_nonce.clone(); // the nonce this settlement was signed for, before it rotates below
         window.released = window
             .released
             .saturating_add(NearToken::from_yoctonear(total_payout_yocto));
@@ -1141,6 +1168,7 @@ impl FlyCoordinator {
                 env::panic_str("[Settle REJECT] Could not record the settlement")
             }),
         );
+        env::storage_write(&nonce_slot(&syn.id), signed_nonce.as_bytes());
         let members = (syn.flyers.len().max(charges.len())) as u64;
         let callback_tgas =
             (CALLBACK_BASE_TGAS + CALLBACK_PER_MEMBER_TGAS * members).min(CALLBACK_MAX_TGAS);
@@ -1149,13 +1177,14 @@ impl FlyCoordinator {
             let _ = promise.then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(Gas::from_tgas(callback_tgas))
-                    .on_settlement_payout(
+                    .on_settlement_payout_for_round(
                         syn.id.clone(),
                         allocations,
                         charges,
                         NearToken::from_yoctonear(total_payout_yocto),
                         allocations_hash,
                         aggregate_order_hash,
+                        signed_nonce,
                     ),
             );
         }
@@ -1239,9 +1268,59 @@ impl FlyCoordinator {
         )
     }
 
-    /// Callback for settlement payout transfer handling with partial rollback (CA-002, CA-003).
+    /// Follow-up step of a settlement, for payouts scheduled by code that did not yet name the round. It is kept only so
+    /// a settlement that was in flight when the contract was upgraded can still be finished; new settlements schedule
+    /// `on_settlement_payout_for_round`, which cannot be confused with another settlement of the same payload (GAP-028).
     #[private]
     pub fn on_settlement_payout(
+        &mut self,
+        syndicate_id: String,
+        allocations: Vec<Allocation>,
+        charges: Vec<Charge>,
+        total_payout: NearToken,
+        allocations_hash: String,
+        order_hash: String,
+    ) -> bool {
+        self.settlement_follow_up(
+            syndicate_id,
+            allocations,
+            charges,
+            total_payout,
+            allocations_hash,
+            order_hash,
+        )
+    }
+
+    /// Follow-up step of a settlement (CA-002, CA-003), naming the round nonce the settlement was signed for. It acts only
+    /// if that nonce is the one recorded for the settlement in flight; otherwise it is a late follow-up of an earlier
+    /// settlement and changes nothing.
+    #[private]
+    #[allow(clippy::too_many_arguments)]
+    pub fn on_settlement_payout_for_round(
+        &mut self,
+        syndicate_id: String,
+        allocations: Vec<Allocation>,
+        charges: Vec<Charge>,
+        total_payout: NearToken,
+        allocations_hash: String,
+        order_hash: String,
+        round_nonce: String,
+    ) -> bool {
+        let in_flight = env::storage_read(&nonce_slot(&syndicate_id));
+        if in_flight.as_deref() != Some(round_nonce.as_bytes()) {
+            return true;
+        }
+        self.settlement_follow_up(
+            syndicate_id,
+            allocations,
+            charges,
+            total_payout,
+            allocations_hash,
+            order_hash,
+        )
+    }
+
+    fn settlement_follow_up(
         &mut self,
         syndicate_id: String,
         allocations: Vec<Allocation>,
@@ -1297,6 +1376,7 @@ impl FlyCoordinator {
             return true;
         }
         env::storage_remove(&pending_slot(&syndicate_id));
+        env::storage_remove(&nonce_slot(&syndicate_id));
         self.finish_settlement(
             syndicate_id,
             charges,
@@ -1448,6 +1528,7 @@ impl FlyCoordinator {
             ready_at
         );
         env::storage_remove(&pending_slot(&syndicate_id));
+        env::storage_remove(&nonce_slot(&syndicate_id));
         env::log_str(&format!(
             "EVENT_JSON:{{\"standard\":\"fly\",\"version\":\"1.0.0\",\"event\":\"settlement_recovered\",\"data\":[{{\"syndicate_id\":\"{}\",\"started_at_block\":{},\"recovered_at_block\":{},\"total_payout\":\"{}\"}}]}}",
             syndicate_id,
@@ -1463,6 +1544,22 @@ impl FlyCoordinator {
             pending.allocations_hash,
             pending.order_hash,
         );
+    }
+
+    /// Where a group is in its life (see `GroupPhase`); nothing for an id that does not exist.
+    pub fn get_group_phase(&self, syndicate_id: String) -> Option<GroupPhase> {
+        let syn = self.syndicates.get(&syndicate_id)?;
+        // A payout in flight comes first: a final one marks the group Settled at once, but if a transfer then fails the
+        // follow-up step puts the group back to Active, so it is not settled until the follow-up has run.
+        if syn.is_settling {
+            return Some(GroupPhase::PayoutInFlight);
+        }
+        Some(match syn.status {
+            SyndicateStatus::Settled => GroupPhase::Settled,
+            SyndicateStatus::AbortedRefunded => GroupPhase::Refunded,
+            SyndicateStatus::Active if syn.flyers.is_empty() => GroupPhase::Unfunded,
+            SyndicateStatus::Active => GroupPhase::Open,
+        })
     }
 
     /// The settlement waiting for its follow-up step, if any.
