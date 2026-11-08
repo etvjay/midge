@@ -77,3 +77,23 @@ for (const name of ['pool', 'ballot']) {
     assert.doesNotThrow(() => p.run(h));
   });
 }
+
+// ---- Review of plan 09-1, finding 1: R-01 must hold for every way of producing an aggregate and for a re-opened round ----
+test('R-01: aggregateAndClear after a signed settlement in the same round is refused and the queue is kept', async () => {
+  const h = new HostedRoost({ provider, deterministicOrder: true }); h.openRound(ctx);
+  sealed(h, 'a.near', { amount: '0.01' });
+  const agg = h.aggregateAndClear();
+  h.signSettlement({ ...ctx, allocations: [{ recipient: 'r.near', amount: '1000' }], orderHash: agg.orderHash });
+  sealed(h, 'b.near', { amount: '0.02' });
+  assert.throws(() => h.aggregateAndClear(), /already has a signed settlement/);
+  assert.equal(h.sealedIntents.length, 1, 'the queue must be untouched');
+});
+
+test('R-01: a round that was already signed cannot be opened again with the same nonce, so the guard cannot be reset', async () => {
+  const h = new HostedRoost({ provider, deterministicOrder: true }); h.openRound(ctx);
+  sealed(h, 'a.near', { amount: '0.01' });
+  const agg = h.aggregateAndClear();
+  h.signSettlement({ ...ctx, allocations: [{ recipient: 'r.near', amount: '1000' }], orderHash: agg.orderHash });
+  assert.throws(() => h.openRound(ctx), /already signed/);
+  assert.doesNotThrow(() => h.openRound({ ...ctx, roundNonce: 'ef'.repeat(32) }), 'a new nonce is a new round');
+});

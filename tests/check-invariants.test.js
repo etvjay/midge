@@ -81,3 +81,20 @@ test('a row for a function the contract no longer has is an error', () => {
   const r = checkInvariants({ root: fixture({ ...inv([good]), 'contracts/fly-coordinator/src/lib.rs': lib, 'docs/STATE_MACHINE.md': doc }) });
   assert.ok(r.errors.some((e) => e.includes('gone')));
 });
+
+// ---- Review of plan 09-1, finding 2: the tests column of STATE_MACHINE.md is checked ----
+const libTwo = 'impl FlyCoordinator {\n pub fn alpha(&self) {}\n}\n';
+const smDoc = (cell) => `## Contract transitions\n| Function | Who | Guard | Effect | Tests |\n|---|---|---|---|---|\n| \`alpha\` | anyone | none | nothing | ${cell} |\n`;
+const smFixture = (cell, extra = {}) => fixture({ ...inv([good]), 'contracts/fly-coordinator/src/lib.rs': libTwo, 'docs/STATE_MACHINE.md': smDoc(cell), ...extra });
+
+test('a Rust test named in the tests column must exist', () => {
+  assert.deepEqual(checkInvariants({ root: smFixture('`real_test`') }).errors, []);
+  const r = checkInvariants({ root: smFixture('`real_test`, `vanished_test`') });
+  assert.ok(r.errors.some((e) => e.includes('vanished_test') && e.includes('alpha')), JSON.stringify(r.errors));
+});
+
+test('a file named in the tests column must exist, and NONE is allowed', () => {
+  assert.deepEqual(checkInvariants({ root: smFixture('`tests/a.test.js` (lead 15)', { 'tests/a.test.js': '' }) }).errors, []);
+  assert.ok(checkInvariants({ root: smFixture('`tests/missing.test.js`') }).errors.some((e) => e.includes('tests/missing.test.js')));
+  assert.deepEqual(checkInvariants({ root: smFixture('NONE') }).errors, []);
+});

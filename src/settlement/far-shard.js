@@ -5,6 +5,11 @@ import crypto from 'node:crypto';
  * Models the dedicated, permissioned NEAR private shard with PBFT consensus (~200ms finality),
  * zero public explorer exposure, and the IMT (Intent Minted Tokens) lifecycle.
  */
+/** Amounts are finite positive numbers. A negative or non-numeric one would add tokens instead of removing them. */
+function requireAmount(value, what) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) throw new Error(`[FAR REJECT] ${what} must be a finite positive amount.`);
+}
+
 export class FarPrivateShardBridge {
   constructor() {
     this.publicTreasuryLocked = new Map(); // assetId -> amount
@@ -17,6 +22,7 @@ export class FarPrivateShardBridge {
    * Step 1: Lock public tokens in intents.near Treasury.
    */
   lockPublicTreasury({ depositor, assetId, amount }) {
+    requireAmount(amount, 'the locked amount');
     const current = this.publicTreasuryLocked.get(assetId) || 0;
     this.publicTreasuryLocked.set(assetId, current + amount);
 
@@ -66,6 +72,7 @@ export class FarPrivateShardBridge {
    * Step 3: Match & Settle inside the FAR Private Shard (No Public RPC).
    */
   executePrivateMatch({ orderId, inputAccount, inputAmount, outputAsset, outputAmount }) {
+    requireAmount(inputAmount, 'the input amount');
     const balance = this.privateImtBalances.get(inputAccount) || 0;
     if (balance < inputAmount) {
       throw new Error(`Insufficient IMT balance on FAR shard: has ${balance}, needs ${inputAmount}`);
@@ -93,6 +100,7 @@ export class FarPrivateShardBridge {
    * Step 4: Burn IMT and withdraw to an unlinked destination wallet.
    */
   burnImtAndWithdraw({ privateAccount, imtAmount, publicDestinationWallet, destinationChain = 'near' }) {
+    requireAmount(imtAmount, 'the burn amount');
     // Burn private-side tokens
     const balance = this.privateImtBalances.get(privateAccount) || 0;
     if (balance < imtAmount) {

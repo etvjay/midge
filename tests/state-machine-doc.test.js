@@ -17,7 +17,11 @@ test('every public contract function has a row, and no row names a missing funct
   assert.deepEqual(rows.filter((r) => !fns.includes(r)), [], 'rows for functions that do not exist');
 });
 
-test('every Roost round method has a row', () => {
+test('every public HostedRoost method has a row, and no row names a method that does not exist', () => {
+  const src = read('src/roost-service/hosted-roost.js');
+  const body = src.slice(src.indexOf('export class HostedRoost'));
+  const methods = [...new Set([...body.matchAll(/^  (?:async\s+)?(?:get\s+)?([a-zA-Z_][A-Za-z0-9_]*)\s*\(/gm)].map((m) => m[1]).filter((n) => !['constructor', 'if', 'for', 'while', 'switch', 'catch', 'return'].includes(n)))];
   const rows = rowNames(part('## The Roost round'));
-  for (const m of ['openRound', 'submitSignedIntent', 'submitSealedIntent', 'exclude', 'runAuction', 'runPool', 'runQuote', 'runBallot', 'runRfq', 'runPayrun', 'runCross', 'signSettlement']) assert.ok(rows.includes(m), `no row for ${m}`);
+  assert.deepEqual(methods.filter((m) => !rows.includes(m)), [], 'methods with no row');
+  assert.deepEqual(rows.filter((r) => !methods.includes(r)), [], 'rows for methods that do not exist');
 });

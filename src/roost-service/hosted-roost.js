@@ -176,6 +176,8 @@ export class HostedRoost {
     return { excluded: [...drop], remaining: this.sealedIntents.length };
   }
 
+  #signedRounds = new Set(); // rounds this host has signed (newest 1000); a signed round cannot be re-opened with the same nonce
+
   /** Signing is once per round, not once per aggregate: after a signature, more inputs must not yield a second signed settlement for the same epoch and nonce. */
   #assertNoSignedAggregate() {
     if (this.aggregate?.signed) throw new RoostAggregationError('this round already has a signed settlement; open a new round');
@@ -185,6 +187,7 @@ export class HostedRoost {
   openRound({ contractId, syndicateId, epoch, roundNonce }) {
     for (const [k, v] of Object.entries({ contractId, syndicateId, roundNonce })) if (typeof v !== 'string' || v.length === 0 || v.includes(':')) throw new RoostAggregationError(`${k} must be a non-empty string without ':'`);
     if (!Number.isSafeInteger(epoch) || epoch < 0) throw new RoostAggregationError('epoch must be a non-negative integer');
+    if (this.#signedRounds.has(`${contractId}:${syndicateId}:${epoch}:${roundNonce}`)) throw new RoostAggregationError('this round was already signed; open a new round with a new nonce');
     this.round = { contractId, syndicateId, epoch, roundNonce };
     this.sealedIntents = []; this.lastSeq = new Map(); this.aggregate = null;
     return { ...this.round };
@@ -236,6 +239,7 @@ export class HostedRoost {
    * excluded and its flyerId reported (never its content), so one bad bid cannot block the round.
    */
   aggregateAndClear({ roundId = '' } = {}) {
+    this.#assertNoSignedAggregate();
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot aggregate an empty sealed intent queue');
     let totalMicro = 0n;
     let valid = 0;
@@ -591,6 +595,8 @@ export class HostedRoost {
       : `${contractId}:${syndicateId}:${epoch}:${roundNonce}:${allocationsHash}:${computeChargesHash(charges)}:${agg.orderHash}`;
     const signature = crypto.sign(null, Buffer.from(message, 'utf8'), this.#settleKey).toString('hex');
     agg.signed = true;
+    this.#signedRounds.add(`${contractId}:${syndicateId}:${epoch}:${roundNonce}`);
+    if (this.#signedRounds.size > 1000) this.#signedRounds.delete(this.#signedRounds.values().next().value);
     return { message, signature, allocationsHash, orderHash: agg.orderHash, settlePublicKey: this.settlePublicKey };
   }
 }

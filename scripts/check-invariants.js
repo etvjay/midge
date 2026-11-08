@@ -64,6 +64,23 @@ export function checkInvariants({ root }) {
     for (const r of rows) if (!fns.includes(r)) errors.push(`docs/STATE_MACHINE.md has a row for ${r}, which the contract no longer has`);
   }
 
+  // Every test or file named in the "tests" (last) column of docs/STATE_MACHINE.md must still exist.
+  if (fs.existsSync(sm)) {
+    const doc = read(sm); let current = '';
+    for (const line of doc.split('\n')) {
+      if (line.startsWith('## ')) { current = line; continue; }
+      const m = line.match(/^\|\s*`([a-zA-Z_][a-zA-Z0-9_]*)`\s*\|/);
+      if (!m || !/Contract transitions|The Roost round/.test(current)) continue;
+      const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+      const testsCell = cells[cells.length - 1] || '';
+      for (const t of testsCell.matchAll(/`([^`]+)`/g)) {
+        const ref = t[1];
+        if (ref.includes('/')) { if (!fs.existsSync(path.join(root, ref))) errors.push(`docs/STATE_MACHINE.md row ${m[1]} names ${ref}, which does not exist`); }
+        else if (!testFnNames.has(ref)) errors.push(`docs/STATE_MACHINE.md row ${m[1]} names test ${ref}, which does not exist`);
+      }
+    }
+  }
+
   const files = [
     ...walk(path.join(root, 'docs'), (p) => p.endsWith('.md') && !rel(p).startsWith('docs/superpowers/')),
     ...walk(path.join(root, 'foundry'), (p) => /\.(md|json|jsonl)$/.test(p) && rel(p) !== 'foundry/invariants.json'),

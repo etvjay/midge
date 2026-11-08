@@ -234,8 +234,8 @@
     },
     {
       "id": "C-12",
-      "statement": "A group's status only moves forward: Active to Settled or AbortedRefunded; those two stay.",
-      "plain": "A finished group cannot be reopened.",
+      "statement": "A group's status only moves forward: Active to Settled (a settlement used everything) or to AbortedRefunded (the last member left). The one exception is a rollback: if the transfer that caused the move fails, the follow-up step restores Active together with the money (on_settlement_payout for a failed payout, on_hatch_out_payout for a failed refund). No other path leaves Settled or AbortedRefunded, and a group in either state takes no deposits.",
+      "plain": "A finished group stays finished, unless the payment that finished it bounced, in which case the money and the open group come back together.",
       "kind": "safety",
       "status": "holds",
       "checks": [
@@ -254,6 +254,14 @@
         {
           "type": "rust",
           "ref": "inv_c12_a_refunded_group_stays_refunded"
+        },
+        {
+          "type": "rust",
+          "ref": "test_on_hatch_out_payout_failure_restores_escrow_and_status"
+        },
+        {
+          "type": "rust",
+          "ref": "test_integration_settlement_failure_callback_rollback"
         }
       ]
     },

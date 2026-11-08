@@ -64,7 +64,7 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (53 tes
 - Attestation: the Intel certificate-chain check is `required` by default. A machine without `dcap-qvl` now fails model attestation; `chain: 'if-available'` and `'skip'` remain as explicit choices.
 - REST daemon: refuses to listen beyond loopback without `FLY_API_KEY`, and refuses state-changing requests with a foreign `Origin` and any request with a non-local `Host` on a loopback bind.
 - MCP over HTTP: every tool outside a short public list needs the coordinator key.
-- Contract (source only, live contract unchanged until redeployed): `:` is refused in an order hash, the code-hash string is capped at 128 bytes, and callbacks, exits and re-deposits keep their books consistent. See GAP-026 to GAP-038.
+- Contract (deployed to testnet 2026-11-08, code hash AFtZmiNS…; GAP-026 and GAP-030 checked live, the others unit-tested only): `:` is refused in an order hash, the code-hash string is capped at 128 bytes, and callbacks, exits and re-deposits keep their books consistent. See GAP-026 to GAP-038.
 
 ## State machine and invariants (2026-11-08, plan 09-1)
 `docs/STATE_MACHINE.md` documents every public contract function and Roost round method with guard, effect and tests; `foundry/invariants.json` defines C-01 to C-12; `make check` fails if they drift (`scripts/check-invariants.js`). The survey of unnamed states is `docs/IMPLICIT_STATE_MACHINES.md`. This proves the named tests exist, not that they are strong enough.

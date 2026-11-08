@@ -50,3 +50,19 @@ test('FAR: a receipt the bridge never issued, or one with an inflated amount, mi
   assert.equal(b.privateImtBalances.get('priv2'), 100, 'the issued amount is what mints, not the one the caller wrote');
   assert.ok(minted);
 });
+
+// ---- Review of plan 09-1, finding 4: no amount may be negative, zero or not a number ----
+test('FAR: a negative, zero or non-numeric amount is refused everywhere and creates no tokens', () => {
+  const b = new FarPrivateShardBridge();
+  for (const bad of [-1e9, 0, NaN, Infinity, '5', null]) {
+    assert.throws(() => b.lockPublicTreasury({ depositor: 'a.near', assetId: 'usdc', amount: bad }), /positive|amount/i, `lock ${String(bad)}`);
+  }
+  const r = b.lockPublicTreasury({ depositor: 'a.near', assetId: 'usdc', amount: 100 });
+  b.mintImtOnFar({ depositReceipt: r, privateAccount: 'priv1' });
+  for (const bad of [-5e8, 0, NaN, Infinity, '5', null]) {
+    assert.throws(() => b.executePrivateMatch({ orderId: 'o1', inputAccount: 'priv1', inputAmount: bad, outputAsset: 'near', outputAmount: 1 }), /positive|amount/i, `match ${String(bad)}`);
+    assert.throws(() => b.burnImtAndWithdraw({ privateAccount: 'priv1', imtAmount: bad, publicDestinationWallet: 'w.near' }), /positive|amount/i, `burn ${String(bad)}`);
+  }
+  assert.equal(b.privateImtBalances.get('priv1'), 100, 'no balance may change');
+  assert.equal(b.publicTreasuryLocked.get('usdc'), 100, 'the treasury total may not move either');
+});

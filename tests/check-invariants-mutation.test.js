@@ -9,7 +9,7 @@ import { checkInvariants } from '../scripts/check-invariants.js';
 const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 function copy() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'inv-real-'));
-  for (const d of ['docs', 'foundry', 'contracts/fly-coordinator/src', 'contracts/fly-coordinator/tests', 'tests']) {
+  for (const d of ['docs', 'foundry', 'contracts/fly-coordinator/src', 'contracts/fly-coordinator/tests', 'tests', 'lab/experiments', 'verifications']) {
     if (fs.existsSync(path.join(repo, d))) fs.cpSync(path.join(repo, d), path.join(root, d), { recursive: true, filter: (s) => !s.includes('node_modules') });
   }
   return root;
@@ -36,4 +36,10 @@ test('citing an invariant that is not defined is caught', () => {
   const root = copy();
   edit(root, 'docs/STATE_MACHINE.md', (t) => t + '\nThis also relies on C-99.\n');
   assert.ok(checkInvariants({ root }).errors.some((e) => e.includes('C-99')));
+});
+
+test('a test name in the tests column of STATE_MACHINE.md that no longer exists is caught', () => {
+  const root = copy();
+  edit(root, 'docs/STATE_MACHINE.md', (t) => t.replace('`test_double_hatch_out_fails`', '`test_double_hatch_out_was_renamed`'));
+  assert.ok(checkInvariants({ root }).errors.some((e) => e.includes('test_double_hatch_out_was_renamed') && e.includes('hatch_out')));
 });

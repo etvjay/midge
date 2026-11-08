@@ -1,6 +1,6 @@
 # State machines: the contract and the Roost round
 
-Written 2026-11-08 from the source (`contracts/fly-coordinator/src/lib.rs`, `src/roost-service/hosted-roost.js`). `tests/state-machine-doc.test.js` fails if a public contract function or a Roost round method has no row, so this stays complete. `scripts/check-invariants.js` fails if a test named here no longer exists. Survey of the unnamed states: `docs/IMPLICIT_STATE_MACHINES.md`.
+Written 2026-11-08 from the source (`contracts/fly-coordinator/src/lib.rs`, `src/roost-service/hosted-roost.js`). `tests/state-machine-doc.test.js` fails if a public contract function or a Roost round method has no row, so this stays complete. `scripts/check-invariants.js` fails if a Rust test, test file or lab experiment named in a `tests` column no longer exists, and `make check` runs it. Lab experiments are run by `node lab/run.js`, not by `node --test`. Survey of the unnamed states: `docs/IMPLICIT_STATE_MACHINES.md`.
 
 ## Words
 - **Group** (code: *syndicate*): a pool of members' money with public rules, held by the contract.
@@ -13,7 +13,7 @@ Written 2026-11-08 from the source (`contracts/fly-coordinator/src/lib.rs`, `src
 - **Drained**: a member still listed whose escrow is 0.
 
 ## States
-`Active` → `Settled` (a settlement used the whole group) or `AbortedRefunded` (the last member left). Both end states stay. Beside the status the contract keeps:
+`Active` → `Settled` (a settlement used the whole group) or `AbortedRefunded` (the last member left). Both end states stay, **with one exception, a rollback**: if the transfer that caused the move fails, the follow-up step puts the group back to `Active` together with the money (`on_settlement_payout` for a failed payout, `on_hatch_out_payout` for a failed refund). A group in either end state takes no deposits. Beside the status the contract keeps:
 `is_settling` (a payout is in flight), the pending record `p:<id>` (exists exactly while `is_settling`), the release window `w:<id>`, the second key `k2:<id>`, `epoch`, `round_nonce`, `active_flyer_count`, `flyers`, `total_escrow`, and one escrow balance per member.
 
 | Composite state | Status | `is_settling` | Pending record | Reached by |
@@ -24,7 +24,7 @@ Written 2026-11-08 from the source (`contracts/fly-coordinator/src/lib.rs`, `src
 | Refunded | AbortedRefunded | no | no | the last member's `hatch_out` |
 | Unfunded and stuck | Active | no | no | `hatch` with no deposit afterwards: no exit, not prunable (GAP-030) |
 
-Not allowed, ever: `Settled → Active`, `AbortedRefunded → Active`, two settlements in flight, a pending record without `is_settling` (or the reverse), a member listed twice.
+Not allowed, ever: `Settled → Active` or `AbortedRefunded → Active` by any path except the failed-transfer rollback above (`C-12`), two settlements in flight, a pending record without `is_settling` (or the reverse), a member listed twice.
 
 ## Contract transitions
 Columns: **who** may call, **guard** (the refusals, quoted from the source), **effect**, **tests** (Rust test names; `NONE` means no test names this function yet).
@@ -71,7 +71,8 @@ Not allowed: signing the same aggregate twice; running again after a signature i
 | `openRound` | id fields non-empty with no `:`; epoch ≥ 0 | sets `round`; clears queue, `lastSeq`, `aggregate` | `lab/experiments/97-room-service.js` |
 | `submitSignedIntent` | round open; account id valid; seq ≥ 1 and newer than before; ciphertext in size bounds; signature valid for this round; key belongs to the account; round unchanged while checking; queue not full | queues or replaces the account's input | `tests/hosted-roost-rounds.test.js` (lead 15), `lab/experiments/74-signed-inputs.js` |
 | `submitSealedIntent` | host not in signed-only mode; sealed hex valid; one bid per id; queue not full | queues the input | `lab/experiments/73-pool-program.js` |
-| `exclude` | none | removes named inputs from the queue | `lab/experiments/94-ongoing-groups.js` |
+| `excludeMembers` | none | removes the named members' inputs from the queue | `lab/experiments/94-ongoing-groups.js` |
+| `aggregateAndClear` | no signed aggregate yet in this round (`R-01`); queue not empty; at least one readable bid | adds up every readable bid exactly; unreadable bids are named by account and dropped; clears the queue; sets `aggregate` | `tests/hosted-roost-rounds.test.js` (R-01) |
 | `runAuction` | no signed aggregate yet in this round (`R-01`); readable bids; valid reserve | clears the queue; sets `aggregate` | `lab/experiments/72-auction-programs.js` |
 | `runPool` | no signed aggregate yet in this round (`R-01`); readable contributions; min and cap valid | as above | `lab/experiments/73-pool-program.js` |
 | `runQuote` | no signed aggregate yet in this round (`R-01`); pricing valid; shape valid | as above | `lab/experiments/77-quote-programs.js` |
@@ -80,6 +81,11 @@ Not allowed: signing the same aggregate twice; running again after a signature i
 | `runPayrun` | no signed aggregate yet in this round (`R-01`); employer, tax and benefits addresses; keys | as above | `lab/experiments/79-payrun-program.js` |
 | `runCross` | no signed aggregate yet in this round (`R-01`); reference price valid; at most 8 sellers filled | clears the queue; **restores it if more than 8 sellers fill** | `tests/hosted-roost-rounds.test.js` (lead 13) |
 | `signSettlement` | an aggregate exists and is unsigned; round fields match; order hash matches; charges and allocations match the outcome; each charge ≤ that bidder's bound; ≤ 8 recipients; payout ≤ what the bids support | signs once; sets `signed` | `lab/experiments/72-auction-programs.js` |
+| `describe` | none | what this host is and what it can run | `lab/experiments/97-room-service.js` |
+| `getSessionInfo` | none | the host's public keys and mode | `verifications/10-hosted-roost.js` |
+| `getAttestationBundle` | none | the attestation of the host's keys for a caller's nonce | `verifications/10-hosted-roost.js` |
+| `inputDigests` | none | a digest per queued input, never its content | `lab/experiments/75-two-room-agreement.js` |
+| `toJSON` | none | the host's public description | NONE |
 
 ## The simulation mirror
 `src/contracts/nest.js` is a JavaScript simulation of the contract used in `model` mode. Its statuses (`ACTIVE`, `SETTLED`, `ABORTED_REFUNDED`) correspond to the contract's `Active`, `Settled`, `AbortedRefunded`. `tests/nest-mirror.test.js` (comparison in `scripts/status-drift.js`) fails if the two sets of names drift, in either direction.
