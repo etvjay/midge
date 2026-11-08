@@ -196,9 +196,11 @@ export class HostedRoost {
     if (typeof cipherTextHex !== 'string' || !/^[0-9a-f]+$/i.test(cipherTextHex) || cipherTextHex.length % 2 !== 0) throw new RoostAggregationError('cipherTextHex must be an even-length hex string');
     const bytes = cipherTextHex.length / 2;
     if (bytes < MIN_CIPHERTEXT_BYTES || bytes > MAX_CIPHERTEXT_BYTES) throw new RoostAggregationError(`sealed bid must be ${MIN_CIPHERTEXT_BYTES} to ${MAX_CIPHERTEXT_BYTES} bytes`);
-    if (!verifyNearSignature(publicKey, inputMessage({ ...this.round, flyerId, seq, cipherTextHex }), signature)) throw new RoostAggregationError('bad signature for this input and this round');
+    const round = this.round; // the signature below is for this round only
+    if (!verifyNearSignature(publicKey, inputMessage({ ...round, flyerId, seq, cipherTextHex }), signature)) throw new RoostAggregationError('bad signature for this input and this round');
     let belongs = false;
     try { belongs = await this.accountKeyCheck(flyerId, publicKey); } catch { throw new RoostAggregationError(`could not check that ${publicKey} is a key of ${flyerId}`); }
+    if (this.round !== round) throw new RoostAggregationError('the round changed while this input was being checked: sign it again for the new round');
     if (!belongs) throw new RoostAggregationError(`${publicKey} is not a key of ${flyerId}`);
     if (seq <= (this.lastSeq.get(flyerId) ?? 0)) throw new RoostAggregationError(`sequence ${seq} is not newer than the one already accepted for ${flyerId}`);
     const replacing = this.sealedIntents.some((i) => i.flyerId === flyerId);
@@ -524,11 +526,12 @@ export class HostedRoost {
       } catch { unreadable.push(intent.flyerId); }
     });
     const out = clearCross({ buys, sells, referenceMicro, maxUnits });
+    const queued = this.sealedIntents; // kept so a cross that cannot be settled does not cost every member their order
     this.sealedIntents = [];
     const cashTotal = out.matchedUnits * referenceMicro;
     const pub = { shape: 'cross', referencePrice: formatMicro(referenceMicro), maxUnits, matchedUnits: Number(out.matchedUnits), cash: formatMicro(cashTotal), buyers: out.buyFills.length, sellers: out.sellFills.length, ordersReceived: out.buysReceived + out.sellsReceived, unreadable, executionModel: 'HOSTED_SEALED_CROSS', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (out.matchedUnits === 0n) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
-    if (out.sellFills.length > 8) throw new RoostAggregationError('a settlement can pay at most 8 sellers');
+    if (out.sellFills.length > 8) { this.sealedIntents = queued; throw new RoostAggregationError('a settlement can pay at most 8 sellers'); }
     const allocations = out.sellFills.map((f) => ({ recipient: f.flyerId, amount: String(f.cashMicro * YOCTO_PER_MICRO) }));
     const charges = out.buyFills.map((f) => ({ member: f.flyerId, amount: String(f.cashMicro * YOCTO_PER_MICRO) }));
     const bound = Object.fromEntries(out.buyFills.map((f) => [f.flyerId, f.ordered * f.limitMicro * YOCTO_PER_MICRO]));
