@@ -138,7 +138,7 @@ $$M = \text{contract} \;:\; \text{group} \;:\; \text{epoch} \;:\; \text{round\_n
 - a **charged** settlement also lists what each member pays. Each charge must not exceed that member's escrow, and the charges must sum exactly to the payout (C-11);
 - a **two-room** group needs two different rooms to sign the same message.
 
-The contract checks the signature, the recipients, the cap, the deadline, the nonce and the quorum; pays; and a callback finishes the books. If the payout transfer fails, the callback restores the money and the group's state. The first recorded settlement on an earlier code version burned 5.81 TGas, and a `hatch_out` 4.92 TGas (`docs/canonical/EVIDENCE_LEDGER.md`); later changes were not re-measured.
+The contract checks the signature, the recipients, the cap, the deadline, the nonce and the quorum; pays; and a callback finishes the books. If the payout transfer fails, the callback restores the money and the group's state. Gas, counting the transaction and all its receipts as read from an archival node on 2026-11-08: a recorded `settle_batch` burnt 6.14 TGas and a `hatch_out` 5.32 TGas. The evidence ledger (`docs/canonical/EVIDENCE_LEDGER.md`) records other runs with other figures; different runs and different ways of counting give different numbers, and later contract changes were not re-measured.
 
 #### The sovereign exit
 
@@ -210,7 +210,7 @@ The programs are tested offline against the real host and service. Their runs ag
 
 A NEAR contract can ask the NEAR Chain Signatures network, a threshold-signing service, to sign for addresses on other chains. From one group identity the design derives a Bitcoin Taproot address, an Ethereum address and a Solana key, so a group's collective decision can move assets on those chains without wrapping tokens or trusting a bridge (`src/multichain/chain-signatures.js`).
 
-**Status, honestly.** The evidence ledger (`docs/canonical/EVIDENCE_LEDGER.md`) records a live threshold-signing call on testnet. `docs/canonical/CURRENT_STATE.md` lists the module as simulated. This paper did not re-run it, so treat it as **unverified** until `npm run verify:mpc` is re-run and the two documents agree.
+**Status.** A live `sign` call from `fly-1793636729.testnet` to `v1.signer-prod.testnet` succeeded on testnet; the transaction was re-read from an archival node on 2026-11-08, and the returned ECDSA signature was recovered against the derived key (GAP-005, closed; `docs/canonical/mpc-evidence.json`). Only the signing is live: no transaction was broadcast on Bitcoin, Ethereum or Solana. An earlier version of `docs/canonical/CURRENT_STATE.md` wrongly called the module simulated; that is corrected.
 
 ---
 
@@ -312,8 +312,8 @@ The contract's invariants are stated in `foundry/invariants.json`, each tied to 
 The defences were exercised on testnet, against the live contract of the time. The three transactions, and the reasoning behind each, are recorded in `docs/security/threat-model.md`:
 
 1. **A stolen room key signs a payout to a stranger.** The contract checks the recipient against the allowed list and aborts. The escrow does not move.
-2. **A settlement over the cap.** The contract rejects it.
-3. **A replayed signature.** The contract rejects the stale nonce.
+2. **A settlement over the cap.** The contract rejects it ("Allocation sum exceeds max_release_bps_per_epoch cap").
+3. **A second settlement of a group that had already settled.** The contract rejects it because the group is no longer active. This shows a replay cannot pay twice. It is not a demonstration of the nonce check, which is covered by the contract's tests (C-05); earlier drafts described this transaction as a stale-nonce rejection, which it was not.
 
 These ran against an earlier code hash. The checks they exercise are still in the current code and its tests, but the transactions are not re-runs against the live hash.
 
@@ -400,7 +400,7 @@ Midge's contribution is a division of powers that can be checked. The money sits
 | 1Click asset audit | Live read of 210 assets | CLM-INTENTS-01 |
 | FAR private shard, Dark Vault pods | Simulated | CLM-VAULT-01 |
 | OutLayer-style sub-accounts | Tested as a JavaScript mirror | CLM-HATCH-01 |
-| Chain Signatures | Unverified; the two records disagree | `docs/canonical/EVIDENCE_LEDGER.md` |
+| Chain Signatures | A live `sign` call on testnet; signing only, nothing broadcast on another chain | `docs/canonical/mpc-evidence.json`, `docs/canonical/EVIDENCE_LEDGER.md` |
 | Lending RFQ and block trades | Programs tested; test accounts only | CLM-RFQ-01, CLM-OTC-01 |
 | MCP server, SDK, REST | Integrated | CLM-MCP-01 (an older tool count), `src/mcp/server.js` |
 | Simulation in section 4 | Reproduces exactly | `scripts/baseline.js` |
@@ -415,7 +415,7 @@ What runs without keys: `make verify`. Live checks need a NEAR key, a Phala key 
 - It does not claim a hosted Roost is running now, or that anything has run on mainnet.
 - It does not claim institutional use. The lending and block-trade programs have run against test accounts.
 - It does not claim the simulation's saving holds outside the model.
-- It does not claim the Chain Signatures path is verified until its two records agree.
+- It does not claim anything was broadcast on Bitcoin, Ethereum or Solana. Only the threshold signature was produced and verified.
 - The documents this one replaces (SRS, RTM, architecture, use cases, research) are not published; they had drifted from the code.
 
 ---

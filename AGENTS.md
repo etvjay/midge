@@ -47,7 +47,7 @@ npm run verify
 make verify              # Complete judge suite: Rust, WASM, 8-layer suite & Foundry (~100 s)
 make test                # 8-layer master architectural test suite (~1.1s)
 make rust                # Production NEAR L1 Rust unit tests (0.12s)
-make wasm                # Compile release WebAssembly binary (238 KB)
+make wasm                # Compile release WebAssembly binary
 make demo                # Full 10-Flyer Dark Swarm simulation
 make check               # Builder Foundry control plane consistency check
 
