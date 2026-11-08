@@ -20,12 +20,9 @@ import { ModelSealedRoost, RoostAggregationError } from '../src/enclave/model-se
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+// The key comes from the environment only; this script never reads .env.
 function loadKey() {
-  if (process.env.NEARAI_API_KEY) return process.env.NEARAI_API_KEY;
-  const envPath = path.join(rootDir, '.env');
-  if (!fs.existsSync(envPath)) return null;
-  const line = fs.readFileSync(envPath, 'utf8').split('\n').find((l) => l.trim().startsWith('NEARAI_API_KEY='));
-  return line ? line.split('=').slice(1).join('=').trim().replace(/^["']|["']$/g, '') : null;
+  return process.env.NEARAI_API_KEY || null;
 }
 
 // Deterministic pseudo-random amounts so a run can be reproduced.
@@ -37,7 +34,7 @@ const sum = (a) => a.reduce((p, c) => p + c, 0);
 
 const key = loadKey();
 if (!key) {
-  console.log('\n>>> [SKIP] MODEL-SEALED ROOST (LIVE): needs NEARAI_API_KEY; not demonstrated.\n');
+  console.log('\n>>> [SKIP] MODEL-SEALED ROOST (LIVE): needs your NEARAI_API_KEY (get one at https://cloud.near.ai, then export NEARAI_API_KEY=<key> and rerun npm run verify:roost-model); not demonstrated.\n');
   process.exit(0);
 }
 

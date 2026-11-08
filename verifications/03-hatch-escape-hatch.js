@@ -150,17 +150,16 @@ export async function verifyHatchProtocol() {
     console.log('[6/6] Auditing Live Deployed NEAR Testnet Contract State via Public RPC...');
     const rpcUrl = process.env.NEAR_RPC_URL || 'https://rpc.testnet.near.org';
     const provider = new JsonRpcProvider({ url: rpcUrl });
+    // near-api-js retries a failing RPC with backoff for minutes; a judge on a bad network should reach the recorded fixture in seconds.
+    const withDeadline = (promise, ms) => new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`no answer within ${ms / 1000} s`)), ms);
+      promise.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+    });
     try {
-      const flashSyn = await provider.callFunction({
-        contractId: testnetContractId,
-        method: 'get_syndicate',
-        args: { syndicate_id: 'syn-flash-1793637420' }
-      });
-      const escapeSyn = await provider.callFunction({
-        contractId: testnetContractId,
-        method: 'get_syndicate',
-        args: { syndicate_id: 'syn-escape-1793637435' }
-      });
+      const [flashSyn, escapeSyn] = await withDeadline(Promise.all([
+        provider.callFunction({ contractId: testnetContractId, method: 'get_syndicate', args: { syndicate_id: 'syn-flash-1793637420' } }),
+        provider.callFunction({ contractId: testnetContractId, method: 'get_syndicate', args: { syndicate_id: 'syn-escape-1793637435' } }),
+      ]), 8000);
 
       if (flashSyn && flashSyn.status === 'Settled' && escapeSyn && escapeSyn.status === 'AbortedRefunded') {
         console.log(`  - Deployed Contract:   ${testnetContractId} (LIVE on NEAR Testnet via ${rpcUrl})`);

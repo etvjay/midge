@@ -24,31 +24,29 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
+// The key comes from the environment only. This script never reads .env: a key found by surprise made every test run spend credit.
 function loadEnvKey() {
-  if (process.env.NEARAI_API_KEY) return process.env.NEARAI_API_KEY;
-  if (process.env.NEAR_AI_API_KEY) return process.env.NEAR_AI_API_KEY;
-  const envPath = path.join(rootDir, '.env');
-  if (fs.existsSync(envPath)) {
-    const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if ((trimmed.startsWith('NEARAI_API_KEY=') || trimmed.startsWith('NEAR_AI_API_KEY='))) {
-        const val = trimmed.split('=')[1]?.trim();
-        if (val) return val;
-      }
-    }
-  }
-  return null;
+  return process.env.NEARAI_API_KEY || process.env.NEAR_AI_API_KEY || null;
 }
 
-export async function verifyInferenceAttestation({ offline = false } = {}) {
+export const KEY_HELP = [
+  'The live inference check needs your own NEAR AI Cloud key.',
+  '  1. Get one at https://cloud.near.ai',
+  '  2. export NEARAI_API_KEY=<your key>',
+  '  3. npm run verify:inference',
+  'It sends one small paid completion request, and rewrites docs/canonical/inference-evidence.json with the result.',
+].join('\n');
+
+export async function verifyInferenceAttestation({ offline = false, live = false } = {}) {
   console.log('\n======================================================');
   console.log(' [VERIFICATION 9] NEAR AI CLOUD TEE INFERENCE ATTESTATION');
   console.log(' Target: Confidential Deliberation & Signed Response Proof');
   console.log('======================================================');
 
   const apiKey = loadEnvKey();
-  const isOffline = offline || process.env.FLY_OFFLINE === '1' || !apiKey;
+  if (live && !offline && !apiKey) throw new Error(`[INFERENCE] No NEARAI_API_KEY found.\n${KEY_HELP}`);
+  const isOffline = offline || !live || process.env.FLY_OFFLINE === '1';
+  const skipReason = offline && live ? 'the live endpoint is unavailable' : (!live ? 'the live check is opt-in' : 'FLY_OFFLINE=1');
 
   if (!isOffline && apiKey) {
     console.log('[1/4] Mode: LIVE EXTERNAL (NEAR AI Cloud API Key Detected)');
@@ -62,11 +60,11 @@ export async function verifyInferenceAttestation({ offline = false } = {}) {
       attRes = await fetch(attUrl, { signal: AbortSignal.timeout(8000) });
     } catch (netErr) {
       console.warn(`[WARN] Live attestation endpoint unreachable (${netErr.message}). Not demonstrated: skipping (no fixture is used for this check).`);
-      return verifyInferenceAttestation({ offline: true });
+      return verifyInferenceAttestation({ offline: true, live: true });
     }
     if (attRes.status >= 500) {
       console.warn(`[WARN] Live attestation endpoint failed with HTTP ${attRes.status}. Not demonstrated: skipping (no fixture is used for this check).`);
-      return verifyInferenceAttestation({ offline: true });
+      return verifyInferenceAttestation({ offline: true, live: true });
     }
     if (!attRes.ok) {
       throw new Error(`[INFERENCE FAIL] Attestation preflight failed: HTTP ${attRes.status}`);
@@ -193,23 +191,27 @@ export async function verifyInferenceAttestation({ offline = false } = {}) {
     return { verified: true, live: true, completionId };
   } else {
     // Honest Skip Mode: When NEARAI_API_KEY is not configured, do NOT use synthetic fixtures.
-    console.log(`[1/4] Mode: SKIPPED (${apiKey ? 'live endpoint unavailable' : 'No NEARAI_API_KEY detected in environment'})`);
+    console.log(`[1/4] Mode: SKIPPED (${skipReason})`);
     console.log('  - Preflight Hardware Attestation: Audited in Verification 01 (Intel TDX Quote v4)');
-    console.log('  - Live Inference Response Signature: Requires NEARAI_API_KEY (https://cloud.near.ai)');
+    console.log('  - Live Inference Response Signature: needs NEARAI_API_KEY (https://cloud.near.ai)');
+    console.log('  - To demonstrate it: export NEARAI_API_KEY=<your key>, then npm run verify:inference');
+    console.log('    (one small paid request; rewrites docs/canonical/inference-evidence.json)');
     console.log('  - Governance Invariant: Zero synthetic or hand-crafted fixtures permitted');
-    console.log(`\n>>> [SKIP] INFERENCE ATTESTATION: Skipped, ${apiKey ? 'the live endpoint is unavailable' : 'pending live NEARAI_API_KEY'} (Not demonstrated offline)\n`);
+    console.log(`\n>>> [SKIP] INFERENCE ATTESTATION: ${skipReason}; needs NEARAI_API_KEY, run npm run verify:inference (Not demonstrated)\n`);
     return {
       verified: true,
       skipped: true,
       live: false,
-      message: apiKey ? 'SKIPPED (live endpoint unavailable; not demonstrated)' : 'SKIPPED (No API key; not demonstrated)'
+      needsKey: 'NEARAI_API_KEY',
+      enable: 'npm run verify:inference',
+      message: `SKIPPED (${skipReason}; not demonstrated)`
     };
   }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  verifyInferenceAttestation().catch((err) => {
-    console.error('FAILED:', err);
+  verifyInferenceAttestation({ live: true }).catch((err) => {
+    console.error(String(err?.message || err));
     process.exit(1);
   });
 }

@@ -129,11 +129,16 @@ async function runAllVerifications() {
   console.log(` 8. HTTP Gateway Daemon, SSE, x402 & MCP Server: ${results.apiSseMcp.verified ? '✅ PASS' : '❌ FAIL'}`);
   const inferStatus = results.inference.live
     ? '✅ PASS (Live External)'
-    : (results.inference.skipped ? '⚠️ SKIPPED (No API key; not demonstrated)' : (isOffline ? '✅ PASS [OFFLINE FIXTURE]' : '✅ PASS (Recorded Fixture)'));
+    : (results.inference.skipped ? '⚠️ SKIPPED (needs NEARAI_API_KEY; run npm run verify:inference)' : (isOffline ? '✅ PASS [OFFLINE FIXTURE]' : '✅ PASS (Recorded Fixture)'));
   console.log(` 9. TEE Deliberation Inference Attestation:      ${inferStatus}`);
   console.log(` 10. Model-Sealed Roost (E2EE, mock gateway):     ${results.modelSealedRoost.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log(` 11. Hosted Roost (exact sums, fake attestation):  ${results.hostedRoost.verified ? '✅ PASS' : '❌ FAIL'}`);
   console.log('────────────────────────────────────────────────────────────────');
+  if (results.inference.skipped) {
+    console.log(' Needs your key (skipped, not failed):');
+    console.log(`   - ${results.inference.needsKey}: get one at https://cloud.near.ai, then ${results.inference.enable}`);
+    console.log('     (one small paid request; rewrites docs/canonical/inference-evidence.json)');
+  }
   console.log(` Total Execution Time: ${duration}s`);
   if (isOffline) {
     console.log(` Verdict: ${allPassed ? 'ALL 11 VERIFICATIONS PASSED [OFFLINE FIXTURES MODE: 3 checks used fixtures]' : 'CHECKS FAILED'}`);
@@ -142,9 +147,8 @@ async function runAllVerifications() {
   }
   console.log('════════════════════════════════════════════════════════════════\n');
 
-  if (!allPassed) {
-    process.exit(1);
-  }
+  // Exit now: a bounded-out RPC client may still hold retry timers that would keep the process alive for minutes.
+  process.exit(allPassed ? 0 : 1);
 }
 
 runAllVerifications();
