@@ -140,6 +140,18 @@
         {
           "type": "rust",
           "ref": "test_y1_hatch_out_blocked_while_settling"
+        },
+        {
+          "type": "rust",
+          "ref": "a_late_follow_up_from_an_earlier_identical_settlement_changes_nothing"
+        },
+        {
+          "type": "rust",
+          "ref": "the_follow_up_that_names_the_settlement_in_flight_finishes_it"
+        },
+        {
+          "type": "rust",
+          "ref": "recovery_clears_the_nonce_record_too"
         }
       ]
     },

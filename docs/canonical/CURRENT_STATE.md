@@ -66,6 +66,9 @@ All 8 architectural verification layers, the NEAR L1 Rust smart contract (140 Ru
 - MCP over HTTP: every tool outside a short public list needs the coordinator key.
 - Contract (deployed to testnet 2026-11-08, code hash AFtZmiNS…, since superseded by FMVXMpB3… on 2026-11-09 with the nonce-checked follow-up and the `get_group_phase` view; GAP-026 and GAP-030 checked live, the others unit-tested only): `:` is refused in an order hash, the code-hash string is capped at 128 bytes, and callbacks, exits and re-deposits keep their books consistent. See GAP-026 to GAP-038.
 
+## Contract change of 2026-11-09 (deployed; code hash FMVXMpB3…, GAP-028)
+The follow-up step of a settlement now names the round nonce it was signed for (`on_settlement_payout_for_round`) and acts only if that is the settlement in flight, so a late follow-up of an earlier settlement with a byte-identical payload cannot finish a newer one. The original follow-up is kept for a settlement in flight at upgrade time. A read-only `get_group_phase` view reports Open, PayoutInFlight, Settled, Refunded or Unfunded. Verified on the real contract (`E-NONCE-CALLBACK-LIVE-01`, run `20261108T153206Z-a0f0`); the late-follow-up case itself is covered by the unit tests only (CLM-CONTRACT-NONCE-01). The deployed site's contract check still expects the previous hash until the site is redeployed.
+
 ## State machine and invariants (2026-11-08, plan 09-1)
 `docs/STATE_MACHINE.md` documents every public contract function and Roost round method with guard, effect and tests; `foundry/invariants.json` defines C-01 to C-12; `make check` fails if they drift (`scripts/check-invariants.js`). The survey of unnamed states is `docs/IMPLICIT_STATE_MACHINES.md`. This proves the named tests exist, not that they are strong enough.
 
