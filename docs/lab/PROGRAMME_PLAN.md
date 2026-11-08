@@ -238,3 +238,24 @@ In plain words: the one door (`RoomService`) now gets four ways in (web API, AI-
 4. It holds no real key and cannot be pointed at a real chain.
 
 **Not tested:** a browser bundle, a hardware host, a testnet settlement through these adapters, load beyond the rate-limit and client-cap tests.
+
+## Escrow-bound charged rounds (audit lead 9): predictions, written 2026-11-08 before the experiments exist or run
+
+**What it is, in plain words.** The contract refuses a charged payout if any member is charged more than they hold, and one such member sinks the whole round. The Roost now reads, from the contract, what each bidder holds, at one block, from two or more providers, and leaves out anyone who cannot cover their worst case. It also lets the coordinator give up a signed round the contract rejected, and says when no member could possibly leave before the payout lands. This **narrows** rejections; a member whose exit timer has run can still leave between the read and the payout, so it is "much rarer", not "impossible".
+
+**E-ESCROWBOUND-01 (offline; the real reader against stub providers, the real host and service).** Predictions:
+1. A bidder with no escrow is left out and named (account only); everyone else is charged; the settlement signs. The block read is inside the signed order hash and two different blocks give two different hashes.
+2. A provider that is down, slow, behind, or disagrees about a balance or the exit timing makes the run answer UNAVAILABLE and leaves the queue as it was.
+3. `raceFree` is true only when height + 30 is below the first block at which anyone could leave; unknown timing is never race-free.
+4. A signed round cannot be re-opened with the same nonce, `abandon` makes it possible, and the abandoned order hash is on record.
+5. A roll member who never voted and cannot pay is left out of a ballot.
+
+**E-ESCROWBOUND-LIVE-01 (testnet; the real contract, real providers).** Three members A, B, C and a recipient. A and C deposit 0.02 NEAR each; B never deposits. A pool round has all three put in 0.01.
+1. **Baseline.** Without the reader the signed settlement (A, B, C at 0.01 each) is **rejected by the contract** with the over-escrow message; afterwards the group is unchanged: escrow 0.04, same round nonce, nothing in flight.
+2. **Stuck, then unstuck.** Re-opening the same round is refused by the host; `abandon` succeeds and records the abandoned order hash.
+3. **With the reader.** `bindEscrow` reads a real block from two providers; B is left out and named; the charges are A and C at 0.01; the settlement is **accepted** and lands: A and C hold 0.01 each, the group holds 0.02, the nonce has changed, and the recipient receives 0.02.
+4. `raceFree` is **false** (the 10-block exit timer ran out long ago), so the live result is honest about the race it does not remove.
+5. With one provider replaced by a dead address the read fails closed (UNAVAILABLE) and the queue is kept.
+6. Teardown leaves nothing behind: the group is pruned, every account deleted, the group count equals the count before the run.
+
+**Not tested live:** the race itself (a member exiting between the read and the payout); that two providers can disagree in practice; behaviour under a provider that lies. **Weakness I expect to remain:** the check trusts the providers to answer honestly, and one operator controls every account in the run.
