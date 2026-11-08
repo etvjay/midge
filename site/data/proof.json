@@ -1,10 +1,10 @@
 {
- "generatedAt": "2026-11-07T14:37:20.988Z",
+ "generatedAt": "2026-11-08T16:28:06.455Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
   "hatch": 42,
   "deposit": 78,
-  "settled": 79,
+  "settled": 83,
   "exit": 25,
   "other": 60,
   "rejected": 36
@@ -2851,6 +2851,42 @@
    "kind": "other",
    "exp": "E-ONGOING-01",
    "run": "20261107T134236Z-af24",
+   "error": null
+  },
+  {
+   "hash": "6ZUqYv7cr2mPFSExsayAH7hJ3J4iVq8MoMBpqdesF35N",
+   "label": "settle_batch 1 nc-mw7zom81",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-NONCE-CALLBACK-LIVE-01",
+   "run": "20261108T153041Z-4486",
+   "error": null
+  },
+  {
+   "hash": "BCmvMhV5aARM28e9peJ8MX1j8yGwJa9Dt4xA7Nu6qEv7",
+   "label": "settle_batch 2 nc-mw7zom81",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-NONCE-CALLBACK-LIVE-01",
+   "run": "20261108T153041Z-4486",
+   "error": null
+  },
+  {
+   "hash": "GfFaem88mwHEDNxV3rKaWfxWmHEhPofEtPvMXkRBiBJ3",
+   "label": "settle_batch 1 nc-mw7zqexc",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-NONCE-CALLBACK-LIVE-01",
+   "run": "20261108T153206Z-a0f0",
+   "error": null
+  },
+  {
+   "hash": "7dRZMR8V9uzS8XzCciVoRSQJXA3RZiqVaFkAATt7G6A4",
+   "label": "settle_batch 2 nc-mw7zqexc",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-NONCE-CALLBACK-LIVE-01",
+   "run": "20261108T153206Z-a0f0",
    "error": null
   },
   {
