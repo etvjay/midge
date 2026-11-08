@@ -351,3 +351,16 @@ Run `20261108T153206Z-a0f0`, PASS, 50 events, log verified, promoted (`docs/lab-
 6. **Teardown leaves nothing:** all accounts deleted, groups removed, the group count back to what it was.
 
 **Not tested live, and said so:** the path after the waiting period (anyone removes it), because it needs about seven days of blocks and cannot be made to pass faster on a real chain; it is shown by the unit tests only. **Weakness I expect to remain:** one operator controls every account.
+
+## The measurement pin against the real NEAR AI host: predictions, written 2026-11-09 before the experiment exists or runs
+
+**What it is, in plain words.** A pin makes a caller accept only a model host whose boot measurements are ones the owner listed. The tests show this with a fake host. This checks it against the real NEAR AI host, using the recorded baseline (`docs/canonical/model-measurements.json`). It needs no API key and spends nothing.
+
+**E-MODEL-PIN-LIVE-01 (cloud tier, read-only).**
+1. **The real host's measurements held still:** read three times with fresh nonces, all six registers are identical across reads.
+2. **The baseline matches what the host reports now,** for each pinned field.
+3. **A fetch pinned to the baseline is accepted** with the Intel certificate chain verified and the TCB status acceptable, and reports that it was pinned.
+4. **A fetch with one pinned field wrong is refused, naming that field,** for each of the five fields in turn.
+5. **A list holding a wrong value and the right one is accepted** (the way a rotation would be handled).
+
+**Not tested, and said so:** that the baseline is the build NEAR AI publishes (I have not checked it against anything they publish); that the values stay the same for days; what happens when NEAR AI really ships a new build. **Weakness I expect to remain:** the baseline is a sighting, not a verification, and the file says so.
