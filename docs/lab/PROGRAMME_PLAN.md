@@ -337,3 +337,17 @@ Run `20261108T131539Z-a3bd`, one run, 50 events, log verified, promoted to `docs
 Run `20261108T153206Z-a0f0`, PASS, 50 events, log verified, promoted (`docs/lab-runs/20261108T153206Z-a0f0`), after the first run `20261108T153041Z-4486` failed on my own funding error (above). **All five predictions held in the second run.** The chain's code hash was the last recorded deployment (`FMVXMpB3…`), still 15 groups; the phase view agreed with every group and gave null for an unknown id; a group read Unfunded before any deposit and Open after; each of two real settlements was followed by `on_settlement_payout_for_round` carrying the round nonce that was signed (two different nonces), the pending record was gone afterwards and the phase was Open again; the teardown left no account and no group behind (15 groups).
 
 **Not shown live, as stated beforehand:** the late follow-up itself, a settlement in flight at the moment of the upgrade, and byte-identical settlements. Those are unit-tested only. A separate finding while checking the README: the transaction recorded as the "wrong nonce replay" proof was refused because the group was already settled, not for a nonce mismatch; the real live nonce evidence is `E-ONGOING-01`. The labels were corrected.
+
+## Removing a never-funded group, live: predictions, written 2026-11-09 before the experiment exists or the contract is redeployed
+
+**What it is, in plain words.** A group that someone hatched and nobody ever funded has no member, so it has no exit and could not be removed; it sat in the contract's storage for ever. The new rule lets its creator remove it at once, and anyone remove it after about seven days (GAP-030). Unit tests show this. This checks it on the real contract after the redeploy.
+
+**E-UNFUNDED-PRUNE-LIVE-01 (testnet).**
+1. **The chain runs the recorded build:** the on-chain code hash equals the last entry in `docs/canonical/deployments.json`, and the contract holds the same groups as before the deploy.
+2. **An unfunded group reads Unfunded** from `get_group_phase`.
+3. **A stranger cannot remove it early:** the call is refused with the never-funded message and the group is still there.
+4. **Its creator can remove it at once:** afterwards `get_syndicate` and `get_group_phase` give null, and the creator's index no longer lists it.
+5. **A funded group is not removed, even by its creator:** the call is refused and the group is untouched.
+6. **Teardown leaves nothing:** all accounts deleted, groups removed, the group count back to what it was.
+
+**Not tested live, and said so:** the path after the waiting period (anyone removes it), because it needs about seven days of blocks and cannot be made to pass faster on a real chain; it is shown by the unit tests only. **Weakness I expect to remain:** one operator controls every account.
