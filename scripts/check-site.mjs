@@ -74,7 +74,9 @@ function measure() {
     if (s.display === 'inline' && el.closest('p, li') && el.closest('p, li').textContent.trim().length > el.textContent.trim().length + 10) continue;
     const r = el.getBoundingClientRect(); if (r.width < 24 || r.height < 24) small.push(`${label(el)} ${Math.round(r.width)}x${Math.round(r.height)}`);
   }
-  return { overflow: document.documentElement.scrollWidth - innerWidth, minScene: minScene === Infinity ? null : +minScene.toFixed(1), minSceneAt, contrast, small,
+  const clipped = [...document.querySelectorAll('.cmd code')].filter((c) => visible(c) && c.scrollWidth > c.clientWidth + 1).map((c) => `command cut off: ${label(c)}`);
+  const chip = document.querySelector('.chain-chip.ok'); if (chip && visible(chip) && chip.getBoundingClientRect().height > 32) clipped.push(`live chip wraps (${Math.round(chip.getBoundingClientRect().height)}px tall)`);
+  return { clipped, overflow: document.documentElement.scrollWidth - innerWidth, minScene: minScene === Infinity ? null : +minScene.toFixed(1), minSceneAt, contrast, small,
     sections: [...document.querySelectorAll('header.hero, .hero, main > section[id], body > section[id], footer[id]')].map((s) => s.id || 'hero').filter((v, i, a) => a.indexOf(v) === i) };
 }
 
@@ -104,7 +106,7 @@ for (const width of [1440, 390]) {
     }
     const m = await page.evaluate(measure);
     if (mode === 'nomain') errors.splice(0, errors.length, ...errors.filter((e) => !/main\.js|ERR_FAILED/.test(e))); // the blocked load itself is expected
-    const extra = [];
+    const extra = [...m.clipped];
     if (mode === 'nomain') {
       const hidden = await page.evaluate(() => [...document.querySelectorAll('.b-fine, .b-tab .b')].filter((e) => getComputedStyle(e).display === 'none').length);
       if (hidden) extra.push(`${hidden} fine prints or tab sentences hidden with main.js blocked`);

@@ -78,7 +78,7 @@ Focus ring: `--lake` on light (6.43:1), `--d-lake` on dark; measured 5.31:1 on s
 - Weights 300, 400, 500 only. Hierarchy from size and colour, not weight.
 - Sentence case everywhere. No uppercase labels with wide tracking. No italic for emphasis.
 - Headlines, labels, buttons and captions have no trailing period; paragraphs do.
-- Numbers use tabular figures (`font-variant-numeric: tabular-nums` on `body`) and `toLocaleString('en-US')`.
+- Figures use tabular digits (`font-variant-numeric: tabular-nums` on the figure strips, the live chip, the live list, the proof legend and lens, and the footer line; prose keeps proportional digits) and `toLocaleString('en-US')`. NEAR amounts show two to four decimals (`0.00`, `0.05`), never a bare `0`.
 - Fonts load from Google Fonts with `display=swap`. Newsreader is requested **without** its optical-size axis (latin file 58 KB instead of 132 KB).
 
 ## 5. Space, radius, layout
@@ -148,7 +148,7 @@ Each lives in `site/index.html` (markup), `site/styles.css` (style) and `site/ma
 | **Proof grid and lens** | Every recorded transaction | One 24px (minimum) square per real transaction, in the HTML, coloured by kind, each a link to the explorer with its own accessible name; a skip link before the grid; a legend in plain words with counts ("Refused by the rules · 36"). The lens below names what anyone can read for the dot pointed at or focused, and what stayed private for that kind of step; the other dots dim. |
 | **What works today** | The single honest status | Three plain lists on dark: running on testnet, built but not live, next. |
 | **Command block** | Something to run | Dark block, mono 12px, a Copy button that confirms ("Copied"). |
-| **Live chain chip** | Proof the page is reading the chain | A pill with a dot that turns lake when the contract answers: "Contract live · N syndicates · block N". |
+| **Live chain chip** | Proof the page is reading the chain | A pill with a dot that turns lake when the contract answers: "Live · N groups · block N", kept on one line (it fits a 390px phone). The signature detail: the same read-out ends the footer. |
 | **FAQ** | Five questions a visitor asks first | A dark card of `details` rows (the first open), a plus that turns to a minus; answers in plain words, each true of the deployed contract. |
 | **Footer** | Where to check and build | A card with the name, one line on what Midge is, the contract and its fingerprint (the recorded one at build time, replaced by the one read from NEAR), and three link columns; a mono legal line below. Behind both, a canvas field of dots, one per recorded transaction, lit in the order they happened, densest at the bottom. |
 

@@ -137,7 +137,7 @@ const view = async (method, args = {}) => { const r = await rpc('query', { reque
 const PR = new Intl.PluralRules('en');
 const plural = (n, one, other) => `${n.toLocaleString('en-US')} ${PR.select(n) === 'one' ? one : other}`;
 const short = (s, n = 12) => (s && s.length > n * 2 + 1 ? `${s.slice(0, n)}…${s.slice(-6)}` : s || '');
-const near = (yocto) => { const v = Number(BigInt(yocto || '0') / 10n ** 20n) / 10000; return v.toLocaleString('en-US', { maximumFractionDigits: 4 }); };
+const near = (yocto) => { const v = Number(BigInt(yocto || '0') / 10n ** 20n) / 10000; return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }); };
 
 function row(list, ok, label, detail) {
   const li = document.createElement('li'); const pip = document.createElement('span'); pip.className = `pip ${ok ? 'on' : 'fail'}`;
@@ -153,7 +153,7 @@ function row(list, ok, label, detail) {
     const { value: count, block } = await view('get_syndicate_count');
     window.__synCount = count;
     $('#net-count').textContent = count;
-    chip.classList.add('ok'); chipText.textContent = `Contract live · ${count} groups · block ${block.toLocaleString('en-US')}`;
+    chip.classList.add('ok'); chipText.textContent = `Live · ${count} groups · block ${block.toLocaleString('en-US')}`;
     row(list, true, 'NEAR answered, with no server of ours in between', `${CONTRACT}, block ${block.toLocaleString('en-US')}`);
     row(list, acct.code_hash === DEPLOYED_CODE_HASH, 'The contract is the exact version we tested', `fingerprint ${short(acct.code_hash, 10)}`);
     const fl = $('#foot-live'); if (fl) fl.textContent = `Contract ${CONTRACT} · fingerprint ${acct.code_hash.slice(0, 8)}… · read just now from NEAR`;
@@ -166,7 +166,7 @@ function row(list, ok, label, detail) {
     }
     note.textContent = 'Read just now by your browser. Anyone can check the same things.';
     recent.textContent = '';
-    for (const x of newest.slice().reverse()) { const li = document.createElement('li'); const a = document.createElement('a'); a.href = `${NB}/address/${x.sub_account || CONTRACT}`; a.textContent = x.id; const sp = document.createElement('span'); sp.textContent = `${x.syndicate_type} · ${x.status} · ${near(x.total_escrow)} NEAR`; li.append(a, sp); recent.appendChild(li); }
+    for (const x of newest.slice().reverse()) { const li = document.createElement('li'); const a = document.createElement('a'); a.href = `${NB}/address/${x.sub_account || CONTRACT}`; a.textContent = x.id; a.title = x.id; const sp = document.createElement('span'); sp.textContent = `${x.syndicate_type} · ${x.status} · ${near(x.total_escrow)} NEAR`; li.append(a, sp); recent.appendChild(li); }
   } catch (e) {
     chipText.textContent = 'Could not reach NEAR testnet from this browser';
     note.textContent = `The public RPC did not answer (${e.message}). The recorded evidence below still applies.`;
