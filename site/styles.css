@@ -431,3 +431,15 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
   .scene-narrow { display: block !important; }
   .b-strip { grid-auto-flow: row; }
 }
+
+/* ---------- proof: the dots are static HTML (visible without JavaScript); the lens names what is public and what stayed private ---------- */
+.proof-field { margin-top: 20px; border: 1px solid var(--d-line); border-radius: 16px; padding: 20px; background: var(--dusk-card); }
+.proof-field .proof-grid { margin-top: 0; }
+.proof-grid.looking a { opacity: 0.35; }
+.proof-grid.looking a.hot { opacity: 1; }
+.lens { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lens > div { border: 1px solid var(--d-line); border-radius: 12px; padding: 12px 16px; background: rgba(233, 236, 232, 0.04); min-width: 0; }
+.lens p { margin: 0; font-size: var(--t-14); color: var(--d-1); overflow-wrap: anywhere; }
+.lens .lens-h { font: 400 var(--t-12) var(--mono); color: var(--d-3); margin-bottom: 4px; }
+.lens .lens-priv p:not(.lens-h) { color: var(--d-lake); }
+@media (max-width: 600px) { .lens { grid-template-columns: 1fr; } }

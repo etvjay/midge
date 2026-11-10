@@ -149,7 +149,7 @@ function row(list, ok, label, detail) {
   try {
     const acct = await rpc('query', { request_type: 'view_account', finality: 'final', account_id: CONTRACT });
     const { value: count, block } = await view('get_syndicate_count');
-    window.__synCount = count; const netStage = $('canvas[data-scene="network"]').__stage; if (netStage) netStage.resize();
+    window.__synCount = count;
     $('#net-count').textContent = count;
     chip.classList.add('ok'); chipText.textContent = `Contract live · ${count} groups · block ${block.toLocaleString('en-US')}`;
     row(list, true, 'NEAR answered, with no server of ours in between', `${CONTRACT}, block ${block.toLocaleString('en-US')}`);
@@ -171,28 +171,21 @@ function row(list, ok, label, detail) {
   }
 })();
 
-// ---------------------------------------------------------------- proof grid and the agent console (recorded runs)
-(async function proof() {
-  const grid = $('#proof-grid'), legend = $('#proof-legend'), note = $('#proof-note');
-  await new Promise((go) => { const o = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { o.disconnect(); go(); } }, { rootMargin: '1200px 0px' }); o.observe($('#proof')); o.observe($('#proof')); });
-  let data;
-  try { data = await (await fetch('data/proof.json')).json(); } catch { note.textContent = 'Could not load the recorded transactions.'; return; }
-  const names = { deposit: 'Money in', hatch: 'Group created', settled: 'Payout', exit: 'Member left with their share', rejected: 'Attack refused', other: 'Other' };
-  for (const k of ['deposit', 'hatch', 'settled', 'exit', 'rejected', 'other']) { if (!data.counts[k]) continue; const s = document.createElement('span'); s.innerHTML = `<i class="k-${k}"></i>`; s.append(`${names[k]} · ${data.counts[k]}`); legend.appendChild(s); }
-  const tip = document.createElement('div'); tip.className = 'proof-tip'; document.body.appendChild(tip);
-  data.transactions.forEach((tx, i) => {
-    const a = document.createElement('a'); a.href = `${NB}/txns/${tx.hash}`; a.target = '_blank'; a.rel = 'noopener'; a.className = `k-${tx.kind}`; a.setAttribute('role', 'listitem');
-    a.setAttribute('aria-label', `Transaction ${i + 1} of ${data.transactions.length}, ${names[tx.kind]}: ${tx.label}${tx.error ? `, refused: ${tx.error}` : ''}, hash ${short(tx.hash, 6)}. Opens NearBlocks.`);
-    a.style.transitionDelay = `${Math.min(i * 5, 900)}ms`;
-    const show = (ev) => { tip.textContent = `${names[tx.kind]} · ${tx.label}${tx.error ? ` · ${tx.error}` : ''} · ${short(tx.hash, 6)}`; const r = a.getBoundingClientRect(); tip.style.left = `${Math.min(innerWidth - 330, Math.max(8, r.left - 20))}px`; tip.style.top = `${r.bottom + 8}px`; tip.classList.add('on'); };
-    a.addEventListener('mouseenter', show); a.addEventListener('focus', show); a.addEventListener('mouseleave', () => tip.classList.remove('on')); a.addEventListener('blur', () => tip.classList.remove('on'));
-    grid.appendChild(a);
-  });
-  io.observe(grid);
-  const skip = $('.proof-skip'); if (skip) skip.textContent = `Skip the ${data.transactions.length} transaction links`;
-  const runs = new Set(data.transactions.map((t) => t.run)).size;
-  note.textContent = `${data.transactions.length} transactions from ${runs} test runs. Attacks that NEAR stopped before they even ran never became transactions, so they are not dots here; the AI agent section shows them.`;
-
+// ---------------------------------------------------------------- proof: the lens (the dots themselves are in the HTML)
+// Pointing at or tabbing to a dot shows what anyone can read on the chain, and what stayed private for that kind of step.
+(function proofLens() {
+  const grid = $('#proof-grid'); const pub = $('#lens-pub'); const priv = $('#lens-priv'); if (!grid || !pub || !priv) return;
+  let tx = []; try { tx = JSON.parse(grid.dataset.tx || '[]'); } catch { return; }
+  const NAMES = { deposit: 'Money in', hatch: 'Group created', settled: 'Payout', exit: 'Member left with their share', rejected: 'Refused by the rules', other: 'Other' };
+  const PRIVATE = {
+    deposit: 'What the member will bid, vote or decide', hatch: 'Nothing yet: the rules themselves are public',
+    settled: "Each member's bid or vote, and for payroll who owns each address", exit: "Nothing needed: a member's own share comes back",
+    rejected: 'Nothing: a refused payout moves no money', other: 'Depends on the step',
+  };
+  const look = (a) => { const t = tx[+a.dataset.i]; if (!t) return; pub.textContent = `${NAMES[t[0]] || t[0]} · ${t[1]} · transaction ${t[2]}`; priv.textContent = PRIVATE[t[0]] || ''; grid.classList.add('looking'); $$('.hot', grid).forEach((d) => d.classList.remove('hot')); a.classList.add('hot'); };
+  grid.addEventListener('mouseover', (e) => { const a = e.target.closest('a'); if (a) look(a); });
+  grid.addEventListener('focusin', (e) => { const a = e.target.closest('a'); if (a) look(a); });
+  grid.addEventListener('mouseleave', () => grid.classList.remove('looking'));
 })();
 
 // ---------------------------------------------------------------- live NEAR AI Cloud attestation check (the browser picks the nonce)
@@ -204,27 +197,27 @@ function row(list, ok, label, detail) {
   const quoteChecks = (who, att, expected) => {
     const q = fromHex(att.intel_quote || '');
     const version = q.length > 8 ? q[0] | (q[1] << 8) : 0; const keyType = q.length > 8 ? q[2] | (q[3] << 8) : 0; const tee = q.length > 8 ? (q[4] | (q[5] << 8) | (q[6] << 16) | (q[7] << 24)) >>> 0 : 0;
-    row(list, q.length >= 636 && version === 4 && keyType === 2 && tee === 0x81, `${who} quote is an Intel TDX v4 quote`, `${q.length} bytes, version ${version}, TEE type 0x${tee.toString(16)}`);
+    row(list, q.length >= 636 && version === 4 && keyType === 2 && tee === 0x81, `${who} quote is an Intel TDX v4 quote`, `${q.length} bytes, version ${version}, hardware type 0x${tee.toString(16)}`);
     const rd = q.length >= 632 ? toHex(q.subarray(568, 632)) : ''; const signer = String(att.signing_address || '').replace(/^0x/i, '').toLowerCase();
     const signerOk = rd.slice(0, 40) === signer && signer.length === 40; const nonceOk = rd.slice(64, 128) === expected;
-    row(list, att.request_nonce === expected, `${who} answered with the expected nonce`, `reported ${short(att.request_nonce, 8)}`);
-    row(list, signerOk && nonceOk, `${who} signing key and the nonce are inside the quote`, `${signerOk ? 'key matches' : 'key differs'}, ${nonceOk ? 'nonce matches' : 'nonce differs'}`);
+    row(list, att.request_nonce === expected, `${who} answered with the random number we sent`, `reported ${short(att.request_nonce, 8)}`);
+    row(list, signerOk && nonceOk, `${who} signing key and our random number are inside the hardware report`, `${signerOk ? 'key matches' : 'key differs'}, ${nonceOk ? 'number matches' : 'number differs'}`);
   };
   const check = async (replay) => {
     const btn = replay ? rep : run; const label = btn.textContent; btn.setAttribute('aria-busy', 'true'); btn.textContent = 'Checking…'; btn.classList.remove('done');
-    run.disabled = rep.disabled = true; list.textContent = ''; note.textContent = 'Asking NEAR AI Cloud for attestation…';
+    run.disabled = rep.disabled = true; list.textContent = ''; note.textContent = 'Asking NEAR AI Cloud to prove what it runs…';
     try {
       const nonce = toHex(crypto.getRandomValues(new Uint8Array(32)));
-      row(list, true, 'Your browser chose a random nonce', short(nonce, 12));
+      row(list, true, 'Your browser chose a random number', short(nonce, 12));
       const res = await fetch(`https://cloud-api.near.ai/v1/attestation/report?model=${encodeURIComponent(LIVE_MODEL)}&signing_algo=ecdsa&nonce=${nonce}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`NEAR AI Cloud answered ${res.status}`);
       const report = await res.json(); const gw = report.gateway_attestation; const model = (report.model_attestations || [])[0];
-      if (!gw || !model) throw new Error('the report had no gateway or model attestation');
+      if (!gw || !model) throw new Error('the report had no proof from the gateway or the model');
       const expected = replay ? toHex(crypto.getRandomValues(new Uint8Array(32))) : nonce;
       quoteChecks('Gateway', gw, expected); quoteChecks('Model', model, expected);
-      row(list, model.model_name === LIVE_MODEL, 'The attestation is for the model we asked about', model.model_name);
+      row(list, model.model_name === LIVE_MODEL, 'The proof is for the model we asked about', model.model_name);
       const fails = $$('.lp-state.fail', list).length;
-      note.textContent = (replay ? 'Replay test: this report was issued for one nonce and checked against another, as a replayed report would be. ' : '')
+      note.textContent = (replay ? 'Replay test: this report was issued for one random number and checked against another, as a replayed report would be. ' : '')
         + (fails ? `${fails} check${fails > 1 ? 's' : ''} failed, so this report would be rejected. ` : 'Every check on this page passed. ')
         + 'Not checked in the browser: the Intel certificate chain and TCB status, the NVIDIA GPU evidence, and response signatures. The repository verifier checks the Intel chain.';
       live.textContent = fails ? 'Live check finished with failures' : 'Live check passed';
@@ -242,7 +235,6 @@ if (!REDUCE && !LIGHT) {
   const models = Object.fromEntries(['room', 'nest', 'tee'].map((n) => [n, fetch(`models/${n}.glb`).then((r) => { if (!r.ok) throw new Error(`${n}.glb ${r.status}`); return r.arrayBuffer(); })]));
   const go = () => import('./scene3d.js').then(({ boot }) => boot({ models, hosts: [
     { el: $('.hero'), kind: 'hero', fallback: $('.hero-img') },
-    { el: $('canvas[data-scene="arch"]').parentElement, kind: 'arch', fallback: $('canvas[data-scene="arch"]') },
   ] })).then((r) => { document.documentElement.dataset.webgl = r && r.ok ? 'on' : 'off'; if (r && !r.ok) { document.documentElement.dataset.webglReason = r.reason; console.info(`Midge: live 3D is off (${r.reason}); showing the rendered image. Add ?3d to the URL to force it.`); } }).catch((e) => { document.documentElement.dataset.webgl = 'off'; console.info('Midge: live 3D failed to start:', e && e.message); });
   const afterPaint = () => requestAnimationFrame(() => setTimeout(go, 0));
   if (document.readyState === 'complete') afterPaint(); else addEventListener('load', afterPaint, { once: true });

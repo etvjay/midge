@@ -78,7 +78,27 @@ test('the old canvas scenes for sections 01 to 05 are gone, and the tabs are wir
   const js = read('site/main.js');
   assert.doesNotMatch(html, /data-scene=/, 'no canvas scene left in the page');
   assert.doesNotMatch(js, /class Stage\b/, 'the canvas stage engine is removed');
+  assert.doesNotMatch(js, /data-scene|__stage/, 'main.js does not reach for removed canvases');
   assert.doesNotMatch(js, /kind-switch|\.drawing\b|steps-rail/, 'the room switch, drawings and steps rail are removed');
   assert.match(js, /\$\$\('\.b-tabs'\)/, 'main.js wires the tab lists');
   assert.match(html, /<head>[\s\S]*classList\.add\('js'\)[\s\S]*<\/head>/, 'the js class is set before first paint');
+});
+
+test('the proof dots are in the static HTML, one per transaction, each linking to NearBlocks, with the lens and honest labels', () => {
+  const h = html.match(/<section[^>]*id="proof"[\s\S]*?<\/section>/)[0];
+  const dots = [...h.matchAll(/<a role="listitem" href="https:\/\/testnet\.nearblocks\.io\/txns\/([1-9A-HJ-NP-Za-km-z]{43,44})"/g)].map((m) => m[1]);
+  assert.equal(dots.length, proof.transactions.length, 'one dot per recorded transaction');
+  assert.deepEqual(dots, proof.transactions.map((t) => t.hash), 'in the order of the data');
+  assert.match(h, /id="lens-pub"/); assert.match(h, /id="lens-priv"/);
+  assert.match(h, new RegExp(`Refused by the rules · ${proof.counts.rejected}`), 'the legend says what the refusals have in common');
+  assert.doesNotMatch(h + read('site/main.js'), /Attack refused/, 'no failed transaction is called an attack');
+});
+
+test('no banned word reaches a visitor: page text, labels, lens data, or the live checks in main.js', () => {
+  const attrs = [...html.matchAll(/(?:aria-label|data-tx|title|alt)="([^"]*)"/g)].map((m) => m[1]).join(' ');
+  const jsStrings = [...read('site/main.js').matchAll(/(['`])((?:(?!\1)[^\\\n]|\\.)*)\1/g)].map((m) => m[2].replace(/\$\{[^}]*\}/g, ' ')).filter((s) => / /.test(s) && !/^\s*https?:/.test(s)).join(' ');
+  for (const w of BANNED) {
+    assert.doesNotMatch(attrs, new RegExp(`\\b${w}\\b`, 'i'), `attribute text: ${w}`);
+    assert.doesNotMatch(jsStrings, new RegExp(`\\b${w}\\b`, 'i'), `main.js visitor text: ${w}`);
+  }
 });

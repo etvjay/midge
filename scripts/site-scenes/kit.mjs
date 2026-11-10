@@ -16,7 +16,22 @@ export const BANNED = ['TEE', 'attestation', 'nonce', 'policy hash', 'hatch_out'
 /** Type sizes per drawing: the phone drawing is shown near its own width, so its type stays at 12 units or more. */
 export const TYPE = { wide: { title: 13, sub: 11, note: 12 }, narrow: { title: 14, sub: 12, note: 12 } };
 
-export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** A recorded transaction label in plain words: method names become what they do (the recorded data itself is not changed). */
+export const plainTx = (label) => String(label || '')
+  .replace(/\bwrong_nonce_replay\b/g, 'replay of a used signature')
+  .replace(/\bnon_whitelisted_recipient\b/g, 'recipient not allowed')
+  .replace(/\bover_cap_release\b/g, 'payout over the cap')
+  .replace(/\battack_rejected:/g, 'attack refused: ')
+  .replace(/\bsettle_batch_charged_two_room\b|\bsettle_batch_charged\b/g, 'charged payout')
+  .replace(/\bsettle_batch_two_room\b|\bsettle_batch\b/g, 'payout')
+  .replace(/\brecover_stuck_settlement\b/g, 'finish a stuck payout')
+  .replace(/\bprune_syndicate\b/g, 'remove group')
+  .replace(/\bhatch_out\b/g, 'exit')
+  .replace(/\bhatch\b/g, 'create group')
+  .replace(/\bnonce\b/gi, 'one-time number')
+  .replace(/\benclave\b/gi, 'room');
 
 /** A safe estimate of rendered width: Geist at about 0.56 em per character, Geist Mono at about 0.62 em. */
 export const textWidth = (s, size, mono) => String(s).length * size * (mono ? 0.62 : 0.56);
