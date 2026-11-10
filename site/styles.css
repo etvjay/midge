@@ -341,3 +341,92 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 .label3d.msg { top: auto; bottom: 16px; left: 16px; right: 16px; transform: none !important; white-space: normal; color: var(--d-1); opacity: 1 !important; }
 .label3d.msg[data-bad="true"] { color: var(--deny); }
 @media (max-width: 760px) { .hero .labels3d .label3d.dim { display: none; } .stage .label3d { font-size: 10px; } }
+
+/* ======================================================================= B cards (sections 01 to 05)
+   A card: tab list on the left; the scene on a lit dark plate with glass panels; a strip of real figures. Built into the HTML by
+   scripts/build-site-cards.mjs, so it is complete without JavaScript (every tab stacked). site/main.js adds `js` to <html> and
+   hides the tabs not selected. Radial light is inside the stage only (design system §3). */
+.b-section .sec-head { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 48px; align-items: end; margin-bottom: 40px; }
+.b-section .title .soft { color: var(--ink-3); }
+.sec-lede { margin: 0; color: var(--ink-2); max-width: 46ch; justify-self: end; font-size: var(--t-16); line-height: 1.6; }
+.bcard { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 8px; }
+.section-alt .bcard { background: var(--paper); }
+.b-left { padding: 20px 20px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.b-tabs { display: flex; flex-direction: column; }
+.b-tab { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: 28px 1fr; gap: 0 8px; padding: 14px 4px; border-bottom: 1px solid var(--line); }
+.b-tab:first-child { border-top: 1px solid var(--line); }
+.b-tab .n { font-family: var(--mono); font-size: var(--t-12); color: var(--ink-3); padding-top: 3px; }
+.b-tab .t { font-size: var(--t-16); color: var(--ink-2); transition: color .2s var(--ease); }
+.b-tab[aria-selected="true"] .t { color: var(--ink); font-weight: 500; }
+.b-tab .b { grid-column: 2; padding-top: 8px; color: var(--ink-2); font-size: var(--t-14); line-height: 1.6; }
+.js .b-tab:not([aria-selected="true"]) .b { display: none; }
+.b-tab:hover .t { color: var(--ink); }
+.b-tab:focus-visible { outline: 2px solid var(--lake); outline-offset: 2px; border-radius: 8px; }
+.b-fine { margin-top: 12px; }
+.js .b-fine:not(.on) { display: none; }
+.js .b-fine-for { display: none; }
+.b-fine summary { cursor: pointer; font-family: var(--mono); font-size: var(--t-12); color: var(--lake); list-style: none; padding: 4px 0; }
+.b-fine summary::-webkit-details-marker { display: none; }
+.b-fine summary::before { content: "+ "; }
+.b-fine[open] summary::before { content: "\2212  "; }
+.b-fine summary:focus-visible { outline: 2px solid var(--lake); outline-offset: 2px; border-radius: 4px; }
+.b-fine p { font-size: var(--t-14); color: var(--ink-2); margin: 8px 0 0; line-height: 1.6; }
+.b-stage { position: relative; border-radius: 12px; overflow: hidden; background: var(--dusk); color: var(--d-1); display: flex; flex-direction: column; min-height: 380px; }
+.b-plate { position: absolute; inset: 0; background:
+    radial-gradient(70% 60% at 68% 30%, rgba(124, 196, 184, 0.16) 0%, transparent 62%),
+    radial-gradient(55% 50% at 18% 85%, rgba(217, 130, 74, 0.09) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, rgba(233, 236, 232, 0.028) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(233, 236, 232, 0.028) 0 1px, transparent 1px 24px),
+    var(--dusk); }
+.b-panel { position: relative; flex: 1; display: flex; flex-direction: column; }
+.b-panel + .b-panel { border-top: 1px solid var(--d-line); }
+.b-panel:focus-visible { outline: 2px solid var(--d-lake); outline-offset: -4px; border-radius: 12px; }
+.b-cap { font-family: var(--mono); font-size: var(--t-12); color: var(--d-3); padding: 16px 16px 0; display: flex; justify-content: space-between; gap: 12px; }
+.b-scene { flex: 1; display: grid; align-items: center; padding: 8px; }
+.b-scene svg { display: block; width: 100%; height: auto; }
+.b-scene .m { font-family: var(--mono); }
+.b-scene .s { font-family: var(--sans); }
+.scene-narrow { display: none !important; }
+.b-strip { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 1px; background: var(--d-line); border-top: 1px solid var(--d-line); margin-top: auto; }
+.b-strip div { background: rgba(15, 20, 22, 0.84); padding: 12px 16px; display: grid; gap: 4px; min-width: 0; }
+.b-strip b { font-family: var(--serif); font-weight: 300; font-size: var(--t-24); color: var(--d-1); line-height: 1.1; }
+.b-strip span { font-family: var(--mono); font-size: var(--t-12); color: var(--d-3); }
+.b-under { margin: 16px 0 0; font-size: var(--t-14); color: var(--ink-3); }
+
+/* the moving parts: one 7 s loop; every class has an end state under reduced motion */
+@keyframes a-travel { 0%, 12% { offset-distance: 0%; opacity: 0; } 16% { opacity: 1; } 50% { offset-distance: 100%; opacity: 1; } 56%, 100% { offset-distance: 100%; opacity: 0; } }
+@keyframes a-travel2 { 0%, 56% { offset-distance: 0%; opacity: 0; } 60% { opacity: 1; } 82% { offset-distance: 100%; opacity: 1; } 88%, 100% { offset-distance: 100%; opacity: 0; } }
+@keyframes a-late { 0%, 52% { opacity: 0; } 58%, 100% { opacity: 1; } }
+@keyframes a-later { 0%, 80% { opacity: 0; } 86%, 100% { opacity: 1; } }
+@keyframes a-dim { 0%, 34% { opacity: 1; } 42%, 100% { opacity: 0.22; } }
+@keyframes a-leave { 0%, 50% { transform: none; opacity: 1; } 72%, 100% { transform: translateX(90px); opacity: 0; } }
+@keyframes a-fill { 0%, 36% { transform: scaleX(0); } 60%, 100% { transform: scaleX(1); } }
+@keyframes a-draw { 0%, 56% { stroke-dashoffset: 120; } 64%, 100% { stroke-dashoffset: 0; } }
+.b-scene .a-tr { offset-rotate: 0deg; animation: a-travel 7s var(--ease) infinite; }
+.b-scene .a-tr2 { offset-rotate: 0deg; animation: a-travel2 7s var(--ease) infinite; }
+.b-scene .a-late { animation: a-late 7s linear infinite; }
+.b-scene .a-later { animation: a-later 7s linear infinite; }
+.b-scene .a-dim { animation: a-dim 7s linear infinite; }
+.b-scene .a-leave { transform-box: fill-box; animation: a-leave 7s var(--ease) infinite; }
+.b-scene .a-fill { transform-box: fill-box; transform-origin: left center; animation: a-fill 7s linear infinite; }
+.b-scene .a-draw { stroke-dasharray: 120; animation: a-draw 7s linear infinite; }
+.b-stage.paused .b-scene * { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .b-scene .a-tr, .b-scene .a-tr2 { animation: none; opacity: 0; }
+  .b-scene .a-late, .b-scene .a-later { animation: none; opacity: 1; }
+  .b-scene .a-dim { animation: none; opacity: 0.22; }
+  .b-scene .a-leave { animation: none; opacity: 0; }
+  .b-scene .a-fill { animation: none; transform: scaleX(1); }
+  .b-scene .a-draw { animation: none; stroke-dashoffset: 0; }
+}
+@media (max-width: 900px) {
+  .b-section .sec-head { grid-template-columns: 1fr; }
+  .sec-lede { justify-self: start; }
+  .bcard { grid-template-columns: 1fr; }
+  .b-stage { min-height: 0; }
+}
+@media (max-width: 600px) {
+  .scene-wide { display: none !important; }
+  .scene-narrow { display: block !important; }
+  .b-strip { grid-auto-flow: row; }
+}

@@ -8,7 +8,7 @@ export const C = {
 };
 
 /** Classes that animate; site/styles.css gives every one of them a reduced-motion end state. */
-export const ANIM_CLASSES = ['tr', 'tr2', 'late', 'later', 'dim', 'leave', 'fill', 'draw'];
+export const ANIM_CLASSES = ['a-tr', 'a-tr2', 'a-late', 'a-later', 'a-dim', 'a-leave', 'a-fill', 'a-draw'];
 
 /** Words that do not appear on the page (design system §2: plain words first). */
 export const BANNED = ['TEE', 'attestation', 'nonce', 'policy hash', 'hatch_out', 'enclave'];
@@ -35,7 +35,7 @@ export function chip(x, y, title, sub = '', o = {}) {
   const cls = o.cls ? ` class="${o.cls}"` : '';
   const lock = o.lock ? `<rect x="${x0 + 12}" y="${y + (h - 22) / 2}" width="22" height="22" rx="6" fill="${C.d1}"/><path d="M${x0 + 18} ${y + h / 2 - 1} v-3 a5 5 0 0 1 10 0 v3" fill="none" stroke="${C.dusk}" stroke-width="1.6"/><rect x="${x0 + 16}" y="${y + h / 2 - 1}" width="14" height="9" rx="2" fill="${C.dusk}"/>` : '';
   const tx = x0 + 14 + lockW;
-  const strike = o.strike ? `<path d="M${x0 + 8} ${y + h / 2} L${x0 + w - 8} ${y + h / 2}" stroke="${C.deny}" stroke-width="1.5" class="draw"/>` : '';
+  const strike = o.strike ? `<path d="M${x0 + 8} ${y + h / 2} L${x0 + w - 8} ${y + h / 2}" stroke="${C.deny}" stroke-width="1.5" class="a-draw"/>` : '';
   // On phones panels are stacked, so connectors pass behind them: an opaque fill keeps those lines hidden.
   const fill = o.fill || (t === TYPE.narrow ? C.panelSolid : C.glass);
   const svg = `<g data-chip="${x0},${y},${w},${h},${need}"${cls}><rect x="${x0}" y="${y}" width="${w}" height="${h}" rx="10" fill="${fill}" stroke="${o.stroke || C.edge}"/>${lock}`
@@ -47,8 +47,8 @@ export function chip(x, y, title, sub = '', o = {}) {
 
 export const line = (d, o = {}) => `<path d="${d}" fill="none" stroke="${o.color || C.faint}" stroke-width="${o.w || 1.2}"${o.dash ? ' stroke-dasharray="3 5"' : ''}/>`;
 
-/** A dot that travels along a path (CSS offset-path); `tr` runs in the first half of the loop, `tr2` in the second. */
-export const mover = (d, color = C.glow, delay = 0, cls = 'tr') => `<circle r="4.5" fill="${color}" class="${cls}" style="offset-path: path('${d}'); animation-delay: ${delay}s"/>`;
+/** A dot that travels along a path (CSS offset-path); `a-tr` runs in the first half of the loop, `a-tr2` in the second. */
+export const mover = (d, color = C.glow, delay = 0, cls = 'a-tr') => `<circle r="4.5" fill="${color}" class="${cls}" style="offset-path: path('${d}'); animation-delay: ${delay}s"/>`;
 
 export function label(x, y, text, o = {}) {
   const cls = ['m', o.cls].filter(Boolean).join(' ');

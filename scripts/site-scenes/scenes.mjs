@@ -15,7 +15,7 @@ function hubBox(hub, cx, y, t) {
     hub.items.forEach((it, i) => { const c = chip(cx - w / 2, yy, it.t, it.s, { type: t, minW: w, stroke: it.focus ? C.lake : C.edge, color: it.focus ? C.d1 : C.d2 }); svg += c.svg; boxes.push(c); yy += c.h + 22; });
     for (let i = 0; i < boxes.length - 1; i++) svg += line(`M${cx} ${boxes[i].y + boxes[i].h} L${cx} ${boxes[i + 1].y}`);
     const last = boxes[boxes.length - 1]; const prev = boxes[boxes.length - 2];
-    svg += mover(`M${cx} ${prev.y + prev.h} L${cx} ${last.y}`, C.lake, 0, 'tr2');
+    svg += mover(`M${cx} ${prev.y + prev.h} L${cx} ${last.y}`, C.lake, 0, 'a-tr2');
     return { svg, x: cx - w / 2, y, w, h: yy - 22 - y, anchorIn: boxes[Math.min(1, boxes.length - 1)] };
   }
   const title = hub.t; const lines = hub.lines || [];
@@ -29,11 +29,11 @@ function hubBox(hub, cx, y, t) {
   lines.forEach((l, i) => { svg += label(isRoom ? cx : x + 14, y + 18 + t.title + (i + 1) * lineH - 4, l, { size: t.sub + 1, color: isRoom ? C.d2 : C.d1, anchor: isRoom ? 'middle' : 'start' }); });
   if (hub.timer) {
     const ty = y + h - 26; const tw = w - 28;
-    svg += `<rect x="${x + 14}" y="${ty}" width="${tw}" height="6" rx="3" fill="rgba(233,236,232,0.14)"/><rect class="fill" x="${x + 14}" y="${ty}" width="${tw}" height="6" rx="3" fill="${C.lake}"/>`;
+    svg += `<rect x="${x + 14}" y="${ty}" width="${tw}" height="6" rx="3" fill="rgba(233,236,232,0.14)"/><rect class="a-fill" x="${x + 14}" y="${ty}" width="${tw}" height="6" rx="3" fill="${C.lake}"/>`;
     svg += label(x + w - 14, ty + 20, 'exit timer', { size: t.sub, color: C.d3, anchor: 'end' });
   }
   // Something that leaves keeps a dashed outline where it was, so the end state still shows what happened.
-  const ghost = hub.cls === 'leave' ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="none" stroke="${C.deny}" stroke-dasharray="4 5"/>` : '';
+  const ghost = hub.cls === 'a-leave' ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="none" stroke="${C.deny}" stroke-dasharray="4 5"/>` : '';
   if (hub.cls) svg = `${ghost}<g class="${hub.cls}">${svg}</g>`;
   return { svg, x, y, w, h };
 }
@@ -59,8 +59,8 @@ function layout(m, view) {
     y = Math.round(mid - tall(outs) / 2);
     const placedOut = outs.map((c, i) => { const p = make(m.outputs[i], W - 24, y, { align: 'end', cls: m.outputs[i].cls }); y += p.h + gap; return p; });
     const target = hub.anchorIn || hub;
-    placedIn.forEach((p, i) => { const d = curve([p.x + p.w, p.y + p.h / 2], [target.x, target.y + target.h / 2]); body += line(d) + (m.inFlow === false ? '' : mover(d, m.inFlow?.color || C.d1, i * 0.1, m.inFlow?.cls || 'tr')); });
-    placedOut.forEach((p, i) => { const o = m.outputs[i]; const d = curve([hub.x + hub.w, hub.y + hub.h / 2], [p.x, p.y + p.h / 2]); body += line(d) + (o.flow ? mover(d, o.flow, i * 0.15, 'tr2') : ''); if (o.after) body += label(p.x + p.w - 10, p.y - 6, o.after, { size: t.sub, color: C.glow, anchor: 'end', cls: 'later' }); });
+    placedIn.forEach((p, i) => { const d = curve([p.x + p.w, p.y + p.h / 2], [target.x, target.y + target.h / 2]); body += line(d) + (m.inFlow === false ? '' : mover(d, m.inFlow?.color || C.d1, i * 0.1, m.inFlow?.cls || 'a-tr')); });
+    placedOut.forEach((p, i) => { const o = m.outputs[i]; const d = curve([hub.x + hub.w, hub.y + hub.h / 2], [p.x, p.y + p.h / 2]); body += line(d) + (o.flow ? mover(d, o.flow, i * 0.15, 'a-tr2') : ''); if (o.after) body += label(p.x + p.w - 12, p.y + t.title + 9, o.after, { size: t.sub, color: C.glow, anchor: 'end', cls: 'a-later' }); });
     body += hub.svg + placedIn.map((p) => p.svg).join('') + placedOut.map((p) => p.svg).join('');
     if (m.hubAfter) body += label(hubCx, hub.y + hub.h + 20, m.hubAfter.text, { size: t.note, color: m.hubAfter.color || C.d2, anchor: 'middle', cls: m.hubAfter.cls });
     bottom = H;
@@ -85,13 +85,13 @@ function layout(m, view) {
   let afterGap = 0;
   if (m.hubAfter) { body += label(cx, hub.y + hub.h + 24, m.hubAfter.text, { size: t.note, color: m.hubAfter.color || C.d2, anchor: 'middle', cls: m.hubAfter.cls }); afterGap = 30; }
   const target = hub.anchorIn || hub;
-  placedIn.forEach((p, i) => { const d = curve([p.x + p.w / 2, p.y + p.h], [target.x + target.w / 2, target.y], true); body += line(d) + (m.inFlow === false ? '' : mover(d, m.inFlow?.color || C.d1, i * 0.1, m.inFlow?.cls || 'tr')); });
+  placedIn.forEach((p, i) => { const d = curve([p.x + p.w / 2, p.y + p.h], [target.x + target.w / 2, target.y], true); body += line(d) + (m.inFlow === false ? '' : mover(d, m.inFlow?.color || C.d1, i * 0.1, m.inFlow?.cls || 'a-tr')); });
   y = hub.y + hub.h + 36 + afterGap;
   const outW = outs.length ? Math.max(...outs.map((c) => c.w)) : 0;
   outs.forEach((c, i) => {
     const o = m.outputs[i]; const p = make(o, cx, y, { minW: outW, align: 'center', cls: o.cls });
-    const d = curve([cx, hub.y + hub.h], [cx, p.y], true); body += line(d) + (o.flow ? mover(d, o.flow, i * 0.15, 'tr2') : '');
-    if (o.after) body += label(p.x + p.w - 10, p.y + p.h / 2 + 4, o.after, { size: t.sub, color: C.glow, anchor: 'end', cls: 'later' });
+    const d = curve([cx, hub.y + hub.h], [cx, p.y], true); body += line(d) + (o.flow ? mover(d, o.flow, i * 0.15, 'a-tr2') : '');
+    if (o.after) body += label(p.x + p.w - 12, p.y + t.title + 9, o.after, { size: t.sub, color: C.glow, anchor: 'end', cls: 'a-later' });
     body += p.svg; y += p.h + 12;
   });
   body = hub.svg + body + placedIn.map((p) => p.svg).join('');
@@ -118,7 +118,7 @@ function agentScene(raw) {
     tries.forEach((l) => { y += lh; body += label(40, y, l, { size: t.note, color: C.glow }); });
     y += lh + 10; let after = label(40, y, verdict, { size: t.title, color: C.deny });
     errs.forEach((l) => { y += lh; after += label(40, y, l, { size: t.note, color: C.d3 }); });
-    body += `<g class="late">${after}</g>`;
+    body += `<g class="a-late">${after}</g>`;
     const h = y + 24;
     return frame(`<rect x="20" y="20" width="${W - 40}" height="${h - 20}" rx="12" fill="rgba(15,20,22,0.85)" stroke="${C.edge}"/>` + body, `An AI agent tries to ${attempt.label.split(' (')[0]}; the attempt is ${verdict}`, view, h + 20);
   };
@@ -132,47 +132,47 @@ export function makeScenes(attempts = []) {
     public: () => both({ aria: 'Bids are public; a watcher reads them and bids just above',
       inputs: [{ t: 'Member A bids 1,250', s: 'visible to everyone' }, { t: 'Member B bids 900', s: 'visible to everyone' }, { t: 'Member C bids 1,100', s: 'visible to everyone' }],
       inFlow: { color: C.deny }, hub: { kind: 'glass', t: 'A watcher', lines: ['reads every bid'], stroke: 'rgba(224,103,90,0.5)' },
-      outputs: [{ t: 'Bids 1,260 first', s: 'and wins the lot', stroke: C.deny, color: C.deny, cls: 'late' }],
-      note: { text: 'Everyone sees the bids before they land', cls: 'later' } }),
+      outputs: [{ t: 'Bids 1,260 first', s: 'and wins the lot', stroke: C.deny, color: C.deny, cls: 'a-late' }],
+      note: { text: 'Everyone sees the bids before they land', cls: 'a-later' } }),
     organizer: () => both({ aria: 'Backers send money to an organizer, who leaves with it',
       inputs: [{ t: 'Backer 1', s: 'sends 0.01' }, { t: 'Backer 2', s: 'sends 0.02' }, { t: 'Backer 3', s: 'sends 0.03' }],
-      inFlow: { color: C.glow }, hub: { kind: 'glass', t: 'The organizer', lines: ['holds 0.06'], cls: 'leave' },
-      hubAfter: { text: 'they leave; the money goes too', color: C.deny, cls: 'later' },
+      inFlow: { color: C.glow }, hub: { kind: 'glass', t: 'The organizer', lines: ['holds 0.06'], cls: 'a-leave' },
+      hubAfter: { text: 'they leave; the money goes too', color: C.deny, cls: 'a-later' },
       note: { text: 'One person holds everything' } }),
     blackbox: () => both({ aria: 'Secure hardware that can pay anything pays a thief after one bug',
       inputs: [{ t: 'The pot', s: '0.10 from 4 members' }], inFlow: { color: C.glow },
       hub: { kind: 'glass', t: 'Secure hardware', lines: ['signs any payout'] },
-      outputs: [{ t: 'A member', s: 'expected' }, { t: 'A thief', s: 'paid everything', stroke: C.deny, color: C.deny, subColor: C.deny, cls: 'late', flow: C.deny }],
-      note: { text: 'If it can pay anything, one bug empties the pot', cls: 'later' } }),
+      outputs: [{ t: 'A member', s: 'expected' }, { t: 'A thief', s: 'paid everything', stroke: C.deny, color: C.deny, subColor: C.deny, cls: 'a-late', flow: C.deny }],
+      note: { text: 'If it can pay anything, one bug empties the pot', cls: 'a-later' } }),
     room: () => both({ aria: 'Sealed bids go into the room; only the total comes out',
       inputs: members(4, 'sealed bid'), hub: { kind: 'room', t: 'The room', lines: ['opens the bids', 'in secure hardware'] },
-      outputs: [{ t: 'Total 4.90', s: 'only this comes out', stroke: C.lake, cls: 'late' }],
+      outputs: [{ t: 'Total 4.90', s: 'only this comes out', stroke: C.lake, cls: 'a-late' }],
       note: { text: 'Example amounts' } }),
     rules: () => both({ aria: 'A payout inside the rules is paid; a payout to a thief is refused',
       inputs: [{ t: 'The room', s: 'proposes a payout' }],
       hub: { kind: 'glass', t: 'The rules, on NEAR', lines: ['pay only: alice, bob', 'at most 20% per window', 'until the deadline'] },
       outputs: [{ t: 'alice 0.40', s: 'paid', stroke: C.lake, flow: C.lake }, { t: 'a thief', s: 'refused', stroke: C.deny, color: C.deny, subColor: C.deny, strike: true, flow: C.deny }],
-      note: { text: 'Even if the room approves it, a payout outside the rules is refused', cls: 'later' } }),
+      note: { text: 'Even if the room approves it, a payout outside the rules is refused', cls: 'a-later' } }),
     exit: () => both({ aria: "The room stops, the exit timer runs out, and each member takes their own share back",
-      top: { t: 'The room', s: 'decides in private', cls: 'dim' }, hubAfter: { text: 'room stopped', color: C.deny, cls: 'late' },
+      top: { t: 'The room', s: 'decides in private', cls: 'a-dim' }, hubAfter: { text: 'room stopped', color: C.deny, cls: 'a-late' },
       hub: { kind: 'glass', t: 'Held by the contract', timer: true, minW: 200 },
       outputs: [{ t: 'Member 1', flow: C.glow, after: '+0.02' }, { t: 'Member 2', flow: C.glow, after: '+0.02' }, { t: 'Member 3', flow: C.glow, after: '+0.02' }].map((o) => ({ ...o, s: 'takes their share' })),
-      note: { text: 'No one has to agree. Nobody else\'s share is touched', cls: 'later' } }),
+      note: { text: 'No one has to agree. Nobody else\'s share is touched', cls: 'a-later' } }),
     auction: () => both({ aria: 'Sealed bids; the room picks the winner and the losing bids stay private',
       inputs: ['a', 'b', 'c', 's'].map((n) => ({ t: `Bidder ${n}`, s: 'sealed bid', lock: true })), hub: { kind: 'room', t: 'The room', lines: ['second price'] },
-      outputs: [{ t: 'Winner: a', s: 'pays the second price', stroke: C.lake, cls: 'late' }, { t: 'Losing bids', s: 'never published', cls: 'late' }] }),
+      outputs: [{ t: 'Winner: a', s: 'pays the second price', stroke: C.lake, cls: 'a-late' }, { t: 'Losing bids', s: 'never published', cls: 'a-late' }] }),
     vote: () => both({ aria: 'Sealed ballots; the room counts; only the winning payout is public',
       inputs: members(5, 'sealed ballot'), hub: { kind: 'room', t: 'The room', lines: ['counts the ballots'] },
-      outputs: [{ t: 'Option A wins', s: 'its payout is paid', stroke: C.lake, cls: 'late' }],
-      note: { text: "On the chain: the payout. Not on it: anyone's vote", cls: 'later' } }),
+      outputs: [{ t: 'Option A wins', s: 'its payout is paid', stroke: C.lake, cls: 'a-late' }],
+      note: { text: "On the chain: the payout. Not on it: anyone's vote", cls: 'a-later' } }),
     payroll: () => both({ aria: 'One pay run pays one-time addresses; who owns each stays private',
       inputs: [{ t: 'The pay run', s: 'one pool' }], hub: { kind: 'room', t: 'The room', lines: ['knows who is who'] },
       outputs: ['7f3a…', 'c21e…', '9b04…'].map((a) => ({ t: `address ${a}`, s: 'paid 0.03, one time', flow: C.glow })),
-      note: { text: 'Strangers see amounts, not who each address belongs to', cls: 'later' } }),
+      note: { text: 'Strangers see amounts, not who each address belongs to', cls: 'a-later' } }),
     invest: () => both({ aria: "Four equal deposits; the room pays the founder; each backer's amount stays private",
       inputs: members(4, 'deposits 0.05', 'Backer'), hub: { kind: 'room', t: 'The room', lines: ['sealed amounts'] },
-      outputs: [{ t: 'The founder', s: 'receives 0.10', stroke: C.lake, cls: 'late' }],
-      note: { text: 'Equal deposits hide who put in how much', cls: 'later' } }),
+      outputs: [{ t: 'The founder', s: 'receives 0.10', stroke: C.lake, cls: 'a-late' }],
+      note: { text: 'Equal deposits hide who put in how much', cls: 'a-later' } }),
     agent: (i = 0) => agentScene(attempts[i] || { label: 'send NEAR to the attacker', refusedBy: 'key', error: 'Access key requires full access' }),
     layers: (focus = 0) => both({ aria: 'Members, then NEAR AI Cloud and our program on Phala, then the contract on NEAR',
       inputs: members(4, 'sealed bid'), hub: { kind: 'stack', items: LAYERS.map(([t, s], i) => ({ t, s, focus: i === focus })) } }),
