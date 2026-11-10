@@ -46,7 +46,8 @@
     "build:wasm:baseline": "cd contracts/public-auction && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",
     "build:openapi": "node scripts/build-openapi.mjs",
     "measure:model": "node scripts/measure-model.js",
-    "verify:solana": "node scripts/testnet-solana.js"
+    "verify:solana": "node scripts/testnet-solana.js",
+    "verify:payroll": "node scripts/testnet-multichain-payroll.js"
   },
   "keywords": [
     "near",

@@ -36,7 +36,7 @@ A hosted Roost with exact arithmetic also runs on a Phala confidential VM: its a
 
 Also built: 10 MCP tools for agents, an SDK and HTTP API, a live attestation panel at midge.vercel.app, 53 Rust tests, one verified Chain Signatures signature, and a one-command verifier (npm run verify) that CI runs.
 
-Limits: testnet only; payroll has run on testnet against a public pay run and hides who is paid (one-time addresses) and adds private receipts, but not the amounts, which stay public on NEAR, and stable distinct salaries still let an observer link a person across months; nothing broadcast on other chains yet.
+Limits: testnet only; payroll has run on testnet against a public pay run and hides who is paid (one-time addresses) and adds private receipts, but not the amounts, which stay public on NEAR, and stable distinct salaries still let an observer link a person across months; a pay run across Solana devnet and Ethereum Sepolia has landed (MPC-signed for our own account, not yet bound by a group's rules), nothing yet on Bitcoin.
 ```
 
 ---
