@@ -57,14 +57,14 @@ function measure() {
     if (r < (large ? 3 : 4.5)) contrast.push(`${label(el)} ${r.toFixed(2)}:1 at ${size}px`);
   }
   let minScene = Infinity, minSceneAt = '';
-  for (const t of document.querySelectorAll('.b-scene svg text')) {
+  for (const t of document.querySelectorAll('.b-scene svg text, svg.dg text')) {
     const svg = t.ownerSVGElement; if (!visible(svg) || !t.getClientRects().length) continue;
     const scale = svg.getScreenCTM() ? svg.getScreenCTM().a : 1; const px = parseFloat(getComputedStyle(t).fontSize) * scale;
     if (px < minScene) { minScene = px; minSceneAt = label(t); }
     const fill = parse(getComputedStyle(t).fill); if (!fill) continue;
     const r0 = t.getBoundingClientRect(); const hits = document.elementsFromPoint(r0.x + r0.width / 2, r0.y + r0.height / 2);
     const shape = hits.find((h) => h !== t && h.ownerSVGElement === svg && /^(rect|path|circle)$/.test(h.tagName) && parse(getComputedStyle(h).fill)?.[3] >= 1);
-    const bg = shape ? parse(getComputedStyle(shape).fill) : bgOf(svg.closest('.b-panel') || svg);
+    const bg = shape ? parse(getComputedStyle(shape).fill) : bgOf(svg.closest('.b-panel, .bc') || svg);
     const r = ratio(over([fill[0], fill[1], fill[2], fill[3] * (+getComputedStyle(t).fillOpacity || 1)], bg), bg);
     if (r < 4.5) contrast.push(`scene ${label(t)} ${r.toFixed(2)}:1`);
   }

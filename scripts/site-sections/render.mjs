@@ -35,6 +35,24 @@ function problem(F, f) {
     return `<rect x="0" y="${y}" width="96" height="24" rx="6" class="dg-box"/><text x="10" y="${y + 16}" class="dg-mono">Backer ${i + 1} ${v}</text><path d="${d}" class="dg-line-glow"/><circle r="3.5" class="dg-dot-glow mo-tr" style="offset-path: path('${d}'); animation-delay: ${i * 0.18}s"/>`;
   }).join('');
   const total = F.organizerBackers.quote.match(/\((\d\.\d\d) in all\)/)[1];
+  // Phone variants: stacked, 300 units wide, so 12-unit labels stay at 11 px or more on a 390 px screen.
+  const nBackers = F.organizerBackers.quote.match(/0\.0\d/g).map((v, i) => {
+    const x = (i % 2) * 156; const y = Math.floor(i / 2) * 36; const d = `M${x + 72} ${y + 28} C ${x + 72} 96, 150 80, 150 104`;
+    return `<rect x="${x}" y="${y}" width="144" height="28" rx="6" class="dg-box"/><text x="${x + 10}" y="${y + 19}" class="dg-mono">Backer ${i + 1} ${v}</text><path d="${d}" class="dg-line-glow"/><circle r="3.5" class="dg-dot-glow mo-tr" style="offset-path: path('${d}'); animation-delay: ${i * 0.18}s"/>`;
+  }).join('');
+  const orgNarrow = `<svg class="dg dg-narrow" viewBox="0 0 300 236" role="img" aria-label="${f(p.organizer.aria)}">${nBackers}
+          <rect x="80" y="104" width="140" height="44" rx="10" class="dg-box dg-box-glow"/><text x="94" y="122" class="dg-sans">The organizer</text><text x="94" y="139" class="dg-mono dim">holds ${total}</text>
+          <path d="M150 148 L150 196" class="dg-line-deny dashed"/><circle r="4" class="dg-dot-deny mo-tr2" style="offset-path: path('M150 148 L150 196')"/>
+          <rect x="100" y="196" width="100" height="32" rx="8" class="dg-box-deny"/><text x="116" y="217" class="dg-mono t-deny">its pick</text></svg>`;
+  const boxNarrow = `<svg class="dg dg-narrow" viewBox="0 0 300 236" role="img" aria-label="A pot goes into secure hardware that signs any payout; one goes to a member, one to a thief">
+          <rect x="100" y="0" width="100" height="30" rx="8" class="dg-box"/><text x="118" y="20" class="dg-mono">the pot</text>
+          <path d="M150 30 V 64" class="dg-line"/><circle r="4" class="dg-dot mo-tr" style="offset-path: path('M150 30 L150 64')"/>
+          <rect x="70" y="64" width="160" height="72" rx="12" class="dg-chip"/>
+          <text x="86" y="96" class="dg-sans">Secure hardware</text><text x="86" y="116" class="dg-mono dim">signs any payout</text>
+          <path d="M120 136 C 120 168, 70 168, 70 196" class="dg-line"/><path d="M180 136 C 180 168, 230 168, 230 196" class="dg-line-deny"/>
+          <circle r="4" class="dg-dot mo-tr2" style="offset-path: path('M120 136 C 120 168, 70 168, 70 196')"/><circle r="4" class="dg-dot-deny mo-tr2" style="offset-path: path('M180 136 C 180 168, 230 168, 230 196'); animation-delay: 0.3s"/>
+          <rect x="10" y="196" width="120" height="32" rx="8" class="dg-box"/><text x="24" y="217" class="dg-mono">a member</text>
+          <rect x="170" y="196" width="120" height="32" rx="8" class="dg-box-deny"/><text x="186" y="217" class="dg-mono t-deny">a thief</text></svg>`;
   const pins = Array.from({ length: 5 }, (_, i) => `<rect class="mo-blink dg-pin" x="${186 + i * 22}" y="26" width="6" height="2"/><rect class="mo-blink dg-pin" x="${186 + i * 22}" y="104" width="6" height="2"/>`).join('');
   const cmpHead = ['', ...p.compare.cols].map((c, i) => `<span class="th${i === 3 ? ' t-lake' : ''}">${esc(c)}</span>`).join('');
   const cmpRows = p.compare.rows.map((r, i) => `<span class="td k mo-rise" style="--i: ${i}">${f(r.k)}</span>${r.cells.map((c) => `<span class="td mo-rise${tone(c.tone)}" style="--i: ${i}">${f(c.t)}</span>`).join('')}`).join('');
@@ -54,17 +72,18 @@ function problem(F, f) {
       </article>
       <article class="bc s3">
         <p class="bc-label">${f(p.organizer.label)}</p>
-        <svg class="dg" viewBox="0 0 460 132" role="img" aria-label="${f(p.organizer.aria)}">${backers}
+        <svg class="dg dg-wide" viewBox="0 0 460 132" role="img" aria-label="${f(p.organizer.aria)}">${backers}
           <rect x="196" y="46" width="112" height="40" rx="10" class="dg-box dg-box-glow"/><text x="210" y="63" class="dg-sans">The organizer</text><text x="210" y="78" class="dg-mono dim">holds ${total}</text>
           <path d="M308 66 L384 66" class="dg-line-deny dashed"/><circle r="4" class="dg-dot-deny mo-tr2" style="offset-path: path('M308 66 L384 66')"/>
           <rect x="384" y="50" width="76" height="32" rx="8" class="dg-box-deny"/><text x="394" y="70" class="dg-mono t-deny">its pick</text>
         </svg>
+        ${orgNarrow}
         <h3 class="bc-title">${f(p.organizer.title)}</h3>
         <p class="chips">${p.organizer.chips.map((c) => `<span class="chip"><b class="t-deny">${esc(F[c.fig].value)}</b> ${f(c.text)}</span>`).join('')}</p>
       </article>
       <article class="bc s3">
         <p class="bc-label">${f(p.blackbox.label)}</p>
-        <svg class="dg" viewBox="0 0 460 132" role="img" aria-label="A pot goes into secure hardware that signs any payout; one goes to a member, one to a thief">
+        <svg class="dg dg-wide" viewBox="0 0 460 132" role="img" aria-label="A pot goes into secure hardware that signs any payout; one goes to a member, one to a thief">
           <rect x="0" y="50" width="92" height="32" rx="8" class="dg-box"/><text x="12" y="70" class="dg-mono">the pot</text>
           <path d="M92 66 H 168" class="dg-line"/><circle r="4" class="dg-dot mo-tr" style="offset-path: path('M92 66 L168 66')"/>
           <rect x="168" y="30" width="124" height="72" rx="12" class="dg-chip"/>${pins}
@@ -74,6 +93,7 @@ function problem(F, f) {
           <rect x="368" y="12" width="92" height="28" rx="8" class="dg-box"/><text x="378" y="30" class="dg-mono">a member</text>
           <rect x="368" y="92" width="92" height="28" rx="8" class="dg-box-deny"/><text x="378" y="110" class="dg-mono t-deny">a thief</text>
         </svg>
+        ${boxNarrow}
         <h3 class="bc-title">${f(p.blackbox.title)}</h3>
         <p class="bc-text">${f(p.blackbox.body)}</p>
       </article>
@@ -222,7 +242,7 @@ function agents(F, f, proof) {
   <div class="wrap">${head('agents', a, f)}
     <div class="bento">
       ${cards}
-      ${a.figs.map((k, i) => `<div class="bc bc-raised s2 stat"><p class="fig${i === 2 ? ' t-lake' : ''}">${countUp(F[k].value)}</p><p class="cap">${esc(F[k].label)}</p></div>`).join('\n      ')}
+      ${a.figs.map((k, i) => `<div class="bc bc-raised s2 stat-card"><p class="fig${i === 2 ? ' t-lake' : ''}">${countUp(F[k].value)}</p><p class="cap">${esc(F[k].label)}</p></div>`).join('\n      ')}
     </div>
     <p class="fine">${f(a.fine)}</p>
   </div>

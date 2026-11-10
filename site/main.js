@@ -28,7 +28,7 @@ if (menuBtn && nav) {
   nav.addEventListener('click', (e) => { if (e.target.closest('a')) setOpen(false); });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && nav.classList.contains('open')) { setOpen(false); menuBtn.focus(); } });
 }
-const darkZones = () => [$('.hero'), $('#proof'), $('.site-footer')];
+const darkZones = () => [$('.hero'), ...$$('.bs'), $('.site-footer')];
 const onScroll = () => { const y = 30; const dark = darkZones().some((el) => { const r = el.getBoundingClientRect(); return r.top <= y && r.bottom >= y; }); header.classList.toggle('on-light', !dark); };
 addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
