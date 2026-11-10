@@ -77,3 +77,47 @@ test('code names appear only in the parts section', () => {
   const CODE = /\b(Roost|Nest|flyers?|hatch|settle_batch)\b/;
   for (const [at, s] of strings(HOME)) if (!at.startsWith('HOME.parts')) assert.doesNotMatch(s, CODE, `${at}: "${s}"`);
 });
+
+// ---- the built page (Task 2)
+const html = read('site/index.html');
+const sectionOf = (id) => { const m = html.match(new RegExp(`<section[^>]*id="${id}"[\\s\\S]*?\\n</section>`)); assert.ok(m, `section ${id}`); return m[0]; };
+
+test('sections 01 to 10 are built in order after the hero, each named by its heading', () => {
+  const ids = ['problem', 'how', 'who', 'rules', 'uses', 'agents', 'parts', 'proof', 'limits', 'try'];
+  let at = html.indexOf('id="hero"');
+  for (const id of ids) {
+    const i = html.indexOf(`<section class="section bs`, at); assert.ok(i > at, `${id} after the one before`);
+    assert.match(html.slice(i, i + 200), new RegExp(`id="${id}" aria-labelledby="${id}-title"`), `${id} in order`);
+    assert.match(html, new RegExp(`id="${id}-title"`), `${id} has its heading`);
+    at = i + 1;
+  }
+});
+
+test('nothing is hidden and no {figure} token is left unfilled', () => {
+  const region = html.slice(html.indexOf('<!-- cards:begin -->'), html.indexOf('<!-- footer:end -->'));
+  assert.doesNotMatch(region, /\shidden[\s>=]/);
+  assert.doesNotMatch(region.replace(/<style[\s\S]*?<\/style>|style="[^"]*"/g, ''), /\{[a-zA-Z]+\}/);
+});
+
+test('every element main.js looks up exists in the built page', () => {
+  for (const id of ['chip', 'chip-text', 'lp-run', 'lp-replay', 'lp-list', 'lp-note', 'chain-list', 'chain-note', 'lens-pub', 'lens-priv', 'proof-grid', 'recent', 'net-count', 'live', 'foot-live', 'rules-json', 'rules-reads-text']) assert.match(html, new RegExp(`id="${id}"`), id);
+});
+
+test('code names are visible only inside Under the hood', () => {
+  const visible = (h) => h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<svg[\s\S]*?<\/svg>/g, ' ').replace(/<[^>]+>/g, ' ');
+  const outside = visible(html.replace(sectionOf('parts'), ''));
+  assert.doesNotMatch(outside, /\b(Roost|Nest|flyers?|hatch|settle_batch)\b/);
+  assert.match(visible(sectionOf('parts')), /code: Roost/);
+});
+
+test('illustrative amounts are labelled, and the recorded refusal links its transaction', () => {
+  assert.match(sectionOf('problem'), /example amounts/);
+  assert.match(sectionOf('proof'), /href="https:\/\/testnet\.nearblocks\.io\/txns\/3gW41Caz1wK4cCDFpixTJ3KweM6qpF7ZGxm6ARB1CmPk"/);
+});
+
+test('the FAQ is four headed groups of native details, eighteen in all, the first open', () => {
+  const groups = [...html.matchAll(/<section class="faq-group" id="faq-g(\d)"[\s\S]*?<\/section>/g)];
+  assert.equal(groups.length, 4);
+  assert.equal(groups.reduce((n, g) => n + (g[0].match(/<details/g) || []).length, 0), 18);
+  assert.match(groups[0][0], /<details open>/);
+});
