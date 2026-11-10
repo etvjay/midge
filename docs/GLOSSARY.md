@@ -29,6 +29,8 @@
 
 Names we do not use in public copy: syndicate, swarm, flyer, hatch, Roost, Nest, pod, facility, FAR shard, TEE (say "secure hardware", then name it once), "trustless", "MEV eliminated", an unqualified "hardware-secured". Third-party product names (OutLayer, Chain Signatures, 1Click) are named only where we use them.
 
+*Decided 2026-11-10:* the landing page's "Under the hood" section may show the code names (Roost, Nest, flyers, hatch, escape hatch, `settle_batch`, two-room agreement, advisor), each once, beside its plain word, so readers of the code and contract can map one to the other. Nowhere else on public pages; `tests/site-home.test.js` checks it.
+
 ## What rooms are for
 
 One pattern (a private room, public rules, an exit) serves several kinds of group. Status is what exists today, not what is planned.
