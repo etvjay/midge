@@ -555,8 +555,8 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 }
 
 /* ---------- Bento motion (plan 2026-11-10-site-bento-direction §Motion). One curve; the site's 7 s loop; only transform, opacity,
-   strokes, motion paths and clips move. Entrances reveal with scroll (scroll-driven animation); where a browser lacks it, main.js
-   adds .in as each one enters and it plays once. Loops pause while their section is off screen (.paused). ---------- */
+   strokes, motion paths and clips move. Entrances play once, when they come into view: main.js adds .in and
+   the animation runs from there; nothing is tied to scroll position. Loops pause while their section is off screen (.paused). ---------- */
 @keyframes mo-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes mo-row { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
 @keyframes mo-flash { 0%, 60% { background-color: rgba(224, 103, 90, 0); } 80% { background-color: rgba(224, 103, 90, 0.28); } 100% { background-color: rgba(224, 103, 90, 0.08); } }
@@ -595,41 +595,25 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 .mo-pop, .mo-spin { transform-box: fill-box; transform-origin: center; }
 .mo-line { transform-origin: top; } .mo-strike { transform-origin: left; }
 
-/* entrances, revealed with scroll */
-@supports (animation-timeline: view()) {
-  .mo-rise { animation: mo-rise linear both; animation-timeline: view(); animation-range: entry calc(4% + var(--i, 0) * 4%) entry calc(44% + var(--i, 0) * 4%); }
-  .mo-row { animation: mo-row linear both; animation-timeline: view(); animation-range: entry calc(10% + var(--i, 0) * 10%) entry calc(30% + var(--i, 0) * 10%); }
-  .mo-flash { animation: mo-row linear both, mo-flash linear both; animation-timeline: view(), view(); animation-range: entry 50% entry 70%, entry 60% cover 40%; }
-  .mo-draw { animation: mo-draw linear both; animation-timeline: view(); animation-range: entry 10% cover 40%; }
-  .mo-pop { animation: mo-pop linear both; animation-timeline: view(); animation-range: entry 40% cover 42%; }
-  .mo-line { animation: mo-line linear both; animation-timeline: view(); animation-range: entry 20% cover 45%; }
-  .mo-bullet { animation: mo-bullet linear both; animation-timeline: view(); animation-range: entry calc(30% + var(--i, 0) * 8%) entry calc(36% + var(--i, 0) * 8%); }
-  .mo-type { animation: mo-type steps(7) both; animation-timeline: view(); animation-range: entry 30% cover 40%; }
-  .mo-slide { animation: mo-slide linear both; animation-timeline: view(); animation-range: entry 70% cover 45%; }
-  .mo-strike { animation: mo-strike linear both; animation-timeline: view(); animation-range: entry 80% cover 48%; }
-  .mo-spin { animation: mo-spin linear both; animation-timeline: view(); animation-range: entry 20% cover 45%; }
-  .proof-grid { view-timeline-name: --dots; }
-  .mo-dot { animation: mo-dot linear both; animation-timeline: --dots; animation-range: cover calc(8% + var(--i, 0) * 0.09%) cover calc(10% + var(--i, 0) * 0.09%); }
+/* entrances: each plays once when it comes into view (main.js adds .in); hidden first only when JavaScript runs and motion is allowed */
+@media (prefers-reduced-motion: no-preference) {
+  .js .mo-rise:not(.in), .js .mo-row:not(.in), .js .mo-flash:not(.in), .js .mo-slide:not(.in) { opacity: 0; }
+  .js .mo-draw:not(.in) { stroke-dashoffset: 1; } .js .mo-line:not(.in) { transform: scaleY(0); } .js .mo-strike:not(.in) { transform: scaleX(0); }
+  .js .mo-pop:not(.in), .js .mo-type:not(.in) { opacity: 0; } .js .mo-bullet:not(.in) { opacity: 0.2; } .js .mo-spin:not(.in) { transform: rotate(-90deg); }
+  .js .proof-grid:not(.in) .mo-dot { opacity: 0.12; }
 }
-/* entrances, played once as they enter (browsers without scroll-driven animation; only when JavaScript runs) */
-@supports not (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .js .mo-rise:not(.in), .js .mo-row:not(.in), .js .mo-flash:not(.in), .js .mo-slide:not(.in) { opacity: 0; }
-    .js .mo-draw:not(.in) { stroke-dashoffset: 1; } .js .mo-line:not(.in) { transform: scaleY(0); } .js .mo-strike:not(.in) { transform: scaleX(0); }
-  }
-  .mo-rise.in { animation: mo-rise 320ms var(--ease) both; animation-delay: calc(var(--i, 0) * 40ms); }
-  .mo-row.in { animation: mo-row 320ms var(--ease) both; animation-delay: calc(var(--i, 0) * 120ms); }
-  .mo-flash.in { animation: mo-row 320ms var(--ease) 900ms both, mo-flash 900ms linear 900ms both; }
-  .mo-draw.in { animation: mo-draw 1200ms var(--ease) both; }
-  .mo-pop.in { animation: mo-pop 500ms var(--spring) 900ms both; }
-  .mo-line.in { animation: mo-line 800ms var(--ease) both; }
-  .mo-bullet.in { animation: mo-bullet 240ms var(--ease) both; animation-delay: calc(160ms + var(--i, 0) * 120ms); }
-  .mo-type.in { animation: mo-type 420ms steps(7) both; }
-  .mo-slide.in { animation: mo-slide 320ms var(--ease) 400ms both; }
-  .mo-strike.in { animation: mo-strike 400ms var(--ease) 600ms both; }
-  .mo-spin.in { animation: mo-spin 800ms var(--ease) both; }
-  .proof-grid.in .mo-dot { animation: mo-dot 300ms var(--ease) both; animation-delay: calc(var(--i, 0) * 4ms); }
-}
+.mo-rise.in { animation: mo-rise 320ms var(--ease) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.mo-row.in { animation: mo-row 320ms var(--ease) both; animation-delay: calc(var(--i, 0) * 120ms); }
+.mo-flash.in { animation: mo-row 320ms var(--ease) 900ms both, mo-flash 900ms linear 900ms both; }
+.mo-draw.in { animation: mo-draw 1200ms var(--ease) both; }
+.mo-pop.in { animation: mo-pop 500ms var(--spring) 900ms both; }
+.mo-line.in { animation: mo-line 800ms var(--ease) both; }
+.mo-bullet.in { animation: mo-bullet 240ms var(--ease) both; animation-delay: calc(160ms + var(--i, 0) * 120ms); }
+.mo-type.in { animation: mo-type 420ms steps(7) both; }
+.mo-slide.in { animation: mo-slide 320ms var(--ease) 400ms both; }
+.mo-strike.in { animation: mo-strike 400ms var(--ease) 600ms both; }
+.mo-spin.in { animation: mo-spin 800ms var(--ease) both; }
+.proof-grid.in .mo-dot { animation: mo-dot 300ms var(--ease) both; animation-delay: calc(var(--i, 0) * 4ms); }
 @media (prefers-reduced-motion: reduce) {
   .bs *, .bs *::before, .bs *::after { animation: none !important; transition: none !important; }
   .mo-tr, .mo-tr2 { display: none; }

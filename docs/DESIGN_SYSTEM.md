@@ -113,7 +113,7 @@ One easing curve for movement, one press curve, one sampled spring for release.
 | Live 3D arrival | crossfades in over 600 ms on its first drawn frame |
 | Card scene | one 7 s loop per scene, in CSS on static SVG; restarts when its tab is chosen; paused while off screen; tabs never advance on their own |
 
-**Bento motion** (the sections after the hero; plan 2026-11-10-site-bento-direction). Entrances are revealed gradually with scroll: CSS scroll-driven animation (`animation-timeline: view()`) ties each one to its position on screen; where a browser lacks it, `main.js` adds `.in` as the element enters and it plays once. Loops run on the site's 7 s cycle and pause while their section is off screen (`.paused`). Figures count up once on entry (a 600 ms tween in `main.js`; the static text is the final number).
+**Bento motion** (the sections after the hero; plan 2026-11-10-site-bento-direction). Each entrance plays once, when it comes into view: `main.js` adds `.in` and the animation runs from there, in every browser. Nothing is tied to scroll position (decided 2026-11-10). Before playing, entrances are hidden only when JavaScript runs and motion is allowed, so no-JavaScript and reduced-motion visitors see every final frame. Loops run on the site's 7 s cycle and pause while their section is off screen (`.paused`). Figures count up once on entry (a 600 ms tween in `main.js`; the static text is the final number).
 
 | Class | What moves | Kind |
 |---|---|---|

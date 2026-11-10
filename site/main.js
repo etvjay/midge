@@ -261,11 +261,10 @@ if (!REDUCE && !LIGHT) {
 }
 
 // ---------------------------------------------------------------- bento motion
-// Entrances reveal with scroll through CSS scroll-driven animation; where a browser lacks it, they play once as they enter (.in).
+// Each entrance plays once, when it comes into view (.in); nothing is tied to scroll position.
 // Numbers count up once on entry. Loops pause while their section is off screen. Nothing here runs under reduced motion.
 (function motion() {
-  const SCROLL = CSS.supports('animation-timeline: view()');
-  if (!REDUCE && !SCROLL) {
+  if (!REDUCE) {
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.15 });
     for (const el of $$('.mo-rise, .mo-row, .mo-flash, .mo-draw, .mo-pop, .mo-line, .mo-bullet, .mo-type, .mo-slide, .mo-strike, .mo-spin, .proof-grid')) io.observe(el);
   }

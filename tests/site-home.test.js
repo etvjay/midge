@@ -137,12 +137,12 @@ test('every motion class used in the page is defined, and only moves transform, 
   assert.doesNotMatch(css, /transition:\s*all/);
 });
 
-test('entrances reveal with scroll where the browser can, and play on entry elsewhere', () => {
-  const sd = css.slice(css.indexOf('@supports (animation-timeline: view())'));
-  assert.match(sd, /animation-timeline:\s*view\(\)/);
-  assert.match(css, /@supports not \(animation-timeline: view\(\)\)/);
+test('entrances play once when they come into view, in every browser, never tied to scroll position', () => {
+  assert.doesNotMatch(css, /animation-timeline|view-timeline/, 'no scroll-driven animation');
+  for (const c of ['mo-rise', 'mo-row', 'mo-draw', 'mo-pop', 'mo-line', 'mo-bullet', 'mo-type', 'mo-slide', 'mo-spin']) assert.match(css, new RegExp(`\\.${c}\\.in \\{[^}]*animation:`), `${c} plays on .in`);
   const js = read('site/main.js');
-  assert.match(js, /CSS\.supports\('animation-timeline: view\(\)'\)/, 'main.js only plays entrances itself where scroll-driven animation is missing');
+  assert.doesNotMatch(js, /CSS\.supports\('animation-timeline/, 'main.js observes every entrance, whatever the browser');
+  assert.match(js, /classList\.add\('in'\); io\.unobserve/, 'each entrance plays once');
   assert.match(js, /classList\.toggle\('paused'/, 'loops pause off screen');
 });
 
@@ -172,12 +172,11 @@ test('the rules panel is filled from the live read, and says so plainly when NEA
 });
 
 // ---- final review fix pass
-test('without scroll-driven animation, entrances are hidden before they play only when motion is allowed (reduced motion shows them)', () => {
-  const fb = css.slice(css.indexOf('@supports not (animation-timeline: view())'));
-  const hide = fb.indexOf('.js .mo-rise:not(.in)');
-  assert.ok(hide > 0, 'the fallback hide rule exists');
-  const before = fb.slice(0, hide);
-  assert.ok(before.lastIndexOf('@media (prefers-reduced-motion: no-preference)') > before.lastIndexOf('}\n}'), 'the hide rules sit inside @media (prefers-reduced-motion: no-preference)');
+test('entrances are hidden before they play only when motion is allowed (reduced motion and no JavaScript show them)', () => {
+  const hide = css.indexOf('.js .mo-rise:not(.in)');
+  assert.ok(hide > 0, 'the hide rule exists');
+  const before = css.slice(0, hide);
+  assert.ok(before.lastIndexOf('@media (prefers-reduced-motion: no-preference)') > before.lastIndexOf('\n}\n'), 'the hide rules sit inside @media (prefers-reduced-motion: no-preference)');
 });
 
 test('no visitor text claims that no one, us included, can take the money or change the rules; the upgrade key is stated', () => {
