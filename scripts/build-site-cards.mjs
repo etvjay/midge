@@ -75,6 +75,47 @@ function proofBlock(proof) {
 `;
 }
 
+const FAQ = [
+  ['Can the room run off with the money?', 'No. The room holds no key to the money. It can only propose a payout, and the contract on NEAR pays it only if it follows the rules every member agreed to: who can be paid, how much per window, and until when.'],
+  ['What if the room stops or disappears?', "Each member takes back what is left of their own money, with no one's permission, once the group's exit timer has run. Nobody else's share is touched."],
+  ['What stays private, and what is public?', 'Private: what each member bids, votes or decides, and for payroll who owns each one-time address. Public: who deposited, how much, the rules, and every payout\'s amount and recipient.'],
+  ['Is this live? Can I lose real money?', 'It is a working prototype on NEAR testnet, where coins have no value. There is no token, and no audit yet.'],
+  ['Can I check any of this myself?', 'Yes. Read the contract and its rules straight from NEAR, open any dot in the proof section on the public explorer, or run every test offline with one command.'],
+];
+const GH = 'https://github.com/etvjay/midge/blob/master/';
+const COLS = [
+  ['Explore', [['How it works', '#how'], ['Who uses it', '#who'], ['Proof', '#proof'], ['Try it', '#try']]],
+  ['Check it yourself', [['The contract on NearBlocks', 'https://testnet.nearblocks.io/address/c.fly-1793636729.testnet'], ['The code on GitHub', 'https://github.com/etvjay/midge'], ['Whitepaper', `${GH}docs/WHITEPAPER.md`], ['Threat model', `${GH}docs/security/threat-model.md`], ['What Midge is', `${GH}docs/canonical/WHAT_IS_MIDGE.md`]]],
+  ['Build with it', [['MCP tools for agents', `${GH}src/mcp/server.js`], ['JavaScript SDK', `${GH}src/sdk/client.js`], ['Rooms API', `${GH}docs/openapi/rooms.json`], ['State machine', `${GH}docs/STATE_MACHINE.md`]]],
+];
+
+/** The FAQ and footer card over a field of the recorded transactions. The live line is replaced by main.js when NEAR answers. */
+function footerBlock(root) {
+  const deployments = JSON.parse(fs.readFileSync(path.join(root, 'docs/canonical/deployments.json'), 'utf8')).deployments;
+  const hash = deployments[deployments.length - 1].codeHash;
+  const ext = (href) => (href.startsWith('#') ? '' : ' target="_blank" rel="noopener"');
+  return `<footer class="site-footer site-end" id="faq" aria-labelledby="faq-title">
+  <canvas class="end-field" aria-hidden="true"></canvas>
+  <div class="wrap end-inner">
+    <div class="faq">
+      <h2 id="faq-title" class="faq-title">Questions, answered</h2>
+      <div class="faq-card">${FAQ.map(([q, a], i) => `
+        <details${i === 0 ? ' open' : ''}><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}
+      </div>
+    </div>
+    <div class="foot">
+      <div class="foot-brand">
+        <p class="foot-mark">Midge</p>
+        <p>Private rooms with public rules, on NEAR. Groups decide together in private; the money follows rules no one can change.</p>
+        <p class="foot-live" id="foot-live">Contract <b>c.fly-1793636729.testnet</b> · fingerprint <b>${hash.slice(0, 8)}…</b> (recorded)</p>
+      </div>${COLS.map(([h, links]) => `
+      <nav class="foot-col" aria-label="${esc(h)}"><p class="foot-h">${esc(h)}</p><ul>${links.map(([t, href]) => `<li><a href="${href}"${ext(href)}>${esc(t)}</a></li>`).join('')}</ul></nav>`).join('')}
+    </div>
+    <p class="legal"><span>Midge · a NEAR hackathon prototype · testnet only · no token</span><span>Not affiliated with Fly.trade or Fly.io</span></p>
+  </div>
+</footer>`;
+}
+
 /** Pure: the page with the cards (re)written between the markers and the nav pointing at the new section ids. */
 export function buildCards(html, proof, root) {
   const F = figures(proof, root);
@@ -95,6 +136,13 @@ export function buildCards(html, proof, root) {
     out = `${out.slice(0, a0)}${PB}\n${PE}${out.slice(a1)}`;
   }
   out = `${out.slice(0, out.indexOf(PB) + PB.length)}${proofBlock(proof)}    ${out.slice(out.indexOf(PE))}`;
+  const FB = '<!-- footer:begin -->'; const FE = '<!-- footer:end -->';
+  if (!out.includes(FB)) {
+    const f0 = out.indexOf('<footer class="site-footer">'); const f1 = out.indexOf('</footer>', f0) + '</footer>'.length;
+    if (f0 < 0 || f1 < f0) throw new Error('could not find the footer to replace');
+    out = `${out.slice(0, f0)}${FB}\n${FE}${out.slice(f1)}`;
+  }
+  out = `${out.slice(0, out.indexOf(FB) + FB.length)}\n${footerBlock(root)}\n${out.slice(out.indexOf(FE))}`;
   for (const [from, to] of Object.entries(RENAMED)) out = out.split(`href="#${from}"`).join(`href="#${to}"`);
   return out;
 }

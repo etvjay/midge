@@ -102,3 +102,24 @@ test('no banned word reaches a visitor: page text, labels, lens data, or the liv
     assert.doesNotMatch(jsStrings, new RegExp(`\\b${w}\\b`, 'i'), `main.js visitor text: ${w}`);
   }
 });
+
+const footerHtml = () => { const m = html.match(/<footer class="site-footer[^"]*"[\s\S]*?<\/footer>/); assert.ok(m, 'the footer keeps the class site-footer'); return m[0]; };
+
+test('the footer has the FAQ, and every link points to a repository file that exists or to the explorer', () => {
+  const f = footerHtml();
+  assert.equal((f.match(/<details/g) || []).length, 5, 'five questions');
+  const links = [...f.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(links.length >= 10, `${links.length} links`);
+  for (const l of links) {
+    if (l.startsWith('#')) { assert.match(html, new RegExp(`id="${l.slice(1)}"`), `${l} exists on the page`); continue; }
+    const repo = l.match(/^https:\/\/github\.com\/etvjay\/midge\/blob\/master\/(.+)$/);
+    if (repo) { assert.ok(fs.existsSync(path.join(root, repo[1])), `${repo[1]} exists`); continue; }
+    assert.match(l, /^https:\/\/(github\.com\/etvjay\/midge|testnet\.nearblocks\.io\/address\/c\.fly-1793636729\.testnet)$/, `${l} is the repo or the explorer`);
+  }
+});
+
+test("the footer's recorded fingerprint is the last recorded deployment", () => {
+  const deployments = JSON.parse(read('docs/canonical/deployments.json')).deployments;
+  const live = deployments[deployments.length - 1].codeHash;
+  assert.match(footerHtml(), new RegExp(`id="foot-live"[\\s\\S]*${live.slice(0, 8)}…[\\s\\S]*recorded`), 'the build-time line names the last deployment and says it is recorded');
+});

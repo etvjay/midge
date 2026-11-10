@@ -337,12 +337,34 @@ node lab/run.js --tier testnet">Copy</button></div>
 
 </main>
 
-<footer class="site-footer">
-  <div class="wrap footer-inner">
-    <p>Midge · a NEAR HACKATHON prototype · testnet only · no token · not affiliated with Fly.trade or Fly.io</p>
-    <p><a href="https://github.com/etvjay/midge">Repository</a> · <a href="https://github.com/etvjay/midge/blob/master/docs/canonical/WHAT_IS_MIDGE.md">What Midge is</a> · <a href="https://testnet.nearblocks.io/address/c.fly-1793636729.testnet">Contract on NearBlocks</a></p>
+<!-- footer:begin -->
+<footer class="site-footer site-end" id="faq" aria-labelledby="faq-title">
+  <canvas class="end-field" aria-hidden="true"></canvas>
+  <div class="wrap end-inner">
+    <div class="faq">
+      <h2 id="faq-title" class="faq-title">Questions, answered</h2>
+      <div class="faq-card">
+        <details open><summary>Can the room run off with the money?</summary><p>No. The room holds no key to the money. It can only propose a payout, and the contract on NEAR pays it only if it follows the rules every member agreed to: who can be paid, how much per window, and until when.</p></details>
+        <details><summary>What if the room stops or disappears?</summary><p>Each member takes back what is left of their own money, with no one's permission, once the group's exit timer has run. Nobody else's share is touched.</p></details>
+        <details><summary>What stays private, and what is public?</summary><p>Private: what each member bids, votes or decides, and for payroll who owns each one-time address. Public: who deposited, how much, the rules, and every payout's amount and recipient.</p></details>
+        <details><summary>Is this live? Can I lose real money?</summary><p>It is a working prototype on NEAR testnet, where coins have no value. There is no token, and no audit yet.</p></details>
+        <details><summary>Can I check any of this myself?</summary><p>Yes. Read the contract and its rules straight from NEAR, open any dot in the proof section on the public explorer, or run every test offline with one command.</p></details>
+      </div>
+    </div>
+    <div class="foot">
+      <div class="foot-brand">
+        <p class="foot-mark">Midge</p>
+        <p>Private rooms with public rules, on NEAR. Groups decide together in private; the money follows rules no one can change.</p>
+        <p class="foot-live" id="foot-live">Contract <b>c.fly-1793636729.testnet</b> · fingerprint <b>854fzUj2…</b> (recorded)</p>
+      </div>
+      <nav class="foot-col" aria-label="Explore"><p class="foot-h">Explore</p><ul><li><a href="#how">How it works</a></li><li><a href="#who">Who uses it</a></li><li><a href="#proof">Proof</a></li><li><a href="#try">Try it</a></li></ul></nav>
+      <nav class="foot-col" aria-label="Check it yourself"><p class="foot-h">Check it yourself</p><ul><li><a href="https://testnet.nearblocks.io/address/c.fly-1793636729.testnet" target="_blank" rel="noopener">The contract on NearBlocks</a></li><li><a href="https://github.com/etvjay/midge" target="_blank" rel="noopener">The code on GitHub</a></li><li><a href="https://github.com/etvjay/midge/blob/master/docs/WHITEPAPER.md" target="_blank" rel="noopener">Whitepaper</a></li><li><a href="https://github.com/etvjay/midge/blob/master/docs/security/threat-model.md" target="_blank" rel="noopener">Threat model</a></li><li><a href="https://github.com/etvjay/midge/blob/master/docs/canonical/WHAT_IS_MIDGE.md" target="_blank" rel="noopener">What Midge is</a></li></ul></nav>
+      <nav class="foot-col" aria-label="Build with it"><p class="foot-h">Build with it</p><ul><li><a href="https://github.com/etvjay/midge/blob/master/src/mcp/server.js" target="_blank" rel="noopener">MCP tools for agents</a></li><li><a href="https://github.com/etvjay/midge/blob/master/src/sdk/client.js" target="_blank" rel="noopener">JavaScript SDK</a></li><li><a href="https://github.com/etvjay/midge/blob/master/docs/openapi/rooms.json" target="_blank" rel="noopener">Rooms API</a></li><li><a href="https://github.com/etvjay/midge/blob/master/docs/STATE_MACHINE.md" target="_blank" rel="noopener">State machine</a></li></ul></nav>
+    </div>
+    <p class="legal"><span>Midge · a NEAR hackathon prototype · testnet only · no token</span><span>Not affiliated with Fly.trade or Fly.io</span></p>
   </div>
 </footer>
+<!-- footer:end -->
 
 <script src="main.js" type="module"></script>
 </body>

@@ -154,6 +154,7 @@ function row(list, ok, label, detail) {
     chip.classList.add('ok'); chipText.textContent = `Contract live · ${count} groups · block ${block.toLocaleString('en-US')}`;
     row(list, true, 'NEAR answered, with no server of ours in between', `${CONTRACT}, block ${block.toLocaleString('en-US')}`);
     row(list, acct.code_hash === DEPLOYED_CODE_HASH, 'The contract is the exact version we tested', `fingerprint ${short(acct.code_hash, 10)}`);
+    const fl = $('#foot-live'); if (fl) fl.textContent = `Contract ${CONTRACT} · fingerprint ${acct.code_hash.slice(0, 8)}… · read just now from NEAR`;
     const { value: newest } = await view('list_syndicates', { from_index: Math.max(0, count - 3), limit: 3 });
     const s = newest[newest.length - 1];
     if (s) {
@@ -239,3 +240,29 @@ if (!REDUCE && !LIGHT) {
   const afterPaint = () => requestAnimationFrame(() => setTimeout(go, 0));
   if (document.readyState === 'complete') afterPaint(); else addEventListener('load', afterPaint, { once: true });
 }
+
+// ---------------------------------------------------------------- footer field: one dot per recorded transaction, lit in the order they happened
+// The dots are the proof section's transactions (the same data), densest at the bottom. Still under reduced motion; paused off screen.
+(function endField() {
+  const host = $('.site-end'); const cv = host && $('.end-field', host); const grid = $('#proof-grid'); if (!cv || !grid) return;
+  let tx = []; try { tx = JSON.parse(grid.dataset.tx || '[]'); } catch { return; } if (!tx.length) return;
+  const ctx = cv.getContext('2d'); const step = 16; let w = 0, h = 0, cols = 0, rows = 0, visible = false, t0 = performance.now();
+  const COL = { exit: '217,130,74', rejected: '224,103,90' };
+  const size = () => { const r = host.getBoundingClientRect(); const dpr = Math.min(2, devicePixelRatio || 1); w = r.width; h = r.height; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); cols = Math.ceil(w / step); rows = Math.ceil(h / step); };
+  const draw = (now) => {
+    ctx.clearRect(0, 0, w, h);
+    const lit = REDUCE ? tx.length : Math.floor(((now - t0) / 40) % (tx.length + 80));
+    for (let y = 0; y < rows; y++) {
+      const depth = y / rows; if (depth < 0.18) continue; const base = (depth - 0.18) / 0.82;
+      for (let x = 0; x < cols; x++) {
+        const k = (y * cols + x) % tx.length; let a = 0.06 + base * 0.26; let col = '124,196,184';
+        if (k < lit && (x * 7 + y * 13) % 9 === 0) { a = Math.min(0.85, a + 0.35); col = COL[tx[k][0]] || col; }
+        ctx.fillStyle = `rgba(${col},${a.toFixed(3)})`; ctx.beginPath(); ctx.arc(x * step + step / 2, y * step + step / 2, 0.6 + base * 2.4, 0, 6.283); ctx.fill();
+      }
+    }
+    if (!REDUCE && visible) requestAnimationFrame(draw);
+  };
+  new IntersectionObserver(([e]) => { const was = visible; visible = e.isIntersecting; if (visible && !was && !REDUCE) requestAnimationFrame(draw); }).observe(host);
+  addEventListener('resize', () => { size(); draw(performance.now()); });
+  size(); draw(performance.now());
+})();
