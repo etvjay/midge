@@ -210,7 +210,7 @@ The programs are tested offline against the real host and service. Their runs ag
 
 A NEAR contract can ask the NEAR Chain Signatures network, a threshold-signing service, to sign for addresses on other chains. From one group identity the design derives a Bitcoin Taproot address, an Ethereum address and a Solana key, so a group's collective decision can move assets on those chains without wrapping tokens or trusting a bridge (`src/multichain/chain-signatures.js`).
 
-**Status.** A live `sign` call from `fly-1793636729.testnet` to `v1.signer-prod.testnet` succeeded on testnet; the transaction was re-read from an archival node on 2026-11-08, and the returned ECDSA signature was recovered against the derived key (GAP-005, closed; `docs/canonical/mpc-evidence.json`). Only the signing is live: no transaction was broadcast on Bitcoin, Ethereum or Solana. An earlier version of `docs/canonical/CURRENT_STATE.md` wrongly called the module simulated; that is corrected.
+**Status.** A live `sign` call from `fly-1793636729.testnet` to `v1.signer-prod.testnet` succeeded on testnet; the transaction was re-read from an archival node on 2026-11-08, and the returned ECDSA signature was recovered against the derived key (GAP-005, closed; `docs/canonical/mpc-evidence.json`). Signing and broadcasting are live: on 2026-11-10 a two-payee pay run paid one payee on Solana devnet and one on Ethereum Sepolia, each by a transaction the MPC network signed and the chain confirmed (`docs/canonical/multichain-payroll-evidence.json`). The signing was requested by our own testnet account, not by the Midge contract, so a group's rules do not limit these payments yet (GAP-045). Nothing has been sent on Bitcoin. An earlier version of `docs/canonical/CURRENT_STATE.md` wrongly called the module simulated; that is corrected.
 
 ---
 
@@ -400,7 +400,7 @@ Midge's contribution is a division of powers that can be checked. The money sits
 | 1Click asset audit | Live read of 210 assets | CLM-INTENTS-01 |
 | FAR private shard, Dark Vault pods | Simulated | CLM-VAULT-01 |
 | OutLayer-style sub-accounts | Tested as a JavaScript mirror | CLM-HATCH-01 |
-| Chain Signatures | A live `sign` call on testnet; signing only, nothing broadcast on another chain | `docs/canonical/mpc-evidence.json`, `docs/canonical/EVIDENCE_LEDGER.md` |
+| Chain Signatures | Transfers signed for our own account confirmed on Solana devnet and Ethereum Sepolia; not yet bound by a group's rules; nothing sent on Bitcoin | `docs/canonical/mpc-evidence.json`, `docs/canonical/multichain-payroll-evidence.json` |
 | Lending RFQ and block trades | Programs tested; test accounts only | CLM-RFQ-01, CLM-OTC-01 |
 | MCP server, SDK, REST | Integrated | CLM-MCP-01 (an older tool count), `src/mcp/server.js` |
 | Simulation in section 4 | Reproduces exactly | `scripts/baseline.js` |
