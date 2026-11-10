@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Midge, private rooms with public rules</title>
-<meta name="description" content="Midge is a network of private rooms with public rules on NEAR. Groups decide together in private, their money follows rules no one can change, and each member can take their own share back. A prototype on NEAR testnet. No token.">
+<meta name="description" content="Midge is a network of private rooms with public rules on NEAR. Groups decide together in private, their money follows rules everyone can read, and each member can take their own share back. A prototype on NEAR testnet. No token.">
 <meta name="theme-color" content="#0f1416">
 <meta property="og:title" content="Midge, private rooms with public rules">
 <meta property="og:description" content="A network of private rooms with public rules, on NEAR. A NEAR HACKATHON prototype on testnet. No token.">
@@ -41,7 +41,7 @@
   <div class="hero-inner">
     <p class="eyebrow">Midge · on NEAR</p>
     <h1 id="hero-title" class="display">A network of private rooms <br>with public rules</h1>
-    <p class="lede">Funds, DAOs, teams and AI agents decide together in private. Their money follows rules that everyone can see and no one can change. If anything goes wrong, each member takes their own share back.</p>
+    <p class="lede">Funds, DAOs, teams and AI agents decide together in private. Their money follows rules that everyone can see and the room cannot change. If anything goes wrong, each member takes their own share back.</p>
     <div class="cta">
       <a class="btn btn-light btn-magnet" href="#how"><span>See how it works</span></a>
       <a class="btn btn-ghost-dark" href="#proof">Check it yourself</a>
@@ -112,7 +112,7 @@
       </article>
       <article class="bc bc-ink s4 flush">
         <div class="panel-head"><span>Measured on testnet, same chain, fresh accounts</span><span>docs/lab/COMPARISON_*.md</span></div>
-        <div class="tbl-wrap"><div class="tbl tbl-4" role="table" aria-label="Measured on testnet, same chain, fresh accounts"><span class="th"></span><span class="th">Public</span><span class="th">Organizer</span><span class="th t-lake">Midge</span><span class="td k mo-rise" style="--i: 0">Bids or amounts an observer read</span><span class="td mo-rise t-deny" style="--i: 0">3 of 5</span><span class="td mo-rise t-deny" style="--i: 0">4 of 4</span><span class="td mo-rise t-lake" style="--i: 0">0 of 5</span><span class="td k mo-rise" style="--i: 1">Who can move the pot</span><span class="td mo-rise t-mute" style="--i: 1">no pot: each pays directly</span><span class="td mo-rise t-deny" style="--i: 1">the organizer, alone</span><span class="td mo-rise t-lake" style="--i: 1">no one outside the rules</span><span class="td k mo-rise" style="--i: 2">If the operator disappears</span><span class="td mo-rise t-mute" style="--i: 2">not applicable</span><span class="td mo-rise t-deny" style="--i: 2">members recover 0%</span><span class="td mo-rise t-lake" style="--i: 2">each member leaves alone</span></div></div>
+        <div class="tbl-wrap mo-rise"><div class="tbl tbl-4" role="table" aria-label="Measured on testnet, same chain, fresh accounts"><span class="th"></span><span class="th">Public</span><span class="th">Organizer</span><span class="th t-lake">Midge</span><span class="td k">Bids or amounts an observer read</span><span class="td t-deny">3 of 5</span><span class="td t-deny">4 of 4</span><span class="td t-lake">0 of 5</span><span class="td k">Who can move the pot</span><span class="td t-mute">no pot: each pays directly</span><span class="td t-deny">the organizer, alone</span><span class="td t-lake">no one outside the rules</span><span class="td k">If the operator disappears</span><span class="td t-mute">not applicable</span><span class="td t-deny">members recover 0%</span><span class="td t-lake">each member leaves alone</span></div></div>
       </article>
       <article class="bc bc-raised s2">
         <p class="bc-label">What Midge keeps</p>
@@ -153,7 +153,7 @@
           <circle cx="210" cy="28" r="16" class="dg-node dg-node-lake"/><path class="mo-tick dg-tick" pathLength="1" d="M203 28l5 5 9-9"/>
           <circle cx="396" cy="28" r="16" class="dg-node"/><path d="M388 36h16M389 33v-8M396 33v-8M403 33v-8M387 24l9-6 9 6" class="dg-stroke"/>
         </svg>
-        <p class="bc-text bc-end">Set when the group is created and stored on NEAR: who may be paid, how much per round, until when. Anyone can read them; nobody can change them.</p>
+        <p class="bc-text bc-end">Set when the group is created and stored on NEAR: who may be paid, how much per round, until when. Anyone can read them, and the contract has no method to change them.</p>
       </article>
       <article class="bc s2">
         <p class="bc-label">The payout</p>
@@ -199,10 +199,10 @@
   <div class="wrap">
     <div class="bento">
       <article class="bc bc-ink s4 flush">
-        <div class="panel-head"><span>view · the newest group</span><span id="rules-state"><i class="dot t-lake"></i>read live from NEAR</span></div>
-        <pre class="code mo-type" id="rules-json" aria-live="polite">Reading the newest group’s rules from NEAR…</pre>
+        <div class="panel-head"><span>view · the newest group</span><span id="rules-state">not read yet</span></div>
+        <pre class="code mo-type" id="rules-json" aria-live="polite">Not read yet. This page reads them from NEAR when its script runs.</pre>
         <noscript><p class="panel-foot">Turn on JavaScript to read them here, or open the contract on NearBlocks.</p></noscript>
-        <p class="panel-foot" id="rules-reads"><span class="t-lake mono">Reads as</span> <span id="rules-reads-text">the rules appear here when NEAR answers</span></p>
+        <p class="panel-foot" id="rules-reads"><span class="t-lake mono">Reads as</span> <span id="rules-reads-text">not read yet</span></p>
       </article>
       <article class="bc s2">
         <p class="bc-label">04 · The rules</p>
@@ -271,9 +271,9 @@
       <article class="bc s3 mo-rise" style="--i: 6"><div class="bc-row"><h3 class="bc-title">Two hosts</h3><span class="code-chip">code: two-room agreement</span></div><p class="bc-text">One room run by two independent hosts that must both sign before any money moves: two cashiers stamping the same receipt.</p><p class="bc-end mono dim">Run with two local hosts; not on hardware yet</p></article>
       <article class="bc s3 mo-rise" style="--i: 7"><div class="bc-row"><h3 class="bc-title">The advisor</h3><span class="code-chip">code: advisor</span></div><p class="bc-text">An AI model in NEAR AI Cloud’s secure hardware that proposes how to split a total. It sees only the total, never a bid.</p><p class="bc-end mono dim">Proposed the split in a live round</p></article>
       <article class="bc bc-ink s6 flush">
-        <div class="hosts-head"><h3 class="bc-title bc-title-lg">Three ways to run code in secure hardware</h3><p class="bc-text">All three run on Intel TDX and come with a hardware report. The difference is who operates the machine, how long it lives, and what can call it.</p></div>
-        <div class="tbl-wrap"><div class="tbl tbl-4 tbl-wide" role="table" aria-label="Three ways to run code in secure hardware"><span class="th"></span><span class="th">Phala Cloud</span><span class="th">OutLayer</span><span class="th">NEAR AI Cloud</span><span class="td k mono mo-rise" style="--i: 0">The unit</span><span class="td mo-rise" style="--i: 0">A whole machine we run, as long as we like</span><span class="td mo-rise" style="--i: 0">One function per call, at most 180 seconds</span><span class="td mo-rise" style="--i: 0">A hosted AI model the bids are sealed to</span><span class="td k mono mo-rise" style="--i: 1">Who operates it</span><span class="td mo-rise" style="--i: 1">We do</span><span class="td mo-rise" style="--i: 1">OutLayer’s own fleet of workers</span><span class="td mo-rise" style="--i: 1">NEAR AI</span><span class="td k mono mo-rise" style="--i: 2">What can call it</span><span class="td mo-rise" style="--i: 2">Whatever we expose from our program</span><span class="td mo-rise" style="--i: 2">A NEAR contract, or anyone over HTTPS</span><span class="td mo-rise" style="--i: 2">Anyone with the API; members seal bids to its key</span><span class="td k mono mo-rise" style="--i: 3">Hardware report</span><span class="td mo-rise" style="--i: 3">One for the machine and its image</span><span class="td mo-rise" style="--i: 3">A fresh one per run, tied to its code, input and output</span><span class="td mo-rise" style="--i: 3">One per request, checkable from your browser</span><span class="td k mono mo-rise" style="--i: 4">Checked on NEAR</span><span class="td mo-rise" style="--i: 4">Not built in</span><span class="td mo-rise" style="--i: 4">Once per worker; each result then carries the worker’s signature</span><span class="td mo-rise" style="--i: 4">Not built in</span><span class="td k mono mo-rise" style="--i: 5">In Midge today</span><span class="td mo-rise t-glow" style="--i: 5">Our room program, run on real TDX machines on 4 and 8 Nov; not running now</span><span class="td mo-rise t-mute" style="--i: 5">Not used yet: only a model of its spending limits</span><span class="td mo-rise t-lake" style="--i: 5">Live: the room host members seal bids to</span></div></div>
-        <p class="panel-foot mono">Sources: OutLayer docs (hardware reports, pricing and limits), Phala dstack docs, Midge’s current state. OutLayer workers themselves run on dstack, some on Phala Cloud.</p>
+        <div class="hosts-head"><h3 class="bc-title bc-title-lg">Three ways to run code in secure hardware</h3><p class="bc-text">All three run on Intel TDX and come with a hardware report. The difference is who operates the machine, how long it lives, and what can call it. Each cell quotes its source.</p></div>
+        <div class="tbl-wrap mo-rise"><div class="tbl tbl-4 tbl-wide" role="table" aria-label="Three ways to run code in secure hardware"><span class="th"></span><span class="th">Phala Cloud</span><span class="th">OutLayer</span><span class="th">NEAR AI Cloud</span><span class="td k mono">The unit</span><span class="td">A whole machine: any Docker container, as a confidential VM</span><span class="td">One function per call, at most 180 seconds</span><span class="td">A hosted AI model the bids are sealed to</span><span class="td k mono">Who operates it</span><span class="td">We deploy and run it</span><span class="td">OutLayer’s workers, on dstack</span><span class="td">NEAR AI</span><span class="td k mono">What can call it</span><span class="td">Whatever our program exposes</span><span class="td">A NEAR contract, or any client over HTTPS</span><span class="td">Anyone with the API; members seal bids to its key</span><span class="td k mono">Hardware report</span><span class="td">One for the machine: its image, arguments and settings</span><span class="td">A fresh one for every run</span><span class="td">One per request, checkable from your browser</span><span class="td k mono">Checked on NEAR</span><span class="td">Not by this platform; you check the report</span><span class="td">Once per worker, at registration; each result then carries the worker’s signature</span><span class="td">Not by this platform; your browser checks the report</span><span class="td k mono">In Midge today</span><span class="td t-glow">Our room program, run on real TDX machines on 4 and 8 Nov; not running now</span><span class="td t-mute">Not used yet: only a model of its spending limits</span><span class="td t-lake">Live: the room host members seal bids to</span></div></div>
+        <p class="panel-foot mono">Sources, quoted and dated: docs/sources/secure-hardware-hosts.md (OutLayer and Phala docs, read 10 Nov 2026) and Midge’s current state.</p>
       </article>
     </div>
   </div>
@@ -299,7 +299,7 @@
         <div class="bc bc-lake"><p class="bc-label t-lake">What stayed private</p><p id="lens-priv">Bids, votes, and who each one-time address belongs to</p></div>
       </div>
       <article class="bc s3 live-card" aria-labelledby="chain-title">
-        <div class="bc-row"><h3 id="chain-title" class="bc-title">Read the contract yourself</h3><span class="bc-label t-lake">read just now</span></div>
+        <div class="bc-row"><h3 id="chain-title" class="bc-title">Read the contract yourself</h3><span class="bc-label" id="chain-state">not read yet</span></div>
         <p class="bc-text">Straight from NEAR, with no server of ours in between.</p>
         <ul class="lp-list" id="chain-list"></ul>
         <p class="panel-note" id="chain-note"></p>
@@ -318,22 +318,22 @@
       </article>
       <article class="bc bc-ink s4 flush">
         <div class="panel-head"><span>payout call · group lab-mw30klm2-2</span><span>run 20261105T035644Z-7c1d</span></div>
-        <div class="tbl-wrap"><div class="tbl tbl-3" role="table" aria-label="A payout to an account that was not on the list">
+        <div class="tbl-wrap mo-rise"><div class="tbl tbl-3" role="table" aria-label="A payout to an account that was not on the list">
           <span class="th">Check</span><span class="th">The payout asked</span><span class="th">The rules allow</span>
-          <span class="td k">Recipient</span><span class="td t-deny"><span class="strike">thief-mw30klm2.testnet<i class="mo-strike" aria-hidden="true"></i></span></span><span class="td dim">listed accounts only</span>
+          <span class="td k">Recipient</span><span class="td t-deny"><span class="strike">thief-mw30klm2.testnet<i aria-hidden="true"></i></span></span><span class="td dim">listed accounts only</span>
           <span class="td k">Money moved</span><span class="td t-deny">0 NEAR</span><span class="td dim">nothing outside the rules</span>
         </div></div>
-        <p class="refusal-bar mo-slide"><span class="t-deny">Refused · recipient is not in allowed_recipients</span><a href="https://testnet.nearblocks.io/txns/3gW41Caz1wK4cCDFpixTJ3KweM6qpF7ZGxm6ARB1CmPk" target="_blank" rel="noopener">3gW41Caz…RB1CmPk on NearBlocks</a></p>
+        <p class="refusal-bar mo-slide"><span class="t-deny">Refused · the recipient is not on the group’s list</span><a href="https://testnet.nearblocks.io/txns/3gW41Caz1wK4cCDFpixTJ3KweM6qpF7ZGxm6ARB1CmPk" target="_blank" rel="noopener">3gW41Caz…RB1CmPk on NearBlocks</a></p>
       </article>
       <div class="bc bc-ink bc-panel s6 runs" id="status">
         <div class="bc-row"><h3 class="bc-title bc-title-lg">What runs where, today</h3><p class="bc-label">Testnet only · no audit yet · every test account was ours</p></div>
         <div class="bento">
-          <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR Protocol</p><span class="status t-lake"><i class="dot mo-breathe"></i>Live</span></div><p class="mono dim">the contract · testnet · <b id="net-count">15</b> groups</p><p class="bc-text bc-end">Holds every group’s money and rules, pays only within them, and runs the exit.</p></div>
+          <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR Protocol</p><span class="status t-lake"><i class="dot mo-breathe"></i>Live</span></div><p class="mono dim">the contract · testnet · <b id="net-count">15</b> groups <span id="net-count-note">(recorded)</span></p><p class="bc-text bc-end">Holds every group’s money and rules, pays only within them, and runs the exit.</p></div>
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR AI Cloud</p><span class="status t-lake"><i class="dot mo-breathe"></i>Live</span></div><p class="mono dim">the model the room seals bids to</p><p class="bc-text bc-end">Bids are sealed to a model in secure hardware; it proposes the split. Check it from your browser above.</p></div>
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">Phala Cloud</p><span class="status t-glow"><i class="dot"></i>Attested, not running now</span></div><p class="mono dim">dstack · Intel TDX</p><p class="bc-text bc-end">The room as its own program in a confidential VM. Run on real TDX machines on 4 and 8 Nov; they were temporary.</p></div>
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR Chain Signatures</p><span class="status t-glow"><i class="dot"></i>One live signature</span></div><p class="mono dim">Bitcoin · Ethereum · Solana</p><p class="bc-text bc-end">A group can control addresses on other chains. One signature made live on testnet; nothing sent yet.</p></div>
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR Intents · 1Click</p><span class="status t-glow"><i class="dot"></i>Read-only</span></div><p class="mono dim">asset registry</p><p class="bc-text bc-end">210 assets read live across NEAR, Bitcoin, Ethereum and Solana. 1Click has no testnet, so no swap was made.</p></div>
-          <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">For agents</p><span class="status t-lake"><i class="dot mo-breathe"></i>Live</span></div><p class="mono dim">MCP tools · JavaScript SDK · HTTP API</p><p class="bc-text bc-end">Every route, SDK method and MCP tool exercised on testnet; limited keys that can only take money back.</p></div>
+          <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">For agents</p><span class="status t-lake"><i class="dot"></i>Runs on your machine</span></div><p class="mono dim">MCP tools · JavaScript SDK · HTTP API</p><p class="bc-text bc-end">Every route, SDK method and MCP tool exercised; the API and MCP server run locally. The limited keys that can only take money back are live on testnet.</p></div>
           <div class="bc s6 partner"><div class="bc-row"><p class="partner-name">Simulations</p><span class="status t-mute"><i class="dot"></i>Not on chain</span></div><p class="mono dim">JavaScript models</p><p class="bc-text bc-end">Lending quotes, block trades between desks and shared AI requests run as models today, not on the contract.</p></div>
         </div>
       </div>
@@ -347,7 +347,7 @@
     <div class="bs-head">
       <div>
         <p class="kicker">09 · What it cannot do</p>
-        <h2 id="limits-title" class="title">No one, us included, can take the money. <span class="soft">Here is why.</span></h2>
+        <h2 id="limits-title" class="title">The room cannot take the money. <span class="soft">Only the rules can pay.</span></h2>
       </div>
     </div>
     <div class="bento">
@@ -358,7 +358,7 @@
           <circle cx="206" cy="110" r="12" class="dg-node"/><path d="M200 110l4 4 8-8" class="dg-tick-static"/>
           <path class="mo-spin dg-fill-lake" d="M110 92l4 14 14 4-14 4-4 14-4-14-14-4 14-4z"/>
         </svg>
-        <h3 class="bc-title bc-title-lg">It cannot take the money</h3><p class="bc-text">The room only proposes. Only the contract pays, and only within the rules every member agreed to.</p><p class="bc-end mono dim">36 payouts refused on testnet</p>
+        <h3 class="bc-title bc-title-lg">It cannot take the money</h3><p class="bc-text">The room only proposes. Only the contract pays, and only within the rules every member agreed to.</p><p class="bc-end mono dim">36 refused by the rules on testnet</p>
       </article>
       <article class="bc s3 side">
         <svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="40" class="dg-line"/><path d="M30 48h36" class="dg-line-deny"/><circle cx="48" cy="48" r="5" class="dg-fill-deny"/></svg>
@@ -369,6 +369,7 @@
         <div><h3 class="bc-title">It cannot lock anyone in</h3><p class="bc-text">If the room stops, every member takes their own share back after the exit timer.</p><p class="mono dim">25 exits recorded</p></div>
       </article>
     </div>
+    <p class="fine limit-note">One honest limit: on testnet our deploy key can still upgrade the contract, so the rules are only as fixed as that key. It is removed before mainnet (gap GAP-044).</p>
   </div>
 </section>
 
@@ -391,7 +392,7 @@ node lab/run.js --tier testnet</code><button class="copy" type="button" data-cop
 npm run build:wasm
 node scripts/lab-env.mjs bootstrap
 node lab/run.js --tier testnet">Copy</button></div><p class="bc-end"><a href="https://github.com/etvjay/midge/blob/master/docs/LAB.md" target="_blank" rel="noopener">The step-by-step guide</a></p></article>
-      <article class="bc bc-raised s2 mo-rise" style="--i: 2"><h3 class="bc-title">Look at the live network</h3><p class="bc-text">The newest groups, read from NEAR by your browser:</p><ul class="recent" id="recent"><li>Reading…</li></ul></article>
+      <article class="bc bc-raised s2 mo-rise" style="--i: 2"><h3 class="bc-title">Look at the live network</h3><p class="bc-text">The newest groups, read from NEAR by your browser:</p><ul class="recent" id="recent"><li>Not read yet</li></ul></article>
     </div>
   </div>
 </section>
@@ -411,7 +412,7 @@ node lab/run.js --tier testnet">Copy</button></div><p class="bc-end"><a href="ht
           <div class="faq-card">
             <details open><summary>What is Midge?</summary><p>A network of private rooms with public rules, on NEAR. Any group (a fund, a DAO, a team, a set of AI agents) gets a private room to decide in, rules fixed in public that limit what the room can pay, and an exit each member can use alone. One contract on NEAR hosts many groups.</p></details>
             <details><summary>Who is it for?</summary><p>Groups that decide together with money on the line: sealed-bid auctions and token sales, secret ballots that pay the winning option, payroll to one-time addresses, investing together, and AI agents that buy or pay together.</p></details>
-            <details><summary>What is live today, and what is not?</summary><p>Live on NEAR testnet: the contract with its rules, payouts and exit, bids sealed to a NEAR AI Cloud model, limited agent keys, and the SDK, API and MCP tools. Attested but not running now: the room on Phala. Models only: lending quotes, block trades, shared AI. Next: paying out on Bitcoin, Ethereum and Solana.</p></details>
+            <details><summary>What is live today, and what is not?</summary><p>Live on NEAR testnet: the contract with its rules, payouts and exit, bids sealed to a NEAR AI Cloud model, and limited agent keys. The SDK, API and MCP tools run on your machine. Attested but not running now: the room on Phala. Models only: lending quotes, block trades, shared AI. Next: paying out on Bitcoin, Ethereum and Solana.</p></details>
             <details><summary>Is this live? Can I lose real money?</summary><p>It is a working prototype on NEAR testnet, where coins have no value. There is no token, and no audit yet.</p></details>
             <details><summary>Can I check any of this myself?</summary><p>Yes. Read the contract and its rules straight from NEAR, open any dot in the proof section on the public explorer, or run every test offline with one command.</p></details>
           </div>
@@ -431,13 +432,13 @@ node lab/run.js --tier testnet">Copy</button></div><p class="bc-end"><a href="ht
             <details><summary>What does Midge integrate with?</summary><p>NEAR testnet for the contract, NEAR AI Cloud for the model the room seals bids to, Phala Cloud for the room as its own program, NEAR Chain Signatures for addresses on other chains, and NEAR Intents' 1Click API for its asset registry. For agents: MCP tools, a JavaScript SDK and an HTTP API with live streams.</p></details>
             <details><summary>How can an AI agent use it?</summary><p>Through the MCP tools, the JavaScript SDK or the HTTP API. Give the agent a limited key and the only thing that key can do on its own is take its owner's money back out.</p></details>
             <details><summary>Does it work with other chains?</summary><p>Partly. With NEAR Chain Signatures a group can control addresses on Bitcoin, Ethereum and Solana, and one signature was made live on testnet. Nothing has been sent on another chain yet.</p></details>
-            <details><summary>Does it use NEAR Intents?</summary><p>It reads the 1Click Swap API's asset registry live: 210 assets across NEAR, Bitcoin, Ethereum and Solana. 1Click runs on mainnet only, so no swap has been made from testnet.</p></details>
+            <details><summary>Does it use NEAR Intents?</summary><p>A recorded audit read the 1Click Swap API's asset registry: 210 assets across NEAR, Bitcoin, Ethereum and Solana. 1Click runs on mainnet only, so no swap has been made from testnet.</p></details>
           </div>
         </section>
         <section class="faq-group" id="faq-g3" aria-labelledby="faq-g3-h">
           <h3 class="faq-h" id="faq-g3-h">Partners and tech</h3>
           <div class="faq-card">
-            <details><summary>Which partner technology does Midge use?</summary><p>NEAR Protocol (the contract, in Rust), NEAR AI Cloud (a hardware-checked model on Intel TDX with NVIDIA GPU evidence), Phala Cloud (dstack confidential VMs on Intel TDX), NEAR Chain Signatures, NEAR Intents (1Click), public NEAR RPC (FastNEAR) and NearBlocks.</p></details>
+            <details><summary>Which partner technology does Midge use?</summary><p>NEAR Protocol (the contract, in Rust), NEAR AI Cloud (a model on Intel TDX whose report also carries NVIDIA GPU evidence), Phala Cloud (dstack confidential VMs on Intel TDX), NEAR Chain Signatures, NEAR Intents (1Click), public NEAR RPC (FastNEAR) and NearBlocks.</p></details>
             <details><summary>How does NEAR AI Cloud fit in?</summary><p>Members seal their bids to a model running in NEAR AI Cloud's secure hardware, and the model proposes the split. Your browser can check that hardware on this page with a random number it picks.</p></details>
             <details><summary>How does Phala fit in?</summary><p>The room can run as its own program in a confidential VM on Phala Cloud. It was run on real Intel TDX machines on 4 and 8 November; those machines were temporary and none is running now.</p></details>
             <details><summary>Does Midge use OutLayer?</summary><p>Not yet. OutLayer runs one function per call on its own secure workers, each run with a fresh hardware report. Phala runs a whole machine we operate. Midge has a model of OutLayer-style spending limits for agents, but calls neither OutLayer nor a running Phala machine today.</p></details>
@@ -449,7 +450,7 @@ node lab/run.js --tier testnet">Copy</button></div><p class="bc-end"><a href="ht
     <div class="foot">
       <div class="foot-brand">
         <p class="foot-mark">Midge</p>
-        <p>Private rooms with public rules, on NEAR. Groups decide together in private; the money follows rules no one can change.</p>
+        <p>Private rooms with public rules, on NEAR. Groups decide together in private; the money follows rules everyone can read.</p>
         <p class="foot-live" id="foot-live">Contract <b>c.fly-1793636729.testnet</b> · fingerprint <b>854fzUj2…</b> (recorded)</p>
       </div>
       <nav class="foot-col" aria-label="Explore"><p class="foot-h">Explore</p><ul><li><a href="#how">How it works</a></li><li><a href="#who">Who uses it</a></li><li><a href="#proof">Proof</a></li><li><a href="#try">Try it</a></li></ul></nav>

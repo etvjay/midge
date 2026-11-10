@@ -143,11 +143,13 @@ function row(list, ok, label, detail) {
 }
 
 // The rules panel (section 04): the newest group's release policy as the contract returns it, and the same rules in words.
+const nbLink = (text) => { const a = document.createElement('a'); a.href = `${NB}/address/${CONTRACT}`; a.target = '_blank'; a.rel = 'noopener'; a.textContent = text; return a; };
 function rulesPanel(group, block) {
   const pre = $('#rules-json'); const words = $('#rules-reads-text'); const state = $('#rules-state'); if (!pre || !words) return;
   if (!group) {
-    pre.textContent = 'Could not read the rules from this browser. Open the contract on NearBlocks to read them there.';
-    words.textContent = 'not read'; if (state) state.textContent = 'NEAR did not answer';
+    pre.textContent = 'Could not read the rules from this browser.';
+    words.replaceChildren('NEAR did not answer from this browser. ', nbLink('Read the contract on NearBlocks'));
+    if (state) state.textContent = 'not read';
     return;
   }
   const pol = group.release_policy || {};
@@ -159,10 +161,12 @@ function rulesPanel(group, block) {
 
 (async function chain() {
   const chip = $('#chip'), chipText = $('#chip-text'), list = $('#chain-list'), note = $('#chain-note'), recent = $('#recent');
+  const pre = $('#rules-json'); if (pre) pre.textContent = 'Reading the newest group\u2019s rules from NEAR\u2026'; if (recent) recent.innerHTML = '<li>Reading\u2026</li>';
   try {
     const acct = await rpc('query', { request_type: 'view_account', finality: 'final', account_id: CONTRACT });
     const { value: count, block } = await view('get_syndicate_count');
-    $('#net-count').textContent = count;
+    $('#net-count').textContent = count; const nn = $('#net-count-note'); if (nn) nn.textContent = '(read just now)';
+    const cs = $('#chain-state'); if (cs) { cs.textContent = 'read just now'; cs.classList.add('t-lake'); }
     chip.classList.add('ok'); chipText.textContent = `Live · ${count} groups · block ${block.toLocaleString('en-US')}`;
     row(list, true, 'NEAR answered, with no server of ours in between', `${CONTRACT}, block ${block.toLocaleString('en-US')}`);
     row(list, acct.code_hash === DEPLOYED_CODE_HASH, 'The contract is the exact version we tested', `fingerprint ${short(acct.code_hash, 10)}`);
@@ -180,7 +184,8 @@ function rulesPanel(group, block) {
     for (const x of newest.slice().reverse()) { const li = document.createElement('li'); const a = document.createElement('a'); a.href = `${NB}/address/${x.sub_account || CONTRACT}`; a.textContent = x.id; a.title = x.id; const sp = document.createElement('span'); sp.textContent = `${x.syndicate_type} · ${x.status} · ${near(x.total_escrow)} NEAR`; li.append(a, sp); recent.appendChild(li); }
   } catch (e) {
     chipText.textContent = 'Could not reach NEAR testnet from this browser';
-    note.textContent = `The public RPC did not answer (${e.message}). The recorded evidence below still applies.`;
+    note.replaceChildren('NEAR\'s public RPC did not answer from this browser. The recorded evidence on this page still applies. ', nbLink('Read the contract on NearBlocks'));
+    const cs = $('#chain-state'); if (cs) cs.textContent = 'not read';
     recent.innerHTML = '<li>Could not read the contract from this browser.</li>';
     rulesPanel(null);
   }

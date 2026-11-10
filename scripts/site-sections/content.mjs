@@ -30,8 +30,8 @@ export const HOME = {
       caption: 'Measured on testnet, same chain, fresh accounts', source: 'docs/lab/COMPARISON_*.md', cols: ['Public', 'Organizer', 'Midge'],
       rows: [
         { k: 'Bids or amounts an observer read', cells: [{ t: '{auctionPublicRead}', tone: 'deny' }, { t: '{organizerRead}', tone: 'deny' }, { t: '{auctionSealedRead}', tone: 'lake' }] },
-        { k: 'Who can move the pot', cells: [{ t: 'no pot: each pays directly', tone: 'mute' }, { t: 'the organizer, alone', tone: 'deny' }, { t: 'no one outside the rules', tone: 'lake' }] },
-        { k: 'If the operator disappears', cells: [{ t: 'not applicable', tone: 'mute' }, { t: 'members recover {organizerVanish}', tone: 'deny' }, { t: 'each member leaves alone', tone: 'lake' }] },
+        { k: 'Who can move the pot', cells: [{ t: 'no pot: each pays directly', tone: 'mute', src: { file: 'docs/lab/COMPARISON_RESULTS.md', quote: 'Each backer pays the recipient directly.' } }, { t: 'the organizer, alone', tone: 'deny', src: { file: 'docs/lab/COMPARISON_RESULTS.md', quote: 'The organizer moved a 0.04 pot to an account of its choosing and nothing stopped it' } }, { t: 'no one outside the rules', tone: 'lake', src: { file: 'docs/lab/COMPARISON_RESULTS.md', quote: 'no operator can take the pot or pay outside the fixed policy' } }] },
+        { k: 'If the operator disappears', cells: [{ t: 'not applicable', tone: 'mute', src: { file: 'docs/lab/COMPARISON_RESULTS.md', quote: '| If the operator disappears | not applicable |' } }, { t: 'members recover {organizerVanish}', tone: 'deny', src: { file: 'docs/lab/COMPARISON_RESULTS.md', quote: 'members recover **0%**' } }, { t: 'each member leaves alone', tone: 'lake', src: { file: 'docs/lab/COMPARISON_RESULTS.md', quote: 'each member recovered their remainder alone' } }] },
       ],
     },
     keeps: {
@@ -44,7 +44,7 @@ export const HOME = {
   engine: {
     kicker: '02 · How it works', title: 'Group money, built at the level of the rules.', soft: 'Each part checks the one before it.',
     room: { label: 'The room', title: 'Members seal their bids. Only the room can open them.', body: 'It weighs every bid or vote in secure hardware and proposes one payout. It holds no key to the money.' },
-    rules: { label: 'The rules', body: 'Set when the group is created and stored on NEAR: who may be paid, how much per round, until when. Anyone can read them; nobody can change them.' },
+    rules: { label: 'The rules', body: 'Set when the group is created and stored on NEAR: who may be paid, how much per round, until when. Anyone can read them, and the contract has no method to change them.' },
     payout: { label: 'The payout', body: 'Paid only if it fits the rules. Anything else is refused and nothing moves.' },
     exit: { label: 'The exit', body: 'If the room stops, each member takes their own share back.' },
   },
@@ -103,21 +103,41 @@ export const HOME = {
     ],
     hosts: {
       title: 'Three ways to run code in secure hardware',
-      lede: 'All three run on Intel TDX and come with a hardware report. The difference is who operates the machine, how long it lives, and what can call it.',
+      lede: 'All three run on Intel TDX and come with a hardware report. The difference is who operates the machine, how long it lives, and what can call it. Each cell quotes its source.',
       cols: ['Phala Cloud', 'OutLayer', 'NEAR AI Cloud'],
       rows: [
-        { k: 'The unit', cells: [{ t: 'A whole machine we run, as long as we like' }, { t: 'One function per call, at most 180 seconds' }, { t: 'A hosted AI model the bids are sealed to' }] },
-        { k: 'Who operates it', cells: [{ t: 'We do' }, { t: 'OutLayer’s own fleet of workers' }, { t: 'NEAR AI' }] },
-        { k: 'What can call it', cells: [{ t: 'Whatever we expose from our program' }, { t: 'A NEAR contract, or anyone over HTTPS' }, { t: 'Anyone with the API; members seal bids to its key' }] },
-        { k: 'Hardware report', cells: [{ t: 'One for the machine and its image' }, { t: 'A fresh one per run, tied to its code, input and output' }, { t: 'One per request, checkable from your browser' }] },
-        { k: 'Checked on NEAR', cells: [{ t: 'Not built in' }, { t: 'Once per worker; each result then carries the worker’s signature' }, { t: 'Not built in' }] },
+        { k: 'The unit', cells: [
+          { t: 'A whole machine: any Docker container, as a confidential VM', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'Deploy any Docker container as a CVM on supported TEEs' } },
+          { t: 'One function per call, at most 180 seconds', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: '180 seconds per execution' } },
+          { t: 'A hosted AI model the bids are sealed to', src: { file: 'docs/canonical/CURRENT_STATE.md', quote: "Bids sealed to a NEAR AI Cloud model's attested Ed25519" } },
+        ] },
+        { k: 'Who operates it', cells: [
+          { t: 'We deploy and run it', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'Deploy any Docker container as a CVM on supported TEEs' } },
+          { t: 'OutLayer\u2019s workers, on dstack', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'the worker runs in an Intel TDX confidential VM via dstack' } },
+          { t: 'NEAR AI', src: { file: 'site/main.js', quote: 'https://cloud-api.near.ai/v1/attestation/report' } },
+        ] },
+        { k: 'What can call it', cells: [
+          { t: 'Whatever our program exposes', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'Deploy any Docker container as a CVM on supported TEEs' } },
+          { t: 'A NEAR contract, or any client over HTTPS', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'or any client can call the HTTPS API directly' } },
+          { t: 'Anyone with the API; members seal bids to its key', src: { file: 'docs/canonical/CURRENT_STATE.md', quote: "Bids sealed to a NEAR AI Cloud model's attested Ed25519" } },
+        ] },
+        { k: 'Hardware report', cells: [
+          { t: 'One for the machine: its image, arguments and settings', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'Docker image hash, startup arguments, and environment variables' } },
+          { t: 'A fresh one for every run', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'it generates a fresh **attestation**' } },
+          { t: 'One per request, checkable from your browser', src: { file: 'site/main.js', quote: 'https://cloud-api.near.ai/v1/attestation/report' } },
+        ] },
+        { k: 'Checked on NEAR', cells: [
+          { t: 'Not by this platform; you check the report', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'Docker image hash, startup arguments, and environment variables' } },
+          { t: 'Once per worker, at registration; each result then carries the worker\u2019s signature', src: { file: 'docs/sources/secure-hardware-hosts.md', quote: 'Results are then signed by the worker key' } },
+          { t: 'Not by this platform; your browser checks the report', src: { file: 'site/main.js', quote: 'https://cloud-api.near.ai/v1/attestation/report' } },
+        ] },
         { k: 'In Midge today', cells: [
           { t: 'Our room program, run on real TDX machines on 4 and 8 Nov; not running now', tone: 'glow', fig: 'phalaHosted' },
           { t: 'Not used yet: only a model of its spending limits', tone: 'mute', fig: 'outlayerModel' },
           { t: 'Live: the room host members seal bids to', tone: 'lake', fig: 'modelHost' },
         ] },
       ],
-      source: 'Sources: OutLayer docs (hardware reports, pricing and limits), Phala dstack docs, Midge’s current state. OutLayer workers themselves run on dstack, some on Phala Cloud.',
+      source: 'Sources, quoted and dated: docs/sources/secure-hardware-hosts.md (OutLayer and Phala docs, read 10 Nov 2026) and Midge’s current state.',
     },
   },
 
@@ -129,7 +149,7 @@ export const HOME = {
       label: 'A recorded refusal', title: 'A payout to an account that was not on the list',
       body: 'The contract refused it before anything else, and no money moved. Open it on NearBlocks.',
       head: 'payout call · group lab-mw30klm2-2', run: 'run 20261105T035644Z-7c1d', recipient: 'thief-mw30klm2.testnet',
-      hash: '3gW41Caz1wK4cCDFpixTJ3KweM6qpF7ZGxm6ARB1CmPk', reason: 'Refused · recipient is not in allowed_recipients',
+      hash: '3gW41Caz1wK4cCDFpixTJ3KweM6qpF7ZGxm6ARB1CmPk', reason: 'Refused · the recipient is not on the group\u2019s list',
     },
     runsTitle: 'What runs where, today', runsNote: 'Testnet only · no audit yet · every test account was ours',
     partners: [
@@ -138,15 +158,16 @@ export const HOME = {
       { name: 'Phala Cloud', role: 'dstack · Intel TDX', status: 'Attested, not running now', tone: 'glow', fig: 'phalaHosted', d: 'The room as its own program in a confidential VM. Run on real TDX machines on 4 and 8 Nov; they were temporary.' },
       { name: 'NEAR Chain Signatures', role: 'Bitcoin · Ethereum · Solana', status: 'One live signature', tone: 'glow', fig: 'chainSignatures', d: 'A group can control addresses on other chains. One signature made live on testnet; nothing sent yet.' },
       { name: 'NEAR Intents · 1Click', role: 'asset registry', status: 'Read-only', tone: 'glow', fig: 'intentsAssets', d: '{intentsAssets} assets read live across NEAR, Bitcoin, Ethereum and Solana. 1Click has no testnet, so no swap was made.' },
-      { name: 'For agents', role: 'MCP tools · JavaScript SDK · HTTP API', status: 'Live', tone: 'lake', fig: 'agentTools', d: 'Every route, SDK method and MCP tool exercised on testnet; limited keys that can only take money back.' },
+      { name: 'For agents', role: 'MCP tools · JavaScript SDK · HTTP API', status: 'Runs on your machine', tone: 'lake', fig: 'agentTools', d: 'Every route, SDK method and MCP tool exercised; the API and MCP server run locally. The limited keys that can only take money back are live on testnet.' },
       { name: 'Simulations', role: 'JavaScript models', status: 'Not on chain', tone: 'mute', fig: 'simulations', wide: true, d: 'Lending quotes, block trades between desks and shared AI requests run as models today, not on the contract.' },
     ],
   },
 
   trust: {
-    kicker: '09 · What it cannot do', title: 'No one, us included, can take the money.', soft: 'Here is why.',
+    kicker: '09 · What it cannot do', title: 'The room cannot take the money.', soft: 'Only the rules can pay.',
+    note: 'One honest limit: on testnet our deploy key can still upgrade the contract, so the rules are only as fixed as that key. It is removed before mainnet (gap GAP-044).',
     cards: [
-      { t: 'It cannot take the money', d: 'The room only proposes. Only the contract pays, and only within the rules every member agreed to.', e: '{refused} payouts refused on testnet' },
+      { t: 'It cannot take the money', d: 'The room only proposes. Only the contract pays, and only within the rules every member agreed to.', e: '{refused} refused by the rules on testnet' },
       { t: 'It cannot pay outside the rules', d: 'An unlisted account or a payout over the cap is refused, and nothing moves.', e: 'Recipient and cap checked in the contract' },
       { t: 'It cannot lock anyone in', d: 'If the room stops, every member takes their own share back after the exit timer.', e: '{exits} exits recorded' },
     ],
@@ -165,7 +186,7 @@ export const HOME = {
     { name: 'About Midge', items: [
       ['What is Midge?', 'A network of private rooms with public rules, on NEAR. Any group (a fund, a DAO, a team, a set of AI agents) gets a private room to decide in, rules fixed in public that limit what the room can pay, and an exit each member can use alone. One contract on NEAR hosts many groups.'],
       ['Who is it for?', 'Groups that decide together with money on the line: sealed-bid auctions and token sales, secret ballots that pay the winning option, payroll to one-time addresses, investing together, and AI agents that buy or pay together.'],
-      ['What is live today, and what is not?', 'Live on NEAR testnet: the contract with its rules, payouts and exit, bids sealed to a NEAR AI Cloud model, limited agent keys, and the SDK, API and MCP tools. Attested but not running now: the room on Phala. Models only: lending quotes, block trades, shared AI. Next: paying out on Bitcoin, Ethereum and Solana.'],
+      ['What is live today, and what is not?', 'Live on NEAR testnet: the contract with its rules, payouts and exit, bids sealed to a NEAR AI Cloud model, and limited agent keys. The SDK, API and MCP tools run on your machine. Attested but not running now: the room on Phala. Models only: lending quotes, block trades, shared AI. Next: paying out on Bitcoin, Ethereum and Solana.'],
       ['Is this live? Can I lose real money?', 'It is a working prototype on NEAR testnet, where coins have no value. There is no token, and no audit yet.'],
       ['Can I check any of this myself?', 'Yes. Read the contract and its rules straight from NEAR, open any dot in the proof section on the public explorer, or run every test offline with one command.'],
     ] },
@@ -179,10 +200,10 @@ export const HOME = {
       ['What does Midge integrate with?', "NEAR testnet for the contract, NEAR AI Cloud for the model the room seals bids to, Phala Cloud for the room as its own program, NEAR Chain Signatures for addresses on other chains, and NEAR Intents' 1Click API for its asset registry. For agents: MCP tools, a JavaScript SDK and an HTTP API with live streams."],
       ['How can an AI agent use it?', "Through the MCP tools, the JavaScript SDK or the HTTP API. Give the agent a limited key and the only thing that key can do on its own is take its owner's money back out."],
       ['Does it work with other chains?', 'Partly. With NEAR Chain Signatures a group can control addresses on Bitcoin, Ethereum and Solana, and one signature was made live on testnet. Nothing has been sent on another chain yet.'],
-      ['Does it use NEAR Intents?', "It reads the 1Click Swap API's asset registry live: {intentsAssets} assets across NEAR, Bitcoin, Ethereum and Solana. 1Click runs on mainnet only, so no swap has been made from testnet."],
+      ['Does it use NEAR Intents?', "A recorded audit read the 1Click Swap API's asset registry: {intentsAssets} assets across NEAR, Bitcoin, Ethereum and Solana. 1Click runs on mainnet only, so no swap has been made from testnet."],
     ] },
     { name: 'Partners and tech', items: [
-      ['Which partner technology does Midge use?', 'NEAR Protocol (the contract, in Rust), NEAR AI Cloud (a hardware-checked model on Intel TDX with NVIDIA GPU evidence), Phala Cloud (dstack confidential VMs on Intel TDX), NEAR Chain Signatures, NEAR Intents (1Click), public NEAR RPC (FastNEAR) and NearBlocks.'],
+      ['Which partner technology does Midge use?', 'NEAR Protocol (the contract, in Rust), NEAR AI Cloud (a model on Intel TDX whose report also carries NVIDIA GPU evidence), Phala Cloud (dstack confidential VMs on Intel TDX), NEAR Chain Signatures, NEAR Intents (1Click), public NEAR RPC (FastNEAR) and NearBlocks.'],
       ['How does NEAR AI Cloud fit in?', "Members seal their bids to a model running in NEAR AI Cloud's secure hardware, and the model proposes the split. Your browser can check that hardware on this page with a random number it picks."],
       ['How does Phala fit in?', 'The room can run as its own program in a confidential VM on Phala Cloud. It was run on real Intel TDX machines on 4 and 8 November; those machines were temporary and none is running now.'],
       ['Does Midge use OutLayer?', 'Not yet. OutLayer runs one function per call on its own secure workers, each run with a fresh hardware report. Phala runs a whole machine we operate. Midge has a model of OutLayer-style spending limits for agents, but calls neither OutLayer nor a running Phala machine today.'],

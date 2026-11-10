@@ -57,7 +57,7 @@ function footerBlock(root, F) {
     <div class="foot">
       <div class="foot-brand">
         <p class="foot-mark">Midge</p>
-        <p>Private rooms with public rules, on NEAR. Groups decide together in private; the money follows rules no one can change.</p>
+        <p>Private rooms with public rules, on NEAR. Groups decide together in private; the money follows rules everyone can read.</p>
         <p class="foot-live" id="foot-live">Contract <b>c.fly-1793636729.testnet</b> · fingerprint <b>${hash.slice(0, 8)}…</b> (recorded)</p>
       </div>${COLS.map(([h, links]) => `
       <nav class="foot-col" aria-label="${esc(h)}"><p class="foot-h">${esc(h)}</p><ul>${links.map(([t, href]) => `<li><a href="${href}"${ext(href)}>${esc(t)}</a></li>`).join('')}</ul></nav>`).join('')}

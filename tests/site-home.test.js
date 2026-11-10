@@ -70,16 +70,17 @@ test('the FAQ has four topics and eighteen questions, and keeps the five origina
 });
 
 test('no banned word in any content string', () => {
-  for (const [at, s] of strings(HOME)) for (const w of BANNED) assert.doesNotMatch(s, new RegExp(`\\b${w}\\b`, 'i'), `${at}: ${w}`);
+  for (const [at, s] of strings(HOME)) if (!/\.src\./.test(at)) for (const w of BANNED) assert.doesNotMatch(s, new RegExp(`\\b${w}\\b`, 'i'), `${at}: ${w}`); // .src fields are citations, never shown
 });
 
 test('code names appear only in the parts section', () => {
   const CODE = /\b(Roost|Nest|flyers?|hatch|settle_batch)\b/;
-  for (const [at, s] of strings(HOME)) if (!at.startsWith('HOME.parts')) assert.doesNotMatch(s, CODE, `${at}: "${s}"`);
+  for (const [at, s] of strings(HOME)) if (!at.startsWith('HOME.parts') && !/\.src\./.test(at)) assert.doesNotMatch(s, CODE, `${at}: "${s}"`);
 });
 
 // ---- the built page (Task 2)
 const html = read('site/index.html');
+const visibleText = (h) => h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ');
 const sectionOf = (id) => { const m = html.match(new RegExp(`<section[^>]*id="${id}"[\\s\\S]*?\\n</section>`)); assert.ok(m, `section ${id}`); return m[0]; };
 
 test('sections 01 to 10 are built in order after the hero, each named by its heading', () => {
@@ -168,4 +169,60 @@ test('the rules panel is filled from the live read, and says so plainly when NEA
   assert.match(js, /release_policy/);
   assert.match(js, /\$\('#rules-reads-text'\)/);
   assert.match(js, /Could not read the rules from this browser/);
+});
+
+// ---- final review fix pass
+test('without scroll-driven animation, entrances are hidden before they play only when motion is allowed (reduced motion shows them)', () => {
+  const fb = css.slice(css.indexOf('@supports not (animation-timeline: view())'));
+  const hide = fb.indexOf('.js .mo-rise:not(.in)');
+  assert.ok(hide > 0, 'the fallback hide rule exists');
+  const before = fb.slice(0, hide);
+  assert.ok(before.lastIndexOf('@media (prefers-reduced-motion: no-preference)') > before.lastIndexOf('}\n}'), 'the hide rules sit inside @media (prefers-reduced-motion: no-preference)');
+});
+
+test('no visitor text claims that no one, us included, can take the money or change the rules; the upgrade key is stated', () => {
+  const visible = (h) => h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ');
+  const page = visible(html) + ' ' + (html.match(/<meta name="description" content="([^"]*)"/) || [, ''])[1];
+  const OVERCLAIM = /us included|no one can change|nobody can change|no one, us|rules no one can change/i;
+  assert.doesNotMatch(page, OVERCLAIM);
+  for (const [at, s] of strings(HOME)) assert.doesNotMatch(s, OVERCLAIM, at);
+  assert.match(page, /deploy key can still upgrade the contract/);
+});
+
+test('entrances are never tied to an inner scroll container', () => {
+  for (const m of html.matchAll(/<div class="tbl-wrap[^"]*">([\s\S]*?)<\/div><\/div>/g)) assert.doesNotMatch(m[1], /class="[^"]*\bmo-(rise|row|flash|slide|type|strike)\b/, 'no entrance inside a table scroller');
+  for (const sel of ['.bc.flush', '.panel-ink', '.band-panel']) {
+    const rule = css.match(new RegExp(`\\n${sel.replace(/\./g, '\\.')} \\{([^}]*)\\}`));
+    assert.ok(rule, `${sel} rule`); assert.doesNotMatch(rule[1], /overflow:\s*hidden/, `${sel} clips without becoming a scroll container`);
+  }
+});
+
+test('nothing static claims to be live: labels start neutral and main.js switches them only after a read', () => {
+  const region = html.slice(html.indexOf('<!-- cards:begin -->'), html.indexOf('<!-- cards:end -->'));
+  assert.doesNotMatch(region, />read just now<|read live from NEAR|Reading…|Reading the newest/, 'no live wording in the built HTML');
+  assert.match(region, /<b id="net-count">\d+<\/b> groups <span id="net-count-note">\(recorded\)<\/span>/);
+  assert.match(js, /net-count-note/);
+  assert.match(js, /Could not read the rules from this browser[\s\S]{0,300}nearblocks/i, 'the rules failure links NearBlocks');
+  assert.match(js, /did not answer from this browser[\s\S]{0,300}nearblocks/i, 'the chain failure links NearBlocks');
+});
+
+test('every cell of the two comparison tables rests on a quoted source', () => {
+  for (const row of HOME.parts.hosts.rows) for (const c of row.cells) {
+    assert.ok(c.src || c.fig, `host cell "${c.t}" has a source`);
+    if (c.src) assert.ok(read(c.src.file).includes(c.src.quote), `"${c.src.quote}" in ${c.src.file}`);
+  }
+  for (const row of HOME.problem.compare.rows) for (const c of row.cells) {
+    if (/^\{[a-zA-Z]+\}$/.test(c.t)) continue;
+    assert.ok(c.src && read(c.src.file).includes(c.src.quote), `comparison cell "${c.t}" quotes its source`);
+  }
+});
+
+test('wording that overstated is gone', () => {
+  const all = [...strings(HOME)].map(([, s]) => s).join('\n') + visibleText(html);
+  assert.doesNotMatch(all, /payouts refused/, 'refusals include early exits: say refused by the rules');
+  assert.doesNotMatch(all, /allowed_recipients/, 'plain words, not the field name');
+  assert.doesNotMatch(all, /with NVIDIA GPU evidence/, 'the GPU evidence is carried, not checked');
+  assert.doesNotMatch(all, /reads the 1Click Swap API's asset registry live/, '210 is a recorded audit');
+  const agents = HOME.proof.partners.find((p) => p.name === 'For agents');
+  assert.notEqual(agents.status, 'Live', 'the API and MCP server run locally');
 });

@@ -83,11 +83,15 @@ function measure() {
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/snap/bin/chromium', args: ['--no-sandbox'] });
 const rows = []; let failed = false;
 for (const width of [1440, 390]) {
-  for (const mode of width === 390 ? ['motion', 'reduce', 'nojs', 'nomain', 'norpc'] : ['motion', 'reduce', 'nojs']) {
+  for (const mode of width === 390 ? ['motion', 'reduce', 'nojs', 'nomain', 'norpc'] : ['motion', 'reduce', 'nojs', 'noview', 'noview-reduce']) {
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(`${width}:${mode}`)) continue; // e.g. ONLY=390:nojs
-    const ctx = await browser.newContext({ viewport: { width, height: width > 600 ? 900 : 844 }, reducedMotion: mode === 'reduce' ? 'reduce' : 'no-preference', javaScriptEnabled: mode !== 'nojs' });
+    const ctx = await browser.newContext({ viewport: { width, height: width > 600 ? 900 : 844 }, reducedMotion: /reduce/.test(mode) ? 'reduce' : 'no-preference', javaScriptEnabled: mode !== 'nojs' });
     const page = await ctx.newPage(); const errors = [];
     if (mode === 'nomain') await page.route('**/main.js', (r) => r.abort());
+    if (mode.startsWith('noview')) { // a browser without scroll-driven animation (Firefox today): the @supports blocks flip and CSS.supports says no
+      await page.route('**/styles.css', async (r) => { const res = await r.fetch(); const body = (await res.text()).split('animation-timeline: view())').join('animation-timeline: no-such-view())'); await r.fulfill({ response: res, body }); });
+      await page.addInitScript(() => { const real = CSS.supports.bind(CSS); CSS.supports = (...a) => (/animation-timeline/.test(a.join(' ')) ? false : real(...a)); });
+    }
     if (mode === 'norpc') await page.route(/test\.rpc\.fastnear\.com|rpc\.testnet\.near\.org/, (r) => r.abort()); // NEAR does not answer // main.js fails to load: the page must fall back to everything stacked
     await page.addInitScript(() => { // count footer-field draws (one clearRect per frame)
       window.__fieldDraws = 0; const clear = CanvasRenderingContext2D.prototype.clearRect;
@@ -112,10 +116,21 @@ for (const width of [1440, 390]) {
       await page.waitForTimeout(1500);
       const rules = await page.evaluate(() => document.getElementById('rules-json')?.textContent || '');
       if (!/Could not read the rules/.test(rules)) extra.push(`rules panel with NEAR blocked says: "${rules.slice(0, 80)}"`);
+      const links = await page.evaluate(() => ['#rules-reads', '#chain-note'].map((id) => !!document.querySelector(`${id} a[href*="nearblocks"]`)));
+      if (links.includes(false)) extra.push(`failure messages without a NearBlocks link: rules ${links[0]}, chain ${links[1]}`);
+      const note = await page.evaluate(() => document.getElementById('net-count-note')?.textContent || '');
+      if (!/recorded/.test(note)) extra.push(`the group count is not labelled recorded with NEAR blocked: "${note}"`);
     }
+    // Every entrance must have reached its final frame once the page has been scrolled through (catches content left
+    // invisible, and motion tied to an inner scroll container that never plays).
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight)); await page.waitForTimeout(mode.startsWith('noview') || mode === 'motion' ? 1800 : 300);
+    const stuck = await page.evaluate(() => [...document.querySelectorAll('.mo-rise, .mo-row, .mo-flash, .mo-slide, .mo-dot, .mo-type')]
+      .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && +getComputedStyle(e).opacity < 0.95; })
+      .map((e) => `${e.tagName.toLowerCase()}.${String(e.className.baseVal ?? e.className).trim().split(/\s+/).slice(0, 2).join('.')} at ${(+getComputedStyle(e).opacity).toFixed(2)}`));
+    if (stuck.length) extra.push(`${stuck.length} entrances not at their final frame after scrolling through: ${stuck.slice(0, 3).join(', ')}`);
     if (mode === 'nomain') {
-      const hidden = await page.evaluate(() => [...document.querySelectorAll('.b-fine, .b-tab .b')].filter((e) => getComputedStyle(e).display === 'none').length);
-      if (hidden) extra.push(`${hidden} fine prints or tab sentences hidden with main.js blocked`);
+      const groups = await page.evaluate(() => [...document.querySelectorAll('.faq-group')].filter((g) => g.getBoundingClientRect().height > 0).length);
+      if (groups !== 4) extra.push(`${groups} of 4 FAQ topics visible with main.js blocked`);
     }
     if (mode === 'motion' && width === 1440) {
       const rate = () => page.evaluate(() => new Promise((go) => { const a = window.__fieldDraws; setTimeout(() => go(window.__fieldDraws - a), 1000); }));

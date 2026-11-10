@@ -55,7 +55,7 @@ function problem(F, f) {
           <rect x="170" y="196" width="120" height="32" rx="8" class="dg-box-deny"/><text x="186" y="217" class="dg-mono t-deny">a thief</text></svg>`;
   const pins = Array.from({ length: 5 }, (_, i) => `<rect class="mo-blink dg-pin" x="${186 + i * 22}" y="26" width="6" height="2"/><rect class="mo-blink dg-pin" x="${186 + i * 22}" y="104" width="6" height="2"/>`).join('');
   const cmpHead = ['', ...p.compare.cols].map((c, i) => `<span class="th${i === 3 ? ' t-lake' : ''}">${esc(c)}</span>`).join('');
-  const cmpRows = p.compare.rows.map((r, i) => `<span class="td k mo-rise" style="--i: ${i}">${f(r.k)}</span>${r.cells.map((c) => `<span class="td mo-rise${tone(c.tone)}" style="--i: ${i}">${f(c.t)}</span>`).join('')}`).join('');
+  const cmpRows = p.compare.rows.map((r) => `<span class="td k">${f(r.k)}</span>${r.cells.map((c) => `<span class="td${tone(c.tone)}">${f(c.t)}</span>`).join('')}`).join('');
   return `
 <section class="section bs" id="problem" aria-labelledby="problem-title">
   <div class="wrap">${head('problem', p, f)}
@@ -99,7 +99,7 @@ function problem(F, f) {
       </article>
       <article class="bc bc-ink s4 flush">
         <div class="panel-head"><span>${f(p.compare.caption)}</span><span>${esc(p.compare.source)}</span></div>
-        <div class="tbl-wrap"><div class="tbl tbl-4" role="table" aria-label="${f(p.compare.caption)}">${cmpHead}${cmpRows}</div></div>
+        <div class="tbl-wrap mo-rise"><div class="tbl tbl-4" role="table" aria-label="${f(p.compare.caption)}">${cmpHead}${cmpRows}</div></div>
       </article>
       <article class="bc bc-raised s2">
         <p class="bc-label">${f(p.keeps.label)}</p>
@@ -191,10 +191,10 @@ function rules(f) {
   <div class="wrap">
     <div class="bento">
       <article class="bc bc-ink s4 flush">
-        <div class="panel-head"><span>${f(r.panelHead)}</span><span id="rules-state"><i class="dot t-lake"></i>read live from NEAR</span></div>
-        <pre class="code mo-type" id="rules-json" aria-live="polite">${f(r.waiting)}</pre>
+        <div class="panel-head"><span>${f(r.panelHead)}</span><span id="rules-state">not read yet</span></div>
+        <pre class="code mo-type" id="rules-json" aria-live="polite">Not read yet. This page reads them from NEAR when its script runs.</pre>
         <noscript><p class="panel-foot">${f(r.noScript)}</p></noscript>
-        <p class="panel-foot" id="rules-reads"><span class="t-lake mono">Reads as</span> <span id="rules-reads-text">the rules appear here when NEAR answers</span></p>
+        <p class="panel-foot" id="rules-reads"><span class="t-lake mono">Reads as</span> <span id="rules-reads-text">not read yet</span></p>
       </article>
       <article class="bc s2">
         <p class="bc-label">${f(r.kicker)}</p>
@@ -253,7 +253,7 @@ function agents(F, f, proof) {
 function parts(f) {
   const p = HOME.parts; const span = { lg: 's3 r2', md: 's3', sm: 's2' };
   const hostHead = ['', ...p.hosts.cols].map((c) => `<span class="th">${esc(c)}</span>`).join('');
-  const hostRows = p.hosts.rows.map((r, i) => `<span class="td k mono mo-rise" style="--i: ${i}">${f(r.k)}</span>${r.cells.map((c) => `<span class="td mo-rise${tone(c.tone)}" style="--i: ${i}">${f(c.t)}</span>`).join('')}`).join('');
+  const hostRows = p.hosts.rows.map((r) => `<span class="td k mono">${f(r.k)}</span>${r.cells.map((c) => `<span class="td${tone(c.tone)}">${f(c.t)}</span>`).join('')}`).join('');
   return `
 <section class="section bs" id="parts" aria-labelledby="parts-title">
   <div class="wrap">${head('parts', p, f)}
@@ -261,7 +261,7 @@ function parts(f) {
       ${p.cards.map((c, i) => `<article class="bc ${span[c.size]}${c.size === 'sm' ? ' bc-raised' : ''} mo-rise" style="--i: ${i}"><div class="bc-row"><h3 class="bc-title${c.size === 'lg' ? ' bc-title-lg' : ''}">${f(c.t)}</h3><span class="code-chip">code: ${f(c.code)}</span></div><p class="bc-text">${f(c.d)}</p><p class="bc-end mono dim">${f(c.s)}</p></article>`).join('\n      ')}
       <article class="bc bc-ink s6 flush">
         <div class="hosts-head"><h3 class="bc-title bc-title-lg">${f(p.hosts.title)}</h3><p class="bc-text">${f(p.hosts.lede)}</p></div>
-        <div class="tbl-wrap"><div class="tbl tbl-4 tbl-wide" role="table" aria-label="${f(p.hosts.title)}">${hostHead}${hostRows}</div></div>
+        <div class="tbl-wrap mo-rise"><div class="tbl tbl-4 tbl-wide" role="table" aria-label="${f(p.hosts.title)}">${hostHead}${hostRows}</div></div>
         <p class="panel-foot mono">${f(p.hosts.source)}</p>
       </article>
     </div>
@@ -293,7 +293,7 @@ function proofSection(F, f, proofParts) {
         <div class="bc bc-lake"><p class="bc-label t-lake">${f(p.lensPriv)}</p><p id="lens-priv">Bids, votes, and who each one-time address belongs to</p></div>
       </div>
       <article class="bc s3 live-card" aria-labelledby="chain-title">
-        <div class="bc-row"><h3 id="chain-title" class="bc-title">Read the contract yourself</h3><span class="bc-label t-lake">read just now</span></div>
+        <div class="bc-row"><h3 id="chain-title" class="bc-title">Read the contract yourself</h3><span class="bc-label" id="chain-state">not read yet</span></div>
         <p class="bc-text">Straight from NEAR, with no server of ours in between.</p>
         <ul class="lp-list" id="chain-list"></ul>
         <p class="panel-note" id="chain-note"></p>
@@ -312,9 +312,9 @@ function proofSection(F, f, proofParts) {
       </article>
       <article class="bc bc-ink s4 flush">
         <div class="panel-head"><span>${f(r.head)}</span><span>${f(r.run)}</span></div>
-        <div class="tbl-wrap"><div class="tbl tbl-3" role="table" aria-label="${f(r.title)}">
+        <div class="tbl-wrap mo-rise"><div class="tbl tbl-3" role="table" aria-label="${f(r.title)}">
           <span class="th">Check</span><span class="th">The payout asked</span><span class="th">The rules allow</span>
-          <span class="td k">Recipient</span><span class="td t-deny"><span class="strike">${f(r.recipient)}<i class="mo-strike" aria-hidden="true"></i></span></span><span class="td dim">listed accounts only</span>
+          <span class="td k">Recipient</span><span class="td t-deny"><span class="strike">${f(r.recipient)}<i aria-hidden="true"></i></span></span><span class="td dim">listed accounts only</span>
           <span class="td k">Money moved</span><span class="td t-deny">0 NEAR</span><span class="td dim">nothing outside the rules</span>
         </div></div>
         <p class="refusal-bar mo-slide"><span class="t-deny">${f(r.reason)}</span><a href="${NB}/txns/${r.hash}" target="_blank" rel="noopener">${esc(`${r.hash.slice(0, 8)}…${r.hash.slice(-7)}`)} on NearBlocks</a></p>
@@ -322,7 +322,7 @@ function proofSection(F, f, proofParts) {
       <div class="bc bc-ink bc-panel s6 runs" id="status">
         <div class="bc-row"><h3 class="bc-title bc-title-lg">${f(p.runsTitle)}</h3><p class="bc-label">${f(p.runsNote)}</p></div>
         <div class="bento">
-          ${p.partners.map((x) => `<div class="bc ${x.wide ? 's6' : 's2'} partner"><div class="bc-row"><p class="partner-name">${f(x.name)}</p><span class="status t-${x.tone}"><i class="dot${x.status === 'Live' ? ' mo-breathe' : ''}"></i>${f(x.status)}</span></div><p class="mono dim">${f(x.role)}${x.fig === 'contractLive' ? ` · <b id="net-count">${esc(F.groups.value)}</b> groups` : ''}</p><p class="bc-text bc-end">${f(x.d)}</p></div>`).join('\n          ')}
+          ${p.partners.map((x) => `<div class="bc ${x.wide ? 's6' : 's2'} partner"><div class="bc-row"><p class="partner-name">${f(x.name)}</p><span class="status t-${x.tone}"><i class="dot${x.status === 'Live' ? ' mo-breathe' : ''}"></i>${f(x.status)}</span></div><p class="mono dim">${f(x.role)}${x.fig === 'contractLive' ? ` · <b id="net-count">${esc(F.groups.value)}</b> groups <span id="net-count-note">(recorded)</span>` : ''}</p><p class="bc-text bc-end">${f(x.d)}</p></div>`).join('\n          ')}
         </div>
       </div>
     </div>
@@ -366,6 +366,7 @@ function trust(f) {
         <div><h3 class="bc-title">${f(c.t)}</h3><p class="bc-text">${f(c.d)}</p><p class="mono dim">${f(c.e)}</p></div>
       </article>
     </div>
+    <p class="fine limit-note">${f(t.note)}</p>
   </div>
 </section>`;
 }
@@ -373,7 +374,7 @@ function trust(f) {
 // ------------------------------------------------------------------ 10 try it
 function tryIt(f) {
   const t = HOME.tryIt;
-  const card = (c, i) => `<article class="bc ${i === 2 ? 'bc-raised ' : ''}s2 mo-rise" style="--i: ${i}"><h3 class="bc-title">${f(c.t)}</h3><p class="bc-text">${f(c.d)}</p>${c.cmd ? `<div class="cmd"><code>${esc(c.cmd)}</code><button class="copy" type="button" data-copy="${esc(c.cmd)}">Copy</button></div>` : ''}${c.link ? `<p class="bc-end"><a href="${c.link.href}"${ext(c.link.href)}>${f(c.link.t)}</a></p>` : ''}${c.live ? '<ul class="recent" id="recent"><li>Reading…</li></ul>' : ''}</article>`;
+  const card = (c, i) => `<article class="bc ${i === 2 ? 'bc-raised ' : ''}s2 mo-rise" style="--i: ${i}"><h3 class="bc-title">${f(c.t)}</h3><p class="bc-text">${f(c.d)}</p>${c.cmd ? `<div class="cmd"><code>${esc(c.cmd)}</code><button class="copy" type="button" data-copy="${esc(c.cmd)}">Copy</button></div>` : ''}${c.link ? `<p class="bc-end"><a href="${c.link.href}"${ext(c.link.href)}>${f(c.link.t)}</a></p>` : ''}${c.live ? '<ul class="recent" id="recent"><li>Not read yet</li></ul>' : ''}</article>`;
   return `
 <section class="section bs" id="try" aria-labelledby="try-title">
   <div class="wrap">${head('try', t, f)}
