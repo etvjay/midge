@@ -430,6 +430,7 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
   .scene-wide { display: none !important; }
   .scene-narrow { display: block !important; }
   .b-strip { grid-auto-flow: row; }
+  .b-scene { padding-inline: 0; } /* the narrow scene gets the full card width: 12-unit labels render at 11 px or more on a 390 px phone */
 }
 
 /* ---------- proof: the dots are static HTML (visible without JavaScript); the lens names what is public and what stayed private ---------- */

@@ -31,7 +31,7 @@ Two ramps from one tinted neutral (a cool green-grey), one accent per ramp, and 
 |---|---|---|
 | `--paper` | `#eef0ec` | Light page background |
 | `--card` | `#f7f8f5` | Raised surface on the light page, alternate section background |
-| `--raised` | `#e3e6e0` | Inset control track (the room switch) |
+| `--raised` | `#e3e6e0` | Inset control track (no component uses it since the 2026-11 card rebuild) |
 | `--ink` | `#15181a` | Primary text |
 | `--ink-2` | `#4a5250` | Secondary text, body copy in cards |
 | `--ink-3` | `#5f6764` | Muted text, captions, kickers |
@@ -109,14 +109,26 @@ One easing curve for movement, one press curve, one sampled spring for release.
 | Kicker | decodes from hex characters to the label in 700 ms (the signature) |
 | Phone menu | enters with fade and 8px rise in 240 ms; exits with a 140 ms fade |
 | Section jump | 220 ms crossfade with View Transitions where supported; a normal jump otherwise |
-| Steps rail | fills with reading progress through the three chapters; markers turn on at each step |
 | Hero image | drifts at most 20px with scroll |
 | Live 3D arrival | crossfades in over 600 ms on its first drawn frame |
-| Line drawings | stroke draws in over 1400 ms (faint edges 240 ms later); numbered markers pop in on the spring after 900 ms |
+| Card scene | one 7 s loop per scene, in CSS on static SVG; restarts when its tab is chosen; paused while off screen; tabs never advance on their own |
+
+**Card scene classes** (all on the same 7 s loop, prefixed so they never meet page classes):
+
+| Class | What moves | End state under reduced motion |
+|---|---|---|
+| `a-tr`, `a-tr2` | a dot travels its path (CSS `offset-path`), the second one later | hidden: the lines themselves say where things go |
+| `a-late`, `a-later` | the result fades in after the travel | shown |
+| `a-dim` | something fades back (a public bid once the room hides it) | dimmed |
+| `a-leave` | the room shrinks away; a dashed outline stays where it was | gone, outline shown |
+| `a-fill` | a bar fills (a share, a cap) | full |
+| `a-draw` | a strike line draws across a refused step | drawn |
+
+Every class has an end state in `@media (prefers-reduced-motion: reduce)`; `tests/site-cards.test.js` checks that none is missing.
 
 **Transitions name their properties** (`transform`, `opacity`, `background-color`, `border-color`, `color`, `clip-path`). Never `transition: all`, never width/height/top/left.
 
-**Reduced motion** (`prefers-reduced-motion: reduce`): no transforms, no scroll-linked effects, no magnet, no word splitting, drawings appear fully drawn, the menu has no animation, the canvas stages draw one still frame each, and the three.js module is never downloaded.
+**Reduced motion** (`prefers-reduced-motion: reduce`): no transforms, no scroll-linked effects, no magnet, no word splitting, card scenes show their end state, the footer field is drawn once, the menu has no animation, and the three.js module is never downloaded.
 
 ## 7. Components
 
@@ -127,18 +139,18 @@ Each lives in `site/index.html` (markup), `site/styles.css` (style) and `site/ma
 | **Header and nav** | Brand, section links, one button | Dark and translucent over dark zones, light and blurred over the page (`.on-light`, switched by scroll position). Nav links 32px tall; under 900px they collapse into a Menu button with 44px rows. The header button stays outlined while the hero is on screen so the hero's button is the only filled one. |
 | **Buttons** | `.btn-light` (filled, the primary on dark), `.btn-ghost-dark` (outlined), `.btn-head`, `.btn-sm`, `.btn-magnet` | 48px (36px small), radius 8, one primary per screen. Busy state: `aria-busy` and a label change ("Checking…"); done state: a lake border. |
 | **Card / mini** | A unit of content on the light page | 16px radius, 8px padding, text inset 16px; a stage inside sits at radius 8. |
-| **Stage** | A dark frame that plays one scene | `.stage` + size (`-xs` 4:3, `-sm` 16:10, `-md` 16:9, `-lg` 4:3, `-xl` 5:4) with a `<canvas data-scene>`; wrapped in `.stage-fig` with a mono `.stage-cap` caption below (never on top of the scene). |
-| **Chapter** | One step of "How it works" | Plate, step label ("1 · The room"), title, one or two short paragraphs; the stage on the other side. |
-| **Plate** | A rendered object that opens a chapter | WebP with alpha from Cycles, 280px wide, radial mask so the shadow fades into the page. |
-| **Room switch** | Choosing between the two ways the room runs | A segmented control whose highlight is one element moved with `clip-path` on the spring (nothing is scaled, corners stay round). Pinning a choice holds the stage on it; choosing it again releases it. |
-| **Steps rail** | Where you are in the three steps | A 1px line beside the chapters that fills with scroll; numbered markers. Hidden under 1360px. |
-| **Drawing** | A technical line drawing of one piece | Inline SVG from Blender, strong strokes in `--lake` where the key points, faint strokes muted; numbered markers on the drawing and a numbered key in the caption (no floating labels). |
-| **Agent console** | A recorded run, replayed as text | Mono 12px on `#0b0f10`; colour by role: input `--glow`, attempt `--d-1`, refused `--deny`, allowed `--d-lake`, notes `--d-3`. Types out once when it comes into view. |
-| **Panel and check list** | A live check the reader runs | Dark panel, a list of rows with a status pip, label, detail in mono, and Pass/Fail. Results come from the reader's own browser. |
-| **Proof grid** | Every recorded transaction | One 24px (minimum) square per real transaction, coloured by kind, each a link to the explorer with its own accessible name; a skip link before the grid; a legend in plain words. |
+| **B card** | One section's story, told in two to four steps | `.bcard`: a light card (16px radius, 8px padding) with the tab list on the left (4 of 11 columns) and a dark stage on the right; one column under 900px with the stage below the tabs. Built at build time from `scripts/site-scenes/content.mjs` by `scripts/build-site-cards.mjs`, so the whole card is in the HTML. |
+| **Tabs** | Choosing the step | WAI-ARIA tabs: click, arrows, Home and End, automatic activation; only the chosen tab shows its line of text. Without JavaScript every tab and panel is shown, stacked. Never auto-advanced. |
+| **Stage and scene** | The step, drawn | A dark plate (`--dusk`, a faint grid and radial light behind the room only) holding one `.b-panel` per tab: a mono caption ("scene 01 of 3") and an inline SVG scene in two layouts, wide (600 units) and narrow (360, stacked), switched at 600px. Glass chips: a translucent panel on wide, opaque `#192023` on narrow so lines never show through. Scene text 13/11/12 units wide, 14/12/12 narrow; rendered at 11.3px or more on a 390px phone. |
+| **Fine print** | The exact condition behind a step | One `details.b-fine` per tab under the tab list, closed by default ("+ The fine print"), showing only for the chosen tab; without JavaScript each carries the step's name. |
+| **Figures strip** | Real numbers under the stage | Three cells along the bottom of the stage (stacked on phones): a serif figure and a mono label. Every figure comes from `site/data/proof.json` or a quoted recorded result checked against its source file at build time; no figure is typed in by hand. |
+| **Panel and check list**| **Panel and check list** | A live check the reader runs | Dark panel, a list of rows with a status pip, label, detail in mono, and Pass/Fail. Results come from the reader's own browser. |
+| **Proof grid and lens** | Every recorded transaction | One 24px (minimum) square per real transaction, in the HTML, coloured by kind, each a link to the explorer with its own accessible name; a skip link before the grid; a legend in plain words with counts ("Refused by the rules · 36"). The lens below names what anyone can read for the dot pointed at or focused, and what stayed private for that kind of step; the other dots dim. |
 | **What works today** | The single honest status | Three plain lists on dark: running on testnet, built but not live, next. |
 | **Command block** | Something to run | Dark block, mono 12px, a Copy button that confirms ("Copied"). |
 | **Live chain chip** | Proof the page is reading the chain | A pill with a dot that turns lake when the contract answers: "Contract live · N syndicates · block N". |
+| **FAQ** | Five questions a visitor asks first | A dark card of `details` rows (the first open), a plus that turns to a minus; answers in plain words, each true of the deployed contract. |
+| **Footer** | Where to check and build | A card with the name, one line on what Midge is, the contract and its fingerprint (the recorded one at build time, replaced by the one read from NEAR), and three link columns; a mono legal line below. Behind both, a canvas field of dots, one per recorded transaction, lit in the order they happened, densest at the bottom. |
 
 ## 8. Imagery and 3D
 
@@ -159,11 +171,11 @@ EEVEE does not work on this server (no `libEGL`); use Cycles. The MCP add-on blo
 - One `WebGLRenderer` for the page; its canvas moves into whichever 3D stage is on screen.
 - Loaded after the first paint; models are fetched in parallel at parse time; a frame is yielded between heavy steps; shaders compile with `compileAsync`.
 - Skipped, with a console message saying why, under reduced motion, on software WebGL (SwiftShader, llvmpipe), with Save-Data, or under 4 GB of device memory. `?3d` forces it.
-- The rendered image (hero) or the 2D canvas scene (architecture) is always underneath; the 3D crossfades over it and the fallback returns if the WebGL context is lost.
+- The rendered hero image is always underneath; the 3D crossfades over it and the image returns if the WebGL context is lost.
 - Pixel ratio capped at 1.5 (1 on phones) and at 3 M pixels; nothing renders off screen or in a hidden tab.
 - Labels are DOM text placed from projected 3D points, never text in the GPU.
 
-**2D canvas stages** (`site/main.js`): each scene is a pure function of time, runs only while on screen, and has a `still` time it draws under reduced motion.
+**Card scenes** (`scripts/site-scenes/`): pure functions from a small model to SVG text, run at build time; the browser only plays their CSS. The plates (`plate-*.webp`) and line drawings (`wire-*.svg`) from the earlier page are no longer used by it.
 
 ## 9. Writing
 
@@ -175,26 +187,31 @@ EEVEE does not work on this server (no `libEGL`); use Cycles. The MCP add-on blo
 
 ## 10. Performance and accessibility budgets
 
-| Measure | Budget | Measured (2026-11-05) |
+| Measure | Budget | Measured (2026-11-10, `node scripts/check-site.mjs`, local) |
 |---|---|---|
-| First contentful paint | under 1 s on a warm load | 0.53-0.59 s through the preview tunnel, 0.23 s locally |
-| Critical page weight (HTML, CSS, JS, fonts) | under 150 KB compressed | about 130 KB |
-| Deferred 3D | under 250 KB compressed | 161 KB bundle + 98 KB models |
+| First contentful paint | under 1 s on a warm load | 108-164 ms across 1440/390 × motion/reduced/no JavaScript |
+| Critical page weight (HTML, CSS, JS) | under 150 KB compressed with the fonts | 61 KB gzipped (HTML 44, CSS 9, JS 8) plus the Google fonts, which this rebuild did not change |
+| Deferred 3D | under 250 KB compressed | 161 KB bundle + 98 KB models (measured 2026-11-05) |
 | Hero image | under 80 KB | 36 KB |
-| Contrast | AA for all text | lowest 5.07:1 |
-| Targets | 24px minimum, 32-48px for controls | proof dots 24px, nav 32px, phone menu 44px, buttons 36-48px |
+| Contrast | AA for all text, scene text included | 0 failures in all six runs |
+| Scene text | 11px or more as rendered | 12.9px at 1440, 11.3px at 390 |
+| Targets | 24px minimum, 32-48px for controls | 0 under 24px in all six runs (inline links in sentences exempt) |
+| Console errors | none | none |
 | Horizontal overflow | none at 390px | none |
 
-Checks to run before shipping: the `ux-ui-audit` probes at 1440 and 390 (0 contrast failures, no unnamed or ambiguous links), a reduced-motion pass, a no-WebGL pass, and a phone pass with the menu open and closed.
+`scripts/check-site.mjs` serves `site/` and checks all of the above in Chromium at 1440 and 390 px, with motion, with reduced motion and with JavaScript off, and saves section screenshots; it exits 1 when a budget fails. Both the contrast and the target checks were seen to fail on a deliberately broken link style. Also run before shipping: a no-WebGL pass and a phone pass with the menu open and closed.
 
 ## 11. Files
 
 | Path | What |
 |---|---|
-| `site/index.html`, `site/styles.css`, `site/main.js` | The page, the tokens and components, the behaviour and 2D scenes |
+| `site/index.html`, `site/styles.css`, `site/main.js` | The page, the tokens and components, the behaviour (tabs, proof lens, footer field, live checks) |
 | `site/src/scene3d.js` → `site/scene3d.js` | The three.js moments, source and bundle (`npm run build:site`) |
 | `site/models/`, `site/img/` | GLB models, plates, drawings, hero |
 | `site/data/proof.json` | Real transactions and the security run (`node scripts/build-site-data.mjs`) |
+| `scripts/site-scenes/` | The scene kit, the scenes, the section content and the figures (`kit.mjs`, `scenes.mjs`, `content.mjs`, `figures.mjs`) |
+| `scripts/build-site-cards.mjs` | Writes sections 01 to 05, the proof dots and the FAQ and footer into `site/index.html` (`npm run build:site`) |
+| `scripts/check-site.mjs` | The browser checks in §10 |
 | `scripts/blender/` | Model, render and drawing scripts, and the MCP client |
 | *(not published)* | The direction and decisions behind this system are in a design spec kept on the author's machine |
 | *(not published)* | The research the motion and 3D choices rest on is kept on the author's machine, not in this repository |
