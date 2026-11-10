@@ -25,5 +25,21 @@ export function figures(proof, root) {
     payrollByAddress: { value: '0 of 4', label: 'payees linked across months by address', source: 'docs/lab/PAYROLL_RESULTS.md', quote: 'Payees an observer links across months **by address** | **4 of 4** | **0 of 4**' },
     investCommonDeposit: { value: '0 of 4', label: "backers' amounts recovered with equal deposits", source: 'docs/lab/COMPARISON_RESULTS.md', quote: '**Held** (0 of 4; every escrow is 0.05' },
     hardwareChecks: { value: '12 of 12', label: 'secure-hardware checks passed', source: 'docs/canonical/CURRENT_STATE.md', quote: 'on all 12 checks' },
+    // ---- the bento sections (plan 2026-11-10-site-bento-direction): comparison runs and honest statuses, each tied to its sentence
+    transactions: { value: String(proof.transactions.length), label: 'transactions recorded on testnet', source: 'site/data/proof.json' },
+    organizerVanish: { value: '0%', label: 'members recover if the organizer disappears', source: 'docs/lab/COMPARISON_RESULTS.md', quote: 'members recover **0%**' },
+    organizerBackers: { value: '0.01 to 0.04', label: 'four backers, 0.10 in all', source: 'docs/lab/COMPARISON_RESULTS.md', quote: 'Four backers invest 0.01, 0.02, 0.03 and 0.04 NEAR (0.10 in all)' },
+    organizerTheft: { value: 'nothing stopped it', label: 'the organizer moved the pot where it chose', source: 'docs/lab/COMPARISON_RESULTS.md', quote: 'The organizer moved a 0.04 pot to an account of its choosing and nothing stopped it' },
+    outsideRules: { value: 'none', label: 'payouts outside the rules', source: 'docs/lab/COMPARISON_RESULTS.md', quote: 'no operator can take the pot or pay outside the fixed policy' },
+    modelHost: { value: 'Live', label: 'bids sealed to a NEAR AI Cloud model', source: 'docs/canonical/CURRENT_STATE.md', quote: 'LIVE DEMONSTRATED** | `npm run verify:roost-model`' },
+    phalaHosted: { value: 'Attested, not running now', label: 'our room program on Phala', source: 'docs/canonical/CURRENT_STATE.md', quote: 'no hosted Roost is running now' },
+    chainSignatures: { value: 'One live signature', label: 'addresses on Bitcoin, Ethereum and Solana', source: 'docs/canonical/CURRENT_STATE.md', quote: 'Only the signing is live; no transaction was broadcast on another chain' },
+    intentsAssets: { value: '210', label: 'assets read live through 1Click', source: 'docs/canonical/CURRENT_STATE.md', quote: '210 assets audited live across NEAR, BTC, ETH, SOL' },
+    outlayerModel: { value: 'Not used yet', label: 'OutLayer-style limits, as a model', source: 'docs/canonical/CURRENT_STATE.md', quote: '**TESTED (JS MODEL)**' },
+    agentTools: { value: 'Live', label: 'SDK, API and MCP tools on testnet', source: 'docs/canonical/WHAT_IS_MIDGE.md', quote: 'Every route, SDK method and MCP tool exercised' },
+    simulations: { value: 'Models only', label: 'lending, block trades, shared AI', source: 'docs/canonical/WHAT_IS_MIDGE.md', quote: 'Credit, block trades and compute are simulations in JavaScript' },
+    stuckPayout: { value: '100 blocks', label: 'after which anyone can finish a stuck payout', source: 'docs/WHITEPAPER.md', quote: 'anyone can finish its books after 100 blocks' },
+    twoHostsHardware: { value: 'not on hardware yet', label: 'two hosts signing one room', source: 'docs/WHITEPAPER.md', quote: 'a two-room settlement on hardware were not tested' },
+    contractLive: { value: 'Live', label: 'the contract on NEAR testnet', source: 'docs/canonical/deployments.json', quote: 'c.fly-1793636729.testnet' },
   };
 }
