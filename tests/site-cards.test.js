@@ -73,3 +73,12 @@ test('every scene animation class has a reduced-motion end state in the styleshe
     assert.match(block, new RegExp(`\\.${c}\\b[^{]*\\{[^}]*animation: none`), `${c} has an end state`);
   }
 });
+
+test('the old canvas scenes for sections 01 to 05 are gone, and the tabs are wired', () => {
+  const js = read('site/main.js');
+  assert.doesNotMatch(html, /data-scene=/, 'no canvas scene left in the page');
+  assert.doesNotMatch(js, /class Stage\b/, 'the canvas stage engine is removed');
+  assert.doesNotMatch(js, /kind-switch|\.drawing\b|steps-rail/, 'the room switch, drawings and steps rail are removed');
+  assert.match(js, /\$\$\('\.b-tabs'\)/, 'main.js wires the tab lists');
+  assert.match(html, /<head>[\s\S]*classList\.add\('js'\)[\s\S]*<\/head>/, 'the js class is set before first paint');
+});
