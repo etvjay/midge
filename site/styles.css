@@ -399,7 +399,7 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 @keyframes a-travel2 { 0%, 56% { offset-distance: 0%; opacity: 0; } 60% { opacity: 1; } 82% { offset-distance: 100%; opacity: 1; } 88%, 100% { offset-distance: 100%; opacity: 0; } }
 @keyframes a-late { 0%, 52% { opacity: 0; } 58%, 100% { opacity: 1; } }
 @keyframes a-later { 0%, 80% { opacity: 0; } 86%, 100% { opacity: 1; } }
-@keyframes a-dim { 0%, 34% { opacity: 1; } 42%, 100% { opacity: 0.22; } }
+@keyframes a-dim { 0%, 34% { opacity: 1; } 42%, 100% { opacity: 0.55; } }
 @keyframes a-leave { 0%, 50% { transform: none; opacity: 1; } 72%, 100% { transform: translateX(90px); opacity: 0; } }
 @keyframes a-fill { 0%, 36% { transform: scaleX(0); } 60%, 100% { transform: scaleX(1); } }
 @keyframes a-draw { 0%, 56% { stroke-dashoffset: 120; } 64%, 100% { stroke-dashoffset: 0; } }
@@ -415,20 +415,27 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 @media (prefers-reduced-motion: reduce) {
   .b-scene .a-tr, .b-scene .a-tr2 { animation: none; opacity: 0; }
   .b-scene .a-late, .b-scene .a-later { animation: none; opacity: 1; }
-  .b-scene .a-dim { animation: none; opacity: 0.22; }
-  .b-scene .a-leave { animation: none; opacity: 0; }
+  .b-scene .a-dim { animation: none; opacity: 0.55; }
+  .b-scene .a-leave { animation: none; opacity: 0.55; } /* stays where it was, faded, inside its dashed outline: who held the money is still readable */
   .b-scene .a-fill { animation: none; transform: scaleX(1); }
   .b-scene .a-draw { animation: none; stroke-dashoffset: 0; }
 }
 @media (max-width: 900px) {
   .b-section .sec-head { grid-template-columns: 1fr; }
   .sec-lede { justify-self: start; }
+}
+/* The card keeps one column until the stage beside the tabs is wide enough for the 600-unit scene to render its 11-unit labels at 11 px or more. */
+@media (max-width: 1099px) {
   .bcard { grid-template-columns: 1fr; }
   .b-stage { min-height: 0; }
+  .b-scene .scene-wide { max-width: 760px; justify-self: center; }
+}
+/* Below 720 px the stacked phone layout is used; it is capped so it is not blown up on small tablets. */
+@media (max-width: 719px) {
+  .scene-wide { display: none !important; }
+  .scene-narrow { display: block !important; max-width: 440px; justify-self: center; }
 }
 @media (max-width: 600px) {
-  .scene-wide { display: none !important; }
-  .scene-narrow { display: block !important; }
   .b-strip { grid-auto-flow: row; }
   .b-scene { padding-inline: 0; } /* the narrow scene gets the full card width: 12-unit labels render at 11 px or more on a 390 px phone */
 }
@@ -436,6 +443,8 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 /* ---------- proof: the dots are static HTML (visible without JavaScript); the lens names what is public and what stayed private ---------- */
 .proof-field { margin-top: 20px; border: 1px solid var(--d-line); border-radius: 16px; padding: 20px; background: var(--dusk-card); }
 .proof-field .proof-grid { margin-top: 0; }
+.proof-grid > span { display: block; min-width: 0; } /* the list item; the link inside fills it */
+.proof-grid > span > a { width: 100%; }
 .proof-grid.looking a { opacity: 0.35; }
 .proof-grid.looking a.hot { opacity: 1; }
 .lens { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

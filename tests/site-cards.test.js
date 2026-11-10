@@ -86,7 +86,8 @@ test('the old canvas scenes for sections 01 to 05 are gone, and the tabs are wir
 
 test('the proof dots are in the static HTML, one per transaction, each linking to NearBlocks, with the lens and honest labels', () => {
   const h = html.match(/<section[^>]*id="proof"[\s\S]*?<\/section>/)[0];
-  const dots = [...h.matchAll(/<a role="listitem" href="https:\/\/testnet\.nearblocks\.io\/txns\/([1-9A-HJ-NP-Za-km-z]{43,44})"/g)].map((m) => m[1]);
+  const dots = [...h.matchAll(/<span role="listitem"><a href="https:\/\/testnet\.nearblocks\.io\/txns\/([1-9A-HJ-NP-Za-km-z]{43,44})"/g)].map((m) => m[1]);
+  assert.doesNotMatch(h, /<a [^>]*role=/, 'a dot keeps the link role (a role on the <a> would replace it)');
   assert.equal(dots.length, proof.transactions.length, 'one dot per recorded transaction');
   assert.deepEqual(dots, proof.transactions.map((t) => t.hash), 'in the order of the data');
   assert.match(h, /id="lens-pub"/); assert.match(h, /id="lens-priv"/);
@@ -122,4 +123,13 @@ test("the footer's recorded fingerprint is the last recorded deployment", () => 
   const deployments = JSON.parse(read('docs/canonical/deployments.json')).deployments;
   const live = deployments[deployments.length - 1].codeHash;
   assert.match(footerHtml(), new RegExp(`id="foot-live"[\\s\\S]*${live.slice(0, 8)}…[\\s\\S]*recorded`), 'the build-time line names the last deployment and says it is recorded');
+});
+
+test('if main.js fails to load or never starts the tabs, the page falls back to everything stacked (fine print included)', () => {
+  assert.match(html, /<script src="main\.js" type="module" onerror="document\.documentElement\.classList\.remove\('js'\)"><\/script>/, 'a failed load removes the js class at once');
+  const head = html.match(/<script>(document\.documentElement\.classList\.add\('js'\)[^<]*)<\/script>/);
+  assert.ok(head, 'the head script sets the js class');
+  assert.match(head[1], /setTimeout\(function \(\) \{ if \(!document\.documentElement\.hasAttribute\('data-tabs'\)\) document\.documentElement\.classList\.remove\('js'\); \}, 4000\)/, 'a timer removes it if the tabs never start');
+  const js = read('site/main.js');
+  assert.match(js, /document\.documentElement\.classList\.add\('js'\); document\.documentElement\.dataset\.tabs = 'on';/, 'main.js marks the tabs as started (and restores the class if the timer fired first)');
 });

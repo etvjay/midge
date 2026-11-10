@@ -65,6 +65,7 @@ function layout(m, view) {
     if (m.hubAfter) body += label(hubCx, hub.y + hub.h + 20, m.hubAfter.text, { size: t.note, color: m.hubAfter.color || C.d2, anchor: 'middle', cls: m.hubAfter.cls });
     bottom = H;
     if (m.note) { const ls = wrap(m.note.text, 72); ls.forEach((l, i) => { body += label(W / 2, H + 4 + i * 16, l, { size: t.note, color: C.d3, anchor: 'middle', cls: m.note.cls }); }); bottom = H + 4 + ls.length * 16; }
+    if (m.example) { body += label(W / 2, bottom + 12, 'Example amounts', { size: t.note, color: C.d3, anchor: 'middle' }); bottom += 22; }
     return frame(body, m.aria, view, bottom + 8);
   }
 
@@ -97,6 +98,7 @@ function layout(m, view) {
   body = hub.svg + body + placedIn.map((p) => p.svg).join('');
   bottom = outs.length ? y - 12 : hub.y + hub.h + afterGap;
   if (m.note) { const ls = wrap(m.note.text, 40); ls.forEach((l, i) => { body += label(cx, bottom + 30 + i * 18, l, { size: t.note, color: C.d3, anchor: 'middle', cls: m.note.cls }); }); bottom += 30 + (ls.length - 1) * 18 + 6; }
+  if (m.example) { body += label(cx, bottom + 24, 'Example amounts', { size: t.note, color: C.d3, anchor: 'middle' }); bottom += 30; }
   return frame(body, m.aria, view, bottom + 16);
 }
 
@@ -133,10 +135,10 @@ export function makeScenes(attempts = []) {
       inputs: [{ t: 'Member A bids 1,250', s: 'visible to everyone' }, { t: 'Member B bids 900', s: 'visible to everyone' }, { t: 'Member C bids 1,100', s: 'visible to everyone' }],
       inFlow: { color: C.deny }, hub: { kind: 'glass', t: 'A watcher', lines: ['reads every bid'], stroke: 'rgba(224,103,90,0.5)' },
       outputs: [{ t: 'Bids 1,260 first', s: 'and wins the lot', stroke: C.deny, color: C.deny, cls: 'a-late' }],
-      note: { text: 'Everyone sees the bids before they land', cls: 'a-later' } }),
+      note: { text: 'Everyone sees the bids before they land', cls: 'a-later' }, example: true }),
     organizer: () => both({ aria: 'Backers send money to an organizer, who leaves with it',
-      inputs: [{ t: 'Backer 1', s: 'sends 0.01' }, { t: 'Backer 2', s: 'sends 0.02' }, { t: 'Backer 3', s: 'sends 0.03' }],
-      inFlow: { color: C.glow }, hub: { kind: 'glass', t: 'The organizer', lines: ['holds 0.06'], cls: 'a-leave' },
+      inputs: [1, 2, 3, 4].map((n) => ({ t: `Backer ${n}`, s: `sends 0.0${n}` })), // the recorded run: 0.01 to 0.04, 0.10 in all
+      inFlow: { color: C.glow }, hub: { kind: 'glass', t: 'The organizer', lines: ['holds 0.10'], cls: 'a-leave' },
       hubAfter: { text: 'they leave; the money goes too', color: C.deny, cls: 'a-later' },
       note: { text: 'One person holds everything' } }),
     blackbox: () => both({ aria: 'Secure hardware that can pay anything pays a thief after one bug',
@@ -147,17 +149,17 @@ export function makeScenes(attempts = []) {
     room: () => both({ aria: 'Sealed bids go into the room; only the total comes out',
       inputs: members(4, 'sealed bid'), hub: { kind: 'room', t: 'The room', lines: ['opens the bids', 'in secure hardware'] },
       outputs: [{ t: 'Total 4.90', s: 'only this comes out', stroke: C.lake, cls: 'a-late' }],
-      note: { text: 'Example amounts' } }),
+      example: true }),
     rules: () => both({ aria: 'A payout inside the rules is paid; a payout to a thief is refused',
       inputs: [{ t: 'The room', s: 'proposes a payout' }],
       hub: { kind: 'glass', t: 'The rules, on NEAR', lines: ['pay only: alice, bob', 'at most 20% per window', 'until the deadline'] },
       outputs: [{ t: 'alice 0.40', s: 'paid', stroke: C.lake, flow: C.lake }, { t: 'a thief', s: 'refused', stroke: C.deny, color: C.deny, subColor: C.deny, strike: true, flow: C.deny }],
-      note: { text: 'Even if the room approves it, a payout outside the rules is refused', cls: 'a-later' } }),
+      note: { text: 'Even if the room approves it, a payout outside the rules is refused', cls: 'a-later' }, example: true }),
     exit: () => both({ aria: "The room stops, the exit timer runs out, and each member takes their own share back",
       top: { t: 'The room', s: 'decides in private', cls: 'a-dim' }, hubAfter: { text: 'room stopped', color: C.deny, cls: 'a-late' },
       hub: { kind: 'glass', t: 'Held by the contract', timer: true, minW: 200 },
       outputs: [{ t: 'Member 1', flow: C.glow, after: '+0.02' }, { t: 'Member 2', flow: C.glow, after: '+0.02' }, { t: 'Member 3', flow: C.glow, after: '+0.02' }].map((o) => ({ ...o, s: 'takes their share' })),
-      note: { text: 'No one has to agree. Nobody else\'s share is touched', cls: 'a-later' } }),
+      note: { text: 'No one has to agree. Nobody else\'s share is touched', cls: 'a-later' }, example: true }),
     auction: () => both({ aria: 'Sealed bids; the room picks the winner and the losing bids stay private',
       inputs: ['a', 'b', 'c', 's'].map((n) => ({ t: `Bidder ${n}`, s: 'sealed bid', lock: true })), hub: { kind: 'room', t: 'The room', lines: ['second price'] },
       outputs: [{ t: 'Winner: a', s: 'pays the second price', stroke: C.lake, cls: 'a-late' }, { t: 'Losing bids', s: 'never published', cls: 'a-late' }] }),
@@ -168,7 +170,7 @@ export function makeScenes(attempts = []) {
     payroll: () => both({ aria: 'One pay run pays one-time addresses; who owns each stays private',
       inputs: [{ t: 'The pay run', s: 'one pool' }], hub: { kind: 'room', t: 'The room', lines: ['knows who is who'] },
       outputs: ['7f3a…', 'c21e…', '9b04…'].map((a) => ({ t: `address ${a}`, s: 'paid 0.03, one time', flow: C.glow })),
-      note: { text: 'Strangers see amounts, not who each address belongs to', cls: 'a-later' } }),
+      note: { text: 'Strangers see amounts, not who each address belongs to', cls: 'a-later' }, example: true }),
     invest: () => both({ aria: "Four equal deposits; the room pays the founder; each backer's amount stays private",
       inputs: members(4, 'deposits 0.05', 'Backer'), hub: { kind: 'room', t: 'The room', lines: ['sealed amounts'] },
       outputs: [{ t: 'The founder', s: 'receives 0.10', stroke: C.lake, cls: 'a-late' }],

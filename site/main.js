@@ -57,6 +57,8 @@ for (const list of $$('.b-tabs')) {
   select(0);
   if (stage) new IntersectionObserver(([e]) => stage.classList.toggle('paused', !e.isIntersecting)).observe(stage);
 }
+// The tabs are running: keep the js class (the head script's fallback timer removes it if this line is never reached).
+document.documentElement.classList.add('js'); document.documentElement.dataset.tabs = 'on';
 
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); if (e.target.__onIn) e.target.__onIn(); } }), { threshold: 0.15 });
 for (const el of $$('.section .title, .section .lede-sm, .card, .mini, .chapter, .arch, .split, .answer, .table-wrap')) { el.classList.add('reveal'); io.observe(el); }
@@ -260,9 +262,12 @@ if (!REDUCE && !LIGHT) {
         ctx.fillStyle = `rgba(${col},${a.toFixed(3)})`; ctx.beginPath(); ctx.arc(x * step + step / 2, y * step + step / 2, 0.6 + base * 2.4, 0, 6.283); ctx.fill();
       }
     }
-    if (!REDUCE && visible) requestAnimationFrame(draw);
   };
-  new IntersectionObserver(([e]) => { const was = visible; visible = e.isIntersecting; if (visible && !was && !REDUCE) requestAnimationFrame(draw); }).observe(host);
-  addEventListener('resize', () => { size(); draw(performance.now()); });
+  // One animation loop at most: a single frame id, started when the footer comes on screen, stopped when it leaves.
+  let raf = 0;
+  const loop = (now) => { raf = 0; if (!visible) return; draw(now); raf = requestAnimationFrame(loop); };
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && !raf && !REDUCE) raf = requestAnimationFrame(loop); }).observe(host);
+  // The footer changes size with the window and when an FAQ answer opens: resize the bitmap to match, then redraw once.
+  new ResizeObserver(() => { size(); draw(performance.now()); }).observe(host);
   size(); draw(performance.now());
 })();

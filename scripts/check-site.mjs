@@ -21,7 +21,8 @@ const SHOTS = path.join(os.homedir(), 'shots-midge');
 const require = createRequire(import.meta.url);
 const pwPath = process.env.PLAYWRIGHT_CORE || (() => { try { return require.resolve('playwright-core'); } catch { return '/home/ubuntu/tools/shots/node_modules/playwright-core'; } })();
 const { chromium } = require(pwPath);
-const BUDGET = { minSceneText: 11, minTarget: 24, firstPaintMs: 1000 };
+const BUDGET = { minSceneText: 11, minTarget: 24, firstPaintMs: 1000, fieldDrawsPerSec: 75 };
+const SWEEP = [601, 640, 700, 760, 900, 901, 960, 1024, 1100, 1180, 1280]; // widths between the two main ones, where the card layout changes
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.avif': 'image/avif', '.glb': 'model/gltf-binary', '.woff2': 'font/woff2' };
 const server = http.createServer((req, res) => {
@@ -80,10 +81,15 @@ function measure() {
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/snap/bin/chromium', args: ['--no-sandbox'] });
 const rows = []; let failed = false;
 for (const width of [1440, 390]) {
-  for (const mode of ['motion', 'reduce', 'nojs']) {
+  for (const mode of width === 390 ? ['motion', 'reduce', 'nojs', 'nomain'] : ['motion', 'reduce', 'nojs']) {
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(`${width}:${mode}`)) continue; // e.g. ONLY=390:nojs
     const ctx = await browser.newContext({ viewport: { width, height: width > 600 ? 900 : 844 }, reducedMotion: mode === 'reduce' ? 'reduce' : 'no-preference', javaScriptEnabled: mode !== 'nojs' });
     const page = await ctx.newPage(); const errors = [];
+    if (mode === 'nomain') await page.route('**/main.js', (r) => r.abort()); // main.js fails to load: the page must fall back to everything stacked
+    await page.addInitScript(() => { // count footer-field draws (one clearRect per frame)
+      window.__fieldDraws = 0; const clear = CanvasRenderingContext2D.prototype.clearRect;
+      CanvasRenderingContext2D.prototype.clearRect = function (...a) { if (this.canvas.classList.contains('end-field')) window.__fieldDraws++; return clear.apply(this, a); };
+    });
     page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     await page.goto(URL0, { waitUntil: 'networkidle' });
     await page.goto(URL0, { waitUntil: 'networkidle' }); // warm load: what a returning visitor and the budget measure
@@ -97,8 +103,34 @@ for (const width of [1440, 390]) {
       await el.screenshot({ path: path.join(SHOTS, `check-${width}-${mode}-${id}.png`) }).catch(() => {});
     }
     const m = await page.evaluate(measure);
+    if (mode === 'nomain') errors.splice(0, errors.length, ...errors.filter((e) => !/main\.js|ERR_FAILED/.test(e))); // the blocked load itself is expected
+    const extra = [];
+    if (mode === 'nomain') {
+      const hidden = await page.evaluate(() => [...document.querySelectorAll('.b-fine, .b-tab .b')].filter((e) => getComputedStyle(e).display === 'none').length);
+      if (hidden) extra.push(`${hidden} fine prints or tab sentences hidden with main.js blocked`);
+    }
+    if (mode === 'motion' && width === 1440) {
+      const rate = () => page.evaluate(() => new Promise((go) => { const a = window.__fieldDraws; setTimeout(() => go(window.__fieldDraws - a), 1000); }));
+      const before = await rate();
+      await page.evaluate(() => { for (let i = 0; i < 10; i++) dispatchEvent(new Event('resize')); });
+      const after = await rate();
+      if (after > BUDGET.fieldDrawsPerSec) extra.push(`footer field ${before} draws/s, ${after} after 10 resize events`);
+      await page.evaluate(() => document.querySelectorAll('.faq-card details').forEach((d) => { d.open = true; }));
+      await page.waitForTimeout(300);
+      const fit = await page.evaluate(() => { const c = document.querySelector('.end-field'); return c ? Math.abs(c.height / Math.min(2, devicePixelRatio || 1) - c.clientHeight) : 0; });
+      if (fit > 2) extra.push(`footer field bitmap is ${fit}px off its box after the FAQ opens`);
+      const swept = [];
+      for (const w of SWEEP) {
+        await page.setViewportSize({ width: w, height: 900 }); await page.waitForTimeout(120);
+        const s = await page.evaluate(measure); swept.push(`${w}:${s.minScene}`);
+        if (s.minScene === null) extra.push(`no scene text measured at ${w}px wide`);
+        if (s.minScene !== null && s.minScene < BUDGET.minSceneText) extra.push(`scene text ${s.minScene}px at ${w}px wide (${s.minSceneAt})`);
+      }
+      console.log(`  smallest scene text by width (px): ${swept.join('  ')}`);
+    }
+    for (const x of extra) console.log(`  ${width} ${mode} ${x}`);
     const row = { width, mode, errors: errors.length, overflow: m.overflow, minSceneText: m.minScene, contrastFails: m.contrast.length, smallTargets: m.small.length, firstPaintMs: paint };
-    const bad = [errors.length && 'errors', m.overflow > 0 && 'overflow', m.minScene !== null && m.minScene < BUDGET.minSceneText && 'scene text', m.contrast.length && 'contrast', m.small.length && 'targets', (paint === null || paint > BUDGET.firstPaintMs) && 'first paint'].filter(Boolean);
+    const bad = [errors.length && 'errors', m.overflow > 0 && 'overflow', m.minScene !== null && m.minScene < BUDGET.minSceneText && 'scene text', m.contrast.length && 'contrast', m.small.length && 'targets', (paint === null || paint > BUDGET.firstPaintMs) && 'first paint', extra.length && 'see notes'].filter(Boolean);
     rows.push({ ...row, ok: bad.length ? `NO (${bad.join(', ')})` : 'yes' }); if (bad.length) failed = true;
     for (const [k, list] of [['error', errors], ['contrast', m.contrast], ['target', m.small]]) for (const x of list.slice(0, 8)) console.log(`  ${width} ${mode} ${k}: ${x}`);
     if (m.minScene !== null && m.minScene < BUDGET.minSceneText) console.log(`  ${width} ${mode} smallest scene text ${m.minScene}px at ${m.minSceneAt}`);
@@ -107,6 +139,6 @@ for (const width of [1440, 390]) {
 }
 await browser.close(); server.close();
 console.table(rows);
-console.log(`budgets: scene text >= ${BUDGET.minSceneText}px, targets >= ${BUDGET.minTarget}px, contrast >= 4.5:1 (3:1 large), first paint <= ${BUDGET.firstPaintMs} ms, 0 errors, 0 overflow`);
+console.log(`budgets: scene text >= ${BUDGET.minSceneText}px (also swept at ${SWEEP.join(', ')}), footer field <= ${BUDGET.fieldDrawsPerSec} draws/s after resizes, nothing hidden with main.js blocked, targets >= ${BUDGET.minTarget}px, contrast >= 4.5:1 (3:1 large), first paint <= ${BUDGET.firstPaintMs} ms, 0 errors, 0 overflow`);
 console.log(`screenshots: ${SHOTS}/check-*.png`);
 process.exit(failed ? 1 : 0);

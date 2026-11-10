@@ -58,7 +58,7 @@ const shortHash = (h) => `${h.slice(0, 10)}…${h.slice(-6)}`;
 function proofBlock(proof) {
   const txs = proof.transactions; const runs = new Set(txs.map((t) => t.run)).size;
   const legend = Object.keys(KIND_NAMES).filter((k) => proof.counts[k]).map((k) => `<span><i class="k-${k}"></i>${KIND_NAMES[k]} · ${proof.counts[k]}</span>`).join('');
-  const dots = txs.map((t, i) => `<a role="listitem" href="https://testnet.nearblocks.io/txns/${t.hash}" target="_blank" rel="noopener" class="k-${t.kind}" data-i="${i}" aria-label="${esc(`Transaction ${i + 1} of ${txs.length}, ${KIND_NAMES[t.kind]}: ${plainTx(t.label)}${t.error ? ', refused' : ''}, ${shortHash(t.hash)}. Opens NearBlocks.`)}"></a>`).join('');
+  const dots = txs.map((t, i) => `<span role="listitem"><a href="https://testnet.nearblocks.io/txns/${t.hash}" target="_blank" rel="noopener" class="k-${t.kind}" data-i="${i}" aria-label="${esc(`Transaction ${i + 1} of ${txs.length}, ${KIND_NAMES[t.kind]}: ${plainTx(t.label)}${t.error ? ', refused' : ''}, ${shortHash(t.hash)}. Opens NearBlocks.`)}"></a></span>`).join('');
   const data = esc(JSON.stringify(txs.map((t) => [t.kind, plainTx(t.label), shortHash(t.hash)])));
   return `
     <p class="lede-dark">From our test runs on NEAR testnet. Point at a dot to see what anyone can read on the chain, and what stayed private. Open it on NearBlocks to check it yourself.</p>

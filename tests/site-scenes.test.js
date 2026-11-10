@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { SCENES } from '../scripts/site-scenes/scenes.mjs';
 import { ANIM_CLASSES, BANNED } from '../scripts/site-scenes/kit.mjs';
 
-const ARGS = { agent: [0, 1, 2, 3], layers: [0, 1, 2] };
+const ARGS = { agent: [0, 1, 2, 3, 4], layers: [0, 1, 2] }; // the agent card renders attempts 0, 1, 2 and 4
 const KEYS = ['public', 'organizer', 'blackbox', 'room', 'rules', 'exit', 'auction', 'vote', 'payroll', 'invest', 'agent', 'layers'];
 function* all() { for (const k of KEYS) for (const a of ARGS[k] || [undefined]) { const s = SCENES[k](a); yield [`${k}${a === undefined ? '' : `(${a})`}`, s]; } }
 const viewOf = (svg) => svg.match(/viewBox="0 0 (\d+) (\d+)"/).slice(1).map(Number);
@@ -54,7 +54,32 @@ test('no banned word appears in any scene', () => {
   }
 });
 
-test('example amounts are labelled', () => {
-  assert.match(SCENES.room().wide, /Example amounts/);
-  assert.match(SCENES.room().narrow, /Example amounts/);
+test('every amount in a scene is either recorded (found in its source) or labelled "Example amounts"', async () => {
+  const fs = await import('node:fs');
+  const src = { lab: fs.readFileSync(new URL('../docs/lab/COMPARISON_RESULTS.md', import.meta.url), 'utf8'), proof: fs.readFileSync(new URL('../site/data/proof.json', import.meta.url), 'utf8') };
+  const RECORDED = { organizer: 'lab', blackbox: 'lab', invest: 'lab', agent: 'proof' };
+  for (const [name, s] of all()) for (const view of ['wide', 'narrow']) {
+    const text = s[view].replace(/<[^>]+>/g, ' ');
+    const amounts = text.match(/\b\d+\.\d+\b|\b\d{1,3}(?:,\d{3})+\b/g) || [];
+    if (!amounts.length) continue;
+    const from = RECORDED[name.replace(/\(.*/, '')];
+    if (from) for (const a of amounts) assert.ok(src[from].includes(a), `${name} ${view}: ${a} is not in its source`);
+    else assert.match(text, /Example amounts/, `${name} ${view} shows ${amounts.join(', ')} without "Example amounts"`);
+  }
+});
+
+test('under reduced motion, nothing that carries text ends invisible or too faint to read', async () => {
+  const fs = await import('node:fs');
+  const css = fs.readFileSync(new URL('../site/styles.css', import.meta.url), 'utf8');
+  const block = css.slice(css.indexOf('.b-scene .a-tr, .b-scene .a-tr2 { animation: none'), css.indexOf('}\n}', css.indexOf('.b-scene .a-tr, .b-scene .a-tr2 { animation: none')));
+  const textClasses = new Set();
+  for (const [, s] of all()) for (const view of ['wide', 'narrow']) {
+    for (const m of s[view].matchAll(/<g [^>]*class="(a-[a-z0-9]+)"[^>]*>([\s\S]*?)<\/g>/g)) if (/<text/.test(m[2])) textClasses.add(m[1]);
+    for (const m of s[view].matchAll(/<text[^>]*class="[^"]*\b(a-[a-z0-9]+)/g)) textClasses.add(m[1]);
+  }
+  assert.ok(textClasses.has('a-leave') && textClasses.has('a-dim'), `found ${[...textClasses]}`);
+  for (const c of textClasses) {
+    const rule = block.match(new RegExp(`\\.${c}\\b[^{]*\\{([^}]*)\\}`)); assert.ok(rule, `${c} has a reduced-motion rule`);
+    const op = rule[1].match(/opacity:\s*([\d.]+)/); if (op) assert.ok(+op[1] >= 0.55, `${c} ends at opacity ${op[1]} (text needs 0.55 or more to stay readable)`);
+  }
 });

@@ -119,12 +119,12 @@ One easing curve for movement, one press curve, one sampled spring for release.
 |---|---|---|
 | `a-tr`, `a-tr2` | a dot travels its path (CSS `offset-path`), the second one later | hidden: the lines themselves say where things go |
 | `a-late`, `a-later` | the result fades in after the travel | shown |
-| `a-dim` | something fades back (a public bid once the room hides it) | dimmed |
-| `a-leave` | the room shrinks away; a dashed outline stays where it was | gone, outline shown |
-| `a-fill` | a bar fills (a share, a cap) | full |
+| `a-dim` | something fades back to 0.55 (the room, once it stops) | at 0.55, still readable |
+| `a-leave` | something slides 90 units right and fades out (the organizer leaving with the money); a red dashed outline stays where it was | in place at 0.55 inside its outline |
+| `a-fill` | a bar fills (the exit timer) | full |
 | `a-draw` | a strike line draws across a refused step | drawn |
 
-Every class has an end state in `@media (prefers-reduced-motion: reduce)`; `tests/site-cards.test.js` checks that none is missing.
+Every class has an end state in `@media (prefers-reduced-motion: reduce)`; `tests/site-cards.test.js` checks that none is missing, and `tests/site-scenes.test.js` checks that no class holding text ends below 0.55 (where `--d-1` on the stage still measures about 5:1).
 
 **Transitions name their properties** (`transform`, `opacity`, `background-color`, `border-color`, `color`, `clip-path`). Never `transition: all`, never width/height/top/left.
 
@@ -139,12 +139,12 @@ Each lives in `site/index.html` (markup), `site/styles.css` (style) and `site/ma
 | **Header and nav** | Brand, section links, one button | Dark and translucent over dark zones, light and blurred over the page (`.on-light`, switched by scroll position). Nav links 32px tall; under 900px they collapse into a Menu button with 44px rows. The header button stays outlined while the hero is on screen so the hero's button is the only filled one. |
 | **Buttons** | `.btn-light` (filled, the primary on dark), `.btn-ghost-dark` (outlined), `.btn-head`, `.btn-sm`, `.btn-magnet` | 48px (36px small), radius 8, one primary per screen. Busy state: `aria-busy` and a label change ("Checking…"); done state: a lake border. |
 | **Card / mini** | A unit of content on the light page | 16px radius, 8px padding, text inset 16px; a stage inside sits at radius 8. |
-| **B card** | One section's story, told in two to four steps | `.bcard`: a light card (16px radius, 8px padding) with the tab list on the left (4 of 11 columns) and a dark stage on the right; one column under 900px with the stage below the tabs. Built at build time from `scripts/site-scenes/content.mjs` by `scripts/build-site-cards.mjs`, so the whole card is in the HTML. |
+| **B card** | One section's story, told in two to four steps | `.bcard`: a light card (16px radius, 8px padding) with the tab list on the left (4 of 11 columns) and a dark stage on the right; one column under 1100px with the stage below the tabs (until then the stage beside the tabs is too narrow for 11 px scene text). Built at build time from `scripts/site-scenes/content.mjs` by `scripts/build-site-cards.mjs`, so the whole card is in the HTML. |
 | **Tabs** | Choosing the step | WAI-ARIA tabs: click, arrows, Home and End, automatic activation; only the chosen tab shows its line of text. Without JavaScript every tab and panel is shown, stacked. Never auto-advanced. |
-| **Stage and scene** | The step, drawn | A dark plate (`--dusk`, a faint grid and radial light behind the room only) holding one `.b-panel` per tab: a mono caption ("scene 01 of 3") and an inline SVG scene in two layouts, wide (600 units) and narrow (360, stacked), switched at 600px. Glass chips: a translucent panel on wide, opaque `#192023` on narrow so lines never show through. Scene text 13/11/12 units wide, 14/12/12 narrow; rendered at 11.3px or more on a 390px phone. |
+| **Stage and scene** | The step, drawn | A dark plate (`--dusk`, a faint grid and radial light behind the room only) holding one `.b-panel` per tab: a mono caption ("scene 01 of 3") and an inline SVG scene in two layouts, wide (600 units) and narrow (360, stacked), switched at 720px (the narrow one capped at 440px, the wide one at 760px). Every amount in a scene is either from a recorded run (checked against its source by a test) or labelled "Example amounts". Glass chips: a translucent panel on wide, opaque `#192023` on narrow so lines never show through. Scene text 13/11/12 units wide, 14/12/12 narrow; rendered at 11.3px or more on a 390px phone. |
 | **Fine print** | The exact condition behind a step | One `details.b-fine` per tab under the tab list, closed by default ("+ The fine print"), showing only for the chosen tab; without JavaScript each carries the step's name. |
 | **Figures strip** | Real numbers under the stage | Three cells along the bottom of the stage (stacked on phones): a serif figure and a mono label. Every figure comes from `site/data/proof.json` or a quoted recorded result checked against its source file at build time; no figure is typed in by hand. |
-| **Panel and check list**| **Panel and check list** | A live check the reader runs | Dark panel, a list of rows with a status pip, label, detail in mono, and Pass/Fail. Results come from the reader's own browser. |
+| **Panel and check list** | A live check the reader runs | Dark panel, a list of rows with a status pip, label, detail in mono, and Pass/Fail. Results come from the reader's own browser. |
 | **Proof grid and lens** | Every recorded transaction | One 24px (minimum) square per real transaction, in the HTML, coloured by kind, each a link to the explorer with its own accessible name; a skip link before the grid; a legend in plain words with counts ("Refused by the rules · 36"). The lens below names what anyone can read for the dot pointed at or focused, and what stayed private for that kind of step; the other dots dim. |
 | **What works today** | The single honest status | Three plain lists on dark: running on testnet, built but not live, next. |
 | **Command block** | Something to run | Dark block, mono 12px, a Copy button that confirms ("Copied"). |
@@ -189,17 +189,19 @@ EEVEE does not work on this server (no `libEGL`); use Cycles. The MCP add-on blo
 
 | Measure | Budget | Measured (2026-11-10, `node scripts/check-site.mjs`, local) |
 |---|---|---|
-| First contentful paint | under 1 s on a warm load | 108-164 ms across 1440/390 × motion/reduced/no JavaScript |
+| First contentful paint | under 1 s on a warm load | 124-232 ms across all seven runs |
 | Critical page weight (HTML, CSS, JS) | under 150 KB compressed with the fonts | 61 KB gzipped (HTML 44, CSS 9, JS 8) plus the Google fonts, which this rebuild did not change |
 | Deferred 3D | under 250 KB compressed | 161 KB bundle + 98 KB models (measured 2026-11-05) |
 | Hero image | under 80 KB | 36 KB |
-| Contrast | AA for all text, scene text included | 0 failures in all six runs |
-| Scene text | 11px or more as rendered | 12.9px at 1440, 11.3px at 390 |
-| Targets | 24px minimum, 32-48px for controls | 0 under 24px in all six runs (inline links in sentences exempt) |
+| Contrast | AA for all text, scene text included | 0 failures in all seven runs |
+| Scene text | 11px or more as rendered, at every width | 12.9px at 1440, 11.3px at 390; swept from 601 to 1280px, lowest 11.3px (at 1100) |
+| Targets | 24px minimum, 32-48px for controls | 0 under 24px in all seven runs (inline links in sentences exempt) |
+| Footer field | one animation loop, at most 75 draws a second | within budget after 10 resize events; the bitmap follows the footer when the FAQ opens |
+| Without main.js | the page falls back to everything stacked | 0 fine prints or tab sentences hidden with main.js blocked |
 | Console errors | none | none |
 | Horizontal overflow | none at 390px | none |
 
-`scripts/check-site.mjs` serves `site/` and checks all of the above in Chromium at 1440 and 390 px, with motion, with reduced motion and with JavaScript off, and saves section screenshots; it exits 1 when a budget fails. Both the contrast and the target checks were seen to fail on a deliberately broken link style. Also run before shipping: a no-WebGL pass and a phone pass with the menu open and closed.
+`scripts/check-site.mjs` serves `site/` and checks all of the above in Chromium at 1440 and 390 px, with motion, with reduced motion, with JavaScript off and (at 390) with main.js blocked, sweeps the scene text across the widths in between, and saves section screenshots; it exits 1 when a budget fails. Both the contrast and the target checks were seen to fail on a deliberately broken link style. Also run before shipping: a no-WebGL pass and a phone pass with the menu open and closed.
 
 ## 11. Files
 
