@@ -121,3 +121,32 @@ test('the FAQ is four headed groups of native details, eighteen in all, the firs
   assert.equal(groups.reduce((n, g) => n + (g[0].match(/<details/g) || []).length, 0), 18);
   assert.match(groups[0][0], /<details open>/);
 });
+
+// ---- motion (Task 4): reveal with scroll, loops only on screen, final frames under reduced motion
+const css = read('site/styles.css');
+const usedMo = [...new Set([...html.matchAll(/class="[^"]*\b(mo-[a-zA-Z]+)/g)].map((m) => m[1]))];
+
+test('every motion class used in the page is defined, and only moves transform, opacity, strokes, paths, clips or the flash', () => {
+  assert.ok(usedMo.length >= 15, `found ${usedMo.length} motion classes`);
+  for (const c of usedMo.filter((x) => x !== 'mo-count')) assert.match(css, new RegExp(`\\.${c}\\b[^{]*\\{[^}]*animation`), `${c} animates`);
+  const ALLOWED = /^(opacity|transform|stroke-dashoffset|offset-distance|clip-path|background-color|--n)$/;
+  for (const m of css.matchAll(/@keyframes (mo-[a-zA-Z0-9]+) \{([\s\S]*?)\}\s*\}/g)) {
+    for (const p of m[2].matchAll(/([a-z-]+)\s*:/g)) assert.match(p[1], ALLOWED, `${m[1]} animates ${p[1]}`);
+  }
+  assert.doesNotMatch(css, /transition:\s*all/);
+});
+
+test('entrances reveal with scroll where the browser can, and play on entry elsewhere', () => {
+  const sd = css.slice(css.indexOf('@supports (animation-timeline: view())'));
+  assert.match(sd, /animation-timeline:\s*view\(\)/);
+  assert.match(css, /@supports not \(animation-timeline: view\(\)\)/);
+  const js = read('site/main.js');
+  assert.match(js, /CSS\.supports\('animation-timeline: view\(\)'\)/, 'main.js only plays entrances itself where scroll-driven animation is missing');
+  assert.match(js, /classList\.toggle\('paused'/, 'loops pause off screen');
+});
+
+test('under reduced motion every animation stops at its final frame and travelling dots are hidden', () => {
+  const block = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
+  assert.match(block, /\.bs \*[^{]*\{[^}]*animation:\s*none !important/);
+  assert.match(block, /\.mo-tr, \.mo-tr2 \{[^}]*display:\s*none/);
+});

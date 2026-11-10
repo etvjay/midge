@@ -243,6 +243,28 @@ if (!REDUCE && !LIGHT) {
   if (document.readyState === 'complete') afterPaint(); else addEventListener('load', afterPaint, { once: true });
 }
 
+// ---------------------------------------------------------------- bento motion
+// Entrances reveal with scroll through CSS scroll-driven animation; where a browser lacks it, they play once as they enter (.in).
+// Numbers count up once on entry. Loops pause while their section is off screen. Nothing here runs under reduced motion.
+(function motion() {
+  const SCROLL = CSS.supports('animation-timeline: view()');
+  if (!REDUCE && !SCROLL) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.15 });
+    for (const el of $$('.mo-rise, .mo-row, .mo-flash, .mo-draw, .mo-pop, .mo-line, .mo-bullet, .mo-type, .mo-slide, .mo-strike, .mo-spin, .proof-grid')) io.observe(el);
+  }
+  if (!REDUCE) {
+    const counts = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return; counts.unobserve(e.target);
+      const el = e.target; const to = +el.dataset.to; const t0 = performance.now();
+      const step = (now) => { const k = Math.min(1, (now - t0) / 600); el.textContent = String(Math.round(to * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }), { threshold: 0.6 });
+    for (const el of $$('.mo-count')) counts.observe(el);
+  }
+  const loops = new IntersectionObserver((es) => es.forEach((e) => e.target.classList.toggle('paused', !e.isIntersecting)), { rootMargin: '120px 0px' });
+  for (const sec of $$('.bs')) loops.observe(sec);
+})();
+
 // ---------------------------------------------------------------- footer field: one dot per recorded transaction, lit in the order they happened
 // The dots are the proof section's transactions (the same data), densest at the bottom. Still under reduced motion; paused off screen.
 (function endField() {
