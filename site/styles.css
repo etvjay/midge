@@ -522,7 +522,8 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 .panel-foot { margin: 0; padding: 12px 16px; font-size: var(--t-14); color: var(--d-2); border-top: 1px solid var(--d-line); }
 .book-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(233, 236, 232, 0.06); font: 400 13px var(--mono); }
 .book-row .num { text-align: right; font-variant-numeric: tabular-nums; } .book-row .dim { text-align: right; }
-.book-row.is-watcher { color: var(--deny); background: rgba(224, 103, 90, 0.08); }
+.book-row.is-watcher { color: #f2897d; background: rgba(224, 103, 90, 0.08); } /* lighter red: 4.5:1 on the tinted row */
+.book-row.is-watcher .dim { color: inherit; }
 .tiles-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: auto; }
 .tile { background: var(--dusk-raised); border-radius: 12px; padding: 16px; }
 .fig { margin: 0; font-family: var(--serif); font-weight: 300; font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -631,6 +632,14 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
 .faq { max-width: 860px; }
 .faq-groups { display: grid; gap: 16px; }
 .faq-h { margin: 0 0 8px; font: 500 var(--t-14) var(--sans); color: var(--d-2); }
+.faq-tabs { position: relative; display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #0b0f10; border: 1px solid var(--d-line); }
+.faq-tab { position: relative; min-height: 40px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--d-2); font: 500 var(--t-14) var(--sans); cursor: pointer; transition: background-color 240ms var(--ease), color 240ms var(--ease); }
+.faq-tab[aria-selected="true"] { background: var(--d-1); color: var(--dusk); }
+.faq-tab:focus-visible { outline: 2px solid var(--d-lake); outline-offset: 2px; }
+.faq-tabbed .faq-h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.faq-group[hidden] { display: none; }
+@media (max-width: 719px) { .faq-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .faq-tab { transition: none; } }
 
 @media (max-width: 1199px) {
   .bs-head { grid-template-columns: 1fr; }

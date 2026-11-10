@@ -32,32 +32,31 @@ const darkZones = () => [$('.hero'), ...$$('.bs'), $('.site-footer')];
 const onScroll = () => { const y = 30; const dark = darkZones().some((el) => { const r = el.getBoundingClientRect(); return r.top <= y && r.bottom >= y; }); header.classList.toggle('on-light', !dark); };
 addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
-// ---------------------------------------------------------------- B cards: tabs (WAI-ARIA tabs, automatic activation)
-// Without JavaScript every tab, scene and fine print is shown stacked; here only the selected one stays. A newly shown scene
-// restarts from the beginning, and scenes pause while their card is off screen.
-for (const list of $$('.b-tabs')) {
-  const card = list.closest('.bcard'); const tabs = $$('[role="tab"]', list); const fines = $$('.b-fine', card); const stage = $('.b-stage', card);
+// ---------------------------------------------------------------- FAQ topics as tabs (WAI-ARIA, automatic activation)
+// Without JavaScript all four topic groups show, each under its heading. Here a tablist shows one at a time.
+(function faqTabs() {
+  const box = $('#faq-groups'); const groups = box ? $$('.faq-group', box) : []; if (groups.length < 2) return;
+  const list = document.createElement('div'); list.className = 'faq-tabs'; list.setAttribute('role', 'tablist'); list.setAttribute('aria-label', 'Question topics');
+  const tabs = groups.map((g, i) => {
+    const t = document.createElement('button'); t.type = 'button'; t.className = 'faq-tab'; t.id = `faq-tab-${i}`;
+    t.setAttribute('role', 'tab'); t.setAttribute('aria-controls', g.id); t.textContent = $('.faq-h', g).textContent;
+    g.setAttribute('role', 'tabpanel'); g.setAttribute('aria-labelledby', t.id); g.tabIndex = 0;
+    list.appendChild(t); return t;
+  });
+  box.prepend(list); box.classList.add('faq-tabbed'); list.style.setProperty('--n', String(tabs.length));
   const select = (i, focus = false) => {
-    tabs.forEach((t, k) => {
-      const on = k === i; const panel = document.getElementById(t.getAttribute('aria-controls'));
-      t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
-      if (!panel) return;
-      if (on && panel.hidden) { const sc = $('.b-scene', panel); if (sc) sc.replaceWith(sc.cloneNode(true)); }
-      panel.hidden = !on;
-    });
-    fines.forEach((f, k) => { f.classList.toggle('on', k === i); if (k !== i) f.open = false; });
+    tabs.forEach((t, k) => { const on = k === i; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; groups[k].hidden = !on; });
     if (focus) tabs[i].focus();
   };
   tabs.forEach((t, i) => t.addEventListener('click', () => select(i)));
   list.addEventListener('keydown', (e) => {
     const i = tabs.indexOf(document.activeElement); if (i < 0) return; const n = tabs.length;
-    const to = { ArrowDown: (i + 1) % n, ArrowRight: (i + 1) % n, ArrowUp: (i + n - 1) % n, ArrowLeft: (i + n - 1) % n, Home: 0, End: n - 1 }[e.key];
+    const to = { ArrowRight: (i + 1) % n, ArrowDown: (i + 1) % n, ArrowLeft: (i + n - 1) % n, ArrowUp: (i + n - 1) % n, Home: 0, End: n - 1 }[e.key];
     if (to === undefined) return; e.preventDefault(); select(to, true);
   });
   select(0);
-  if (stage) new IntersectionObserver(([e]) => stage.classList.toggle('paused', !e.isIntersecting)).observe(stage);
-}
-// The tabs are running: keep the js class (the head script's fallback timer removes it if this line is never reached).
+})();
+// The page's script is running: keep the js class (the head script's fallback timer removes it if this line is never reached).
 document.documentElement.classList.add('js'); document.documentElement.dataset.tabs = 'on';
 
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); if (e.target.__onIn) e.target.__onIn(); } }), { threshold: 0.15 });
@@ -146,6 +145,21 @@ function row(list, ok, label, detail) {
   li.append(pip, body, state); list.appendChild(li);
 }
 
+// The rules panel (section 04): the newest group's release policy as the contract returns it, and the same rules in words.
+function rulesPanel(group, block) {
+  const pre = $('#rules-json'); const words = $('#rules-reads-text'); const state = $('#rules-state'); if (!pre || !words) return;
+  if (!group) {
+    pre.textContent = 'Could not read the rules from this browser. Open the contract on NearBlocks to read them there.';
+    words.textContent = 'not read'; if (state) state.textContent = 'NEAR did not answer';
+    return;
+  }
+  const pol = group.release_policy || {};
+  pre.textContent = JSON.stringify({ group: group.id, status: group.status, release_policy: pol }, null, 2);
+  const n = (pol.allowed_recipients || []).length;
+  words.textContent = `${group.id}: pays ${plural(n, 'listed account', 'listed accounts')} only, up to ${(pol.max_release_bps_per_epoch || 0) / 100}% per window, until block ${Number(pol.settle_deadline_block || 0).toLocaleString('en-US')}`;
+  if (state && block) state.textContent = `read live from NEAR · block ${block.toLocaleString('en-US')}`;
+}
+
 (async function chain() {
   const chip = $('#chip'), chipText = $('#chip-text'), list = $('#chain-list'), note = $('#chain-note'), recent = $('#recent');
   try {
@@ -159,6 +173,7 @@ function row(list, ok, label, detail) {
     const fl = $('#foot-live'); if (fl) fl.textContent = `Contract ${CONTRACT} · fingerprint ${acct.code_hash.slice(0, 8)}… · read just now from NEAR`;
     const { value: newest } = await view('list_syndicates', { from_index: Math.max(0, count - 3), limit: 3 });
     const s = newest[newest.length - 1];
+    rulesPanel(s, block);
     if (s) {
       const pol = s.release_policy || {};
       row(list, Boolean(s.policy_hash), `The newest group's rules are public`, `${s.id}: pays only ${plural((pol.allowed_recipients || []).length, 'account', 'accounts')}, at most ${(pol.max_release_bps_per_epoch || 0) / 100}% per round`);
@@ -171,6 +186,7 @@ function row(list, ok, label, detail) {
     chipText.textContent = 'Could not reach NEAR testnet from this browser';
     note.textContent = `The public RPC did not answer (${e.message}). The recorded evidence below still applies.`;
     recent.innerHTML = '<li>Could not read the contract from this browser.</li>';
+    rulesPanel(null);
   }
 })();
 

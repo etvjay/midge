@@ -150,3 +150,22 @@ test('under reduced motion every animation stops at its final frame and travelli
   assert.match(block, /\.bs \*[^{]*\{[^}]*animation:\s*none !important/);
   assert.match(block, /\.mo-tr, \.mo-tr2 \{[^}]*display:\s*none/);
 });
+
+// ---- behaviour (Task 5)
+const js = read('site/main.js');
+
+test('the FAQ topics become a tablist in main.js (and only there): roles, selection, keys', () => {
+  assert.doesNotMatch(html, /role="tablist"/, 'no tablist in the static HTML: without JavaScript all four groups show');
+  assert.match(js, /setAttribute\('role', 'tablist'\)/);
+  assert.match(js, /aria-selected/);
+  for (const k of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) assert.match(js, new RegExp(k));
+  assert.doesNotMatch(js, /\$\$\('\.b-tabs'\)/, 'the old tab-card controller is gone');
+  assert.match(js, /document\.documentElement\.dataset\.tabs = 'on'/, 'the started marker the head fallback waits for');
+});
+
+test('the rules panel is filled from the live read, and says so plainly when NEAR does not answer', () => {
+  assert.match(js, /\$\('#rules-json'\)/);
+  assert.match(js, /release_policy/);
+  assert.match(js, /\$\('#rules-reads-text'\)/);
+  assert.match(js, /Could not read the rules from this browser/);
+});

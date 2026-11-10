@@ -83,11 +83,12 @@ function measure() {
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/snap/bin/chromium', args: ['--no-sandbox'] });
 const rows = []; let failed = false;
 for (const width of [1440, 390]) {
-  for (const mode of width === 390 ? ['motion', 'reduce', 'nojs', 'nomain'] : ['motion', 'reduce', 'nojs']) {
+  for (const mode of width === 390 ? ['motion', 'reduce', 'nojs', 'nomain', 'norpc'] : ['motion', 'reduce', 'nojs']) {
     if (process.env.ONLY && !process.env.ONLY.split(',').includes(`${width}:${mode}`)) continue; // e.g. ONLY=390:nojs
     const ctx = await browser.newContext({ viewport: { width, height: width > 600 ? 900 : 844 }, reducedMotion: mode === 'reduce' ? 'reduce' : 'no-preference', javaScriptEnabled: mode !== 'nojs' });
     const page = await ctx.newPage(); const errors = [];
-    if (mode === 'nomain') await page.route('**/main.js', (r) => r.abort()); // main.js fails to load: the page must fall back to everything stacked
+    if (mode === 'nomain') await page.route('**/main.js', (r) => r.abort());
+    if (mode === 'norpc') await page.route(/test\.rpc\.fastnear\.com|rpc\.testnet\.near\.org/, (r) => r.abort()); // NEAR does not answer // main.js fails to load: the page must fall back to everything stacked
     await page.addInitScript(() => { // count footer-field draws (one clearRect per frame)
       window.__fieldDraws = 0; const clear = CanvasRenderingContext2D.prototype.clearRect;
       CanvasRenderingContext2D.prototype.clearRect = function (...a) { if (this.canvas.classList.contains('end-field')) window.__fieldDraws++; return clear.apply(this, a); };
@@ -105,8 +106,13 @@ for (const width of [1440, 390]) {
       await el.screenshot({ path: path.join(SHOTS, `check-${width}-${mode}-${id}.png`) }).catch(() => {});
     }
     const m = await page.evaluate(measure);
-    if (mode === 'nomain') errors.splice(0, errors.length, ...errors.filter((e) => !/main\.js|ERR_FAILED/.test(e))); // the blocked load itself is expected
+    if (mode === 'nomain' || mode === 'norpc') errors.splice(0, errors.length, ...errors.filter((e) => !/main\.js|ERR_FAILED|Failed to load resource/.test(e))); // the blocked loads themselves are expected
     const extra = [...m.clipped];
+    if (mode === 'norpc') {
+      await page.waitForTimeout(1500);
+      const rules = await page.evaluate(() => document.getElementById('rules-json')?.textContent || '');
+      if (!/Could not read the rules/.test(rules)) extra.push(`rules panel with NEAR blocked says: "${rules.slice(0, 80)}"`);
+    }
     if (mode === 'nomain') {
       const hidden = await page.evaluate(() => [...document.querySelectorAll('.b-fine, .b-tab .b')].filter((e) => getComputedStyle(e).display === 'none').length);
       if (hidden) extra.push(`${hidden} fine prints or tab sentences hidden with main.js blocked`);
