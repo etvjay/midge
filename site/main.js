@@ -60,10 +60,7 @@ addEventListener('scroll', onScroll, { passive: true }); onScroll();
 document.documentElement.classList.add('js'); document.documentElement.dataset.tabs = 'on';
 
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); if (e.target.__onIn) e.target.__onIn(); } }), { threshold: 0.15 });
-for (const el of $$('.section .title, .section .lede-sm, .card, .mini, .chapter, .arch, .split, .answer, .table-wrap')) { el.classList.add('reveal'); io.observe(el); }
-// Siblings in a grid enter 40 ms apart, never more than 160 ms behind the first.
-for (const g of $$('.grid-2, .grid-3, .grid-4, .grid-5')) [...g.children].forEach((c, i) => { c.style.transitionDelay = `${Math.min(i * 40, 160)}ms`; });
-const st = $('.status-table'); if (st) { $$('tbody tr', st).forEach((tr, i) => { tr.style.transitionDelay = `${i * 60}ms`; }); io.observe(st); }
+for (const el of $$('.section .title, .section .lede-sm')) { el.classList.add('reveal'); io.observe(el); }
 // Kickers decode from ciphertext when they come into view.
 for (const k of $$('.kicker')) {
   const final = k.textContent; k.__onIn = () => { if (REDUCE) return; const t0 = performance.now(); const run = (now) => { const p = clamp((now - t0) / 700); k.textContent = Array.from(final, (ch, i) => (ch === ' ' || i / final.length < p ? ch : HEX[(Math.random() * 16) | 0])).join(''); if (p < 1) requestAnimationFrame(run); else k.textContent = final; }; requestAnimationFrame(run); };
@@ -165,7 +162,6 @@ function rulesPanel(group, block) {
   try {
     const acct = await rpc('query', { request_type: 'view_account', finality: 'final', account_id: CONTRACT });
     const { value: count, block } = await view('get_syndicate_count');
-    window.__synCount = count;
     $('#net-count').textContent = count;
     chip.classList.add('ok'); chipText.textContent = `Live · ${count} groups · block ${block.toLocaleString('en-US')}`;
     row(list, true, 'NEAR answered, with no server of ours in between', `${CONTRACT}, block ${block.toLocaleString('en-US')}`);
