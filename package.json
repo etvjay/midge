@@ -47,6 +47,7 @@
     "build:openapi": "node scripts/build-openapi.mjs",
     "measure:model": "node scripts/measure-model.js",
     "verify:solana": "node scripts/testnet-solana.js",
+    "verify:intents-quote": "node scripts/verify-intents-quote.mjs",
     "verify:contract-payroll": "node scripts/testnet-contract-payroll.js",
     "verify:payroll": "node scripts/testnet-multichain-payroll.js"
   },
