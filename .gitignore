@@ -21,3 +21,6 @@ lab/runs/*
 /HANDOFF-*.md
 /docs/roost-tee-plan.md
 /docs/superpowers/
+
+# OutLayer program build output
+outlayer/*/target/
