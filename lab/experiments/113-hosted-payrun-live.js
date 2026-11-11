@@ -106,7 +106,11 @@ export default {
         s.assert('the settlement key the contract will trust equals the attested one', session.settlePublicKey === attested.settlePublicKey);
         countBefore = Number(await chain.view('get_syndicate_count', {}));
         const names = ['er', ...PAYEES, 'tx', 'bf'];
-        const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `pr${tag.slice(-5)}`, count: names.length, fundNear: '0.4', names });
+        // Only the employer sends transactions after setup (a deposit, then a hatch_out that needs about 0.06 NEAR available), so it is funded 0.4 and the others 0.1.
+        const first = await createMembers(chain, { rootDir: ctx.rootDir, tag: `pr${tag.slice(-5)}`, count: 1, fundNear: '0.4', names: ['er'] });
+        let rest;
+        try { rest = await createMembers(chain, { rootDir: ctx.rootDir, tag: `pr${tag.slice(-5)}`, count: names.length - 1, fundNear: '0.1', names: names.slice(1) }); } catch (e) { await teardownMembers(chain, { rootDir: ctx.rootDir, members: first, pruneIds: [], exitWaitMs: 1000 }); throw e; }
+        const made = [...first, ...rest];
         P = Object.fromEntries(names.map((k, i) => [k, made[i]])); P.all = made;
         runParams.employer = P.er.id; runParams.taxAddress = P.tx.id; runParams.benefitsAddress = P.bf.id;
         created.push(id);
