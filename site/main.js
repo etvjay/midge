@@ -239,7 +239,7 @@ function rulesPanel(group, block) {
       const fails = $$('.lp-state.fail', list).length;
       note.textContent = (replay ? 'Replay test: this report was issued for one random number and checked against another, as a replayed report would be. ' : '')
         + (fails ? `${fails} check${fails > 1 ? 's' : ''} failed, so this report would be rejected. ` : 'Every check on this page passed. ')
-        + 'Not checked in the browser: the Intel certificate chain and TCB status, the NVIDIA GPU evidence, and response signatures. The repository verifier checks the Intel chain.';
+        + 'Not checked on this page: the Intel certificate chain and TCB status, the NVIDIA GPU evidence, and the signature on each model reply. The repository verifier checks the Intel chain, and the room checks every reply’s signature against the attested key before it uses an answer.';
       live.textContent = fails ? 'Live check finished with failures' : 'Live check passed';
     } catch (err) { note.textContent = `Could not complete the live check from this browser: ${err.message}.`; }
     finally { run.disabled = rep.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = label; btn.classList.add('done'); }
