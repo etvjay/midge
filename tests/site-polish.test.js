@@ -25,7 +25,7 @@ test('the live chip stays on one line when NEAR answers', () => {
 });
 
 test('figures use tabular digits', () => {
-  for (const sel of ['.b-strip b', '.chain-chip', '.recent', '.proof-legend', '.foot-live', '.lens p']) {
+  for (const sel of ['.fig', '.chain-chip', '.recent', '.proof-legend', '.foot-live', '.lens p']) {
     assert.match(css, new RegExp(`${sel.replace(/\./g, '\\.')}[^{]*\\{[^}]*font-variant-numeric:\\s*tabular-nums`), sel);
   }
 });

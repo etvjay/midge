@@ -1,0 +1,141 @@
+{
+  "runId": "20261111T121606Z-4495",
+  "startedAt": "2026-11-11T12:16:06.458Z",
+  "rootHash": "da784b9ab49e566041b4d123ae4c73dcbb70375fe418a48cc6e2e2dea5dd1453",
+  "verdicts": {
+    "E-LAB-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-SUITE-OFFLINE": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CHECK-FOUNDRY": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-RUST-CONTRACT": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-04": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-05": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-06": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ESCROWBOUND-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-IFACE-MODEL": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ADVISOR-MODEL": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-AUCTION-PROGRAMS-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-POOL-PROGRAM-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-SIGNED-INPUT-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-TWO-ROOM-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-QUOTE-PROGRAMS-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-BALLOT-PROGRAM-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-PAYRUN-PROGRAM-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-RFQ-PROGRAM-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-DEPOSIT-CONSENT-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-02": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-ROOMSERVICE-03": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 1586,
+  "commit": "4c13e1231fa540670779476f6163c953dc98c2e2"
+}

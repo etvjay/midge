@@ -1,0 +1,87 @@
+
+======================================================
+ [VERIFICATION 11] HOSTED ROOST (EXACT SUMS, ATTESTED KEYS, BOUNDED SIGNING)
+ Target: deterministic Roost for a dstack CVM; fake attestation provider
+======================================================
+
+[1/8] Keys and attestation binding
+  ✓ settlement and intent keys are distinct 32-byte keys
+  ✓ two Roost instances never share keys
+  ✓ report data is sha512(domain, settle key, intent key, nonce)
+  ✓ the provider was asked to attest exactly that report data
+  ✓ a different nonce gives different report data
+  ✓ swapping a key changes the report data
+  ✓ a malformed nonce is refused
+  ✓ a real-mode Roost reports its inputs as hidden only conditionally
+  ✓ a simulator-backed Roost never claims hidden inputs
+
+[2/8] Exact aggregation
+  ✓ 0.1 + 0.2 + 0.3 is exactly 0.6 (no floating point error)
+  ✓ the queue is cleared after a round
+  ✓ 50 bids sum exactly
+  ✓ the largest and smallest representable amounts are exact
+  ✓ toMicro and formatMicro round-trip
+  ✓ the coordinator-side state never holds a bid in the clear
+
+[3/8] Bad bids are excluded, not fatal
+  ✓ valid bids are summed and invalid ones excluded
+  ✓ excluded flyers are named, their content is never exposed
+  ✓ a round with no valid bid is refused
+  ✓ input validation: duplicate flyer, capacity, non-hex, too short, too long
+
+[4/8] Settlement signing is bounded and single-use
+  ✓ rejects allocations above what the sealed bids support
+  ✓ rejects an orderHash from a different round
+  ✓ rejects duplicate recipients, bad amounts, empty and oversized lists
+  ✓ rejects separators that could forge the signed message
+  ✓ signs the contract message format and the signature verifies
+  ✓ the signature does not verify under another key or for another message
+  ✓ an aggregate can be signed only once
+  ✓ signing without any aggregate is refused
+  ✓ the allocations hash ignores order and sorts recipients byte-wise
+
+[5/8] HTTP surface and access control
+  ✓ members can read the session and the attestation without credentials
+  ✓ the server itself refuses aggregate and settle without the coordinator key
+  ✓ a member client cannot even attempt coordinator calls
+  ✓ a wrong coordinator key is refused
+  ✓ the coordinator gets the exact aggregate over HTTP
+  ✓ the coordinator gets a verifying settlement signature over HTTP
+  ✓ no response contains a bid in the clear
+  ✓ oversized bodies are refused
+  ✓ unknown routes and debug routes do not exist
+  ✓ a server cannot be built without a coordinator key
+
+[6/8] Attestation verification wrapper (mock dstack-verifier)
+  ✓ a correct attestation passes every check (12 checks)
+  ✓ the caller supplies the nonce: a replayed bundle for another nonce fails
+  ✓ a verifier that rejects the quote fails the run
+  ✓ a quote that does not verify fails
+  ✓ an event log that does not replay fails
+  ✓ report data that is not ours fails
+  ✓ a different compose hash (modified build) fails
+  ✓ an unpinned OS image fails
+  ✓ a development OS image fails
+  ✓ an out-of-date TCB fails by default and passes only when explicitly accepted
+  ✓ a non-TDX platform fails
+  ✓ swapping the settlement key in the bundle fails
+  ✓ an unreachable verifier fails closed
+  ✓ a malformed bundle fails closed
+
+[7/8] Compose hash derived from our own compose file
+  ✓ hash ignores key order, respects array order, and maps NaN to null
+  ✓ derives the hash from an app-compose string and it equals sha256 of that exact string
+  ✓ derives the hash from an app-compose object as well
+  ✓ detects a provider that changed our compose text
+  ✓ detects a different image digest in the compose
+  ✓ says so when the response holds no app-compose
+  ✓ KNOWN ANSWER from real hardware: the derived hash equals the hash a real Phala TDX VM attested (8a0180ff698c44b5)
+  ✓ KNOWN ANSWER: hashing the null fields as Phala reports them would NOT reproduce it (nulls mean absent)
+  ✓ the verifier accepts when the attested hash is among the derived candidates
+  ✓ the verifier rejects when the attested hash is not among them
+  ✓ the verifier rejects an empty or malformed pin list
+
+[8/8] The coordinator key is not exposed
+  ✓ serialising the Roost exposes only public keys
+
+>>> [PASS] HOSTED ROOST: 64 checks passed with a fake attestation provider (hardware evidence: real CVM run + dstack verifier).

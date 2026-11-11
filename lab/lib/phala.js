@@ -1,3 +1,4 @@
+import { npxEnv } from './npx-env.js';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import crypto from 'node:crypto';
@@ -16,7 +17,7 @@ export const HOURLY_USD = 0.058; // tdx.small, from `phala instance-types` on 20
  * this process dies; the API key reaches children through the environment, never a command line.
  */
 export async function deployRoost({ rootDir, hours = 1, composePath = 'deploy/roost/docker-compose.yml', log = () => {} }) {
-  const env = { ...process.env, PHALA_CLOUD_API_KEY: loadEnvFile(rootDir).PHALA_CLOUD_API_KEY || process.env.PHALA_CLOUD_API_KEY };
+  const env = npxEnv({ ...process.env, PHALA_CLOUD_API_KEY: loadEnvFile(rootDir).PHALA_CLOUD_API_KEY || process.env.PHALA_CLOUD_API_KEY });
   if (!env.PHALA_CLOUD_API_KEY) throw new Error('PHALA_CLOUD_API_KEY is not set');
   const phala = (args, opts = {}) => run('npx', [...PHALA, ...args], { cwd: rootDir, env, timeout: 300000, maxBuffer: 20 * 1024 * 1024, ...opts });
   const parse = (t) => JSON.parse(t.slice(t.indexOf('{')));
@@ -61,7 +62,7 @@ export async function deployRoost({ rootDir, hours = 1, composePath = 'deploy/ro
 }
 
 export async function listCvms(rootDir) {
-  const env = { ...process.env, PHALA_CLOUD_API_KEY: loadEnvFile(rootDir).PHALA_CLOUD_API_KEY || process.env.PHALA_CLOUD_API_KEY };
+  const env = npxEnv({ ...process.env, PHALA_CLOUD_API_KEY: loadEnvFile(rootDir).PHALA_CLOUD_API_KEY || process.env.PHALA_CLOUD_API_KEY });
   const out = await run('npx', [...PHALA, 'cvms', 'list', '-j'], { cwd: rootDir, env, timeout: 90000 });
   const d = JSON.parse(out.stdout.slice(out.stdout.indexOf('{')));
   return d.items || [];

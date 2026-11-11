@@ -140,6 +140,7 @@ export default {
       s.assert('(6) with d in, the rooms signed different messages', sa.message !== sb.message);
       refused(s, '(6) the contract refuses the disagreeing pair', await chain.send(coord.account, 'settle_batch_charged_two_room', settleArgs(id, round, oa, sa.signature, sb.signature), { gas: 150000000000000n, label: 'rooms disagree' }), /second room/);
       s.assert('(6) nothing moved', BigInt((await state(id)).total_escrow) === near(DEPOSIT) * 4n && !(await state(id)).is_settling);
+      A.abandonSignedRound(); B.abandonSignedRound(); // the contract refused the pair, so the nonce is unchanged; each room gives up its refused signature (kept on record) so the round can run again
       round = await roundOf(id); await feed(round);
       A.excludeMembers([P.d.id]); B.excludeMembers([P.d.id]);
       oa = A.runPool({ recipient: recipient.id, roundId: id }); ob = B.runPool({ recipient: recipient.id, roundId: id });

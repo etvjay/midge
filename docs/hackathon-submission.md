@@ -25,9 +25,9 @@ What is built and checked:
 3. Chain Signatures: the Midge contract checked a group's rules and asked v1.signer-prod.testnet for payments that landed on Solana devnet and Ethereum Sepolia, and refused three out-of-rules requests (`npm run verify:contract-payroll`); funds on other chains are outside the member exit, and nothing was sent on Bitcoin.
 4. Confidential Intents: the 1Click asset registry is read live. The FAR private shard is an in-memory simulation; no claim of private on-chain settlement is made.
 
-Also: an MCP server with 18 tools, an SDK, x402 agent payments, sealed auctions, pools, ballots, requests for quote and payroll (private who, private receipts; the amounts are public). Every claim has a command anyone can re-run (make verify, no keys), and its limits are written beside it.
+Also: an MCP server with 18 tools, an SDK, x402 agent payments, sealed auctions, pools, ballots, requests for quote and payroll (signed invoices, auditor pack, private who and receipts; amounts are public). Every claim has a command anyone can re-run (make verify, no keys), and its limits are written beside it.
 ```
-*(Character count: 1,958 / 2,000, checked by `tests/public-docs-true.test.js`)*
+*(Character count: 1,980 / 2,000, checked by `tests/public-docs-true.test.js`)*
 
 ---
 

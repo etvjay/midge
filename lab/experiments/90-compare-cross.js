@@ -67,7 +67,7 @@ export default {
       const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `x${tag.slice(-5)}`, count: 5, fundNear: '0.5', names: WHO });
       people = Object.fromEntries(WHO.map((k, i) => [k, made[i]]));
       const baseId = `pc${tag.slice(-6)}.${chain.masterId}`; const h = memberHandle(chain, baseId);
-      await chain.master.createSubAccount({ accountOrPrefix: `pc${tag.slice(-6)}`, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near('3.2') });
+      await chain.master.createSubAccount({ accountOrPrefix: `pc${tag.slice(-6)}`, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near('3.8') }); // the wasm's storage alone costs about 3.25 NEAR (325 KB), so 3.2 stopped being enough when the contract was rebuilt
       baseline = h; await chain.waitFor(async () => { try { await h.account.getBalance(); return true; } catch { return false; } }, { what: 'baseline account' });
       await h.account.deployContract(fs.readFileSync(wasmPath));
       s.assert('the order book contract is deployed and answers', (await chain.view('get_book', { book_id: 'none' }, baseId)) === null);

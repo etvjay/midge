@@ -47,6 +47,7 @@ It does not assume a trusted execution environment (TEE, a hardware-isolated com
 | Component | Trust assumption | Failure mode | Protocol defense |
 | :--- | :--- | :--- | :--- |
 | **Release policy** | A depositor reads the policy before consenting | A creator sets a bad allowlist or their own key as the room key | `policy_hash` is named on deposit and covers recipients, cap, deadline and exit timer (C-09); the contract records the room key and recipients, but cannot judge them |
+| **The contract's code** | Its deployer does not replace it maliciously | The one full-access deployer key can redeploy the code (GAP-044); it was used twice on 2026-11-11 | Not defended while the key exists: deleting it is irreversible and is left until last. Every code hash is recorded in `docs/canonical/deployments.json`, and `scripts/verify-onchain.js` and the site compare the chain with it, so a change is visible, not prevented |
 | **The room's key** | The attested hardware runs untampered code | The key is stolen or the hardware is broken | The key cannot pay outside `allowed_recipients` or beyond the cap (C-02, C-03) |
 | **Operator liveness** | The room delivers settlements | The operator stalls or vanishes | `hatch_out` after the exit timer (C-07) |
 | **Hardware vendor** | Intel TDX isolates the room | Published attacks on TDX exist | Bounded damage: one settlement per window within the policy; not a claim that the hardware cannot be broken |

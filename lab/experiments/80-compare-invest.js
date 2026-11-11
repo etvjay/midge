@@ -132,6 +132,7 @@ export default {
       s.observe('what the observer reads: every escrow', Object.fromEntries(Object.entries(seen).map(([k, v]) => [k, fmt(v)])));
       s.assert('every escrow is the same, so the escrows say nothing about who bid what', new Set(values.map(String)).size === 1);
       s.assert('prediction 4: the observer\'s best guess (the common deposit, or the total divided by four) matches none of the four bids', best === 0, { actual: best });
+      { const st0 = await state(id); roost.openRound({ contractId: chain.coordinatorId, syndicateId: id, epoch: Number(st0.epoch), roundNonce: st0.round_nonce }); } // a real room works inside a round; abandoning a refused signature below needs one
       sealed(roost, flyers(), (m) => BIDS[Object.keys(who).find((k) => who[k].id === m.id)]);
       const agg = roost.aggregateAndClear({ roundId: `${tag}-c` });
       s.assert('the Roost totals the sealed bids to exactly 0.10 although 0.20 is deposited', BigInt(Math.round(Number(agg.aggregateOrder.totalInputAmount) * 1e6)) * 10n ** 18n === near(TOTAL) && agg.aggregateOrder.flyerCount === 4, { actual: agg.aggregateOrder });
@@ -145,6 +146,7 @@ export default {
       s.assert('prediction 5 (contract): a validly signed payout to an account outside the policy is refused', !steal.ok && /whitelist/i.test(steal.error || ''), { actual: steal.error });
       s.assert('the escrow is intact after the attempt', BigInt((await state(id)).total_escrow) === near('0.20'));
       // the Roost signed once for the thief above; a new sealed round is needed for the honest settlement
+      roost.abandonSignedRound(); // the contract refused the thief's settlement; the room keeps its signature on record and lets the round run again (the room refuses a second signature otherwise)
       sealed(roost, flyers(), (m) => BIDS[Object.keys(who).find((k) => who[k].id === m.id)]);
       const agg2 = roost.aggregateAndClear({ roundId: `${tag}-c2` });
       const st2 = await state(id);

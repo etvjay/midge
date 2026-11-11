@@ -1,0 +1,420 @@
+   Compiling libc v0.2.191
+   Compiling cfg-if v1.0.5
+   Compiling typenum v1.20.1
+   Compiling zeroize v1.9.1
+   Compiling subtle v2.6.1
+   Compiling generic-array v0.14.7
+   Compiling const-oid v0.9.6
+   Compiling serde_core v1.0.229
+   Compiling jobserver v0.1.35
+   Compiling cc v1.11.0
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling serde v1.0.229
+   Compiling equivalent v1.0.3
+   Compiling once_cell v1.21.4
+   Compiling getrandom v0.2.17
+   Compiling rand_core v0.6.4
+   Compiling indexmap v2.14.2
+   Compiling foldhash v0.2.0
+   Compiling hashbrown v0.17.1
+   Compiling toml_edit v0.25.17+spec-1.1.0
+   Compiling num-traits v0.2.19
+   Compiling proc-macro-crate v3.5.0
+   Compiling itoa v1.0.18
+   Compiling borsh-derive v1.8.1
+   Compiling zmij v1.0.23
+   Compiling memchr v2.8.3
+   Compiling cpufeatures v0.2.17
+   Compiling borsh v1.8.1
+   Compiling hex v0.4.3
+   Compiling unicode-segmentation v1.13.3
+   Compiling sha2 v0.10.9
+   Compiling convert_case v0.10.0
+   Compiling cmake v0.1.58
+   Compiling hybrid-array v0.4.15
+   Compiling fnv v1.0.7
+   Compiling derive_more-impl v2.1.1
+   Compiling aws-lc-sys v0.47.0
+   Compiling thiserror v2.0.21
+   Compiling serde_json v1.0.154
+   Compiling num-integer v0.1.47
+   Compiling signature v2.2.0
+   Compiling near-schema-checker-core v0.38.0
+   Compiling derive_more v2.1.1
+   Compiling near-schema-checker-lib v0.38.0
+   Compiling num-bigint v0.3.3
+   Compiling crunchy v0.2.4
+   Compiling block-buffer v0.12.1
+   Compiling crypto-common v0.2.2
+   Compiling near-account-id v3.0.0
+   Compiling secp256k1-sys v0.8.2
+   Compiling bs58 v0.4.0
+   Compiling const-oid v0.10.2
+   Compiling byteorder v1.5.0
+   Compiling bs58 v0.5.1
+   Compiling rand_core v0.10.1
+   Compiling static_assertions v1.1.0
+   Compiling base64 v0.23.1
+   Compiling serde_with v3.24.0
+   Compiling digest v0.11.3
+   Compiling enum-map v2.7.3
+   Compiling arbitrary v1.5.0
+   Compiling num-rational v0.3.2
+   Compiling darling_core v0.20.11
+   Compiling near-gas v0.3.7
+   Compiling near-token v0.3.6
+   Compiling tracing-core v0.1.36
+   Compiling der v0.7.10
+   Compiling pin-project-lite v0.2.17
+   Compiling getrandom v0.4.3
+   Compiling base64 v0.21.7
+   Compiling near-primitives-core v0.38.0
+   Compiling tracing v0.1.44
+   Compiling curve25519-dalek v4.1.3
+   Compiling darling_macro v0.20.11
+   Compiling anyhow v1.0.104
+   Compiling fixed-hash v0.7.0
+   Compiling uint v0.9.5
+   Compiling ed25519 v2.2.3
+   Compiling zstd-sys v2.1.2+zstd.1.5.7
+   Compiling ff v0.13.1
+   Compiling json_comments v0.2.2
+   Compiling keccak v0.1.6
+   Compiling smallvec v1.16.4
+   Compiling unsafe-libyaml v0.2.11
+   Compiling cpufeatures v0.3.1
+   Compiling base16ct v0.2.0
+   Compiling ryu v1.0.23
+   Compiling untrusted v0.7.1
+   Compiling scopeguard v1.2.0
+   Compiling lock_api v0.4.14
+   Compiling serde_yaml v0.9.34+deprecated
+   Compiling sec1 v0.7.3
+   Compiling parking_lot_core v0.9.12
+   Compiling sha3 v0.10.9
+   Compiling near-config-utils v0.38.0
+   Compiling group v0.13.0
+   Compiling ed25519-dalek v2.2.0
+   Compiling primitive-types v0.10.1
+   Compiling aws-lc-rs v1.19.0
+   Compiling secp256k1 v0.27.0
+   Compiling darling v0.20.11
+   Compiling strum v0.24.1
+   Compiling zerocopy v0.8.63
+   Compiling crypto-bigint v0.5.5
+   Compiling blake2 v0.10.6
+   Compiling keccak v0.2.2
+   Compiling bitflags v2.13.2
+   Compiling near-stdx v0.38.0
+   Compiling linux-raw-sys v0.12.1
+   Compiling rustix v1.1.6
+   Compiling ppv-lite86 v0.2.21
+   Compiling near-crypto v0.38.0
+   Compiling sha3 v0.11.0
+   Compiling elliptic-curve v0.13.8
+   Compiling near-parameters v0.38.0
+   Compiling ripemd v0.1.3
+   Compiling hmac v0.12.1
+   Compiling fastrand v2.5.0
+   Compiling tempfile v3.27.0
+   Compiling zstd-safe v7.4.0
+   Compiling rfc6979 v0.4.0
+   Compiling rand_chacha v0.3.1
+   Compiling derive_builder_core v0.20.2
+   Compiling parking_lot v0.12.5
+   Compiling sha2 v0.11.1
+   Compiling spki v0.7.3
+   Compiling blst v0.3.17
+   Compiling deranged v0.5.9
+   Compiling num_cpus v1.17.0
+   Compiling tap v1.0.1
+   Compiling powerfmt v0.2.1
+   Compiling spin v0.9.9
+   Compiling num-conv v0.2.2
+   Compiling time-core v0.1.9
+   Compiling near-sys v0.4.0
+   Compiling near-sdk-env v0.1.8
+   Compiling lazy_static v1.5.1
+   Compiling wyz v0.5.1
+   Compiling time v0.3.55
+   Compiling threadpool v1.8.1
+   Compiling ecdsa v0.16.9
+   Compiling derive_builder_macro v0.20.2
+   Compiling rand v0.8.8
+   Compiling radium v0.7.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling primeorder v0.13.6
+   Compiling bytesize v1.3.3
+   Compiling near-crypto-hash v0.2.0
+   Compiling either v1.19.0
+   Compiling base64 v0.22.1
+   Compiling rustc-hex v2.1.0
+   Compiling funty v2.0.0
+   Compiling hashbrown v0.14.5
+   Compiling iana-time-zone v0.1.65
+   Compiling dashmap v6.2.1
+   Compiling chrono v0.4.45
+   Compiling bitvec v1.1.1
+   Compiling near-sdk-core v4.4.1
+   Compiling zeropool-bn v0.5.11
+   Compiling itertools v0.14.0
+   Compiling p256 v0.13.2
+   Compiling derive_builder v0.20.2
+   Compiling near-time v0.38.0
+   Compiling zstd v0.13.4
+   Compiling near-digest v0.1.4
+   Compiling near-fmt v0.38.0
+   Compiling digest-io v0.1.0
+   Compiling ordered-float v4.6.0
+   Compiling lru v0.18.5
+   Compiling bytes v1.12.1
+   Compiling near-sdk-macros v5.30.0
+   Compiling near-primitives v0.38.0
+   Compiling near-global-contracts v0.3.2
+   Compiling near-vm-runner v0.38.0
+   Compiling wait-timeout v0.2.1
+   Compiling quick-error v1.2.3
+   Compiling hex-literal v1.1.0
+   Compiling bit-vec v0.10.1
+   Compiling bit-set v0.11.1
+   Compiling rusty-fork v0.3.1
+   Compiling rand v0.10.3
+   Compiling chacha20 v0.10.2
+   Compiling rand_xorshift v0.5.0
+   Compiling unarray v0.1.4
+   Compiling core_detect v1.0.0
+   Compiling regex-syntax v0.8.11
+   Compiling proptest v1.12.0
+   Compiling near-sdk v5.30.0
+   Compiling fly-coordinator v0.1.0 (/home/ubuntu/near/contracts/fly-coordinator)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 39s
+     Running unittests src/lib.rs (target/debug/deps/fly_coordinator-c68e1d78f5c935b3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/foreign_payment_tests.rs (target/debug/deps/foreign_payment_tests-f020e90304da0894)
+
+running 24 tests
+test a_group_without_a_foreign_policy_cannot_ask_for_a_signature - should panic ... ok
+test a_failed_signer_call_releases_the_reservation ... ok
+test a_payment_the_room_did_not_sign_is_refused - should panic ... ok
+test a_payee_listed_for_another_chain_is_refused - should panic ... ok
+test a_policy_cannot_be_set_after_a_deposit ... ok
+test a_refunded_group_can_still_pay_its_listed_foreign_payees_within_the_caps ... ok
+test a_rehatched_group_id_gets_a_different_signing_path_so_different_foreign_addresses ... ok
+test a_release_in_an_old_window_does_not_touch_the_new_windows_total ... ok
+test a_second_payment_over_the_running_total_is_refused - should panic ... ok
+test a_stranger_cannot_prune_a_group_that_has_a_foreign_policy ... ok
+test a_successful_signer_call_keeps_the_reservation_and_marks_it_signed ... ok
+test an_amount_over_the_per_payment_cap_is_refused - should panic ... ok
+test an_ethereum_fee_above_the_cap_is_refused - should panic ... ok
+test an_ethereum_payment_within_the_caps_is_recorded ... ok
+test an_unknown_group_has_no_signing_path ... ok
+test an_in_rules_payment_reserves_budget_and_records_the_obligation ... ok
+test an_unlisted_payee_is_refused - should panic ... ok
+test pruning_a_group_clears_its_foreign_policy_and_a_rehatch_starts_clean ... ok
+test the_policy_is_set_once_by_the_owner_before_funding ... ok
+test the_running_total_is_per_window_and_returns_after_the_window ... ok
+test the_signed_message_is_pinned ... ok
+test the_signer_path_names_the_group_and_its_creation_block ... ok
+test the_same_obligation_cannot_be_paid_twice - should panic ... ok
+test the_window_must_be_long_enough_to_mean_something ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.31s
+
+     Running tests/foreign_tests.rs (target/debug/deps/foreign_tests-c568da16aa4641da)
+
+running 5 tests
+test a_different_payee_or_amount_changes_the_message ... ok
+test addresses_are_parsed_strictly ... ok
+test evm_digest_handles_zero_integers ... ok
+test solana_transfer_message_matches_the_message_that_landed_on_devnet ... ok
+test evm_digest_matches_ethers_for_a_sepolia_transfer ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/integration_tests.rs (target/debug/deps/integration_tests-9571f16529d36443)
+
+running 6 tests
+test test_integration_escape_hatch_and_storage_reclamation ... ok
+test test_integration_full_syndicate_lifecycle_with_payout ... ok
+test test_integration_hatch_out_failure_callback_rollback ... ok
+test test_integration_settlement_failure_callback_rollback ... ok
+test test_integration_theft_frontrun_fails ... ok
+test test_integration_repeat_deposit_and_exit_loop ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.31s
+
+     Running tests/invariants.rs (target/debug/deps/invariants-e5933ea976968463)
+
+running 5 tests
+test prop_pro_rata_deductions_at_near_scale ... ok
+test prop_pro_rata_deductions_exact_conservation ... ok
+test prop_release_policy_canonical_order_independence ... ok
+test test_overshoot_cap_50_limit_enforced_on_callback ... ok
+test prop_syndicate_escrow_and_flyer_invariants ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.68s
+
+     Running tests/signer_override_tests.rs (target/debug/deps/signer_override_tests-1c6c45347a0bbf44)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/state_machine_tests.rs (target/debug/deps/state_machine_tests-984ebb7b2b58bea2)
+
+running 6 tests
+test inv_c05_the_nonce_changes_when_a_settlement_finishes ... ok
+test inv_c01_the_books_balance_after_every_transition ... ok
+test inv_c12_a_refunded_group_stays_refunded ... ok
+test inv_c12_a_settled_group_takes_no_more_deposits - should panic ... ok
+test st_views_describe_a_new_group ... ok
+test st_views_say_nothing_about_a_group_that_does_not_exist ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+
+     Running tests/unit_tests.rs (target/debug/deps/unit_tests-508a1be72aa89f3f)
+
+running 128 tests
+test a_charged_settlement_signature_cannot_authorise_a_plain_settlement - should panic ... ok
+test a_deposit_that_assumed_a_different_timer_is_refused - should panic ... ok
+test a_deposit_inside_the_window_raises_the_allowance ... ok
+test a_deposit_that_names_the_real_timer_is_accepted ... ok
+test a_deposit_with_a_hash_that_omits_the_timer_is_refused - should panic ... ok
+test a_deposit_that_has_left_does_not_raise_the_release_cap - should panic ... ok
+test a_failed_charged_payout_leaves_every_members_escrow_untouched ... ok
+test a_finished_settlement_leaves_no_pending_record ... ok
+test a_follow_up_with_no_nonce_on_record_is_not_the_one_in_flight ... ok
+test a_flash_keeps_its_epoch_and_exit_timer_whatever_the_windows ... ok
+test a_funded_group_is_not_removed_even_by_its_creator_after_the_waiting_period - should panic ... ok
+test a_group_nobody_has_funded_is_unfunded ... ok
+test a_group_opened_before_this_change_is_shown_with_its_timer_not_covered ... ok
+test a_funded_group_is_open_then_in_flight_then_open_again_then_settled ... ok
+test a_group_whose_last_member_left_is_refunded ... ok
+test a_late_callback_after_recovery_changes_nothing ... ok
+test a_late_callback_from_a_recovered_settlement_cannot_finish_the_next_one ... ok
+test a_late_follow_up_from_an_earlier_identical_settlement_changes_nothing ... ok
+test a_new_groups_hash_covers_the_exit_timer ... ok
+test a_member_drained_to_zero_who_deposits_again_is_not_listed_twice ... ok
+test a_new_window_in_a_dark_vault_locks_exits_again_for_a_timer - should panic ... ok
+test a_new_window_is_still_capped_against_the_escrow_then - should panic ... ok
+test a_one_room_syndicate_refuses_a_two_room_settlement - should panic ... ok
+test a_plain_settlement_signature_cannot_authorise_a_charged_settlement - should panic ... ok
+test a_payout_that_fails_gives_its_allowance_back ... ok
+test a_removed_unfunded_id_can_be_hatched_again ... ok
+test a_settlement_in_flight_from_the_old_code_is_still_finished_by_the_old_follow_up ... ok
+test a_pruned_two_room_syndicate_forgets_its_second_key ... ok
+test a_settlement_in_flight_records_when_it_started ... ok
+test a_stranger_cannot_remove_an_unfunded_group_before_the_waiting_period - should panic ... ok
+test a_settlement_inside_the_window_cannot_keep_members_out ... ok
+test a_stuck_settlement_cannot_be_recovered_too_early - should panic ... ok
+test a_timer_at_the_floor_is_accepted ... ok
+test a_timer_below_the_floor_is_refused - should panic ... ok
+test a_two_room_syndicate_cannot_register_the_same_key_twice - should panic ... ok
+test a_third_settlement_that_takes_the_window_over_the_cap_is_refused - should panic ... ok
+test a_two_room_syndicate_refuses_a_single_signature_charged_settlement - should panic ... ok
+test a_two_room_syndicate_refuses_a_single_signature_settlement - should panic ... ok
+test after_a_charged_settlement_exit_returns_the_deposit_less_the_members_own_charge ... ok
+test after_recovery_members_can_exit_and_the_books_balance ... ok
+test anyone_can_remove_an_unfunded_group_after_the_waiting_period ... ok
+test anyone_can_recover_a_stuck_settlement_and_it_settles_the_books_as_if_the_payout_landed ... ok
+test charged_settlement_charges_each_member_their_own_amount ... ok
+test charged_settlement_rejects_a_charge_above_the_members_deposit - should panic ... ok
+test charged_settlement_rejects_a_member_charged_twice - should panic ... ok
+test charged_settlement_rejects_charges_other_than_the_ones_signed - should panic ... ok
+test charged_settlement_rejects_charges_that_do_not_sum_to_the_payout - should panic ... ok
+test charges_hash_matches_the_roosts_javascript_implementation ... ok
+test charged_settlement_rejects_charging_someone_who_never_deposited - should panic ... ok
+test every_term_a_depositor_consents_to_changes_the_hash ... ok
+test exit_is_not_limited_by_the_release_policy_deadline_or_recipient_list ... ok
+test exit_is_refused_while_a_settlement_is_in_flight_so_a_late_signature_cannot_race_a_refund - should panic ... ok
+test hatch_refuses_an_oversized_code_hash - should panic ... ok
+test exit_stays_refused_until_the_stuck_settlement_is_recovered - should panic ... ok
+test mul_div_floor_is_exact_across_the_u128_range ... ok
+test one_room_signing_twice_is_not_two_rooms - should panic ... ok
+test order_hash_may_not_contain_the_message_separator - should panic ... ok
+test pro_rata_deductions_four_equal_deposits_of_005_near_partial_payout_of_010 ... ok
+test in_a_dark_vault_the_epoch_and_the_exit_timer_advance_with_the_window_not_with_each_settlement ... ok
+test recovery_clears_the_nonce_record_too ... ok
+test recovery_is_refused_after_the_callback_already_ran - should panic ... ok
+test pruning_a_group_forgets_its_window ... ok
+test recovery_is_refused_when_nothing_is_in_flight - should panic ... ok
+test test_bad_signature_fails - should panic ... ok
+test test_a_pruned_id_can_be_reused_and_the_old_signature_is_dead - should panic ... ok
+test test_below_min_deposit_fails - should panic ... ok
+test test_below_quorum_fails - should panic ... ok
+test test_dark_vault_epoch_rollover_resets_escape_hatch_timer ... ok
+test test_deposit_limit_exceeded_fails - should panic ... ok
+test test_compact_member_index_drops_ids_of_pruned_syndicates ... ok
+test test_double_hatch_out_fails - should panic ... ok
+test test_deposit_to_non_active_fails - should panic ... ok
+test test_get_syndicates_by_member ... ok
+test test_hatch_and_ed25519_settle_with_payout ... ok
+test test_hatch_invalid_quorum_fails - should panic ... ok
+test test_hatch_invalid_timeout_fails - should panic ... ok
+test test_hatch_out_after_settled_fails - should panic ... ok
+test test_invalid_id_characters_fails - should panic ... ok
+test test_hatch_out_after_timeout_refunds_only_caller ... ok
+test test_nep297_events_emission ... ok
+test test_on_hatch_out_payout_failure_restores_escrow_and_status ... ok
+test test_on_hatch_out_payout_failure_with_redeposit_prevents_double_counting ... ok
+test test_on_hatch_out_payout_rejects_external_caller - should panic ... ok
+test test_on_settlement_payout_failure_reverts_state ... ok
+test test_on_settlement_payout_rejects_external_caller - should panic ... ok
+test test_on_settlement_payout_success_cleans_up_flyer_storage ... ok
+test test_partial_flash_settlement_allows_a_fresh_signature_on_the_new_nonce ... ok
+test test_partial_flash_settlement_cannot_be_replayed - should panic ... ok
+test test_max_flyers_cap_enforced - should panic ... ok
+test test_partial_flash_settlement_rotates_nonce_but_keeps_epoch_and_timer ... ok
+test test_premature_hatch_out_fails - should panic ... ok
+test test_prune_an_aborted_refunded_syndicate ... ok
+test test_prune_refuses_an_active_syndicate - should panic ... ok
+test test_prune_refuses_an_unknown_syndicate - should panic ... ok
+test test_prune_removes_a_settled_syndicate_and_logs_it ... ok
+test test_repeat_deposit_withdraw_does_not_inflate_flyer_cap ... ok
+test test_settle_batch_rejects_altered_payout_recipient - should panic ... ok
+test test_signature_cross_contract_replay_fails - should panic ... ok
+test test_syndicate_discovery_and_pagination ... ok
+test test_wrong_nonce_fails - should panic ... ok
+test test_y1_deposit_with_wrong_policy_hash_fails - should panic ... ok
+test test_y1_hatch_out_blocked_while_settling - should panic ... ok
+test test_y1_settlement_after_deadline_fails - should panic ... ok
+test test_y1_settlement_exceeding_max_release_bps_fails - should panic ... ok
+test test_y1_settlement_to_recipient_outside_allowlist_fails - should panic ... ok
+test the_allowance_does_not_return_inside_the_same_window - should panic ... ok
+test test_settle_batch_50_flyers_gas_budget ... ok
+test the_allowance_returns_in_a_new_window_sized_to_the_escrow_then ... ok
+test the_creator_can_remove_a_group_nobody_funded_at_once ... ok
+test the_back_to_back_drain_measured_on_testnet_is_now_refused - should panic ... ok
+test the_follow_up_scheduled_by_a_settlement_is_the_one_that_names_its_round ... ok
+test the_follow_up_is_still_the_late_one_after_the_right_one_finished ... ok
+test the_follow_up_that_names_the_settlement_in_flight_finishes_it ... ok
+test the_hash_does_not_depend_on_the_order_or_repetition_of_recipients ... ok
+test the_phase_of_a_group_that_does_not_exist_is_nothing ... ok
+test the_terms_of_an_unknown_group_are_none ... ok
+test the_terms_view_shows_what_a_depositor_consents_to_and_that_the_timer_is_covered ... ok
+test the_window_records_what_has_been_released_since_it_opened ... ok
+test two_groups_that_differ_only_in_the_timer_have_different_hashes ... ok
+test two_room_charged_settlement_pays_when_both_rooms_sign_the_charges ... ok
+test two_room_settlement_pays_when_both_rooms_sign_the_same_message ... ok
+test two_room_settlement_rejects_a_bad_first_signature - should panic ... ok
+test the_follow_up_step_is_given_gas_in_proportion_to_the_members ... ok
+test two_room_settlement_rejects_a_bad_second_signature - should panic ... ok
+test two_room_syndicate_exposes_its_second_key_and_a_one_room_one_does_not ... ok
+test two_rooms_that_computed_different_payouts_cannot_settle - should panic ... ok
+test two_rooms_that_disagree_on_who_pays_cannot_settle - should panic ... ok
+test two_settlements_that_together_stay_within_the_cap_are_both_allowed ... ok
+
+test result: ok. 128 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.93s
+
+   Doc-tests fly_coordinator
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

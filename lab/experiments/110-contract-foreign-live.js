@@ -26,7 +26,7 @@ export default {
     'One operator controls the room key (a test key, not a hosted Roost), the contract and the payees.',
     'The contract is a test deployment (m.<account>); production c.<account> is not upgraded.',
     'Money at the group\'s foreign addresses is outside the NEAR escrow, so a member\'s exit does not reach it.',
-    'Solana devnet and Ethereum Sepolia only; nothing is sent on Bitcoin. The signer failing mid-request is covered by a unit test, not here.',
+    'Solana devnet and Ethereum Sepolia only; nothing is sent on Bitcoin. The signer failing mid-request is shown separately by E-FOREIGN-SIGNER-FAIL-LIVE-01.',
   ],
   async run(ctx) {
     const chain = await connect(ctx.rootDir);
@@ -72,6 +72,31 @@ export default {
       s.assert('the Solana address derived for the contract differs from the one for our own account with the same path', solGroup !== solOurs);
       s.assert('the Ethereum address derived for the contract differs from the one for our own account with the same path', evmGroup !== evmOurs);
       A = { solGroup, evmGroup, solPayee: policy.payees.find((p) => p.chain === 'solana-devnet').address, evmPayee: policy.payees.find((p) => p.chain === 'ethereum-sepolia').address };
+      // A group's addresses depend on its signer path (id + creation block), so a group that was re-created, or created before that rule, has unfunded addresses.
+      // Top them up from the old funding addresses (signed as our own account, as the setup script does) only when they are low.
+      const mpcAsMaster = async (payload, p, domain) => {
+        const tx = await chain.master.callFunctionRaw({ contractId: SIGNER, methodName: 'sign', args: { request: { payload_v2: payload, path: p, domain_id: domain } }, deposit: 1n, gas: 250_000_000_000_000n });
+        let raw = tx.status?.SuccessValue; for (const r of tx.receipts_outcome || []) raw = r.outcome?.status?.SuccessValue || raw;
+        return JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
+      };
+      if ((await solBal(solGroup)) < 5_000_000) {
+        const solOld = nearKeyToSolanaAddress(await derive(1, 'midge/solana/group-1', chain.masterId));
+        const { value: { blockhash } } = await sol('getLatestBlockhash', [{ commitment: 'finalized' }]);
+        const msg = buildTransferMessage({ from: b58decode(solOld), to: b58decode(solGroup), lamports: 20_000_000n, recentBlockhash: b58decode(blockhash) });
+        const sig = parseEddsaSignature(await mpcAsMaster({ Eddsa: Buffer.from(msg).toString('hex') }, 'midge/solana/group-1', 1));
+        const id = await sol('sendTransaction', [Buffer.from(assembleTransaction(msg, sig)).toString('base64'), { encoding: 'base64', preflightCommitment: 'confirmed' }]);
+        s.evidence('solana', { label: 'top-up of the group address', signature: id });
+        for (let i = 0; i < 30 && (await solBal(solGroup)) < 5_000_000; i++) await sleep(2000);
+      }
+      if ((await eth.getBalance(evmGroup)) < ethers.parseEther('0.002')) {
+        const evmOld = await evmAddr('fly/dark-vault/epoch-1', chain.masterId);
+        const fee = await eth.getFeeData(); const nonce = await eth.getTransactionCount(evmOld, 'pending');
+        const gas = await eth.estimateGas({ from: evmOld, to: evmGroup, value: ethers.parseEther('0.004') });
+        const tx = ethers.Transaction.from({ type: 2, chainId: 11155111, nonce, to: evmGroup, value: ethers.parseEther('0.004'), gasLimit: gas + gas / 5n, maxFeePerGas: (fee.maxFeePerGas ?? 2_000_000_000n) * 2n, maxPriorityFeePerGas: fee.maxPriorityFeePerGas ?? 1_000_000_000n });
+        tx.signature = signatureFromMpc(await mpcAsMaster({ Ecdsa: tx.unsignedHash.slice(2) }, 'fly/dark-vault/epoch-1', 0), tx.unsignedHash, evmOld);
+        const sent = await eth.broadcastTransaction(tx.serialized); await sent.wait(1, 180_000);
+        s.evidence('sepolia', { label: 'top-up of the group address', hash: sent.hash });
+      }
       s.assert('the Solana group address holds enough for a payment', (await solBal(solGroup)) >= 3_000_000, { actual: await solBal(solGroup) });
       s.assert('the Ethereum group address holds enough for a payment', (await eth.getBalance(evmGroup)) >= ethers.parseEther('0.002'));
     }, { critical: true });

@@ -43,7 +43,11 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   async function deposit(flyer, id, amountNear, pol = policy()) {
     return chain.send(flyer.account, 'deposit', { syndicate_id: id, policy_hash: computePolicyHash(pol, timers[id] ?? 50) }, { deposit: near(amountNear), gas: 30000000000000n, label: `deposit ${flyer.id} -> ${id}` });
   }
-  async function sealedRound(flyers, amountEach) {
+  // A real room works inside a round: open the group's current round (its epoch and nonce) before taking bids. The room signs once per round, so a
+  // signature the contract refuses is abandoned (it stays on record) before the same round runs again; opening an already-signed round is refused.
+  async function sealedRound(flyers, amountEach, id) {
+    const st = await state(id);
+    await coordinator.openRound({ contractId: chain.coordinatorId, syndicateId: id, epoch: Number(st.epoch), roundNonce: st.round_nonce });
     for (const f of flyers) await bid(f.id, amountEach);
     return coordinator.aggregate({ roundId: `${runTag}` });
   }
@@ -52,6 +56,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     const params = { contractId: chain.coordinatorId, syndicateId: id, epoch: Number(st.epoch), roundNonce: st.round_nonce, allocations, orderHash: aggregate.orderHash };
     const signed = signer ? signer(params) : await coordinator.signSettlement(params);
     const tx = await chain.send(coord.account, 'settle_batch', { syndicate_id: id, attestation_nonce: st.round_nonce, aggregate_order_hash: aggregate.orderHash, allocations, enclave_signature: signed.signature }, { gas: 100000000000000n, label: `settle_batch ${id}` });
+    if (!tx.ok && !signer) await coordinator.abandonRound().catch(() => {}); // the contract refused it: the nonce is unchanged, so give the signature up (on record) and let the round run again
     return { tx, signed, params };
   }
   /** Run a transaction, ALWAYS record it as evidence (with its error text), and assert it succeeded. */
@@ -103,7 +108,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
 
   let aggregate;
   await ctx.step('members seal bids; the Roost aggregates them exactly', async (s) => {
-    aggregate = await sealedRound(F, '0.02');
+    aggregate = await sealedRound(F, '0.02', id1);
     s.observe('aggregate', aggregate.aggregateOrder);
     s.assert('the total is exactly 0.06', aggregate.aggregateOrder.totalInputAmount === '0.06', { expected: '0.06', actual: aggregate.aggregateOrder.totalInputAmount });
     s.assert('three bids counted and none excluded', aggregate.aggregateOrder.flyerCount === 3 && aggregate.aggregateOrder.excludedFlyers.length === 0);
@@ -148,7 +153,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     await chain.waitFor(() => state(id2), { what: 'syndicate 2' });
     for (const f of F.slice(0, 2)) await must(s, `${f.id} deposited 0.02`, deposit(f, id2, '0.02'));
     await chain.waitFor(async () => BigInt((await state(id2)).total_escrow) === near('0.04'), { what: 'escrow 0.04' });
-    agg2 = await sealedRound(F.slice(0, 2), '0.02');
+    agg2 = await sealedRound(F.slice(0, 2), '0.02', id2);
     const thief = `thief-${runTag}.testnet`;
     const stBefore = await state(id2);
     const { tx } = await settle(id2, [{ recipient: thief, amount: stBefore.total_escrow }], agg2);
@@ -173,7 +178,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   });
 
   await ctx.step('cleanup: settle syndicate #2 legitimately with the real Roost', async (s) => {
-    const agg = await sealedRound(F.slice(0, 2), '0.02');
+    const agg = await sealedRound(F.slice(0, 2), '0.02', id2);
     const st = await state(id2);
     const { tx } = await settle(id2, [{ recipient: rcpt.id, amount: st.total_escrow }], agg);
     txEvidence(s, tx);
@@ -191,7 +196,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     await chain.waitFor(() => state(id4), { what: 'syndicate 4' });
     await must(s, 'f1 deposited 0.03', deposit(F[0], id4, '0.03'));
     await chain.waitFor(async () => BigInt((await state(id4)).total_escrow) === near('0.03'), { what: 'escrow 0.03' });
-    const aggA = await sealedRound(F.slice(0, 1), '0.03');
+    const aggA = await sealedRound(F.slice(0, 1), '0.03', id4);
     const st0 = await state(id4);
     const part = [{ recipient: rcpt.id, amount: String(near('0.01')) }];
     const first = await settle(id4, part, aggA);
@@ -209,7 +214,7 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
     const st2 = await state(id4);
     s.assert('the escrow is unchanged by the replay', st2.total_escrow === st1.total_escrow, { expected: st1.total_escrow, actual: st2.total_escrow });
     s.assert('the recipient received nothing from the replay', (await bal(rcpt.account)) === before);
-    const aggB = await sealedRound(F.slice(0, 1), '0.02');
+    const aggB = await sealedRound(F.slice(0, 1), '0.02', id4);
     const second = await settle(id4, [{ recipient: rcpt.id, amount: st2.total_escrow }], aggB);
     txEvidence(s, second.tx);
     s.assert('a fresh signature on the new nonce settles the rest', second.tx.ok, { actual: second.tx.error });

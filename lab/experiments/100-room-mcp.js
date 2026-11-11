@@ -39,11 +39,11 @@ export default {
   hypothesis: 'Predictions are in docs/lab/PROGRAMME_PLAN.md, written before any code. Four tools mirror the four verbs; none takes a secret key; the coordinator tools need the coordinator key over HTTP; one dispatcher serves stdio and HTTP; a vote through the tools gives the same settlement as the service. The failure that must not happen: a room opened or run over HTTP with no key, a secret key accepted as a tool argument, or an Origin-less browser attack path (DNS rebinding) left open.',
   limits: ['Offline: a real HTTP server on a local port, and the real stdio binary as a child process pointed at a local rooms server.', 'The protocol subset implemented is initialize, ping, tools/list and tools/call (single and batch) over JSON responses; server-initiated messages and resumable streams are not.', 'One operator plays every member.'],
   async run(ctx) {
-    await ctx.step('the tool list: four new tools, ten old ones, no secret key anywhere', async (s) => {
+    await ctx.step('the tool list: five room tools, thirteen base tools (ten original and three payroll checks), no secret key anywhere', async (s) => {
       const host = mkHost(); const svc = new RoomService({ host });
       const withRooms = new FlyMcpServer({ mode: 'model', rooms: svc }).listTools().tools; const without = new FlyMcpServer({ mode: 'model' }).listTools().tools;
-      s.assert('without rooms the list is the original ten', without.length === FLY_MCP_TOOLS.length && FLY_MCP_TOOLS.length === 10 && ROOM_TOOLS.every((n) => !without.some((t) => t.name === n)), { actual: without.length });
-      s.assert('with rooms it adds exactly the five room tools (the fifth, abandon, was added with the escrow work)', withRooms.length === 15 && ROOM_TOOLS.every((n) => withRooms.some((t) => t.name === n)), { actual: withRooms.map((t) => t.name) });
+      s.assert('without rooms the list is the thirteen base tools (the original ten and the three payroll checks)', without.length === FLY_MCP_TOOLS.length && FLY_MCP_TOOLS.length === 13 && ROOM_TOOLS.every((n) => !without.some((t) => t.name === n)), { actual: without.length });
+      s.assert('with rooms it adds exactly the five room tools (the fifth, abandon, was added with the escrow work)', withRooms.length === 18 && ROOM_TOOLS.every((n) => withRooms.some((t) => t.name === n)), { actual: withRooms.map((t) => t.name) });
       const bad = []; for (const t of withRooms.filter((x) => ROOM_TOOLS.includes(x.name))) walk(t.inputSchema, (k, p) => { if (/secret|private|mnemonic|seed|password/i.test(k)) bad.push(`${t.name}${p}`); });
       s.assert('no room tool has a parameter that could carry a secret key', bad.length === 0, { actual: bad });
       s.assert('every room tool has a description and an object input schema', withRooms.filter((x) => ROOM_TOOLS.includes(x.name)).every((t) => t.description.length > 20 && t.inputSchema.type === 'object'));
@@ -100,7 +100,7 @@ export default {
         let r = await api.post({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} });
         s.assert('initialize answers with a protocol version, server info and the tools capability', r.status === 200 && r.json.id === 1 && r.json.result.protocolVersion && r.json.result.serverInfo?.name && 'tools' in r.json.result.capabilities, { actual: r.json });
         r = await api.post({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
-        s.assert('tools/list over HTTP shows 15 tools', r.json.result.tools.length === 15);
+        s.assert('tools/list over HTTP shows 18 tools', r.json.result.tools.length === 18);
         r = await api.post(call(3, 'midge_describe_rooms', {}));
         s.assert('describe needs no key', r.status === 200 && textOf(r.json).programs.length === 7);
         r = await api.post(call(4, 'midge_open_room_round', { round: ROUND }));

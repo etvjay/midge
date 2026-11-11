@@ -45,6 +45,10 @@ export default {
       }
     };
     const bidAndSign = async ({ syndicateId, bid, allocations }) => {
+      // A real room works inside a round: open the group's current one (epoch and nonce). It signs once per round, so a signature the contract refused is given up (kept on record) first.
+      const st0 = await state(syndicateId);
+      try { roost.abandonSignedRound(); } catch { /* nothing signed to give up */ }
+      roost.openRound({ contractId: chain.coordinatorId, syndicateId, epoch: Number(st0.epoch), roundNonce: st0.round_nonce });
       roost.submitSealedIntent({ flyerId: chain.masterId, cipherTextHex: sealToModel(JSON.stringify({ amount: bid }), roost.intentPublicKey) });
       const agg = roost.aggregateAndClear({ roundId: `${tag}-${syndicateId}-${Date.now()}` });
       const st = await state(syndicateId);

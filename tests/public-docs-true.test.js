@@ -21,7 +21,7 @@ for (const f of DOCS) {
     assert.deepEqual([...new Set(doc.match(/CLM-[A-Z0-9-]+/g) || [])].filter((c) => !ids.has(c)), []);
     assert.deepEqual([...new Set(doc.match(/GAP-\d{3}/g) || [])].filter((g) => !gids.has(g)), []);
     const paths = [...new Set([...doc.matchAll(/`((?:src|docs|scripts|deploy|lab|foundry|contracts|tests|verifications|bin)\/[A-Za-z0-9_./-]+?)`/g)].map((m) => m[1].replace(/[.,;:]$/, '')))]
-      .filter((p) => !/target\//.test(p) && !/\.\.\./.test(p));
+      .filter((p) => !/(^|\/)target(\/|$)/.test(p) && !/\.\.\./.test(p)); // build output (a `target` directory) exists only after a build
     assert.deepEqual(paths.filter((p) => !fs.existsSync(path.join(root, p))), []);
   });
 

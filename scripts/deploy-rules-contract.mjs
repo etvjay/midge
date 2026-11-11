@@ -12,7 +12,8 @@ import { connect, near, fmt } from '../lab/lib/near.js';
 import { base58Encode } from '../src/roost-service/signed-input.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const wasm = fs.readFileSync(path.join(root, 'contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm'));
+// MIDGE_WASM points at another build (for example the test-signer-override build for the test copy only); the default is the production build.
+const wasm = fs.readFileSync(process.env.MIDGE_WASM || path.join(root, 'contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm'));
 const localHash = base58Encode(crypto.createHash('sha256').update(wasm).digest());
 const chain = await connect(root);
 const m = chain.sub('m');
