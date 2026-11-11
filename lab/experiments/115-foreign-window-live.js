@@ -18,7 +18,7 @@ export default {
   hypothesis: 'Predictions are in docs/lab/PROGRAMME_PLAN.md, committed before this file existed. A 100-block window: 1,500,000 lamports pass, a further 1,000,000 is refused, after the window the same request passes and lands, and the first obligation id is still refused.',
   limits: [
     'Runs on the test copy of the contract (same code as production, a separate account), with the shortest window the contract allows.',
-    'A signer call failing mid-request is not forced here; it is covered by unit tests only.',
+    'A signer call failing mid-request is shown separately by E-FOREIGN-SIGNER-FAIL-LIVE-01.',
     'Solana devnet only; one operator controls the room key, the contract and the payee.',
   ],
   async run(ctx) {

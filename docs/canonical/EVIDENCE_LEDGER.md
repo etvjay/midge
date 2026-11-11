@@ -3,7 +3,7 @@
 **Version:** 1.1.0  
 **Governance Standard:** Builder Foundry v1.0 & Repository Starter Virtuous Cycle  
 **Hackathon:** NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)  
-**Git Head:** `5f5ca17eeafb21734ee01345403ee24c73c34ea6`  
+**Git Head:** not pinned here (a pinned commit goes stale); it is whatever `git log -1` shows  
 
 ---
 

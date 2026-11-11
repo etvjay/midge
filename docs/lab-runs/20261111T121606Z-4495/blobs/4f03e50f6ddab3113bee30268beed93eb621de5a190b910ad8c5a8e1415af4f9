@@ -1,0 +1,30 @@
+======================================================
+ [VERIFICATION 7] 5-LAYER RESILIENCE FAILURE MATRIX
+ Target: Deterministic FMEA Across Enclave, Agents, Shard & MPC
+======================================================
+[1/5] LAYER 1: Enclave Crash / Invalid Attestation Quote...
+  ✓ Remedy:    ON_CHAIN_TIMELOCK_ESCAPE_HATCH (REFUNDED_100_PERCENT)
+  ✓ Outcome:   80 USDC refunded 100% to flyer-l1
+
+[2/5] LAYER 2: Flyer Agent Dropout during Deliberation...
+  ✓ Scenario A (Quorum Met):   QUORUM_MAINTAINED_REWEIGHTED
+    ↳ Dynamic Rebalancing:    4 members reweighted to 25% ($100 each)
+  ✓ Scenario B (Quorum Broken): QUORUM_BROKEN_ROUND_ABORTED
+    ↳ Action:                 REFUND_ALL_ACTIVE_MEMBERS (Escrow preserved)
+
+[3/5] LAYER 3: FAR Shard Solver Slippage Breach...
+  ✓ Execution Status:  TRADE_REVERTED_SLIPPAGE_BREACH
+  ✓ Protection:        ATOMIC_REVERSION_IMT_UNWIND
+  ✓ IMT Restored:      1000 IMT tokens safe on FAR Private Shard
+
+[4/5] LAYER 4: Cross-Chain MPC Network Latency...
+  ✓ Attempt 2:         RETRY_QUEUED_ATTEMPT_2 (Idempotent replay)
+  ✓ Attempt 4:         TARGET_CHAIN_ABORTED_FALLBACK_ACTIVE
+    ↳ Fallback Action: HOLD_ASSETS_IN_LOCAL_NEAR_ESCROW
+
+[5/5] LAYER 5: Malicious / Rogue Agent Policy Breach...
+  ✓ Policy Verdict:    TRANSACTION_BLOCKED_AT_BOUNDARY
+  ✓ Guard Boundary:    Blocked at sub-account layer before touching on-chain state.
+
+>>> [PASS] 5-LAYER RESILIENCE FAILURE MATRIX VERIFIED.
+

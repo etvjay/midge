@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| **Product** | A network where groups decide together in private and settle on NEAR under rules no one can change. |
+| **Product** | A network where groups decide together in private and settle on NEAR under rules everyone can read. |
 | **Character** | Exact, discreet, quietly alive. |
 | **World** | Ink on paper for reading; a dark room for the private work; instrument drawings for the mechanism. |
 | **Moments** | The hero network and the architecture flow carry the colour and the 3D. Everything else stays quiet. |

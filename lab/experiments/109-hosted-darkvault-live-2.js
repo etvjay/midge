@@ -8,6 +8,7 @@ import { HostedRoostClient } from '../../src/roost-service/client.js';
 import { verifyHostedAttestation } from '../../src/roost-service/verify-hosted.js';
 import { expectedComposeHashes } from '../../src/roost-service/compose-hash.js';
 import { sealToModel } from '../../src/enclave/e2ee.js';
+import { signInputWithNearKey, inputMessage } from '../../src/roost-service/signed-input.js';
 
 const MEMBERS = ['u1', 'u2', 'u3', 'u4', 'u5']; const FOUNDERS = ['u1', 'u2', 'u3', 'u4'];
 const DEP = '0.1'; const CAP_BPS = 2500; const TIMER = 24;
@@ -76,7 +77,12 @@ export default {
       const session = await member.getSession();
       const epochs = []; const nonces = [];
 
-      const cast = (who, body) => member.submitSealedIntent({ flyerId: P[who].id, cipherTextHex: sealToModel(JSON.stringify(body), session.intentPublicKey) });
+      // The pinned image requires signed inputs (GAP-046): every input is sealed to the room and signed with the member's own account key for the current round.
+      let curRound = null;
+      const cast = (who, body) => {
+        const cipherTextHex = sealToModel(JSON.stringify(body), session.intentPublicKey); const kp = P[who].key.keyPair;
+        return member.submitSignedIntent({ flyerId: P[who].id, cipherTextHex, publicKey: kp.getPublicKey().toString(), signature: signInputWithNearKey(kp.toString(), inputMessage({ ...curRound, flyerId: P[who].id, seq: 1, cipherTextHex })), seq: 1 });
+      };
       const settle = async (s, label, res, round, expectTotal) => {
         const signed = await coordinator.signSettlement({ ...round, allocations: res.allocations, orderHash: res.orderHash, charges: res.charges });
         const tx = await chain.send(coord.account, 'settle_batch_charged', { syndicate_id: id, attestation_nonce: round.roundNonce, aggregate_order_hash: res.orderHash, allocations: res.allocations, charges: res.charges, enclave_signature: signed.signature }, { gas: 150000000000000n, label: `settle_batch_charged ${label}` });
@@ -92,7 +98,7 @@ export default {
         s.assert('the settlement key the contract will trust equals the attested one', session.settlePublicKey === attested.settlePublicKey);
         countBefore = Number(await chain.view('get_syndicate_count', {}));
         const names = [...MEMBERS, 'rp', 'ra', 'rb', 'rl'];
-        const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `hv${tag.slice(-5)}`, count: names.length, fundNear: '0.4', names });
+        const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `hv${tag.slice(-5)}`, count: names.length, fundNear: { default: '0.3', rp: '0.05', ra: '0.05', rl: '0.05', rb: '0.05' }, names }); // depositors need the deposit, gas and the exit reserve; recipients only receive
         P = Object.fromEntries(names.map((k, i) => [k, made[i]])); P.all = made;
         s.assert('nine accounts exist', made.length === 9);
         created.push(id);
@@ -106,7 +112,7 @@ export default {
       }, { critical: true });
 
       await ctx.step('prediction 2: round 1, a pool run by the VM, 0.05 to rp', async (s) => {
-        const round = await roundOf(); await coordinator.openRound(round);
+        const round = await roundOf(); await coordinator.openRound(round); curRound = round;
         for (const [k, a] of [['u1', '0.01'], ['u2', '0.01'], ['u3', '0.015'], ['u4', '0.015']]) await cast(k, { amount: a });
         const res = await coordinator.runPool({ recipient: P.rp.id, roundId: `${id}-r1` });
         s.observe('block the VM read', res.outcome.escrowBlock);
@@ -122,7 +128,7 @@ export default {
         s.assert('u5 deposits 0.1 into the running group', d.ok, { actual: d.error });
         await chain.waitFor(async () => BigInt((await state()).total_escrow) === toN('0.45'), { what: 'late deposit' });
         await waitWindowEnd();
-        const round = await roundOf(); await coordinator.openRound(round);
+        const round = await roundOf(); await coordinator.openRound(round); curRound = round;
         for (const k of MEMBERS) await cast(k, { amount: '0.01' });
         const res = await coordinator.runPool({ recipient: P.ra.id, roundId: `${id}-r2` });
         s.assert('the late member is charged: five charges of 0.01', res.charges.length === 5 && res.charges.every((c) => BigInt(c.amount) === toN('0.01')) && res.charges.some((c) => c.member === P.u5.id), { actual: res.charges });
@@ -135,7 +141,7 @@ export default {
 
       await ctx.step('prediction 4 and 5: round 3, a lending quote, then the books close', async (s) => {
         await waitWindowEnd();
-        const round = await roundOf(); await coordinator.openRound(round);
+        const round = await roundOf(); await coordinator.openRound(round); curRound = round;
         for (const [k, bps] of [['u2', 450], ['u3', 400], ['u4', 500], ['u5', 600]]) await cast(k, { rateBps: bps });
         const res = await coordinator.runQuote({ shape: 'lend', counterparty: P.rl.id, amount: '0.04', limit: 700, roundId: `${id}-r3` });
         s.assert('u3 wins at 400 bps', res.outcome.won && res.outcome.winner === P.u3.id && res.outcome.rateBps === 400, { actual: res.outcome });

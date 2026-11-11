@@ -204,7 +204,7 @@ The room runs small fixed programs. Each has its own rules, its own worst-case c
 | Request for quote | A taker asks makers for prices and takes the best | `E-RFQ-PROGRAM-01` |
 | Block cross | Complementary sell and buy blocks cross at a reference price | `E-QUOTE-PROGRAMS-01` |
 
-The programs are tested offline against the real host and service. Their runs against the real contract, with what each hides and what it does not, are written up as each ran: `docs/lab/PAYROLL_RESULTS.md`, `docs/lab/RFQ_RESULTS.md`, `docs/lab/QUOTE_CROSS_RESULTS.md`, `docs/lab/COMPARISON_AUCTIONS.md`, `docs/lab/COMPARISON_RESULTS.md`, `docs/lab/ONGOING_RESULTS.md`, `docs/lab/ROOMSERVICE_RESULTS.md`. Those runs used a local host, not a TEE.
+The programs are tested offline against the real host and service. Their runs against the real contract, with what each hides and what it does not, are written up as each ran: `docs/lab/PAYROLL_RESULTS.md`, `docs/lab/RFQ_RESULTS.md`, `docs/lab/QUOTE_CROSS_RESULTS.md`, `docs/lab/COMPARISON_AUCTIONS.md`, `docs/lab/COMPARISON_RESULTS.md`, `docs/lab/ONGOING_RESULTS.md`, `docs/lab/ROOMSERVICE_RESULTS.md`. Those runs used a local host, not a TEE. The hosted room has since run a pool, a lending quote, a ballot, a sealed-quote RFQ (buy side and sell side, first and second price, a tie) and a pay run with payee-signed invoices on a real Phala TDX VM, each settled on the production contract: the promoted runs are in `docs/lab-runs/` and the claims in `foundry/claims.jsonl` (`E-HOSTED-DARKVAULT-LIVE-02`, `E-HOSTED-SIGNED-LIVE-01`, `E-HOSTED-RFQ-LIVE-01` and `-02`, `E-HOSTED-PAYRUN-LIVE-01`).
 
 ### 2.6 Beyond NEAR: Chain Signatures
 
@@ -222,7 +222,7 @@ Because the contract is general and the programs are small, the same pieces serv
 
 *The idea.* A borrower and a lender agree terms without publishing them to the market, and a borrower near liquidation is not hunted by bots that can see their health.
 
-*What is built.* Sealed quotes and requests for quote run as programs and have been run on testnet with test accounts (`docs/lab/RFQ_RESULTS.md`, `docs/lab/QUOTE_CROSS_RESULTS.md`): a taker asks several makers, the room picks the best price, and the contract settles it. The facility models are in `src/facilities/rfq-adjudication.js`.
+*What is built.* Sealed quotes and requests for quote run as programs and have been run on testnet with test accounts (`docs/lab/RFQ_RESULTS.md`, `docs/lab/QUOTE_CROSS_RESULTS.md`): a taker asks several makers, the room picks the best price, and the contract settles it. The same program has run on a real TDX VM: a buyer took the lowest eligible ask and was charged exactly that, a seller took the highest eligible bid and paid the second price, a bidder who could not pay was left out by name, and a tie went to the earlier submission, with the losing quotes appearing nowhere in what the room returned (`E-HOSTED-RFQ-LIVE-01`, `E-HOSTED-RFQ-LIVE-02`). The facility models are in `src/facilities/rfq-adjudication.js`.
 
 *What is Design.* A full repo facility needs collateral in one asset, principal in another, a margin check against a private price oracle, private cure notices, and an orderly private liquidation on default. The contract moves NEAR escrow; collateral in other assets, a confidential oracle and a liquidation path are not built. No institution has used it. Earlier drafts compared it to a banking network; that comparison rested on a figure this repository never checked and has been removed.
 
@@ -238,7 +238,7 @@ An organisation that pays staff and contractors on-chain should not tie each nam
 2. Each person gives a fresh one-time payout address for the run. Only the room knows which person owns which address, so a stranger sees amounts going to addresses they cannot name.
 3. The room issues each payee a signed, encrypted receipt (invoice id, period, gross, deductions, net) and gives an auditor only category totals. The root of all receipts is in the settlement's signed order hash, so anyone can check that a receipt belongs to the run without seeing the others.
 
-**Limits.** The amounts are public, because a settlement is a public NEAR transfer to each recipient. Stable, distinct salaries let an observer link the same person across pay runs by amount. One settlement pays at most 8 recipients, so a larger payroll is several settlements. A dishonest host could issue a wrong receipt; two rooms reduce that. This was built and run on testnet against a public pay run on a local host (`docs/lab/PAYROLL_RESULTS.md`, `E-PAYRUN-PROGRAM-01`).
+**Limits.** The amounts are public, because a settlement is a public NEAR transfer to each recipient. Stable, distinct salaries let an observer link the same person across pay runs by amount. One settlement pays at most 8 recipients, so a larger payroll is several settlements. A dishonest host could issue a wrong receipt; two rooms reduce that. This was built and run on testnet against a public pay run on a local host (`docs/lab/PAYROLL_RESULTS.md`, `E-PAYRUN-PROGRAM-01`). It has also run on a real TDX VM with **payee-signed invoices**: each payee seals a signed invoice to the room, and a line that differs from its invoice in amount or destination stops the whole run with the queue kept; the settlement paid exact amounts on the production contract, each payee's statement was bound to their invoice and to the on-chain order hash, and the employer opened one line for an auditor with a signature the room checked against the chain (`E-HOSTED-PAYRUN-LIVE-01`). Nothing in the room remembers earlier rounds, so "this invoice was already paid" is the employer's pre-flight check, not the room's.
 
 ### 3.4 Syndicates, pools and group decisions
 
@@ -331,7 +331,8 @@ The residual risks, listed rather than hidden:
 - **Public deposits and refunds.** The funding accounts, the amounts deposited and the timing of payouts are public on NEAR. Only the deliberation and the bids are private.
 - **An unfunded group** (hatched, never deposited into) has no member and so no exit. Its creator can remove it at once, and anyone can after about seven days (GAP-030, deployed 2026-11-08 and checked live by `E-UNFUNDED-PRUNE-LIVE-01`; the path after the waiting period is unit-tested only).
 - **A callback whose payload is identical to another's** can be matched to the wrong record; this was accepted and is recorded for the next contract change.
-- **Providers.** Escrow-bound rounds trust two RPC providers to agree and to be honest.
+- **Providers.** Escrow-bound rounds trust two RPC providers to agree and to be honest. Signed inputs are accepted only if every configured provider confirms the member's key (GAP-050).
+- **The deployer key (GAP-044).** The testnet contract account `c.fly-1793636729.testnet` still holds one full-access key (the deployer's). A group's release policy is fixed once the group is hatched, but whoever holds that key can replace the contract's **code**, and it was used to upgrade the contract twice on 2026-11-11 (the full history is in `docs/canonical/deployments.json`, and `scripts/verify-onchain.js` and the site compare the chain's code hash with it). Deleting the key is irreversible and is deliberately left until everything else is verified.
 
 ---
 
@@ -415,7 +416,8 @@ What runs without keys: `make verify`. Live checks need a NEAR key, a Phala key 
 - It does not claim a hosted Roost is running now, or that anything has run on mainnet.
 - It does not claim institutional use. The lending and block-trade programs have run against test accounts.
 - It does not claim the simulation's saving holds outside the model.
-- It does not claim anything was broadcast on Bitcoin, Ethereum or Solana. Only the threshold signature was produced and verified.
+- It does not claim anything was sent on Bitcoin. Payments on Solana devnet and Ethereum Sepolia, requested by the contract after it checked a group's rules and signed by the NEAR MPC network, were confirmed on those testnets; money held at a group's foreign addresses is outside the NEAR escrow and so outside the member exit.
+- It does not claim the contract's code cannot be changed: one deployer key can still redeploy it (GAP-044).
 - The documents this one replaces (SRS, RTM, architecture, use cases, research) are not published; they had drifted from the code.
 
 ---

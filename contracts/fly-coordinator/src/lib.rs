@@ -2066,7 +2066,7 @@ impl FlyCoordinator {
         .parse()
         .unwrap();
         let args = near_sdk::serde_json::json!({ "request": { "payload_v2": payload, "path": foreign::signer_path(&syndicate_id, gen), "domain_id": domain_id } }).to_string().into_bytes();
-        Promise::new(signer)
+        Promise::new(signer_override(signer))
             .function_call(
                 "sign".to_string(),
                 args,
@@ -2326,5 +2326,42 @@ impl FlyCoordinator {
         self.syndicates
             .get(&syndicate_id)
             .map(|s| s.policy_hash.clone())
+    }
+}
+
+// ---- Test-only signer override ------------------------------------------------------------------------------------------------------------------------
+// Everything below is at the END of the file on purpose: the default (production) build must stay byte-identical to the deployed contract, and moving or
+// adding a line above would change the line numbers embedded in its panic locations. In the default build `signer_override` returns its argument and
+// compiles away; the `test-signer-override` build (the TEST copy only, never production) lets the contract's own account point the MPC signer elsewhere
+// so a signer failure can be shown live.
+#[cfg(not(feature = "test-signer-override"))]
+#[inline(always)]
+fn signer_override(real: AccountId) -> AccountId {
+    real
+}
+
+#[cfg(feature = "test-signer-override")]
+fn signer_override(real: AccountId) -> AccountId {
+    env::storage_read(b"test:signer")
+        .and_then(|raw| String::from_utf8(raw).ok())
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(real)
+}
+
+#[cfg(feature = "test-signer-override")]
+#[near]
+impl FlyCoordinator {
+    /// TEST BUILD ONLY. Point the MPC signer at another account (for example one with no contract, so the call fails). Only the contract's own account may call it.
+    pub fn set_test_signer(&mut self, account: AccountId) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            env::current_account_id(),
+            "[Test REJECT] only the contract's own account may set the test signer"
+        );
+        env::storage_write(b"test:signer", account.as_str().as_bytes());
+    }
+
+    pub fn get_test_signer(&self) -> Option<String> {
+        env::storage_read(b"test:signer").and_then(|raw| String::from_utf8(raw).ok())
     }
 }

@@ -1,7 +1,7 @@
 # Makefile — Universal Verification & Build Automation for Midge
 # NEAR HACKATHON: Build Beyond Boundaries (Nov 1–14, 2026)
 
-.PHONY: all help verify test wasm demo check rust review clean
+.PHONY: all help verify test unit wasm demo check rust review clean
 
 help:
 	@echo "╔══════════════════════════════════════════════════════════════════════════════╗"
@@ -10,6 +10,7 @@ help:
 	@echo "Available Targets:"
 	@echo "  make verify   - Run complete judge verification (Rust, WASM, TEE, MCP, etc.)"
 	@echo "  make test     - Run 8-layer master architectural test suite (~1.1s)"
+	@echo "  make unit     - Run the JavaScript unit, truth-check and wholeness tests (about 30 s)"
 	@echo "  make rust     - Run NEAR L1 Rust smart contract unit tests (0.12s)"
 	@echo "  make wasm     - Compile release WebAssembly contract"
 	@echo "  make demo     - Execute 10-Flyer Dark Swarm multi-agent simulation"
@@ -22,6 +23,9 @@ verify:
 
 test:
 	@npm test
+
+unit:
+	@npm run test:unit
 
 rust:
 	@npm run verify:rust

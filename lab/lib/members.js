@@ -21,19 +21,32 @@ export const memberHandle = (chain, id) => {
   return { id, key, account: new Account(id, chain.provider, new KeyPairSigner(key.keyPair)) };
 };
 
-/** Create `count` accounts named <tag><n>.<master>, each funded with `fundNear`. Returns handles in order. */
+/**
+ * How much each member is funded with. `fundNear` is one amount for everyone, or a map { default, <name>: amount } so that members who only
+ * receive money are not funded like members who deposit and exit. A map needs `names`, a default, and no name that is not a member.
+ */
+export function fundingPlan({ count, names = null, fundNear = '0.15' }) {
+  if (typeof fundNear !== 'object' || fundNear === null) return Array.from({ length: count }, () => String(fundNear));
+  if (!names) throw new Error('a funding map needs names');
+  if (fundNear.default === undefined) throw new Error('a funding map needs a default');
+  for (const k of Object.keys(fundNear)) if (k !== 'default' && !names.includes(k)) throw new Error(`the funding map names ${k}, who is not a member`);
+  return names.map((n) => String(fundNear[n] ?? fundNear.default));
+}
+
+/** Create `count` accounts named <tag><n>.<master>, each funded as `fundNear` says (see fundingPlan). Returns handles in order. */
 export async function createMembers(chain, { rootDir, tag, count, fundNear = '0.15', names = null }) {
+  const plan = fundingPlan({ count, names, fundNear });
   // Check the main account can pay for all of them BEFORE creating any, so a short balance fails at once and leaves nothing behind.
-  const need = near(fundNear) * BigInt(count) + near('0.3');
+  const need = plan.reduce((a, x) => a + near(x), 0n) + near('0.3');
   const have = await chain.balance(chain.master);
-  if (have < need) throw new Error(`not enough NEAR to create ${count} accounts of ${fundNear}: the run needs about ${fmt(need)} and the main account has ${fmt(have)}`);
+  if (have < need) throw new Error(`not enough NEAR to create ${count} accounts (${[...new Set(plan)].join(' / ')} each): the run needs about ${fmt(need)} and the main account has ${fmt(have)}`);
   const out = []; const created = [];
   try {
     for (let i = 1; i <= count; i += 1) {
       const prefix = names ? `${tag}${names[i - 1]}` : `${tag}m${i}`;
       const id = `${prefix}.${chain.masterId}`;
       const h = memberHandle(chain, id);
-      await chain.master.createSubAccount({ accountOrPrefix: prefix, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near(fundNear) });
+      await chain.master.createSubAccount({ accountOrPrefix: prefix, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near(plan[i - 1]) });
       created.push(h);
       const led = readLedger(rootDir); led.accounts.push({ id, createdAt: new Date().toISOString(), tag }); writeLedger(rootDir, led);
       // A new account is not visible to every RPC read for a block or two. Return only when it is, so callers can rely on it.

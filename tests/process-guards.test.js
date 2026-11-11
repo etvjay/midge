@@ -45,3 +45,41 @@ test('predictions: a plan commit after the file is a violation', () => {
 test('predictions: an experiment on the exempt list is skipped (those existed before the check)', () => {
   assert.deepEqual(findViolations([{ id: 'E-OLD-01', fileCommit: 'a', fileTime: T(1), planCommit: null, planTime: null }], new Set(['E-OLD-01'])), []);
 });
+
+test('reaper: with an exact name only that VM can ever be selected, however old the others are', () => {
+  const list = [cvm('midge-lab-1', '2026-01-01T00:00:00Z'), cvm('midge-lab-2', '2026-01-01T00:00:00Z')];
+  const r = selectToReap(list, { now: NOW, maxAgeHours: 0, onlyName: 'midge-lab-2' });
+  assert.deepEqual(r.reap.map((c) => c.cvmName), ['midge-lab-2']);
+  assert.equal(r.foreign.length, 1, 'the other midge VM is left alone');
+});
+test('reaper: an exact name that matches nothing selects nothing', () => {
+  assert.equal(selectToReap([cvm('midge-lab-1', '2026-01-01T00:00:00Z')], { now: NOW, maxAgeHours: 0, onlyName: 'midge-lab-9' }).reap.length, 0);
+});
+
+// The real Phala list records carry { appId, cvmName, status, uptime: "47s" } and no creation time (checked on a live VM, 2026-11-11).
+test('reaper: the age is read from the uptime string the real listing gives', () => {
+  const vm = (name, uptime) => ({ appId: `app-${name}`, cvmName: name, status: 'running', uptime });
+  const r = selectToReap([vm('midge-lab-a', '47s'), vm('midge-lab-b', '3h 5m'), vm('midge-lab-c', '2d'), vm('midge-lab-d', '125m'), vm('midge-lab-e', 'soon')], { now: NOW, maxAgeHours: 2 });
+  assert.deepEqual(r.reap.map((c) => c.cvmName).sort(), ['midge-lab-b', 'midge-lab-c', 'midge-lab-d']);
+  assert.deepEqual(r.keep.map((c) => c.cvmName), ['midge-lab-a']);
+  assert.deepEqual(r.unknownAge.map((c) => c.cvmName), ['midge-lab-e'], 'an uptime it cannot read is reported and left alone');
+});
+
+// ---- npx cache: the Phala tools must not depend on the user's shared npm cache (a root-owned directory in it broke the reaper on 2026-11-11)
+import { npxEnv } from '../lab/lib/npx-env.js';
+
+test('npxEnv gives the Phala tools their own npm cache, keeps every other variable, and can be overridden', () => {
+  const e = npxEnv({ PHALA_CLOUD_API_KEY: 'k', PATH: '/bin' }, '/home/x');
+  assert.equal(e.npm_config_cache, '/home/x/.cache/midge-npx');
+  assert.equal(e.PHALA_CLOUD_API_KEY, 'k'); assert.equal(e.PATH, '/bin');
+  assert.equal(npxEnv({ MIDGE_NPM_CACHE: '/tmp/c' }, '/home/x').npm_config_cache, '/tmp/c');
+  assert.notEqual(npxEnv({}, '/home/x').npm_config_cache, '/home/x/.npm/_cacache', 'never the shared cache');
+});
+
+test('every place that runs npx for Phala passes the isolated environment', async () => {
+  const fs = await import('node:fs');
+  for (const f of ['scripts/phala-reaper.mjs', 'lab/lib/phala.js']) {
+    const src = fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+    assert.match(src, /npxEnv\(/, `${f} must build its environment with npxEnv`);
+  }
+});

@@ -1,3 +1,4 @@
+import { retryOnRateLimit } from './retry.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -58,7 +59,9 @@ export async function connect(rootDir, { rpc = process.env.LAB_NEAR_RPC || 'http
   const env = loadEnvFile(rootDir);
   const masterId = env.NEAR_ACCOUNT_ID; const masterKey = env.NEAR_PRIVATE_KEY;
   if (!masterId || !masterKey) throw new Error('NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY are required in .env');
-  const provider = new JsonRpcProvider({ url: rpc });
+  // Every RPC call (views, balances, account actions, broadcasts) goes through sendJsonRpc, so retry rate limiting there once instead of at each call site.
+  class RetryingProvider extends JsonRpcProvider { sendJsonRpc(...args) { return retryOnRateLimit(() => super.sendJsonRpc(...args)); } }
+  const provider = new RetryingProvider({ url: rpc });
   const mk = (id, kp) => new Account(id, provider, new KeyPairSigner(kp));
   const master = mk(masterId, KeyPair.fromString(masterKey));
   const coordinatorId = `c.${masterId}`;
