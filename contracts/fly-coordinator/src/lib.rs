@@ -454,6 +454,24 @@ fn write_foreign_spent(
     );
 }
 
+/// The NEAR MPC signer this contract asks: the network's signer account. A build with the `test-signer-override` feature (the TEST copy of the contract only, never
+/// production) lets the contract's own account point it elsewhere so a signer failure can be shown live.
+fn foreign_signer_account() -> AccountId {
+    #[cfg(feature = "test-signer-override")]
+    if let Some(raw) = env::storage_read(b"test:signer") {
+        if let Some(a) = String::from_utf8(raw).ok().and_then(|s| s.parse().ok()) {
+            return a;
+        }
+    }
+    if env::current_account_id().as_str().ends_with(".testnet") {
+        "v1.signer-prod.testnet"
+    } else {
+        "v1.signer"
+    }
+    .parse()
+    .unwrap()
+}
+
 /// What a settlement in flight still has to do, kept until its follow-up step finishes or someone recovers it.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
@@ -2058,13 +2076,7 @@ impl FlyCoordinator {
         );
         env::log_str(&format!("EVENT_JSON:{{\"event\":\"foreign_payment_requested\",\"group\":\"{}\",\"obligation\":\"{}\",\"chain\":\"{}\",\"payee\":\"{}\",\"amount\":\"{}\"}}", syndicate_id, r.obligation_id, r.chain, r.payee, r.amount.0));
 
-        let signer: AccountId = if env::current_account_id().as_str().ends_with(".testnet") {
-            "v1.signer-prod.testnet"
-        } else {
-            "v1.signer"
-        }
-        .parse()
-        .unwrap();
+        let signer: AccountId = foreign_signer_account();
         let args = near_sdk::serde_json::json!({ "request": { "payload_v2": payload, "path": foreign::signer_path(&syndicate_id, gen), "domain_id": domain_id } }).to_string().into_bytes();
         Promise::new(signer)
             .function_call(
@@ -2326,5 +2338,23 @@ impl FlyCoordinator {
         self.syndicates
             .get(&syndicate_id)
             .map(|s| s.policy_hash.clone())
+    }
+}
+
+#[cfg(feature = "test-signer-override")]
+#[near]
+impl FlyCoordinator {
+    /// TEST BUILD ONLY. Point the MPC signer at another account (for example one with no contract, so the call fails). Only the contract's own account may call it.
+    pub fn set_test_signer(&mut self, account: AccountId) {
+        assert_eq!(
+            env::predecessor_account_id(),
+            env::current_account_id(),
+            "[Test REJECT] only the contract's own account may set the test signer"
+        );
+        env::storage_write(b"test:signer", account.as_str().as_bytes());
+    }
+
+    pub fn get_test_signer(&self) -> Option<String> {
+        env::storage_read(b"test:signer").and_then(|raw| String::from_utf8(raw).ok())
     }
 }

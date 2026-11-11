@@ -567,3 +567,15 @@ Not shown: the account-check providers failing on a live VM (unit tests only), r
 6. **Teardown leaves nothing:** account deleted, VM deleted, Phala account empty, under $0.05.
 
 **Not tested:** one provider answering "no" while the other answers "yes" (unit tests), recovery when the provider returns (it needs a second VM). **Weakness I expect to remain:** availability: one failing provider stops all bid intake. That is the price of requiring every provider to agree.
+
+## A signer call that fails mid-request, live: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** When the contract asks the NEAR MPC signer to sign a foreign payment, it first reserves the payee's budget and records the obligation; if the signer then fails, the callback must release both so the same obligation can be asked for again. That was shown by unit tests only, because the real signer does not fail on demand. This makes the contract's cross-contract call fail for real: a build of the contract with a `test-signer-override` feature (deployed to the TEST copy `m.<account>` only, never to production; the default build does not contain it) lets the contract's own account point the signer at an account that does not exist.
+
+**E-FOREIGN-SIGNER-FAIL-LIVE-01 (testnet, the test copy running the feature build).** A group with a foreign policy listing one Solana payee, at most 2,000,000 lamports per payment and 2,000,000 per window.
+1. **The override is the contract's own.** `set_test_signer` called from our main account is refused; called from the contract's own account it is accepted and the signer points at a nonexistent account.
+2. **A failing signer releases everything.** The contract accepts a valid room-signed request for 2,000,000 lamports, reserves, calls the nonexistent signer, the promise fails, and when the callback has run `get_foreign_obligation` returns nothing and `get_foreign_spent` reads 0. The request's final result carries no signature.
+3. **The same obligation id works again.** With the signer pointed back at the real one, the same obligation id for the same 2,000,000 is accepted (it would be refused for passing the cap if the failed reservation had leaked, and for being used if the id had been burned), a signature is returned, and it verifies against the address derived from the group's signer path.
+4. **Teardown:** the group removed; then the test copy is redeployed with the default build, so it equals production again (its code hash equals production's).
+
+**Not tested:** a failure on the Ethereum path (same code), a failure arriving after the window has rolled (unit tests), a signer that fails after a long delay. **Weakness I expect to remain:** this shows the contract's behaviour when a cross-contract call fails; it does not show the real MPC network failing, and the build under test has the extra feature the default build lacks.
