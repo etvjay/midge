@@ -283,7 +283,7 @@ export class HostedRoost {
     const round = this.round; // the signature below is for this round only
     if (!verifyNearSignature(publicKey, inputMessage({ ...round, flyerId, seq, cipherTextHex }), signature)) throw new RoostAggregationError('bad signature for this input and this round');
     let belongs = false;
-    try { belongs = await this.accountKeyCheck(flyerId, publicKey); } catch { throw new RoostAggregationError(`could not check that ${publicKey} is a key of ${flyerId}`); }
+    try { belongs = await this.accountKeyCheck(flyerId, publicKey); } catch (e) { throw new RoostAggregationError(`could not check that ${publicKey} is a key of ${flyerId} (${String(e?.message ?? e).replace(/\s+/g, ' ').slice(0, 160)})`); } // the reason names the provider that could not answer, so an operator can act on it
     if (this.round !== round) throw new RoostAggregationError('the round changed while this input was being checked: sign it again for the new round');
     if (!belongs) throw new RoostAggregationError(`${publicKey} is not a key of ${flyerId}`);
     if (seq <= (this.lastSeq.get(flyerId) ?? 0)) throw new RoostAggregationError(`sequence ${seq} is not newer than the one already accepted for ${flyerId}`);
