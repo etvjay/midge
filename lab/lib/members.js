@@ -23,18 +23,31 @@ export const memberHandle = (chain, id) => {
 
 /** Create `count` accounts named <tag><n>.<master>, each funded with `fundNear`. Returns handles in order. */
 export async function createMembers(chain, { rootDir, tag, count, fundNear = '0.15', names = null }) {
-  const out = [];
-  for (let i = 1; i <= count; i += 1) {
-    const prefix = names ? `${tag}${names[i - 1]}` : `${tag}m${i}`;
-    const id = `${prefix}.${chain.masterId}`;
-    const h = memberHandle(chain, id);
-    await chain.master.createSubAccount({ accountOrPrefix: prefix, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near(fundNear) });
-    const led = readLedger(rootDir); led.accounts.push({ id, createdAt: new Date().toISOString(), tag }); writeLedger(rootDir, led);
-    // A new account is not visible to every RPC read for a block or two. Return only when it is, so callers can rely on it.
-    let seen = false;
-    for (let i = 0; i < 20 && !seen; i += 1) { seen = await accountExists(chain, id); if (!seen) await sleep(1500); }
-    if (!seen) throw new Error(`account ${id} did not become visible within 30 s of creation`);
-    out.push(h);
+  // Check the main account can pay for all of them BEFORE creating any, so a short balance fails at once and leaves nothing behind.
+  const need = near(fundNear) * BigInt(count) + near('0.3');
+  const have = await chain.balance(chain.master);
+  if (have < need) throw new Error(`not enough NEAR to create ${count} accounts of ${fundNear}: the run needs about ${fmt(need)} and the main account has ${fmt(have)}`);
+  const out = []; const created = [];
+  try {
+    for (let i = 1; i <= count; i += 1) {
+      const prefix = names ? `${tag}${names[i - 1]}` : `${tag}m${i}`;
+      const id = `${prefix}.${chain.masterId}`;
+      const h = memberHandle(chain, id);
+      await chain.master.createSubAccount({ accountOrPrefix: prefix, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near(fundNear) });
+      created.push(h);
+      const led = readLedger(rootDir); led.accounts.push({ id, createdAt: new Date().toISOString(), tag }); writeLedger(rootDir, led);
+      // A new account is not visible to every RPC read for a block or two. Return only when it is, so callers can rely on it.
+      let seen = false;
+      for (let k = 0; k < 20 && !seen; k += 1) { seen = await accountExists(chain, id); if (!seen) await sleep(1500); }
+      if (!seen) throw new Error(`account ${id} did not become visible within 30 s of creation`);
+      out.push(h);
+    }
+  } catch (e) {
+    // A failure part-way must not strand the accounts already funded: delete them, give the balance back to the main account, and forget them.
+    for (const h of created) { try { await h.account.deleteAccount(chain.masterId); } catch { /* left in the ledger for lab-env cleanup */ } }
+    const gone = new Set(created.map((h) => h.id)); const led = readLedger(rootDir);
+    writeLedger(rootDir, { ...led, accounts: led.accounts.filter((a) => !gone.has(a.id)) });
+    throw e;
   }
   return out;
 }
