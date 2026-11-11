@@ -3,6 +3,10 @@ name = "fly-coordinator"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+# A build for the TEST copy of the contract only (never production): lets the contract's own account point the MPC signer at another account so a signer failure can be shown live.
+test-signer-override = []
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
