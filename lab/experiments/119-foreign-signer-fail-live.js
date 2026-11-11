@@ -52,7 +52,12 @@ export default {
       s.assert('the feature build is not the production build', hashFile(FEATURE_WASM) !== hashFile(DEFAULT_WASM));
       const h = await deploy(FEATURE_WASM);
       s.evidence('deploy', { account: CONTRACT, featureBuild: h, defaultBuild: hashFile(DEFAULT_WASM) });
-      s.assert('the test copy has get_test_signer and no override is set', (await view('get_test_signer', {})) === null);
+      const cur = await view('get_test_signer', {}); // an earlier run leaves the real signer's name stored (there is no way to unset it); either way the real signer is the one in use
+      if (cur !== null && cur !== SIGNER) { // a failed earlier run can leave the signer pointing at a dead account: put the real one back (only the contract's own account may)
+        const fix = await chain.send(M.account, 'set_test_signer', { account: SIGNER }, { contractId: CONTRACT, gas: 30000000000000n, label: 'repair: set_test_signer back to the real signer' });
+        s.assert('a leftover override from an earlier failed run was repaired', fix.ok, { actual: fix.error });
+      }
+      s.assert('the test copy has get_test_signer and it now points at no other signer', [null, SIGNER].includes(await view('get_test_signer', {})), { actual: await view('get_test_signer', {}) });
     }, { critical: true });
 
     const roomSign = (r) => {
@@ -97,10 +102,11 @@ export default {
     const OBL = `sf-a-${tag}`;
     const startState = async () => ({ ob: await view('get_foreign_obligation', { syndicate_id: GROUP, obligation_id: OBL }), spent: await spent(A.payee) });
     await ctx.step('prediction 1: only the contract\'s own account may point the signer elsewhere', async (s) => {
+      const beforeSet = await view('get_test_signer', {});
       const bad = await chain.send(master, 'set_test_signer', { account: `nosigner-${tag}.${chain.masterId}` }, { contractId: CONTRACT, gas: 30000000000000n, label: 'set_test_signer from the main account' });
       s.evidence('tx', { label: bad.label, hash: bad.hash, ok: bad.ok, error: bad.error });
       s.assert('a call from our main account is refused', !bad.ok && /only the contract's own account/.test(bad.error || ''), { actual: bad.error });
-      s.assert('nothing was set', (await view('get_test_signer', {})) === null);
+      s.assert('the refused call changed nothing', (await view('get_test_signer', {})) === beforeSet, { actual: [beforeSet, await view('get_test_signer', {})] });
       const good = await chain.send(M.account, 'set_test_signer', { account: `nosigner-${tag}.${chain.masterId}` }, { contractId: CONTRACT, gas: 30000000000000n, label: 'set_test_signer from the contract itself' });
       s.assert('a call from the contract\'s own account is accepted', good.ok, { actual: good.error });
       s.assert('the signer now points at an account that does not exist', (await view('get_test_signer', {})) === `nosigner-${tag}.${chain.masterId}`);
@@ -131,6 +137,7 @@ export default {
     });
 
     await ctx.step('teardown: the default build is put back on the test copy', async (s) => {
+      try { await chain.send(M.account, 'set_test_signer', { account: SIGNER }, { contractId: CONTRACT, gas: 30000000000000n, label: 'teardown: signer back to the real one' }); } catch { /* the feature build may not be there */ }
       const h = await deploy(DEFAULT_WASM);
       s.assert('the test copy runs the default build again', (await codeHashOf()) === h && h === hashFile(DEFAULT_WASM));
       let gone = false; try { await view('get_test_signer', {}); } catch { gone = true; }
