@@ -413,3 +413,16 @@ Same group, same image, with what the pinned image can do today: round 2 is a se
 
 ### Results: contract-requested foreign payments (written after the run; the predictions above were not edited)
 **E-CONTRACT-FOREIGN-LIVE-01**, run `20261111T045220Z-5a19`, PASS on the first run, log verified, promoted. All five predictions held: the keys derived for the contract differ from those for our own account with the same path; an in-rules Solana payment and an in-rules Ethereum payment were each requested by the contract, verified against independently rebuilt messages and digests, landed, and the payees gained exactly the amounts; the contract's running totals rose by exactly what was paid and both obligations are marked signed; four out-of-rules requests (unlisted payee, over the cap, reused obligation, a request the room did not sign) were each refused with their own reason and the totals did not move. Still not shown: the signer failing mid-request on a live chain, two-room groups, the production contract, and a hosted Roost signing these requests. No mutation check of the experiment's assertions was run.
+
+## A ballot on the rebuilt hosted Roost, signed inputs required: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** The first hosted Dark Vault run failed because the pinned image never required signed inputs, so the room refused a ballot (GAP-046). CI has since rebuilt the image from the merged fix (digest `0e09e816…3804d4`) and the compose file now sets `ROOST_REQUIRE_SIGNED_INPUTS=1`. This runs a ballot on a real Phala TDX VM with that image.
+
+**E-HOSTED-SIGNED-LIVE-01 (hardware).** Three members a, b, c deposit 0.05 each into a group whose room key is the VM's attested settlement key; two recipients ra and rb.
+1. **The VM attests on the new image.** Phala's app-compose equals our compose file byte for byte, the file carries `ROOST_REQUIRE_SIGNED_INPUTS=1` and the new digest, and the official verifier accepts the quote (so the setting is part of what is measured).
+2. **The room is in signed-input mode.** An unsigned sealed intent sent to `/intents` is refused with "only accepts signed inputs".
+3. **Signed inputs are checked against the chain.** A vote signed with a key that is not an access key of the member's NEAR account is refused; the three real signed votes are accepted.
+4. **The ballot runs.** Votes A, A, B; A wins 2 to 1; the VM signs; the contract accepts; `ra` receives exactly 0.03; each member is charged exactly 0.01.
+5. **Teardown leaves nothing:** accounts deleted, group pruned, VM deleted, Phala account empty, session under $0.10.
+
+**Not tested:** an RFQ and a pay run on hardware (same mechanism, not exercised), two rooms, the VM staying up. **Weakness I expect to remain:** the account-key check asks one RPC provider; one operator controls every account and the VM.

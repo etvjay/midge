@@ -3,7 +3,7 @@
 # that the attestation measures, so editing this file changes the code identity on purpose.
 services:
   roost:
-    image: ghcr.io/etvjay/midge-roost@sha256:cde03fef9c7fa13ab921cb860c86f98b504d1422df54b782691259c8832de9a9
+    image: ghcr.io/etvjay/midge-roost@sha256:0e09e81646d62f57205b5380922e62a79dc2dc61063dbaa80deeb284de3804d4
     restart: unless-stopped
     environment:
       # Set as an encrypted environment variable in Phala Cloud; only the CVM can decrypt it.
@@ -14,6 +14,9 @@ services:
       # elsewhere without changing the Roost's identity. Plain text is fine: nothing here is secret. Changing either line is a redeploy.
       - ROOST_RPC_URLS=https://test.rpc.fastnear.com,https://rpc.testnet.near.org
       - ROOST_CONTRACT_ID=c.fly-1793636729.testnet
+      # Signed inputs REQUIRED: the room accepts only inputs signed with a key the member's NEAR account really has (checked against the first
+      # provider above). Ballots, RFQs and pay runs need this and are refused without it (GAP-046). Measured by the attestation like the lines above.
+      - ROOST_REQUIRE_SIGNED_INPUTS=1
     volumes:
       - /var/run/dstack.sock:/var/run/dstack.sock
     ports:
