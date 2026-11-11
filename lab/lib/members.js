@@ -1,3 +1,4 @@
+import { makeAgreeingAccountKeyCheck } from '../../src/roost-service/signed-input.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Account, KeyPairSigner } from 'near-api-js';
@@ -34,6 +35,19 @@ export function fundingPlan({ count, names = null, fundNear = '0.15' }) {
 }
 
 /** Create `count` accounts named <tag><n>.<master>, each funded as `fundNear` says (see fundingPlan). Returns handles in order. */
+const CHECK_PROVIDERS = ['https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'];
+const agreeingCheck = (chain) => makeAgreeingAccountKeyCheck({ rpcUrls: CHECK_PROVIDERS, contractId: chain.coordinatorId });
+
+/** Poll `check(accountId, publicKey)` (the room's agreeing account-key check) until it says yes. A check that throws is a provider that could not be reached: retried like a no. */
+export async function waitForKeyAgreement(check, accountId, publicKey, { tries = 40, sleep: pause = sleep } = {}) {
+  for (let i = 0; i < tries; i += 1) {
+    let ok = false; try { ok = (await check(accountId, publicKey)) === true; } catch { ok = false; }
+    if (ok) return true;
+    if (i < tries - 1) await pause(1500);
+  }
+  throw new Error(`the chain providers never agreed that ${publicKey} is a key of ${accountId}`);
+}
+
 export async function createMembers(chain, { rootDir, tag, count, fundNear = '0.15', names = null }) {
   const plan = fundingPlan({ count, names, fundNear });
   // Check the main account can pay for all of them BEFORE creating any, so a short balance fails at once and leaves nothing behind.
@@ -53,6 +67,9 @@ export async function createMembers(chain, { rootDir, tag, count, fundNear = '0.
       let seen = false;
       for (let k = 0; k < 20 && !seen; k += 1) { seen = await accountExists(chain, id); if (!seen) await sleep(1500); }
       if (!seen) throw new Error(`account ${id} did not become visible within 30 s of creation`);
+      // A hosted room accepts a signed input only if EVERY chain provider confirms the key, and a provider can take several seconds longer than our own read to show a new key.
+      // Wait for the same agreement here, so a member's first signed input is not refused for being too fresh.
+      await waitForKeyAgreement(agreeingCheck(chain), id, h.key.keyPair.getPublicKey().toString());
       out.push(h);
     }
   } catch (e) {
