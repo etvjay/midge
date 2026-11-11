@@ -168,6 +168,25 @@ export class FlyClient {
     return res.data;
   }
 
+  // --- Payroll checks: pure, move no money and sign nothing ---
+  /** Would this payment pass the group's foreign-payment rules? Mirrors what the contract enforces, so a refusal is caught before a signature is asked for. */
+  async payrollPreflight({ payment, policy, spent, usedObligations, history, person }) {
+    const res = await this._request('POST', '/v1/payroll/preflight', { payment, policy, spent, usedObligations, history, person });
+    return res.data;
+  }
+
+  /** Does a payee-signed invoice verify, and does it match the employer's approval field by field? */
+  async checkInvoice(invoice, approval) {
+    const res = await this._request('POST', '/v1/payroll/invoice/check', { invoice, approval });
+    return res.data;
+  }
+
+  /** Do the lines an employer opened for an auditor verify against the order hash recorded on chain? */
+  async verifyAuditorPack(pack, onChainOrderHash) {
+    const res = await this._request('POST', '/v1/payroll/auditor/verify', { pack, onChainOrderHash });
+    return res.data;
+  }
+
   // --- 2. Roost Enclave & Cryptography ---
   /** The session key of the Roost that serves this syndicate. Every syndicate has its own Roost and its own bids. */
   async getSessionKey(syndicateId) {

@@ -37,7 +37,26 @@ class SyndicateListResult extends Array {
  * Fully compatible with NEAR AI's official MCP ecosystem (nearai/near-mcp)
  * and anthropic/cursor tool-calling standards.
  */
+import { preflight as payrollPreflightCheck } from '../roost-service/preflight.js';
+import { matchApproval as matchInvoiceApproval, invoiceHash as hashInvoice } from '../roost-service/invoice.js';
+import { verifyAuditorPack as verifyPack } from '../roost-service/auditor.js';
+
 export const FLY_MCP_TOOLS = [
+  {
+    name: 'midge_payroll_preflight',
+    description: 'Checks a planned foreign-chain payment against a group\'s foreign-payment rules (allowed payee on that chain, per-payment cap, running total, duplicate obligation, address format, Ethereum fee cap) and warns on a changed destination or an unusual amount. A pure check: it moves no money and signs nothing, and the contract still decides.',
+    inputSchema: { type: 'object', properties: { payment: { type: 'object' }, policy: { type: 'object' }, spent: { type: 'object' }, usedObligations: { type: 'array', items: { type: 'string' } }, history: { type: 'object' }, person: { type: 'string' } }, required: ['payment', 'policy'] },
+  },
+  {
+    name: 'midge_check_invoice',
+    description: 'Verifies a payee-signed invoice and compares it field by field (invoice id, period, chain, destination address, asset, amount) with the employer\'s approval, returning the reasons for any mismatch and the invoice hash. A pure check: it moves no money.',
+    inputSchema: { type: 'object', properties: { invoice: { type: 'object' }, approval: { type: 'object' } }, required: ['invoice', 'approval'] },
+  },
+  {
+    name: 'midge_verify_auditor_pack',
+    description: 'Verifies the lines an employer opened for an auditor (each with a Merkle proof) against the pay run\'s order hash recorded on chain. Lines that stay closed reveal nothing. A pure check: it moves no money.',
+    inputSchema: { type: 'object', properties: { pack: { type: 'object' }, onChainOrderHash: { type: 'string' } }, required: ['pack', 'onChainOrderHash'] },
+  },
   {
     name: 'midge_hatch_syndicate',
     description: 'Instantiates a new confidential Flash Syndicate or persistent Dark Vault on NEAR L1 with bounded release policy.',
@@ -280,6 +299,9 @@ export class FlyMcpServer {
     const isChain = this.mode === 'chain' && this.chainClient;
 
     switch (name) {
+      case 'midge_payroll_preflight': return this.formatOutput(payrollPreflightCheck(args.payment, { policy: args.policy, spent: args.spent || {}, usedObligations: new Set(args.usedObligations || []), history: args.history || {}, person: args.person || null }));
+      case 'midge_check_invoice': return this.formatOutput({ ...matchInvoiceApproval(args.invoice, args.approval), invoiceHash: args.invoice?.body ? hashInvoice(args.invoice.body) : null });
+      case 'midge_verify_auditor_pack': return this.formatOutput(verifyPack(args.pack, args.onChainOrderHash));
       case 'midge_hatch_syndicate': {
         this.requireWritable('midge_hatch_syndicate');
         if (isChain && this.chainClient.isConfiguredForWrites()) {

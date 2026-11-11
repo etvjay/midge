@@ -12,6 +12,9 @@ import { ConfidentialRfqFacility } from '../facilities/rfq-adjudication.js';
 import { OtcBlockTradeFacility } from '../facilities/otc-block-trade.js';
 import { ConfidentialComputeSyndicate } from '../facilities/compute-syndicate.js';
 import { ResilienceEngine } from '../resilience/failure-matrix.js';
+import { preflight } from '../roost-service/preflight.js';
+import { matchApproval, invoiceHash } from '../roost-service/invoice.js';
+import { verifyAuditorPack } from '../roost-service/auditor.js';
 
 export class FlyApiDaemon {
   constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null, roostBackend = null, chainClient = null, roostOptions = {}, simulateHaq = false } = {}) {
@@ -647,6 +650,29 @@ export class FlyApiDaemon {
     // ==========================================
     // 4. Dark Facilities: RFQ & Private Credit (/v1/facilities/rfq)
     // ==========================================
+    // ==========================================
+    // Payroll checks (/v1/payroll): pure functions. They read what they are given, move no money and sign nothing.
+    // ==========================================
+    if (method === 'POST' && pathname === '/v1/payroll/preflight') {
+      const body = await this.parseBody(req);
+      if (!body.payment || !body.policy) return this.sendJson(res, 400, { error: 'payment and policy are required' }, req);
+      const ctx = { policy: body.policy, spent: body.spent || {}, usedObligations: new Set(body.usedObligations || []), history: body.history || {}, person: body.person || null };
+      return this.sendJson(res, 200, preflight(body.payment, ctx), req);
+    }
+
+    if (method === 'POST' && pathname === '/v1/payroll/invoice/check') {
+      const body = await this.parseBody(req);
+      if (!body.invoice || !body.approval) return this.sendJson(res, 400, { error: 'invoice and approval are required' }, req);
+      const r = matchApproval(body.invoice, body.approval);
+      return this.sendJson(res, 200, { ...r, invoiceHash: body.invoice.body ? invoiceHash(body.invoice.body) : null }, req);
+    }
+
+    if (method === 'POST' && pathname === '/v1/payroll/auditor/verify') {
+      const body = await this.parseBody(req);
+      if (!body.pack || typeof body.onChainOrderHash !== 'string') return this.sendJson(res, 400, { error: 'pack and onChainOrderHash are required' }, req);
+      return this.sendJson(res, 200, verifyAuditorPack(body.pack, body.onChainOrderHash), req);
+    }
+
     if (method === 'POST' && pathname === '/v1/facilities/rfq') {
       const body = await this.parseBody(req);
       const rfq = this.rfq.createRfq(body);
