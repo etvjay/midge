@@ -61,3 +61,51 @@ test('nothing in these tools can move money or sign: they are pure checks', asyn
   const text = [...['midge_payroll_preflight', 'midge_check_invoice', 'midge_verify_auditor_pack']].map((n) => FLY_MCP_TOOLS.find((t) => t.name === n)?.description || '').join(' ');
   assert.match(text, /does not move money|never moves money|moves no money/i);
 });
+
+// ---- the optional advisory: off unless the operator configured an advisor, and never in the decision ----
+const fakeAdvisor = () => { const sent = []; return { sent, ask: async ({ user }) => { sent.push(user); return { plaintext: 'The amount is over the per-payment cap; reduce it before asking again.', record: { model: 'fake', requestSha256: 'a'.repeat(64), responseSha256: 'b'.repeat(64), tcbStatus: 'UpToDate', modelPublicKey: 'k' } }; } }; };
+const over = { payment: { ...payment, amount: '9000000' }, policy };
+
+test('HTTP: explain:true with NO advisor configured returns the deterministic wording and calls nothing', async () => {
+  await withDaemon(async (base) => {
+    const r = await fetch(`${base}/v1/payroll/preflight`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...over, explain: true }) });
+    const j = await r.json();
+    assert.equal(j.ok, false); assert.equal(j.explanation.used, false); assert.match(j.explanation.reason, /off/); assert.ok(j.explanation.text.length > 5);
+  });
+});
+
+test('HTTP: without explain the response has no explanation field at all', async () => {
+  await withDaemon(async (base) => {
+    const r = await fetch(`${base}/v1/payroll/preflight`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(over) });
+    assert.equal('explanation' in (await r.json()), false);
+  });
+});
+
+test('HTTP: with an advisor configured and explain:true the redacted message is what the advisor receives', async () => {
+  const adv = fakeAdvisor();
+  const daemon = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'local', simulateHaq: true, preflightAdvisor: adv });
+  const { port } = await daemon.start();
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/v1/payroll/preflight`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...over, explain: true }) });
+    const j = await r.json();
+    assert.equal(j.ok, false, 'the decision is the deterministic one'); assert.equal(j.explanation.used, true); assert.equal(j.explanation.advisoryOnly, true);
+    assert.equal(adv.sent.length, 1);
+    assert.equal(adv.sent[0].includes(SOL), false); assert.equal(adv.sent[0].includes('9000000'), false); assert.equal(adv.sent[0].includes('o-1'), false);
+  } finally { await daemon.stop?.(); }
+});
+
+test('SDK and MCP pass explain through and keep the decision deterministic', async () => {
+  const adv = fakeAdvisor();
+  const daemon = new FlyApiDaemon({ port: 0, mode: 'model', roostBackend: 'local', simulateHaq: true, preflightAdvisor: adv });
+  const { port } = await daemon.start();
+  try {
+    const sdk = new FlyClient({ baseUrl: `http://127.0.0.1:${port}` });
+    const out = await sdk.payrollPreflight({ ...over, explain: true });
+    assert.equal(out.ok, false); assert.equal(out.explanation.used, true);
+  } finally { await daemon.stop?.(); }
+  const mcp = new FlyMcpServer({ mode: 'model', preflightAdvisor: fakeAdvisor() });
+  const res = await mcp.executeTool('midge_payroll_preflight', { ...over, explain: true });
+  assert.equal(res.ok, false); assert.equal(res.explanation.used, true);
+  const off = await new FlyMcpServer({ mode: 'model' }).executeTool('midge_payroll_preflight', { ...over, explain: true });
+  assert.equal(off.explanation.used, false);
+});

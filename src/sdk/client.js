@@ -170,8 +170,8 @@ export class FlyClient {
 
   // --- Payroll checks: pure, move no money and sign nothing ---
   /** Would this payment pass the group's foreign-payment rules? Mirrors what the contract enforces, so a refusal is caught before a signature is asked for. */
-  async payrollPreflight({ payment, policy, spent, usedObligations, history, person }) {
-    const res = await this._request('POST', '/v1/payroll/preflight', { payment, policy, spent, usedObligations, history, person });
+  async payrollPreflight({ payment, policy, spent, usedObligations, history, person, explain }) {
+    const res = await this._request('POST', '/v1/payroll/preflight', { payment, policy, spent, usedObligations, history, person, ...(explain ? { explain: true } : {}) });
     return res.data;
   }
 

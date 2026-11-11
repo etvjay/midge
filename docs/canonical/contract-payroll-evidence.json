@@ -1,10 +1,10 @@
 {
-  "ranAt": "2026-11-11T04:29:46.145Z",
+  "ranAt": "2026-11-11T05:29:20.785Z",
   "contract": "m.fly-1793636729.testnet",
-  "group": "payroll-live-1",
+  "group": "payroll-live-2",
   "signerContract": "v1.signer-prod.testnet",
   "predecessor": "m.fly-1793636729.testnet",
-  "codeHash": "7Wgw8jXPbKumLtm9navuB3C65c2jPpsFNzKZYuQ6otPL",
+  "codeHash": "EULUXozHaRFAXedLEtBWwgKLXdGYcEyc3fgYp4n4Xa3Q",
   "foreignPolicy": {
     "payees": [
       {
@@ -20,33 +20,34 @@
         "max_total": "3000000000000000"
       }
     ],
-    "max_fee_cost": "10000000000000000"
+    "max_fee_cost": "10000000000000000",
+    "window_blocks": 1000
   },
   "addresses": {
-    "solanaGroup": "D7qNdAvErSo77e2q9iNpJCpGgXkDTrx3VzuVP2d8xvc1",
-    "sepoliaGroup": "0x01B58C67144E1208ec2744b642480A690B30D58E",
+    "solanaGroup": "EZCukqMG6cvFqg7FsRjomPWbJmnAFhDRZwFFryfRwKKS",
+    "sepoliaGroup": "0x1e915f19d41738895e41A6291BF6533907d0f6A4",
     "solanaPayee": "KLsn8JawHSc2KMRFK9qrxifgBEm8WJ568LsvSKbaVPc",
     "sepoliaPayee": "0xB9A425FB45734FC29a9c941c2c05b34DE59FF7A4"
   },
   "payments": [
     {
       "chain": "solana-devnet",
-      "obligation": "sol-mwbmcdnp",
-      "nearTx": "7aSiwMcDzwFJUnngW9AMjmLDKQACQLehyvAwr1CMvAHL",
-      "nearTxUrl": "https://testnet.nearblocks.io/txns/7aSiwMcDzwFJUnngW9AMjmLDKQACQLehyvAwr1CMvAHL",
-      "chainTx": "4C4kmPTrMDVNp3aScLXuq99646ewuJYdhVftUKwXPe6euud8YaXFGASoEHS4nYxBpebjyo9oyxV6uZwNTPhtNi2J",
+      "obligation": "sol-mwboh84t",
+      "nearTx": "Fa5nXCuydAjeYU9F1wYLL329QxFTDjN4EajaBCSoWaTx",
+      "nearTxUrl": "https://testnet.nearblocks.io/txns/Fa5nXCuydAjeYU9F1wYLL329QxFTDjN4EajaBCSoWaTx",
+      "chainTx": "3yfbqVQ8Sgjit13LMszqizgyN9u1PvLKYz6rKFs8owCeTs4YtruRR2Sfp5Mtowj1krre9EA6u9kmoh2Nn2RsxP7U",
       "status": "finalized",
-      "url": "https://explorer.solana.com/tx/4C4kmPTrMDVNp3aScLXuq99646ewuJYdhVftUKwXPe6euud8YaXFGASoEHS4nYxBpebjyo9oyxV6uZwNTPhtNi2J?cluster=devnet"
+      "url": "https://explorer.solana.com/tx/3yfbqVQ8Sgjit13LMszqizgyN9u1PvLKYz6rKFs8owCeTs4YtruRR2Sfp5Mtowj1krre9EA6u9kmoh2Nn2RsxP7U?cluster=devnet"
     },
     {
       "chain": "ethereum-sepolia",
-      "obligation": "eth-mwbmcdnp",
-      "nearTx": "356Hio8fKSgPwmc2FvzgWQdtggjzJGjCq14JEcyd1XX4",
-      "nearTxUrl": "https://testnet.nearblocks.io/txns/356Hio8fKSgPwmc2FvzgWQdtggjzJGjCq14JEcyd1XX4",
-      "chainTx": "0xd1b3f8b6600ec2ef473256bf8e6ec8c8e15b23ca2683668a8baab1ede66a0ee4",
+      "obligation": "eth-mwboh84t",
+      "nearTx": "CjZvC6vHQ5Nv9D8Xge4X24C1baAyFi6W8rjCebpaahcY",
+      "nearTxUrl": "https://testnet.nearblocks.io/txns/CjZvC6vHQ5Nv9D8Xge4X24C1baAyFi6W8rjCebpaahcY",
+      "chainTx": "0x1baeab356f5d0f521104e2a2f28d9dbb3ba169a75b4873f764bc0a62a2a2ddbb",
       "status": "confirmed",
-      "block": 12109383,
-      "url": "https://sepolia.etherscan.io/tx/0xd1b3f8b6600ec2ef473256bf8e6ec8c8e15b23ca2683668a8baab1ede66a0ee4"
+      "block": 12109674,
+      "url": "https://sepolia.etherscan.io/tx/0x1baeab356f5d0f521104e2a2f28d9dbb3ba169a75b4873f764bc0a62a2a2ddbb"
     }
   ],
   "refusals": [
@@ -60,13 +61,13 @@
       "label": "amount over the per-payment cap",
       "refused": true,
       "nearTx": null,
-      "error": "Smart contract panicked: panicked at src/lib.rs:1793:9:\n[Foreign REJECT] amount is over the per-payment cap"
+      "error": "Smart contract panicked: panicked at src/lib.rs:1944:9:\n[Foreign REJECT] amount is over the per-payment cap"
     },
     {
       "label": "an obligation already requested",
       "refused": true,
       "nearTx": null,
-      "error": "Smart contract panicked: panicked at src/lib.rs:1782:9:\n[Foreign REJECT] obligation sol-mwbmcdnp was already requested"
+      "error": "Smart contract panicked: panicked at src/lib.rs:1926:9:\n[Foreign REJECT] obligation sol-mwboh84t was already requested"
     }
   ],
   "reservedByContract": {

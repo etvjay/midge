@@ -49,3 +49,47 @@ Plain words: a *state* is "where is this thing right now"; a *transition* is a m
 2. Add a second table to 09-1 for the Roost round (machine 2) and fix H1 test-first: a `run*` after a signed aggregate in the same round must refuse.
 3. Fix H2 (add the status guard) and test it; decide on H4 (refuse, or keep the switch but expose `mode` loudly) and H5 (generate the mirror from one table, or delete it if unused).
 4. Name the member and group composite states in code (small enums or `get_*` views) so the next audit does not have to infer them.
+
+
+---
+
+# Update, 2026-11-11: machines added since the survey, and the ones it missed
+
+Same method: reading and grep, plus two behaviours confirmed in the code. Not complete. "Hole" means a transition nothing guards or recovers.
+
+## 7. New since 2026-11-08
+| Machine | State is really | Named? | Notes |
+|---|---|---|---|
+| **Foreign obligation** (contract) | none → **reserved** (spent += amount, `signed:false`) → **signed** \| **released** (signer failed: record removed, spent -= amount) | `signed` flag only | **Hole F1 (GAP-047, FIXED 2026-11-11, see below):** if the callback never runs (for example the call runs out of gas) the obligation stays reserved forever: its id is burned and its amount counts against the payee's total. `since_block` is recorded but nothing reads it for foreign obligations; settlements have a 100-block recovery (`STUCK_SETTLEMENT_BLOCKS`), these have none. **Also:** a signed obligation whose transaction is never broadcast cannot be cancelled, so its budget stays spent. |
+| **Foreign policy** (contract) | none → **set** (owner, before the first deposit, once) | no | Stored beside the group (`f:<id>`), not in the policy hash, so a depositor consents to it only by reading `get_foreign_policy`. |
+| **Foreign running total** (contract) | per payee and chain: `{window_start, spent}`; a window that has ended counts as empty | yes (`ForeignSpent`) | Was a lifetime total; now a window like the NEAR release cap (GAP-047). |
+| **Group with foreign funds** | `Active` → `Settled` \| `AbortedRefunded` | partly | **F3 (FIXED 2026-11-11):** `request_foreign_payment` needed `Active`, so a terminal group stranded its foreign money. A finished group may now still pay its listed payees within the caps and window. Money at the foreign addresses is still outside the member exit, and still unreachable if the room is gone. |
+| **Pruned group** (contract) | `prune_syndicate` removes the group, its second key and its window | no | **Hole F2 (GAP-048, FIXED 2026-11-11, see below):** it did not remove the foreign policy (`f:`), obligations (`fo:`) or running totals (`fs:`). Hatching the same id again inherits the old policy (so `set_foreign_policy` refuses: already set) and the old totals. |
+| **Roost signed-input mode** | boolean fixed at boot from the attested compose file | no | `requireSignedInputs` applies to **every** program: with `ROOST_REQUIRE_SIGNED_INPUTS=1` the room refuses unsigned sealed intents for pools and quotes too. The pinned compose now requires it, so the hosted pool and quote experiments that used unsigned intents (E-HOSTED-DARKVAULT-LIVE-02, E-HOSTED-ESCROW-LIVE-01) can no longer be re-run unchanged on the current compose. |
+| **Phala VM session** | created → attested → used → deleted; a detached dead-man's switch deletes it at the deadline | no | If the dead-man process dies (reboot) the VM keeps billing; the only reconciliation is the next run's "no CVM already running" check. |
+| **Lab experiment** | predictions written → experiment file → run → verified → promoted | no | Nothing checks that predictions were committed before the file. Two experiments tonight had them in the same commit (disclosed in the plan). |
+| **1Click adapter** | dry quote only | no | A guard, not a machine: it refuses anything whose response is not a dry quote. |
+
+## 8. Found by this scan, not in the 2026-11-08 survey
+| Machine | Where | State | Note |
+|---|---|---|---|
+| **Escrow binding** | `HostedRoost.#escrow` | none → bound (a fresh read of named accounts at one block) → cleared on open, abandon and every run that ends undecided | The room refuses a charged round without a fresh bind; the clear points are spread over several methods. |
+| **Pod** | `syndicate/pod.js` | `ACTIVE` only | One state and no transitions: a record, not a machine. |
+| **Flyer dropout** | `resilience/failure-matrix.js` | active members ≥ quorum → `QUORUM_MAINTAINED_REWEIGHTED` \| `QUORUM_BROKEN_ROUND_ABORTED` | A pure function of its inputs (simulation). |
+| **Chain Signatures mode** | `multichain/chain-signatures.js` | `SIMULATED_LOCAL_MOCK` \| `NEAR_MPC_LIVE` | Chosen by whether credentials work; responses carry `mode`, but it is a silent switch like H4. |
+| **Daemon fallback** | `FlyApiDaemon.modeFallbackReason` | null → set when `chain` fell back to `model` | The reason is recorded and shown on `/health`. |
+| **Advisor** | `advisor/attested-advisor.js` | request → attested model → receipt signature checked → advice accepted \| `AdvisorError` | Fails closed. |
+
+## 9. Fix order, if you want it
+1. **F1** first (money can be stuck): a permissionless `recover_foreign_obligation` after N blocks if still `signed:false`, test-first, then redeploy the test contract.
+2. **F2:** make `prune_syndicate` remove `f:`, `fo:` and `fs:` for the id, or refuse to prune while any exist.
+3. **Signed-input mode:** decide whether pools and quotes should keep an unsigned path on the hosted room or whether signed-only is the policy; either way write it down.
+4. Write the F3 and lifetime-cap limits where the foreign-payment feature is described.
+
+## 10. Fixed 2026-11-11 (what changed, and one correction to section 9)
+- **F1 / GAP-047 (correction).** Section 9 proposed letting anyone release a reservation that stays unresolved after N blocks. That would be **unsound**: the contract cannot see the other chain, and an unresolved reservation may correspond to a signature that was produced and a payment that landed. Releasing its budget could let a payee be paid past the cap. The conservative behaviour (keep the reservation) was right; the defect was that the lock was permanent. The fix is a **window**, as for the NEAR release cap: `ForeignPolicy.window_blocks` (at least 100), and a payee's `max_total` is the most reserved inside one window. A stuck reservation now locks capacity for one window. A signer failure releases only from the window the reservation was made in. The obligation id stays burned, which is what makes a retry safe.
+- **F2 / GAP-048.** The foreign policy is removed with the group; obligation and total slots are keyed to the group's creation block, so a re-hatched id starts clean (the old entries stay in storage, unreachable: there is no way to delete every key under a prefix). Because pruning a group that controls foreign money strands it, **only the owner** may prune a group that has a foreign policy.
+- **F3.** A finished group may still request payments to its listed payees within the caps.
+- **Signed-input mode.** Decision: **the hosted room is signed-only for every program.** It is the stronger setting, and it is what binds a vote or bid to a real account key. Members use `signedBidParams` (one call seals and signs). The earlier hosted pool and quote experiments ran on earlier compose hashes (still pinned) with unsigned input and are evidence for those builds, not repeatable on the current compose.
+- **Phala VM session.** `scripts/phala-reaper.mjs` is a second line behind the detached dead-man's switch: schedule it (cron, every 30 minutes) and it deletes any `midge-*` VM older than two hours (dry run unless `--yes`). Its selection logic is unit-tested and its listing was run against the real account; its deletion has **not** been run against a real VM (the safety classifier blocked that test).
+- **Lab method.** `scripts/check-predictions-first.mjs`, run by `make check`: any experiment not on `lab/predictions-exempt.json` (the 50 that existed today) must have its id in the plan in a strictly earlier commit than its file.
