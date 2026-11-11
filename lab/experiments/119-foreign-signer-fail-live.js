@@ -1,4 +1,8 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import { ed25519 } from '@noble/curves/ed25519.js';
+import { base58Encode } from '../../src/roost-service/signed-input.js';
 import { connect, deriveSubKeyPair } from '../lib/near.js';
 import { b58decode, nearKeyToSolanaAddress, buildTransferMessage, assembleTransaction, parseEddsaSignature } from '../../src/multichain/solana-transfer.js';
 
@@ -32,6 +36,24 @@ export default {
     const solBal = async (a) => (await sol('getBalance', [a, { commitment: 'confirmed' }])).value;
     const spent = async (payee) => BigInt(await view('get_foreign_spent', { syndicate_id: GROUP, chain: 'solana-devnet', payee }));
     let A = {}; let syn = null;
+
+    // The experiment brings its own contract build and puts the default one back: the test copy is only ever on the feature build while this runs.
+    const FEATURE_WASM = process.env.MIDGE_SIGNER_WASM || path.join(ctx.rootDir, 'contracts/fly-coordinator/target-testsigner/wasm32-unknown-unknown/release/fly_coordinator.wasm');
+    const DEFAULT_WASM = path.join(ctx.rootDir, 'contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm');
+    const codeHashOf = async () => (await chain.provider.query({ request_type: 'view_code', finality: 'final', account_id: CONTRACT })).hash;
+    const hashFile = (f) => base58Encode(crypto.createHash('sha256').update(fs.readFileSync(f)).digest());
+    const deploy = async (file) => {
+      const h = hashFile(file);
+      if ((await codeHashOf()) !== h) { await M.account.deployContract(fs.readFileSync(file)); await chain.waitFor(async () => (await codeHashOf()) === h, { what: 'the new code on chain', timeoutMs: 90000 }); }
+      return h;
+    };
+    await ctx.step('set up: the test copy runs the test-signer-override build (the default build is put back at the end)', async (s) => {
+      s.assert('the feature build exists (build it with: npm run build:wasm:testsigner)', fs.existsSync(FEATURE_WASM) && fs.existsSync(DEFAULT_WASM), { actual: [FEATURE_WASM, DEFAULT_WASM].map((f) => fs.existsSync(f)) });
+      s.assert('the feature build is not the production build', hashFile(FEATURE_WASM) !== hashFile(DEFAULT_WASM));
+      const h = await deploy(FEATURE_WASM);
+      s.evidence('deploy', { account: CONTRACT, featureBuild: h, defaultBuild: hashFile(DEFAULT_WASM) });
+      s.assert('the test copy has get_test_signer and no override is set', (await view('get_test_signer', {})) === null);
+    }, { critical: true });
 
     const roomSign = (r) => {
       const m = `${CONTRACT}:${GROUP}:${syn.epoch}:${syn.round_nonce}:foreign:${r.obligation_id}:${r.chain}:${r.from}:${r.payee}:${r.amount}:${r.recent_blockhash}`;
@@ -107,6 +129,13 @@ export default {
       const st = await startState();
       s.assert('the obligation is recorded and signed, and 2,000,000 is reserved', st.ob?.signed === true && st.spent === 2_000_000n, { actual: [st.ob, String(st.spent)] });
     });
+
+    await ctx.step('teardown: the default build is put back on the test copy', async (s) => {
+      const h = await deploy(DEFAULT_WASM);
+      s.assert('the test copy runs the default build again', (await codeHashOf()) === h && h === hashFile(DEFAULT_WASM));
+      let gone = false; try { await view('get_test_signer', {}); } catch { gone = true; }
+      s.assert('and the test method is gone', gone);
+    }, { always: true });
 
     await ctx.step('teardown: the owner removes the unfunded group', async (s) => {
       const r = await chain.send(M.account, 'prune_syndicate', { syndicate_id: GROUP }, { gas: 60000000000000n, contractId: CONTRACT, label: 'prune the test group' });
