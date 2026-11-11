@@ -4,6 +4,10 @@ import { leafHash, merkleRoot, merkleProof, verifyProof, payrunOrderHash } from 
  * Selective disclosure for an auditor. The employer opens chosen lines of a pay run with a Merkle proof each; the auditor checks them against
  * the order hash recorded on chain, and sees nothing about the lines that stay closed. Totals can be shown without any person or address.
  */
+/** What the employer signs to authorise opening lines of a pay run for an auditor. It names the run, the exact lines and the auditor's key, so none can be changed after signing. */
+export const AUDIT_OPEN_DOMAIN = 'midge-audit-open-v1';
+export const auditOpenMessage = ({ runId, indices, auditorKeyHex }) => `${AUDIT_OPEN_DOMAIN}:${runId}:${indices.join(',')}:${String(auditorKeyHex).toLowerCase()}`;
+
 export function auditorPack({ runId, receipts, open }) {
   const leaves = receipts.map(leafHash);
   const root = merkleRoot(leaves);
