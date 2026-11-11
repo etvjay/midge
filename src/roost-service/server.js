@@ -5,6 +5,7 @@ import { HostedRoost } from './hosted-roost.js';
 import { DstackSocketProvider } from './provider.js';
 import { RoostAggregationError } from '../enclave/errors.js';
 import { createEscrowReader } from './escrow-reader.js';
+import { makeAccountKeyCheck } from './signed-input.js';
 
 /**
  * HTTP surface of the hosted Roost.
@@ -52,6 +53,24 @@ export function escrowReaderFromEnv(env) {
   if (!env.ROOST_CONTRACT_ID) throw new Error('ROOST_RPC_URLS is set but ROOST_CONTRACT_ID is not');
   if (urls.length < 2) throw new Error('ROOST_RPC_URLS needs two or more different providers: they must agree, so one is not enough');
   return createEscrowReader({ rpcUrls: urls, contractId: env.ROOST_CONTRACT_ID });
+}
+
+/**
+ * The Roost this process runs, from its environment. ROOST_REQUIRE_SIGNED_INPUTS=1 (exactly that value) makes the room accept only inputs signed
+ * with a key the member's NEAR account really has, checked against the first provider and the contract; ballots, RFQs and pay runs need it.
+ * It is read from the compose file, which the attestation measures, so a member who verifies the Roost also verifies this setting.
+ */
+export function roostFromEnv(env, provider = new DstackSocketProvider()) {
+  const escrowReader = escrowReaderFromEnv(env);
+  let accountKeyCheck = null;
+  const requireSignedInputs = env.ROOST_REQUIRE_SIGNED_INPUTS === '1';
+  if (requireSignedInputs) {
+    const urls = (env.ROOST_RPC_URLS || '').split(',').map((u) => u.trim()).filter(Boolean);
+    if (urls.length === 0) throw new Error('ROOST_REQUIRE_SIGNED_INPUTS needs ROOST_RPC_URLS to check account keys against');
+    if (!env.ROOST_CONTRACT_ID) throw new Error('ROOST_REQUIRE_SIGNED_INPUTS needs ROOST_CONTRACT_ID');
+    accountKeyCheck = makeAccountKeyCheck({ rpcUrl: urls[0], contractId: env.ROOST_CONTRACT_ID });
+  }
+  return new HostedRoost({ provider, escrowReader, requireSignedInputs, accountKeyCheck });
 }
 
 export function createRoostServer({ roost, adminKey }) {
@@ -151,9 +170,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.error('ROOST_ADMIN_KEY (at least 24 characters) is required');
     process.exit(1);
   }
-  const provider = new DstackSocketProvider();
-  const escrowReader = escrowReaderFromEnv(process.env);
-  const roost = new HostedRoost({ provider, escrowReader });
+  const roost = roostFromEnv(process.env);
   const port = Number(process.env.PORT || 8080);
   createRoostServer({ roost, adminKey }).listen(port, '0.0.0.0', () => {
     const d = roost.describe();

@@ -1,5 +1,9 @@
+pub mod foreign;
+pub use foreign::{ForeignObligation, ForeignPayee, ForeignPaymentRequest, ForeignPolicy};
+use near_sdk::json_types::U128;
+
 use near_sdk::store::{IterableMap, LookupMap};
-use near_sdk::{env, near, AccountId, Gas, NearToken, PanicOnDefault, Promise};
+use near_sdk::{env, near, AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseResult};
 
 /// Minimum storage deposit to prevent storage griefing attacks (0.005 NEAR).
 pub const MIN_STORAGE_DEPOSIT_YOCTO: u128 = 5_000_000_000_000_000_000_000;
@@ -370,6 +374,45 @@ fn write_window(syndicate_id: &str, w: &ReleaseWindow) {
         &near_sdk::borsh::to_vec(w).unwrap_or_else(|_| {
             env::panic_str("[Settle REJECT] Could not record the release window")
         }),
+    );
+}
+
+fn foreign_policy_slot(id: &str) -> Vec<u8> {
+    let mut k = b"f:".to_vec();
+    k.extend_from_slice(id.as_bytes());
+    k
+}
+
+fn foreign_obligation_slot(id: &str, obligation: &str) -> Vec<u8> {
+    format!("fo:{}:{}:{}", id.len(), id, obligation).into_bytes()
+}
+
+fn foreign_spent_slot(id: &str, chain: &str, payee: &str) -> Vec<u8> {
+    format!("fs:{}:{}:{}:{}", id.len(), id, chain, payee).into_bytes()
+}
+
+/// Ethereum addresses compare without case; Solana addresses are exact.
+fn normalize_foreign(chain: &str, address: &str) -> String {
+    if chain.starts_with("ethereum") {
+        address
+            .trim_start_matches("0x")
+            .trim_start_matches("0X")
+            .to_lowercase()
+    } else {
+        address.to_string()
+    }
+}
+
+fn read_foreign_spent(id: &str, chain: &str, payee_norm: &str) -> u128 {
+    env::storage_read(&foreign_spent_slot(id, chain, payee_norm))
+        .and_then(|raw| near_sdk::borsh::from_slice(&raw).ok())
+        .unwrap_or(0)
+}
+
+fn write_foreign_spent(id: &str, chain: &str, payee_norm: &str, v: u128) {
+    env::storage_write(
+        &foreign_spent_slot(id, chain, payee_norm),
+        &near_sdk::borsh::to_vec(&v).unwrap(),
     );
 }
 
@@ -1671,6 +1714,341 @@ impl FlyCoordinator {
 
     pub fn get_syndicate(&self, syndicate_id: String) -> Option<SyndicateRecord> {
         self.syndicates.get(&syndicate_id).cloned()
+    }
+
+    /// set_foreign_policy(): the owner fixes, once and before the first deposit, which payees on other chains the group may pay and
+    /// how much (per payment, in total, and in Ethereum fees). A depositor can read it first (`get_foreign_policy`); it cannot change.
+    pub fn set_foreign_policy(&mut self, syndicate_id: String, policy: ForeignPolicy) {
+        let syn = self
+            .syndicates
+            .get(&syndicate_id)
+            .unwrap_or_else(|| env::panic_str("Syndicate not found"));
+        assert_eq!(
+            syn.owner,
+            env::predecessor_account_id(),
+            "[Foreign REJECT] only the owner may set the foreign policy"
+        );
+        assert!(
+            syn.total_escrow.as_yoctonear() == 0 && syn.flyer_count == 0,
+            "[Foreign REJECT] the foreign policy is set before the first deposit"
+        );
+        assert!(
+            env::storage_read(&foreign_policy_slot(&syndicate_id)).is_none(),
+            "[Foreign REJECT] the foreign policy is already set"
+        );
+        assert!(
+            !policy.payees.is_empty() && policy.payees.len() <= 8,
+            "[Foreign REJECT] one to eight foreign payees"
+        );
+        let mut seen: Vec<(String, String)> = Vec::new();
+        for p in &policy.payees {
+            assert!(
+                foreign::KNOWN_CHAINS.contains(&p.chain.as_str()),
+                "[Foreign REJECT] unknown chain {}",
+                p.chain
+            );
+            let ok = if p.chain.starts_with("solana") {
+                foreign::base58_decode(&p.address)
+                    .map(|b| b.len() == 32)
+                    .unwrap_or(false)
+            } else {
+                foreign::hex_to_20(&p.address).is_some()
+            };
+            assert!(
+                ok,
+                "[Foreign REJECT] {} is not a valid address on {}",
+                p.address, p.chain
+            );
+            assert!(
+                p.max_amount.0 > 0 && p.max_total.0 >= p.max_amount.0,
+                "[Foreign REJECT] caps must be positive and the total at least one payment"
+            );
+            let key = (p.chain.clone(), normalize_foreign(&p.chain, &p.address));
+            assert!(
+                !seen.contains(&key),
+                "[Foreign REJECT] duplicate foreign payee"
+            );
+            seen.push(key);
+        }
+        env::storage_write(
+            &foreign_policy_slot(&syndicate_id),
+            &near_sdk::borsh::to_vec(&policy)
+                .unwrap_or_else(|_| env::panic_str("could not store the policy")),
+        );
+    }
+
+    pub fn get_foreign_policy(&self, syndicate_id: String) -> Option<ForeignPolicy> {
+        env::storage_read(&foreign_policy_slot(&syndicate_id))
+            .and_then(|raw| near_sdk::borsh::from_slice(&raw).ok())
+    }
+
+    pub fn get_foreign_obligation(
+        &self,
+        syndicate_id: String,
+        obligation_id: String,
+    ) -> Option<ForeignObligation> {
+        env::storage_read(&foreign_obligation_slot(&syndicate_id, &obligation_id))
+            .and_then(|raw| near_sdk::borsh::from_slice(&raw).ok())
+    }
+
+    pub fn get_foreign_spent(&self, syndicate_id: String, chain: String, payee: String) -> U128 {
+        U128(read_foreign_spent(
+            &syndicate_id,
+            &chain,
+            &normalize_foreign(&chain, &payee),
+        ))
+    }
+
+    /// request_foreign_payment(): pay a payee on another chain. The room signs the payment; the contract checks that signature, the
+    /// group's foreign policy (payee on that chain, per-payment cap, running total, Ethereum fee cap) and that the obligation id is
+    /// new, reserves the budget, builds the foreign transaction itself from those checked fields, and asks the NEAR MPC signer to
+    /// sign it with a key derived from THIS contract and the group id. The signature comes back to the caller, who broadcasts it.
+    /// If the signer fails, the reservation is released and the obligation can be asked for again.
+    pub fn request_foreign_payment(
+        &mut self,
+        syndicate_id: String,
+        attestation_nonce: String,
+        request: ForeignPaymentRequest,
+        enclave_signature: String,
+    ) -> Promise {
+        let syn = self
+            .syndicates
+            .get(&syndicate_id)
+            .unwrap_or_else(|| env::panic_str("Syndicate not found"))
+            .clone();
+        assert_eq!(
+            syn.status,
+            SyndicateStatus::Active,
+            "[HAQ REJECT] Syndicate is not active."
+        );
+        assert_eq!(
+            syn.round_nonce, attestation_nonce,
+            "[HAQ REJECT] Nonce mismatch. Replay attack blocked."
+        );
+        assert!(
+            env::storage_read(&second_key_slot(&syndicate_id)).is_none(),
+            "[Foreign REJECT] foreign payments are not supported for two-room groups yet"
+        );
+        let policy = self
+            .get_foreign_policy(syndicate_id.clone())
+            .unwrap_or_else(|| {
+                env::panic_str("[Foreign REJECT] no foreign policy is set for this group")
+            });
+
+        let r = &request;
+        assert!(
+            !r.obligation_id.is_empty()
+                && r.obligation_id.len() <= 64
+                && r.obligation_id
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-'),
+            "[Foreign REJECT] obligation id must be 1 to 64 plain characters"
+        );
+        // The room approved exactly this payment.
+        let message = foreign::foreign_payment_message(
+            env::current_account_id().as_str(),
+            &syn.id,
+            syn.epoch,
+            &syn.round_nonce,
+            r,
+        );
+        let pk_bytes = hex::decode(&syn.enclave_public_key)
+            .unwrap_or_else(|_| env::panic_str("[HAQ REJECT] Enclave public key must be hex"));
+        let sig_bytes = hex::decode(&enclave_signature)
+            .unwrap_or_else(|_| env::panic_str("[HAQ REJECT] Invalid hex signature"));
+        assert!(
+            pk_bytes.len() == 32 && sig_bytes.len() == 64,
+            "[HAQ REJECT] Key must be 32 bytes and signature 64 bytes"
+        );
+        let mut pk = [0u8; 32];
+        pk.copy_from_slice(&pk_bytes);
+        let mut sg = [0u8; 64];
+        sg.copy_from_slice(&sig_bytes);
+        assert!(
+            env::ed25519_verify(&sg, message.as_bytes(), &pk),
+            "[HAQ REJECT] Invalid enclave Ed25519 signature over foreign payment!"
+        );
+
+        // The group's rules.
+        assert!(
+            env::storage_read(&foreign_obligation_slot(&syndicate_id, &r.obligation_id)).is_none(),
+            "[Foreign REJECT] obligation {} was already requested",
+            r.obligation_id
+        );
+        let wanted = normalize_foreign(&r.chain, &r.payee);
+        let rule = policy
+            .payees
+            .iter()
+            .find(|p| p.chain == r.chain && normalize_foreign(&p.chain, &p.address) == wanted)
+            .unwrap_or_else(|| {
+                env::panic_str("[Foreign REJECT] payee is not allowed on this chain")
+            });
+        assert!(
+            r.amount.0 > 0 && r.amount.0 <= rule.max_amount.0,
+            "[Foreign REJECT] amount is over the per-payment cap"
+        );
+        let spent = read_foreign_spent(&syndicate_id, &r.chain, &wanted);
+        assert!(
+            spent.saturating_add(r.amount.0) <= rule.max_total.0,
+            "[Foreign REJECT] total would pass the running cap for this payee"
+        );
+
+        // Build the transaction the signer will sign, from the fields just checked.
+        let (domain_id, payload) = if r.chain.starts_with("solana") {
+            let to = foreign::base58_decode(&r.payee)
+                .filter(|b| b.len() == 32)
+                .unwrap_or_else(|| {
+                    env::panic_str("[Foreign REJECT] payee is not a Solana address")
+                });
+            let from = foreign::base58_decode(&r.from)
+                .filter(|b| b.len() == 32)
+                .unwrap_or_else(|| env::panic_str("[Foreign REJECT] from is not a Solana address"));
+            let bh = r
+                .recent_blockhash
+                .as_ref()
+                .and_then(|b| foreign::base58_decode(b))
+                .filter(|b| b.len() == 32)
+                .unwrap_or_else(|| {
+                    env::panic_str("[Foreign REJECT] a Solana payment needs a recent blockhash")
+                });
+            let lamports = u64::try_from(r.amount.0).unwrap_or_else(|_| {
+                env::panic_str("[Foreign REJECT] amount does not fit a Solana transfer")
+            });
+            let (mut f, mut t, mut b) = ([0u8; 32], [0u8; 32], [0u8; 32]);
+            f.copy_from_slice(&from);
+            t.copy_from_slice(&to);
+            b.copy_from_slice(&bh);
+            let msg = foreign::solana_transfer_message(&f, &t, lamports, &b);
+            (
+                1u32,
+                near_sdk::serde_json::json!({ "Eddsa": hex::encode(msg) }),
+            )
+        } else {
+            let to = foreign::hex_to_20(&r.payee).unwrap_or_else(|| {
+                env::panic_str("[Foreign REJECT] payee is not an Ethereum address")
+            });
+            assert!(
+                foreign::hex_to_20(&r.from).is_some(),
+                "[Foreign REJECT] from is not an Ethereum address"
+            );
+            let (nonce, prio, max_fee, gas) =
+                match (r.evm_nonce, r.max_priority_fee, r.max_fee, r.gas_limit) {
+                    (Some(n), Some(p), Some(m), Some(g)) => (n, p.0, m.0, g),
+                    _ => env::panic_str(
+                        "[Foreign REJECT] an Ethereum payment needs nonce, fees and gas limit",
+                    ),
+                };
+            assert!(
+                prio <= max_fee,
+                "[Foreign REJECT] priority fee is above the max fee"
+            );
+            assert!(
+                (gas as u128).saturating_mul(max_fee) <= policy.max_fee_cost.0,
+                "[Foreign REJECT] fee (gas limit x max fee) is over the cap"
+            );
+            let digest = foreign::evm_transfer_digest(
+                11_155_111,
+                nonce,
+                prio,
+                max_fee,
+                gas,
+                &to,
+                r.amount.0,
+                |b| env::keccak256(b),
+            );
+            (
+                0u32,
+                near_sdk::serde_json::json!({ "Ecdsa": hex::encode(digest) }),
+            )
+        };
+
+        // Reserve the budget and record the obligation before asking, so a second request cannot spend the same budget.
+        write_foreign_spent(&syndicate_id, &r.chain, &wanted, spent + r.amount.0);
+        let ob = ForeignObligation {
+            chain: r.chain.clone(),
+            payee: r.payee.clone(),
+            amount: r.amount,
+            since_block: env::block_height(),
+            signed: false,
+        };
+        env::storage_write(
+            &foreign_obligation_slot(&syndicate_id, &r.obligation_id),
+            &near_sdk::borsh::to_vec(&ob)
+                .unwrap_or_else(|_| env::panic_str("could not record the obligation")),
+        );
+        env::log_str(&format!("EVENT_JSON:{{\"event\":\"foreign_payment_requested\",\"group\":\"{}\",\"obligation\":\"{}\",\"chain\":\"{}\",\"payee\":\"{}\",\"amount\":\"{}\"}}", syndicate_id, r.obligation_id, r.chain, r.payee, r.amount.0));
+
+        let signer: AccountId = if env::current_account_id().as_str().ends_with(".testnet") {
+            "v1.signer-prod.testnet"
+        } else {
+            "v1.signer"
+        }
+        .parse()
+        .unwrap();
+        let args = near_sdk::serde_json::json!({ "request": { "payload_v2": payload, "path": syndicate_id, "domain_id": domain_id } }).to_string().into_bytes();
+        Promise::new(signer)
+            .function_call(
+                "sign".to_string(),
+                args,
+                NearToken::from_yoctonear(1),
+                Gas::from_tgas(200),
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(Gas::from_tgas(15))
+                    .on_foreign_signed(
+                        syndicate_id,
+                        r.obligation_id.clone(),
+                        r.chain.clone(),
+                        wanted,
+                        r.amount,
+                    ),
+            )
+    }
+
+    /// Follow-up of a foreign payment request: if the signer failed, release the reservation so the obligation can be asked for again.
+    #[private]
+    #[allow(deprecated)]
+    pub fn on_foreign_signed(
+        &mut self,
+        syndicate_id: String,
+        obligation_id: String,
+        chain: String,
+        payee: String,
+        amount: U128,
+    ) -> Option<String> {
+        assert_eq!(
+            env::promise_results_count(),
+            1,
+            "expected one promise result"
+        );
+        match env::promise_result(0) {
+            PromiseResult::Successful(bytes) => {
+                if let Some(raw) =
+                    env::storage_read(&foreign_obligation_slot(&syndicate_id, &obligation_id))
+                {
+                    if let Ok(mut ob) = near_sdk::borsh::from_slice::<ForeignObligation>(&raw) {
+                        ob.signed = true;
+                        env::storage_write(
+                            &foreign_obligation_slot(&syndicate_id, &obligation_id),
+                            &near_sdk::borsh::to_vec(&ob).unwrap(),
+                        );
+                    }
+                }
+                Some(String::from_utf8_lossy(&bytes).to_string())
+            }
+            PromiseResult::Failed => {
+                env::storage_remove(&foreign_obligation_slot(&syndicate_id, &obligation_id));
+                let spent = read_foreign_spent(&syndicate_id, &chain, &payee);
+                write_foreign_spent(
+                    &syndicate_id,
+                    &chain,
+                    &payee,
+                    spent.saturating_sub(amount.0),
+                );
+                None
+            }
+        }
     }
 
     /// prune_syndicate(): garbage collection of a finished syndicate (permissionless), or of a never-funded one (its

@@ -33,7 +33,7 @@ export function figures(proof, root) {
     outsideRules: { value: 'none', label: 'payouts outside the rules', source: 'docs/lab/COMPARISON_RESULTS.md', quote: 'no operator can take the pot or pay outside the fixed policy' },
     modelHost: { value: 'Live', label: 'bids sealed to a NEAR AI Cloud model', source: 'docs/canonical/CURRENT_STATE.md', quote: 'LIVE DEMONSTRATED** | `npm run verify:roost-model`' },
     phalaHosted: { value: 'Attested, not running now', label: 'our room program on Phala', source: 'docs/canonical/CURRENT_STATE.md', quote: 'no hosted Roost is running now' },
-    chainSignatures: { value: 'One live signature', label: 'addresses on Bitcoin, Ethereum and Solana', source: 'docs/canonical/CURRENT_STATE.md', quote: 'Only the signing is live; no transaction was broadcast on another chain' },
+    chainSignatures: { value: 'Rules checked, on testnet', label: 'contract-requested payments on Solana and Ethereum', source: 'docs/canonical/CURRENT_STATE.md', quote: "the Midge contract checked the group's foreign-payment rules and asked the signer for both payments" },
     intentsAssets: { value: '210', label: 'assets read live through 1Click', source: 'docs/canonical/CURRENT_STATE.md', quote: '210 assets audited live across NEAR, BTC, ETH, SOL' },
     outlayerModel: { value: 'Not used yet', label: 'OutLayer-style limits, as a model', source: 'docs/canonical/CURRENT_STATE.md', quote: '**TESTED (JS MODEL)**' },
     agentTools: { value: 'Live', label: 'SDK, API and MCP tools on testnet', source: 'docs/canonical/WHAT_IS_MIDGE.md', quote: 'Every route, SDK method and MCP tool exercised' },

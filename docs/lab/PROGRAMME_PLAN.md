@@ -369,3 +369,47 @@ Run `20261108T153206Z-a0f0`, PASS, 50 events, log verified, promoted (`docs/lab-
 **E-UNFUNDED-PRUNE-LIVE-01**, run `20261108T170650Z-a88e`, PASS on the first run, 40 events, log verified, promoted. The chain ran the recorded build (`854fzUj2…`) with the same 15 groups; an unfunded group read Unfunded; a stranger's early removal was refused with the never-funded message and the group stayed; the creator removed it at once (group and phase null, creator's index clean); a funded group was refused even for its creator and was untouched; the teardown left no account and no group (15 groups). **Not shown live, as stated beforehand:** the path after the waiting period (unit tests only).
 
 **E-MODEL-PIN-LIVE-01**, run `20261108T170912Z-53f2`, PASS on the first run, log verified, promoted. Against the real NEAR AI host: three reads gave identical measurements; the recorded baseline matched; a fetch pinned to it was accepted with the Intel chain verified and TCB UpToDate; a wrong value in each of the five fields was refused naming that field; a list holding a wrong and the right value was accepted. **Not shown:** that the baseline is NEAR AI's published build, stability over days, a real rotation.
+
+## A Dark Vault run by the hosted Roost on real hardware: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** The ongoing-group experiment (E-ONGOING-01) ran a Dark Vault across three rounds on testnet, but with a local room and a simulated attestation. The hosted-Roost experiments (E-HOSTED-LIVE-01, E-HOSTED-ESCROW-LIVE-01) ran one round on a real Phala TDX VM. Nothing yet had the real VM run a group that lives across several rounds. This does that, on the pinned image `cde03fef…`, against the real testnet contract with the VM's escrow check on.
+
+**E-HOSTED-DARKVAULT-LIVE-01 (hardware).** Five members (u1 to u5) and four recipients. Four founders deposit 0.1 each into a DARK_VAULT group whose room key is the VM's attested settlement key. The VM runs three rounds; the contract settles each.
+1. **The VM starts and attests** on the pinned image, as in the earlier hosted runs (compose equals our file byte for byte, official verifier accepts the quote, production OS image, not a simulator).
+2. **Round 1, a pool:** u1 to u4 bid 0.01, 0.01, 0.015, 0.015; the VM reads the chain's escrow, signs; the contract accepts; `rp` receives exactly 0.05; the epoch rises by exactly 1 and the round nonce changes.
+3. **A late fifth deposit, then round 2, a ballot:** u5 deposits 0.1 between rounds; the VM's escrow read counts u5; A wins 3 to 2; `ra` receives exactly 0.05; u5 is charged 0.01 like the others (0.09 left).
+4. **Round 3, a lending quote:** u3 wins at 400 bps; `rl` receives exactly 0.04.
+5. **The books close:** after round 3 the escrows are u1 0.08, u2 0.08, u3 0.035, u4 0.075, u5 0.09 and they sum to the group total 0.36; the epoch rose by 3 and every nonce was different.
+6. **Teardown leaves nothing:** the members exit with their remainders, the group is pruned, every account deleted, the VM deleted and the Phala account empty, the session costing under $0.10.
+
+**Not tested:** two rooms, a VM failing mid-group, the VM staying up beyond the session, a lying provider. **Weakness I expect to remain:** one operator controls every account and the VM; the attestation proves which image runs, not that the providers are honest.
+
+### Results: the hosted Dark Vault, first run (written after the run; the predictions above were not edited)
+Run `20261111T043528Z-3f73`, **FAIL**, one run (kept locally, not promoted). **Predictions 1 and 2 held on real hardware:** the VM attested on the pinned image (16 checks, the official verifier accepted the quote) and ran round 1, a pool; the contract accepted the settlement the VM signed and `rp` received exactly 0.05. **Prediction 3 failed:** the VM refused the ballot with "a ballot is only counted on a host that requires signed inputs". The hosted server's entry point never turns signed inputs on, so ballots, RFQs and pay runs cannot run on the real VM; they had only ever run against local rooms (GAP-046). Round 3 then timed out because round 2 never happened and its expected totals were wrong, a consequence and not a second finding. **Prediction 6 held:** all nine accounts were deleted, the group pruned, the VM deleted and the Phala account empty, the session costing under $0.10.
+
+## The hosted Dark Vault, second run: predictions, written 2026-11-11 before the experiment exists or runs
+Same group, same image, with what the pinned image can do today: round 2 is a second **pool** (all five members bid 0.01, the late depositor included), not a ballot.
+**E-HOSTED-DARKVAULT-LIVE-02 (hardware).**
+1. The VM attests on the pinned image, as before.
+2. Round 1 (pool, four founders): `rp` receives exactly 0.05; epoch +1; the nonce changes.
+3. A late fifth deposit, then round 2 (pool, five members): the VM's escrow read counts u5; `ra` receives exactly 0.05; every member is charged 0.01, so u5 has 0.09.
+4. Round 3 (lending quote): u3 wins at 400 bps; `rl` receives exactly 0.04.
+5. The books close: u1 0.08, u2 0.08, u3 0.035, u4 0.075, u5 0.09, summing to the group total 0.36; the epoch rose by exactly 3 and every nonce was different.
+6. Teardown leaves nothing: group pruned, accounts deleted, VM deleted, account empty, under $0.10.
+**Not tested (and why):** a ballot, an RFQ and a pay run on hardware, because the pinned image cannot run them (GAP-046).
+
+## Contract-requested foreign payments: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** On 2026-11-10 a script ran a payroll in which the Midge contract (test deployment `m.fly-1793636729.testnet`) checked a group's rules and asked the NEAR MPC signer to sign two payments, on Solana devnet and Ethereum Sepolia. That was a one-off script, so by the project's own rule it is not yet proof. This is the same flow as a lab experiment, run again on the same contract and group (`payroll-live-1`), whose derived addresses are already funded.
+
+**E-CONTRACT-FOREIGN-LIVE-01 (testnet and two foreign testnets).**
+1. **The keys are the contract's.** The Solana and Ethereum addresses the signer derives for the contract and the group id differ from the ones it derives for our own account with the same path; the group's funded balances are non-zero.
+2. **An in-rules Solana payment:** the contract accepts the room-signed request, the signer's reply verifies against the contract-derived Solana key over the message the script rebuilds independently, the transaction lands on devnet, and the payee's balance rises by exactly the amount.
+3. **An in-rules Ethereum payment:** the signature recovers to the contract-derived Ethereum address over the EIP-1559 digest that ethers computes independently, the transaction lands on Sepolia with status 1, and the payee's balance rises by exactly the amount.
+4. **The books:** the contract's recorded running total for each payee rose by exactly the amount just paid, and each obligation is marked signed.
+5. **Refusals:** an unlisted payee, an amount over the per-payment cap, a reused obligation id and a request the room did not sign are each refused by the contract with its own message, and the recorded totals do not move.
+
+**Not tested:** the signer failing mid-request (covered by a unit test only), two-room groups, the production contract, the hosted Roost signing these requests (a test key signs). **Weakness I expect to remain:** one operator controls the room key, the contract and the payees; money at the foreign addresses is outside the NEAR exit.
+
+### Results: contract-requested foreign payments (written after the run; the predictions above were not edited)
+**E-CONTRACT-FOREIGN-LIVE-01**, run `20261111T045220Z-5a19`, PASS on the first run, log verified, promoted. All five predictions held: the keys derived for the contract differ from those for our own account with the same path; an in-rules Solana payment and an in-rules Ethereum payment were each requested by the contract, verified against independently rebuilt messages and digests, landed, and the payees gained exactly the amounts; the contract's running totals rose by exactly what was paid and both obligations are marked signed; four out-of-rules requests (unlisted payee, over the cap, reused obligation, a request the room did not sign) were each refused with their own reason and the totals did not move. Still not shown: the signer failing mid-request on a live chain, two-room groups, the production contract, and a hosted Roost signing these requests. No mutation check of the experiment's assertions was run.
