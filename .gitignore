@@ -27,3 +27,7 @@ outlayer/*/target/
 
 # alternate contract build output (the test-signer-override build)
 contracts/**/target-*/
+
+# Video working folders (film drafts, storyboards, licensed music and sound effects) are kept only on
+# the author's machine and are not published.
+/videos/
