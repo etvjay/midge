@@ -77,6 +77,21 @@ export function makeAccountKeyCheck({ rpcUrl, contractId, fetchImpl = fetch }) {
 }
 
 /**
+ * The same check against several independent RPC providers, which must ALL confirm the key. One provider that says no, or says something different, refuses
+ * the key; one that cannot answer is an error and the key is not accepted. A single provider could otherwise vouch for a key that is not the account's
+ * (GAP-050), so two or more different providers are required when the check is built, as for the escrow reader.
+ */
+export function makeAgreeingAccountKeyCheck({ rpcUrls, contractId, fetchImpl = fetch }) {
+  const urls = [...new Set((rpcUrls || []).map((u) => String(u).trim().replace(/\/+$/, '')).filter(Boolean))];
+  if (urls.length < 2) throw new Error('the account-key check needs two or more different RPC providers: they must agree, so one is not enough');
+  const checks = urls.map((rpcUrl) => makeAccountKeyCheck({ rpcUrl, contractId, fetchImpl }));
+  return async (accountId, publicKey) => {
+    const answers = await Promise.all(checks.map((c) => c(accountId, publicKey)));
+    return answers.every((a) => a === true);
+  };
+}
+
+/**
  * Everything a member sends to a signed-only room, in one call: seal the body to the room's intent key, then sign the sealed bytes together with
  * the round (contract, group, epoch, nonce), the account and a sequence number. Returns the parameters for `submitSignedIntent`.
  * The hosted Roost requires signed inputs for every program (pool, quote, auction, ballot, RFQ, pay run), so this is how a member bids.

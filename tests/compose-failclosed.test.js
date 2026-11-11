@@ -20,3 +20,11 @@ test('it pins the same image as the real compose file', () => {
   const img = (t) => t.match(/image: (\S+)/)[1];
   assert.equal(img(read('docker-compose.failclosed.yml')), img(read('docker-compose.yml')));
 });
+
+test('the fixture breaks only the escrow providers: its key-check providers are the real ones, so signed bids can still be accepted (GAP-050)', () => {
+  const fix = read('docker-compose.failclosed.yml'); const real = read('docker-compose.yml');
+  const kc = (t) => t.match(/ROOST_ACCOUNT_CHECK_RPC_URLS=(.*)/)[1];
+  assert.equal(kc(fix), kc(real));
+  for (const u of kc(real).split(',')) assert.doesNotMatch(new URL(u).hostname, /\.invalid$/);
+  assert.equal(new Set(kc(real).split(',')).size, 2, 'two different key-check providers');
+});
