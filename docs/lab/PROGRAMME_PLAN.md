@@ -432,3 +432,16 @@ Same group, same image, with what the pinned image can do today: round 2 is a se
 
 ### Results: contract-requested foreign payments, re-run on the windowed contract (written after the run; the predictions above were not edited)
 After GAP-047 and GAP-048 were fixed (a per-window running total, prune cleanup, finished groups still able to pay listed payees) the test contract was redeployed and the same experiment, **E-CONTRACT-FOREIGN-LIVE-01**, was run against it on a new group, `payroll-live-2`: run `20261111T052928Z-c176`, PASS, log verified, promoted. All five predictions held again. Not shown live: a window rollover, a failed signer call, a finished group paying, and the prune rules (unit tests only).
+
+## The redacted pre-flight advisory: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** An optional explainer that asks the attested NEAR AI Cloud model to put a pre-flight result into plain words. It is built so using it does not weaken the room's confidentiality: the model is sent finding codes and ratios rounded to the nearest ten percent, never a name, address, id or exact amount, and it is off unless the operator turns it on. This runs it against the real model.
+
+**E-PREFLIGHT-ADVICE-LIVE-01 (live NEAR AI Cloud, no chain).** A scenario with a person, two Solana addresses, an obligation id and exact amounts, whose deterministic pre-flight has two warnings (changed destination, unusual amount).
+1. **The model gets only the redacted message.** The message contains none of the scenario's identifying strings (names, both addresses, the obligation id, any exact amount) and nothing shaped like an address, and is under 600 characters.
+2. **Coarse by design.** Two payments in the same ten-percent bucket produce an identical message.
+3. **The model is the attested one.** The attestation chain verifies with TCB `UpToDate`, and the model's signed receipt verifies (hashes, signature, signer equals the attested key).
+4. **Advice only.** The reply is plain text; the pre-flight decision returned beside it is identical to the one computed without the model; a reply containing an address-shaped string would be refused.
+5. **Off by default.** With the advisory not enabled the model is not called (zero requests).
+
+**Not tested:** whether the explanation is useful to an operator (I expect it to mostly restate the codes), the room running this inside the hosted VM, and any model other than Qwen/Qwen3.6-35B-A3B-FP8. **Weakness I expect to remain:** the model still learns the finding codes, the chain family, rounded ratios and that a payment is being checked.
