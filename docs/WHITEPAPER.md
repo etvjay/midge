@@ -331,7 +331,8 @@ The residual risks, listed rather than hidden:
 - **Public deposits and refunds.** The funding accounts, the amounts deposited and the timing of payouts are public on NEAR. Only the deliberation and the bids are private.
 - **An unfunded group** (hatched, never deposited into) has no member and so no exit. Its creator can remove it at once, and anyone can after about seven days (GAP-030, deployed 2026-11-08 and checked live by `E-UNFUNDED-PRUNE-LIVE-01`; the path after the waiting period is unit-tested only).
 - **A callback whose payload is identical to another's** can be matched to the wrong record; this was accepted and is recorded for the next contract change.
-- **Providers.** Escrow-bound rounds trust two RPC providers to agree and to be honest.
+- **Providers.** Escrow-bound rounds trust two RPC providers to agree and to be honest. Signed inputs are accepted only if every configured provider confirms the member's key (GAP-050).
+- **The deployer key (GAP-044).** The testnet contract account `c.fly-1793636729.testnet` still holds one full-access key (the deployer's). A group's release policy is fixed once the group is hatched, but whoever holds that key can replace the contract's **code**, and it was used to upgrade the contract twice on 2026-11-11 (the full history is in `docs/canonical/deployments.json`, and `scripts/verify-onchain.js` and the site compare the chain's code hash with it). Deleting the key is irreversible and is deliberately left until everything else is verified.
 
 ---
 
@@ -415,7 +416,8 @@ What runs without keys: `make verify`. Live checks need a NEAR key, a Phala key 
 - It does not claim a hosted Roost is running now, or that anything has run on mainnet.
 - It does not claim institutional use. The lending and block-trade programs have run against test accounts.
 - It does not claim the simulation's saving holds outside the model.
-- It does not claim anything was broadcast on Bitcoin, Ethereum or Solana. Only the threshold signature was produced and verified.
+- It does not claim anything was sent on Bitcoin. Payments on Solana devnet and Ethereum Sepolia, requested by the contract after it checked a group's rules and signed by the NEAR MPC network, were confirmed on those testnets; money held at a group's foreign addresses is outside the NEAR escrow and so outside the member exit.
+- It does not claim the contract's code cannot be changed: one deployer key can still redeploy it (GAP-044).
 - The documents this one replaces (SRS, RTM, architecture, use cases, research) are not published; they had drifted from the code.
 
 ---
