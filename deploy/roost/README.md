@@ -48,5 +48,7 @@ The pinned compose file sets `ROOST_REQUIRE_SIGNED_INPUTS=1`, and the setting ap
 ## Forgotten VMs
 Every session arms a detached dead-man's switch, which dies if the machine reboots. Schedule `node scripts/phala-reaper.mjs --yes` (for example every 30 minutes) as a second line: it deletes any `midge-*` VM older than two hours.
 
+**On this development machine the reaper is scheduled in cron** (every 30 minutes, `--yes`), so any `midge-*` VM older than two hours is deleted. To hold a VM on purpose for longer, comment out the cron line first (`crontab -e`) and put it back when you are done; a VM held without doing that will disappear. `node scripts/phala-reaper.mjs` with no flags only lists.
+
 ## The optional advisory (off by default)
 `explain: true` on `/v1/payroll/preflight`, `payrollPreflight({ explain: true })` and the `midge_payroll_preflight` tool ask an attested NEAR AI Cloud model to explain a pre-flight result **only if the operator configured an advisor** (`preflightAdvisor`). It is sent finding codes, the chain family and ratios rounded to the nearest ten percent: never a name, address, obligation id, group id or exact amount, and the model is not called at all if a guard finds one. It is advice only. This is the one place where information about a payment leaves the room, so leave it off unless you accept that.
