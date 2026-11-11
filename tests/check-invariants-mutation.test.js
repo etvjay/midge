@@ -7,8 +7,13 @@ import path from 'node:path';
 import { checkInvariants } from '../scripts/check-invariants.js';
 
 const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+// Each test works on its own copy of the repository (about 17 MB). The copies are removed when the file's tests finish: without this every run left five
+// of them in the temp directory (578 folders and several GB by 2026-11-11).
+const made = [];
+test.after(() => { for (const d of made) fs.rmSync(d, { recursive: true, force: true }); });
 function copy() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'inv-real-'));
+  made.push(root);
   for (const d of ['docs', 'foundry', 'contracts/fly-coordinator/src', 'contracts/fly-coordinator/tests', 'tests', 'lab/experiments', 'verifications']) {
     if (fs.existsSync(path.join(repo, d))) fs.cpSync(path.join(repo, d), path.join(root, d), { recursive: true, filter: (s) => !s.includes('node_modules') });
   }
