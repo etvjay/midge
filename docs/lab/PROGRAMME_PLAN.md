@@ -553,3 +553,17 @@ Not shown: the account-check providers failing on a live VM (unit tests only), r
 7. **Teardown leaves nothing:** makers exit with what is left, group pruned, accounts deleted, VM deleted, Phala account empty, under $0.10.
 
 **Not tested:** more than one tied pair, ties across more than two makers, a taker who is also a maker. **Weakness I expect to remain:** the room sees every bid, and the second price reveals the runner-up's bid to the public by design.
+
+## One account-check provider down, on the hardware room: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** Since GAP-050 the hosted room accepts a signed bid only if **every** configured account-check provider confirms the member's key. That was shown by unit tests only. This runs it on a real Phala TDX VM whose compose lists two account-check providers of which one can never resolve (a test fixture that differs from the real compose in that one line), with the escrow providers working.
+
+**E-HOSTED-ACCTCHECK-FAIL-LIVE-01 (hardware).** One throwaway NEAR account (0.1 NEAR, deleted after) with a valid key.
+1. **The VM attests**, and the compose it runs equals the fixture byte for byte; the fixture lists two different account-check providers, one real and one on the reserved `.invalid` domain.
+2. **A correctly signed bid is refused.** A bid signed with the account's real key is refused, because the check cannot reach one of its providers; the refusal says the key could not be checked, and does not say it was accepted.
+3. **Retries get the same answer,** and the room is still up (it answers `/healthz` and `/session`).
+4. **Nothing was queued.** The room's input digests are empty, so no round can be run on a bid that was never accepted: a charged round is refused as having no inputs, not run.
+5. **The failure is the provider's and not the key's.** On the real compose (both providers working) the same signed bid is accepted: shown here by the earlier promoted runs, not repeated.
+6. **Teardown leaves nothing:** account deleted, VM deleted, Phala account empty, under $0.05.
+
+**Not tested:** one provider answering "no" while the other answers "yes" (unit tests), recovery when the provider returns (it needs a second VM). **Weakness I expect to remain:** availability: one failing provider stops all bid intake. That is the price of requiring every provider to agree.
