@@ -1,0 +1,102 @@
+{
+  "lines": [
+    {
+      "id": "01",
+      "sfx": [
+        "soft whoosh",
+        "camera shutter click"
+      ]
+    },
+    {
+      "id": "02",
+      "sfx": [
+        "typewriter key",
+        "pencil scratch"
+      ]
+    },
+    {
+      "id": "03",
+      "sfx": [
+        "door close",
+        "deep soft impact"
+      ]
+    },
+    {
+      "id": "04",
+      "sfx": [
+        "soft tick"
+      ]
+    },
+    {
+      "id": "05",
+      "sfx": [
+        "paper slide",
+        "soft shimmer"
+      ]
+    },
+    {
+      "id": "06",
+      "sfx": [
+        "paper slide",
+        "wooden knock",
+        "low thud"
+      ]
+    },
+    {
+      "id": "07",
+      "sfx": [
+        "soft chime",
+        "paper slide"
+      ]
+    },
+    {
+      "id": "08",
+      "sfx": [
+        "soft tick",
+        "paper unfold"
+      ]
+    },
+    {
+      "id": "09",
+      "sfx": [
+        "slot reel tick"
+      ]
+    },
+    {
+      "id": "10",
+      "sfx": [
+        "soft click",
+        "mechanical switch"
+      ]
+    },
+    {
+      "id": "11",
+      "sfx": [
+        "soft pop"
+      ]
+    },
+    {
+      "id": "12",
+      "sfx": [
+        "clock ticking",
+        "soft whoosh",
+        "warm chime"
+      ]
+    },
+    {
+      "id": "13",
+      "sfx": [
+        "airy whoosh"
+      ]
+    },
+    {
+      "id": "14",
+      "sfx": [
+        "soft bell"
+      ]
+    }
+  ],
+  "bgm": {
+    "mode": "none"
+  }
+}

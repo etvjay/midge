@@ -1,0 +1,313 @@
+{
+  "bgm": {
+    "path": "assets/bgm/bed.mp3",
+    "volume": 0.5,
+    "query": "warm minimal underscore, soft sustained pad, slow pulse, sparse piano and bell, calm and exact",
+    "duration_s": 112
+  },
+  "bgm_pending": false,
+  "voices": [],
+  "sfx": [
+    {
+      "frame": 1,
+      "file": "assets/sfx/soft-whoosh.mp3",
+      "offset_s": 0.1,
+      "duration_s": 1.834,
+      "volume": 0.5
+    },
+    {
+      "frame": 1,
+      "file": "assets/sfx/camera-shutter-click.mp3",
+      "offset_s": 3.5,
+      "duration_s": 1.176,
+      "volume": 0.4
+    },
+    {
+      "frame": 2,
+      "file": "assets/sfx/typewriter-key.mp3",
+      "offset_s": 0.3,
+      "duration_s": 2.521,
+      "volume": 0.45
+    },
+    {
+      "frame": 2,
+      "file": "assets/sfx/pencil-scratch.mp3",
+      "offset_s": 3.0,
+      "duration_s": 1.709,
+      "volume": 0.5
+    },
+    {
+      "frame": 2,
+      "file": "assets/sfx/pencil-scratch.mp3",
+      "offset_s": 5.3,
+      "duration_s": 1.709,
+      "volume": 0.5
+    },
+    {
+      "frame": 3,
+      "file": "assets/sfx/door-close.mp3",
+      "offset_s": 3.2,
+      "duration_s": 0.816,
+      "volume": 0.8
+    },
+    {
+      "frame": 3,
+      "file": "assets/sfx/deep-soft-impact.mp3",
+      "offset_s": 3.6,
+      "duration_s": 1.871,
+      "volume": 0.7
+    },
+    {
+      "frame": 4,
+      "file": "assets/sfx/soft-tick.mp3",
+      "offset_s": 1.0,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 4,
+      "file": "assets/sfx/soft-tick.mp3",
+      "offset_s": 1.85,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 4,
+      "file": "assets/sfx/soft-tick.mp3",
+      "offset_s": 2.7,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 4,
+      "file": "assets/sfx/soft-tick.mp3",
+      "offset_s": 3.55,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 5,
+      "file": "assets/sfx/paper-slide.mp3",
+      "offset_s": 1.3,
+      "duration_s": 1.008,
+      "volume": 0.55
+    },
+    {
+      "frame": 5,
+      "file": "assets/sfx/paper-slide.mp3",
+      "offset_s": 2.65,
+      "duration_s": 1.008,
+      "volume": 0.55
+    },
+    {
+      "frame": 5,
+      "file": "assets/sfx/paper-slide.mp3",
+      "offset_s": 4.0,
+      "duration_s": 1.008,
+      "volume": 0.55
+    },
+    {
+      "frame": 5,
+      "file": "assets/sfx/soft-shimmer.mp3",
+      "offset_s": 2.6,
+      "duration_s": 6.196,
+      "volume": 0.3
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/paper-slide.mp3",
+      "offset_s": 0.6,
+      "duration_s": 1.008,
+      "volume": 0.5
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/paper-slide.mp3",
+      "offset_s": 1.9,
+      "duration_s": 1.008,
+      "volume": 0.45
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/paper-slide.mp3",
+      "offset_s": 3.0,
+      "duration_s": 1.008,
+      "volume": 0.45
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/paper-slide.mp3",
+      "offset_s": 4.4,
+      "duration_s": 1.008,
+      "volume": 0.5
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/wooden-knock.mp3",
+      "offset_s": 5.5,
+      "duration_s": 0.72,
+      "volume": 0.7
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/low-thud.mp3",
+      "offset_s": 5.95,
+      "duration_s": 0.792,
+      "volume": 0.8
+    },
+    {
+      "frame": 7,
+      "file": "assets/sfx/soft-chime.mp3",
+      "offset_s": 1.9,
+      "duration_s": 4.362,
+      "volume": 0.45
+    },
+    {
+      "frame": 7,
+      "file": "assets/sfx/paper-slide.mp3",
+      "offset_s": 2.8,
+      "duration_s": 1.008,
+      "volume": 0.5
+    },
+    {
+      "frame": 8,
+      "file": "assets/sfx/soft-tick.mp3",
+      "offset_s": 0.5,
+      "duration_s": 0.264,
+      "volume": 0.55
+    },
+    {
+      "frame": 8,
+      "file": "assets/sfx/soft-tick.mp3",
+      "offset_s": 0.9,
+      "duration_s": 0.264,
+      "volume": 0.55
+    },
+    {
+      "frame": 8,
+      "file": "assets/sfx/soft-tick.mp3",
+      "offset_s": 1.3,
+      "duration_s": 0.264,
+      "volume": 0.55
+    },
+    {
+      "frame": 8,
+      "file": "assets/sfx/soft-tick.mp3",
+      "offset_s": 1.7,
+      "duration_s": 0.264,
+      "volume": 0.55
+    },
+    {
+      "frame": 8,
+      "file": "assets/sfx/paper-unfold.mp3",
+      "offset_s": 4.4,
+      "duration_s": 1.008,
+      "volume": 0.6
+    },
+    {
+      "frame": 9,
+      "file": "assets/sfx/slot-reel-tick-short.mp3",
+      "offset_s": 0.1,
+      "duration_s": 2.928,
+      "volume": 0.45
+    },
+    {
+      "frame": 10,
+      "file": "assets/sfx/soft-click.mp3",
+      "offset_s": 0.8,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 10,
+      "file": "assets/sfx/mechanical-switch.mp3",
+      "offset_s": 3.4,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 10,
+      "file": "assets/sfx/mechanical-switch.mp3",
+      "offset_s": 6.0,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 10,
+      "file": "assets/sfx/soft-click.mp3",
+      "offset_s": 7.0,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 10,
+      "file": "assets/sfx/soft-click.mp3",
+      "offset_s": 7.35,
+      "duration_s": 0.264,
+      "volume": 0.6
+    },
+    {
+      "frame": 11,
+      "file": "assets/sfx/soft-pop.mp3",
+      "offset_s": 0.7,
+      "duration_s": 0.696,
+      "volume": 0.55
+    },
+    {
+      "frame": 11,
+      "file": "assets/sfx/soft-pop.mp3",
+      "offset_s": 2.9,
+      "duration_s": 0.696,
+      "volume": 0.55
+    },
+    {
+      "frame": 11,
+      "file": "assets/sfx/soft-pop.mp3",
+      "offset_s": 5.1,
+      "duration_s": 0.696,
+      "volume": 0.55
+    },
+    {
+      "frame": 11,
+      "file": "assets/sfx/soft-pop.mp3",
+      "offset_s": 7.3,
+      "duration_s": 0.696,
+      "volume": 0.55
+    },
+    {
+      "frame": 12,
+      "file": "assets/sfx/clock-ticking-short.mp3",
+      "offset_s": 1.9,
+      "duration_s": 2.928,
+      "volume": 0.6
+    },
+    {
+      "frame": 12,
+      "file": "assets/sfx/soft-whoosh.mp3",
+      "offset_s": 5.4,
+      "duration_s": 1.834,
+      "volume": 0.5
+    },
+    {
+      "frame": 12,
+      "file": "assets/sfx/warm-chime.mp3",
+      "offset_s": 7.2,
+      "duration_s": 4.362,
+      "volume": 0.6
+    },
+    {
+      "frame": 13,
+      "file": "assets/sfx/airy-whoosh.mp3",
+      "offset_s": 0.2,
+      "duration_s": 1.423,
+      "volume": 0.5
+    },
+    {
+      "frame": 14,
+      "file": "assets/sfx/soft-bell.mp3",
+      "offset_s": 2.5,
+      "duration_s": 0.576,
+      "volume": 0.6
+    }
+  ]
+}

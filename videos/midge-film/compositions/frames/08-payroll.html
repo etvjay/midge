@@ -1,0 +1,66 @@
+<template>
+<div id="root" data-composition-id="08-payroll" data-width="1920" data-height="1080" data-duration="9">
+<style>
+@font-face{font-family:'Geist';font-weight:400 500;font-style:normal;font-display:block;src:url('assets/fonts/Geist-400.woff2') format('woff2');}
+@font-face{font-family:'Geist Mono';font-weight:400;font-style:normal;font-display:block;src:url('assets/fonts/GeistMono-400.woff2') format('woff2');}
+@font-face{font-family:'Newsreader';font-weight:300 400;font-style:normal;font-display:block;src:url('assets/fonts/Newsreader-300.woff2') format('woff2');}
+#root{position:relative;width:1920px;height:1080px;overflow:hidden}
+#root *{box-sizing:border-box;margin:0;padding:0}
+.f08-P-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;background:#eef0ec}
+.f08-P-stage *{position:absolute}
+.f08-P-cam{left:0;top:0;width:1920px;height:1080px;transform-origin:50% 45%}
+.f08-P-vig{left:0;top:0;width:1920px;height:1080px;pointer-events:none;background:radial-gradient(120% 90% at 50% 45%,rgba(21,24,26,0) 55%,rgba(21,24,26,.07) 100%)}
+.f08-P-noise{left:0;top:0;width:1920px;height:1080px;pointer-events:none;opacity:.22;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%27256%27%20height%3D%27256%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%27.85%27%20numOctaves%3D%272%27%20seed%3D%277%27/%3E%3CfeColorMatrix%20values%3D%270%200%200%200%20.45%20%200%200%200%200%20.47%20%200%200%200%200%20.46%20%200%200%200%20.55%200%27/%3E%3C/filter%3E%3Crect%20width%3D%27256%27%20height%3D%27256%27%20filter%3D%27url%28%23n%29%27/%3E%3C/svg%3E");background-size:256px 256px}
+.f08-P-d{font-family:'Newsreader',serif;font-weight:300;letter-spacing:-.025em;line-height:1.04;color:#15181a;white-space:nowrap}
+.f08-P-m{font-family:'Geist Mono',monospace;font-weight:400;font-size:28px;color:#5f6764;white-space:nowrap}
+.f08-P-b{font-family:'Geist',sans-serif;font-weight:400;color:#4a5250;white-space:nowrap}
+.f08-P-ink{color:#15181a}
+.f08-P-w{position:relative !important;display:inline-block;white-space:pre}
+.f08-P-hl{background:rgba(21,24,26,.13)}
+.f08-P-fld{overflow:hidden;background:#0f2b2d;border-radius:10px}
+.f08-P-fld i{border-radius:50%;filter:blur(50px)}
+.f08-P-fld.f08-P-grey{background:#c9cfc9}
+.f08-P-edge{border-radius:10px;box-shadow:0 0 0 1px rgba(21,24,26,.55),0 46px 96px -30px rgba(15,43,45,.45)}
+.f08-P-pt{width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:#f4f6f1;box-shadow:0 0 10px rgba(244,246,241,.9),0 0 34px rgba(190,235,225,.55)}
+.f08-P-dot{width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#15181a}
+.f08-P-warm{width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#f3a56b;box-shadow:0 0 14px #f6b98a,0 0 50px rgba(217,130,74,.85),0 0 130px rgba(217,130,74,.5)}
+.f08-P-glow{border-radius:50%;pointer-events:none}
+
+.f08-h-lab{left:140px;top:120px}
+.f08-h-row{left:140px;width:800px;height:70px}.f08-h-a{left:0;top:10px;font-size:32px}.f08-h-v{right:0;top:10px;font-size:32px;color:#15181a}.f08-h-ru{left:0;top:68px;width:800px;height:1px}
+.f08-h-link{left:940px;top:400px;width:180px;height:1.6px;background:#d9824a;transform-origin:0 50%}
+.f08-h-rec{left:1120px;top:226px;width:600px;height:388px;border:1.6px solid #d9824a;background:rgba(217,130,74,.09);border-radius:6px;transform-origin:0 45%}
+.f08-h-rl{left:36px;top:36px;color:#a85a28;font-size:28px}.f08-h-ln{left:36px;height:1.6px;background:rgba(217,130,74,.7);transform-origin:0 50%}
+.f08-h-t{left:140px;font-size:44px}.f08-h-t1{top:690px}.f08-h-t2{top:760px}.f08-h-t3{top:830px}
+</style>
+<div id="stage-08-payroll" class="clip f08-P-stage" data-start="0" data-duration="9" data-track-index="0">
+<div class="f08-P-cam"><p class="f08-P-m f08-h-lab">a pay run</p><i class="f08-P-glow f08-h-wash" style="left:900px;top:80px;width:900px;height:760px;background:radial-gradient(closest-side,rgba(217,130,74,.30),rgba(255,255,255,0))"></i><div class="f08-h-row f08-h-r0" style="top:236px"><p class="f08-P-m f08-h-a">7f3a…c91e</p><p class="f08-P-m f08-h-v">1.20 NEAR</p><i class="f08-P-hl f08-h-ru"></i></div><div class="f08-h-row f08-h-r1" style="top:332px"><p class="f08-P-m f08-h-a">b04d…22a7</p><p class="f08-P-m f08-h-v">0.85 NEAR</p><i class="f08-P-hl f08-h-ru"></i></div><div class="f08-h-row f08-h-r2" style="top:428px"><p class="f08-P-m f08-h-a">e91c…5d03</p><p class="f08-P-m f08-h-v">1.60 NEAR</p><i class="f08-P-hl f08-h-ru"></i></div><div class="f08-h-row f08-h-r3" style="top:524px"><p class="f08-P-m f08-h-a">3c7e…a418</p><p class="f08-P-m f08-h-v">0.95 NEAR</p><i class="f08-P-hl f08-h-ru"></i></div><i class="f08-h-link"></i><div class="f08-h-rec"><p class="f08-P-m f08-h-rl">receipt · for one payee only</p><i class="f08-h-ln" style="top:112px;width:86%"></i><i class="f08-h-ln" style="top:168px;width:54%"></i><i class="f08-h-ln" style="top:224px;width:78%"></i><i class="f08-h-ln" style="top:280px;width:42%"></i></div><p class="f08-P-b f08-h-t f08-h-t1"><span class="f08-P-w">The </span><span class="f08-P-w">chain </span><span class="f08-P-w">cannot </span><span class="f08-P-w">name </span><span class="f08-P-w">who </span><span class="f08-P-w">was </span><span class="f08-P-w">paid. </span></p><p class="f08-P-b f08-h-t f08-h-t2"><span class="f08-P-w">Each </span><span class="f08-P-w">payee </span><span class="f08-P-w">holds </span><span class="f08-P-w">a </span><span class="f08-P-w">private </span><span class="f08-P-w">receipt. </span></p><p class="f08-P-b f08-P-ink f08-h-t f08-h-t3"><span class="f08-P-w">The </span><span class="f08-P-w">amounts </span><span class="f08-P-w">stay </span><span class="f08-P-w">public. </span></p></div>
+<div class="f08-P-vig"></div><div class="f08-P-noise"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<script>(function(){
+var ID="08-payroll",DUR=9;
+var R=document.querySelector('[data-composition-id="'+ID+'"]');
+function $(s){return R.querySelectorAll(s)}
+var tl=gsap.timeline({paused:true});
+function inb(s,t,o){o=o||{};tl.fromTo($(s),{opacity:0,filter:"blur(16px)",y:o.y==null?16:o.y},{opacity:o.to==null?1:o.to,filter:"blur(0px)",y:0,duration:o.d||0.9,ease:"power3.out",stagger:o.st||0},t)}
+function outb(s,t,d){tl.to($(s),{opacity:0,filter:"blur(14px)",y:-10,duration:d||0.5,ease:"power2.in"},t)}
+function words(s,t,st){tl.fromTo($(s+" .f08-P-w"),{opacity:0,filter:"blur(14px)",y:20},{opacity:1,filter:"blur(0px)",y:0,duration:0.85,ease:"power3.out",stagger:st||0.07},t)}
+function fade(s,t,to,d){tl.fromTo($(s),{opacity:0},{opacity:to==null?1:to,duration:d||0.8,ease:"power2.out"},t)}
+function growX(s,t,d,st){tl.fromTo($(s),{scaleX:0},{scaleX:1,duration:d||0.9,ease:"power3.inOut",stagger:st||0},t)}
+function growY(s,t,d,st){tl.fromTo($(s),{scaleY:0},{scaleY:1,duration:d||0.9,ease:"power3.inOut",stagger:st||0},t)}
+function pop(s,t,st){tl.fromTo($(s),{scale:0,opacity:0},{scale:1,opacity:1,duration:0.7,ease:"back.out(2)",stagger:st||0.09},t)}
+function drift(s,amp){Array.prototype.forEach.call($(s),function(el,i){var a=((i*137.5+40)%360)*Math.PI/180;tl.fromTo(el,{x:-Math.cos(a)*amp*0.5,y:-Math.sin(a)*amp*0.4},{x:Math.cos(a)*amp*0.5,y:Math.sin(a)*amp*0.4,duration:DUR,ease:"sine.inOut"},0)})}
+function draw(s,t,d){Array.prototype.forEach.call($(s),function(p){var L=p.getTotalLength();tl.fromTo(p,{strokeDasharray:L,strokeDashoffset:L},{strokeDashoffset:0,duration:d||1,ease:"power2.inOut"},t)})}
+function cam(a,b){tl.fromTo($(".f08-P-cam"),{scale:a},{scale:b,duration:DUR,ease:"sine.inOut"},0)}
+drift(".f08-P-fld i",90);
+cam(1,1.03);fade('.f08-h-lab',0.2);
+tl.fromTo($('.f08-h-row'),{opacity:0,y:18,filter:"blur(10px)"},{opacity:1,y:0,filter:"blur(0px)",duration:0.7,ease:"power3.out",stagger:0.4},0.5);
+words('.f08-h-t1',2.6,0.05);
+tl.to($('.f08-h-r1 .f08-h-a'),{color:"#a85a28",duration:0.4},4.0);growX('.f08-h-link',4.0,0.5);
+tl.fromTo($('.f08-h-rec'),{scaleX:0.02,scaleY:0.1,opacity:0},{scaleX:1,scaleY:1,opacity:1,duration:0.9,ease:"power3.out"},4.4);fade('.f08-h-wash',4.4,1,1.4);
+fade('.f08-h-rl',5.0);growX('.f08-h-ln',5.1,0.6,0.12);words('.f08-h-t2',5.0,0.05);
+words('.f08-h-t3',6.8,0.06);tl.to($('.f08-h-v'),{scale:1.12,duration:0.35,ease:"power2.out",stagger:0.08,transformOrigin:"100% 50%"},6.9);tl.to($('.f08-h-v'),{scale:1,duration:0.5,stagger:0.08},7.3);
+window.__timelines=window.__timelines||{};window.__timelines[ID]=tl;})();</script>
+</div>
+</template>

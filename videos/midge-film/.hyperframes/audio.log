@@ -1,0 +1,14 @@
+· no SCRIPT.md — silent film (BGM only)
+file:///home/ubuntu/.claude/plugins/cache/claude-plugins-official/hyperframes/0.8.61/skills/media-use/audio/scripts/lib/heygen.mjs:102
+    throw new Error(
+          ^
+
+Error: HeyGen OAuth token expired — run `npx hyperframes auth refresh` (or `npx hyperframes auth login`)
+    at heygenAuthHeaders (file:///home/ubuntu/.claude/plugins/cache/claude-plugins-official/hyperframes/0.8.61/skills/media-use/audio/scripts/lib/heygen.mjs:102:11)
+    at file:///home/ubuntu/.claude/plugins/cache/claude-plugins-official/hyperframes/0.8.61/skills/media-use/audio/scripts/audio.mjs:116:28
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.21.0
+✗ audio generate: media audio engine exited 1
