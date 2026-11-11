@@ -86,7 +86,7 @@ export default {
           members = { flyers: made.slice(0, 3), recipient: made[3] };
           st.assert('four accounts exist and are funded', (await Promise.all(made.map((m) => accountExists(chain, m.id)))).every(Boolean));
         }, { critical: true });
-        flow = await chainRoundFlow(ctx, { chain, roost: { member, coordinator, session }, expectedCodeHash: derivedHash(verification), runTag: `hw${tag}`, members });
+        flow = await chainRoundFlow(ctx, { chain, roost: { member, coordinator, session }, expectedCodeHash: derivedHash(verification), runTag: `hw${tag}`, members, signedInputs: true });
       } finally {
         await ctx.step('teardown of the chain side: prune the syndicates, compact the indexes, delete the accounts', async (st) => {
           if (!members) { st.assert('nothing to tear down', true); return; }
