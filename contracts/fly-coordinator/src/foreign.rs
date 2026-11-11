@@ -58,7 +58,13 @@ pub struct ForeignObligation {
 
 /// The text the room signs for a foreign payment. It carries every field the transaction is built from, so the contract can
 /// check that the room approved exactly this payment.
-pub fn foreign_payment_message(contract: &str, syndicate_id: &str, epoch: u64, round_nonce: &str, r: &ForeignPaymentRequest) -> String {
+pub fn foreign_payment_message(
+    contract: &str,
+    syndicate_id: &str,
+    epoch: u64,
+    round_nonce: &str,
+    r: &ForeignPaymentRequest,
+) -> String {
     let params = match &r.recent_blockhash {
         Some(b) => b.clone(),
         None => format!(
@@ -71,7 +77,16 @@ pub fn foreign_payment_message(contract: &str, syndicate_id: &str, epoch: u64, r
     };
     format!(
         "{}:{}:{}:{}:foreign:{}:{}:{}:{}:{}:{}",
-        contract, syndicate_id, epoch, round_nonce, r.obligation_id, r.chain, r.from, r.payee, r.amount.0, params
+        contract,
+        syndicate_id,
+        epoch,
+        round_nonce,
+        r.obligation_id,
+        r.chain,
+        r.from,
+        r.payee,
+        r.amount.0,
+        params
     )
 }
 
@@ -102,7 +117,10 @@ pub fn base58_decode(s: &str) -> Option<Vec<u8>> {
 
 /// A 20-byte address from hex, with or without the 0x prefix. None unless it is exactly 40 hex characters.
 pub fn hex_to_20(s: &str) -> Option<[u8; 20]> {
-    let t = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")).unwrap_or(s);
+    let t = s
+        .strip_prefix("0x")
+        .or_else(|| s.strip_prefix("0X"))
+        .unwrap_or(s);
     if t.len() != 40 {
         return None;
     }
@@ -114,7 +132,12 @@ pub fn hex_to_20(s: &str) -> Option<[u8; 20]> {
 
 /// The legacy Solana message for one System Program transfer: header (1 signature, 0 read-only signed, 1 read-only unsigned),
 /// accounts [from, to, system program], the recent blockhash, and one instruction (transfer = 2, then the lamports, little-endian).
-pub fn solana_transfer_message(from: &[u8; 32], to: &[u8; 32], lamports: u64, recent_blockhash: &[u8; 32]) -> Vec<u8> {
+pub fn solana_transfer_message(
+    from: &[u8; 32],
+    to: &[u8; 32],
+    lamports: u64,
+    recent_blockhash: &[u8; 32],
+) -> Vec<u8> {
     let mut m = Vec::with_capacity(150);
     m.extend_from_slice(&[1, 0, 1, 3]);
     m.extend_from_slice(from);
@@ -144,7 +167,12 @@ fn rlp_len(len: usize, offset: u8) -> Vec<u8> {
     if len < 56 {
         return vec![offset + len as u8];
     }
-    let be: Vec<u8> = len.to_be_bytes().iter().copied().skip_while(|&x| x == 0).collect();
+    let be: Vec<u8> = len
+        .to_be_bytes()
+        .iter()
+        .copied()
+        .skip_while(|&x| x == 0)
+        .collect();
     let mut out = vec![offset + 55 + be.len() as u8];
     out.extend(be);
     out
@@ -152,7 +180,12 @@ fn rlp_len(len: usize, offset: u8) -> Vec<u8> {
 
 /// An integer as RLP wants it: big-endian with no leading zeros, and zero as the empty string.
 fn rlp_uint(v: u128) -> Vec<u8> {
-    let be: Vec<u8> = v.to_be_bytes().iter().copied().skip_while(|&x| x == 0).collect();
+    let be: Vec<u8> = v
+        .to_be_bytes()
+        .iter()
+        .copied()
+        .skip_while(|&x| x == 0)
+        .collect();
     rlp_bytes(&be)
 }
 

@@ -2,7 +2,9 @@
 //! Vectors come from the JavaScript builders that already signed live transactions on Solana devnet and Ethereum Sepolia.
 #![allow(deprecated)]
 
-use fly_coordinator::foreign::{base58_decode, evm_transfer_digest, hex_to_20, solana_transfer_message};
+use fly_coordinator::foreign::{
+    base58_decode, evm_transfer_digest, hex_to_20, solana_transfer_message,
+};
 use near_sdk::env;
 use near_sdk::test_utils::VMContextBuilder;
 use near_sdk::testing_env;
@@ -41,8 +43,20 @@ fn a_different_payee_or_amount_changes_the_message() {
 fn evm_digest_matches_ethers_for_a_sepolia_transfer() {
     testing_env!(VMContextBuilder::new().build());
     let to = hex_to_20("0xB9A425FB45734FC29a9c941c2c05b34DE59FF7A4").unwrap();
-    let d = evm_transfer_digest(11_155_111, 7, 1_000_000_000, 2_000_000_000, 250_000, &to, 500_000_000_000_000, |b| env::keccak256(b));
-    assert_eq!(hex::encode(d), "4e79b5a45aa7fb1c5fe0ba531c3206856f8be1936f4cc13242930a05e2949789");
+    let d = evm_transfer_digest(
+        11_155_111,
+        7,
+        1_000_000_000,
+        2_000_000_000,
+        250_000,
+        &to,
+        500_000_000_000_000,
+        |b| env::keccak256(b),
+    );
+    assert_eq!(
+        hex::encode(d),
+        "4e79b5a45aa7fb1c5fe0ba531c3206856f8be1936f4cc13242930a05e2949789"
+    );
 }
 
 #[test]
@@ -50,7 +64,10 @@ fn evm_digest_handles_zero_integers() {
     testing_env!(VMContextBuilder::new().build());
     let to = hex_to_20("0x000000000000000000000000000000000000dEaD").unwrap();
     let d = evm_transfer_digest(1, 0, 0, 1, 21_000, &to, 0, |b| env::keccak256(b));
-    assert_eq!(hex::encode(d), "73b0986b9bdb6e37cf5b8a243fd17b9c6b7241e7aaf20e581bf12a56e41e3ea4");
+    assert_eq!(
+        hex::encode(d),
+        "73b0986b9bdb6e37cf5b8a243fd17b9c6b7241e7aaf20e581bf12a56e41e3ea4"
+    );
 }
 
 #[test]
@@ -58,7 +75,10 @@ fn addresses_are_parsed_strictly() {
     assert!(hex_to_20("0x1234").is_none());
     assert!(hex_to_20("B9A425FB45734FC29a9c941c2c05b34DE59FF7A4").is_some());
     assert!(hex_to_20("0xZZA425FB45734FC29a9c941c2c05b34DE59FF7A4").is_none());
-    assert_eq!(base58_decode("11111111111111111111111111111111").unwrap(), vec![0u8; 32]);
+    assert_eq!(
+        base58_decode("11111111111111111111111111111111").unwrap(),
+        vec![0u8; 32]
+    );
     assert!(base58_decode("0OIl").is_none()); // characters outside the base58 alphabet
     let key = base58_decode("2J75L6udJ52N7YmrDPQLN7gzV6CqWny6CaWGccvohi4f").unwrap();
     assert_eq!(key.len(), 32);
