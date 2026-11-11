@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Live multichain payroll: one pay run, signed for our own NEAR account (NOT by the Midge contract, so a group's rules do not limit it), paying one payee on Solana devnet and one on Ethereum
+ * Live multichain payroll: one pay run, signed for our own NEAR account (the earlier demonstration; scripts/testnet-contract-payroll.js is the one the Midge contract requests), paying one payee on Solana devnet and one on Ethereum
  * Sepolia. Each payment is a real transaction on its chain, signed by NEAR's MPC network (Chain Signatures: domain 1 Ed25519 for
  * Solana, domain 0 secp256k1 for Ethereum), verified locally, broadcast and confirmed. Writes a receipt file with the plan's hash.
  * Run: npm run verify:payroll. Needs .env (NEAR_ACCOUNT_ID, NEAR_PRIVATE_KEY) and the derived group addresses funded on the testnets
