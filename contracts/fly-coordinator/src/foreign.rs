@@ -105,6 +105,13 @@ pub struct ForeignSpent {
     pub spent: U128,
 }
 
+/// The path the NEAR MPC signer derives a group's foreign keys from, together with this contract's account. It names the group's creation block as well as
+/// its id: a group id can be freed by `prune_syndicate` and hatched again by anyone, and with the id alone the new group would derive the SAME Solana and
+/// Ethereum addresses as the old one and could pay out whatever the old group left there (GAP-049). Group ids cannot contain ':', so this is unambiguous.
+pub fn signer_path(syndicate_id: &str, created_at_block: u64) -> String {
+    format!("{}:{}", syndicate_id, created_at_block)
+}
+
 pub const KNOWN_CHAINS: [&str; 2] = ["solana-devnet", "ethereum-sepolia"];
 
 const B58: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
