@@ -88,7 +88,7 @@ export default {
       const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `q${tag.slice(-5)}`, count: 6, fundNear: '0.6', names: ['a', 'b', 'c', 'd', 's', 'r'] });
       people = { a: made[0], b: made[1], c: made[2], d: made[3], s: made[4] }; borrower = made[5];
       const baseId = `pm${tag.slice(-6)}.${chain.masterId}`; const h = memberHandle(chain, baseId);
-      await chain.master.createSubAccount({ accountOrPrefix: `pm${tag.slice(-6)}`, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near('3.2') });
+      await chain.master.createSubAccount({ accountOrPrefix: `pm${tag.slice(-6)}`, publicKey: h.key.keyPair.getPublicKey(), nearToTransfer: near('3.8') }); // the wasm's storage alone costs about 3.25 NEAR (325 KB), so 3.2 stopped being enough when the contract was rebuilt
       baseline = h; await chain.waitFor(async () => { try { await h.account.getBalance(); return true; } catch { return false; } }, { what: 'baseline account' });
       await h.account.deployContract(fs.readFileSync(wasmPath));
       s.assert('the open quote contract is deployed and answers', (await chain.view('get_request', { request_id: 'none' }, baseId)) === null);

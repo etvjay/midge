@@ -1,0 +1,57 @@
+{
+  "runId": "20261111T151252Z-adf6",
+  "startedAt": "2026-11-11T15:12:52.623Z",
+  "rootHash": "b6e68afee443e5a8d26c8835861ee8675305d2fdfb2178e1908705b41300084f",
+  "verdicts": {
+    "E-CMP-INVEST-01": {
+      "attempts": [
+        "FAIL"
+      ],
+      "verdict": "FAIL"
+    },
+    "E-CMP-AUCTION-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CMP-INVEST-02": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CMP-QUOTE-01": {
+      "attempts": [
+        "FAIL"
+      ],
+      "verdict": "FAIL"
+    },
+    "E-CMP-CROSS-01": {
+      "attempts": [
+        "FAIL"
+      ],
+      "verdict": "FAIL"
+    },
+    "E-CMP-VOTE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CMP-PAYROLL-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CMP-RFQ-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 658,
+  "commit": "e2674424263c429aa5dfac37e93cf7750d6a51c5"
+}
