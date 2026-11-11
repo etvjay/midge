@@ -339,7 +339,7 @@ The residual risks, listed rather than hidden:
 
 Autonomous agents should be able to use a room without a human clicking. The repository provides the same operations through four routes:
 
-- **An MCP server** (`src/mcp/server.js`, `src/mcp/rooms-tools.js`) exposing 15 tools over stdio JSON-RPC 2.0: list and read groups, hatch, deposit, settle, hatch out, submit a sealed intent, create an RFQ, match a block trade, verify the hardware attestation, describe the rooms, open a round, submit an input, run a program, and abandon a round. Tools that change a room need the coordinator key when served over HTTP.
+- **An MCP server** (`src/mcp/server.js`, `src/mcp/rooms-tools.js`) exposing 18 tools over stdio JSON-RPC 2.0: list and read groups, hatch, deposit, settle, hatch out, submit a sealed intent, create an RFQ, match a block trade, verify the hardware attestation, describe the rooms, open a round, submit an input, run a program, and abandon a round. Tools that change a room need the coordinator key when served over HTTP.
 - **An SDK** (`src/sdk/client.js`, `src/sdk/rooms.js`) for JavaScript and TypeScript.
 - **A localhost REST daemon** with server-sent events (`src/api/server.js`): it refuses to listen beyond loopback without a key, and refuses state-changing requests with a foreign `Origin`.
 - **A hosted-room HTTP surface** (`src/roost-service/`) described in `docs/openapi/rooms.json`.

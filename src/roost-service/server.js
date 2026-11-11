@@ -5,7 +5,7 @@ import { HostedRoost } from './hosted-roost.js';
 import { DstackSocketProvider } from './provider.js';
 import { RoostAggregationError } from '../enclave/errors.js';
 import { createEscrowReader } from './escrow-reader.js';
-import { makeAccountKeyCheck } from './signed-input.js';
+import { makeAgreeingAccountKeyCheck } from './signed-input.js';
 import { preflight } from './preflight.js';
 import { matchApproval, invoiceHash } from './invoice.js';
 import { verifyAuditorPack } from './auditor.js';
@@ -68,10 +68,12 @@ export function roostFromEnv(env, provider = new DstackSocketProvider()) {
   let accountKeyCheck = null;
   const requireSignedInputs = env.ROOST_REQUIRE_SIGNED_INPUTS === '1';
   if (requireSignedInputs) {
-    const urls = (env.ROOST_RPC_URLS || '').split(',').map((u) => u.trim()).filter(Boolean);
-    if (urls.length === 0) throw new Error('ROOST_REQUIRE_SIGNED_INPUTS needs ROOST_RPC_URLS to check account keys against');
+    // Account keys are checked against their own list of providers (ROOST_ACCOUNT_CHECK_RPC_URLS), by default the escrow providers, and ALL of them must confirm
+    // the key. Keeping the lists separate lets a test make the escrow providers unreachable while key checks still work (GAP-050).
+    const urls = (env.ROOST_ACCOUNT_CHECK_RPC_URLS || env.ROOST_RPC_URLS || '').split(',').map((u) => u.trim()).filter(Boolean);
+    if (urls.length === 0) throw new Error('ROOST_REQUIRE_SIGNED_INPUTS needs ROOST_ACCOUNT_CHECK_RPC_URLS or ROOST_RPC_URLS to check account keys against');
     if (!env.ROOST_CONTRACT_ID) throw new Error('ROOST_REQUIRE_SIGNED_INPUTS needs ROOST_CONTRACT_ID');
-    accountKeyCheck = makeAccountKeyCheck({ rpcUrl: urls[0], contractId: env.ROOST_CONTRACT_ID });
+    accountKeyCheck = makeAgreeingAccountKeyCheck({ rpcUrls: urls, contractId: env.ROOST_CONTRACT_ID });
   }
   return new HostedRoost({ provider, escrowReader, requireSignedInputs, accountKeyCheck });
 }
