@@ -46,10 +46,13 @@ test('every partner status and every "in Midge today" cell rests on a quoted fig
   for (const c of today.cells) assert.ok(F[c.fig]?.quote, `"${c.t}" has no quoted figure`);
 });
 
-test('the honesty fixes hold: Phala not running, OutLayer not used, Chain Signatures on two testnets and nothing on Bitcoin, 1Click read-only', () => {
+test('the honesty fixes hold: Phala not running, OutLayer only for the signing step, Chain Signatures on two testnets and nothing on Bitcoin, 1Click read-only', () => {
   const all = [...strings(HOME)].map(([, s]) => s).join('\n');
   assert.match(all, /not running now/);
-  assert.match(all, /OutLayer[\s\S]{0,200}not used yet|Not used yet/);
+  assert.match(all, /Only the signing step: a settlement signed inside OutLayer/, 'the comparison says what OutLayer is used for');
+  assert.match(all, /Does Midge use OutLayer\?[\s\S]{0,40}Only for one step/, 'the FAQ says it is one step');
+  assert.match(all, /does not run there/, 'and says the room does not run on OutLayer');
+  assert.doesNotMatch(all, /Not used yet: only a model of its spending limits/);
   assert.match(all, /Solana devnet.{0,30}Ethereum Sepolia/);
   assert.match(all, /Nothing sent on Bitcoin|nothing has been sent on Bitcoin/i);
   assert.match(all, /outside the member exit/, 'foreign funds are outside the exit, and the page says so');
