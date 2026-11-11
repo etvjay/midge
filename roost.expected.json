@@ -1,6 +1,7 @@
 {
   "_comment": "Pinned expectations for verifying a hosted Roost. composeHash is a list, newest first: the hash of the CURRENT compose file and image digest, then earlier builds that real VMs attested. osImageHashes are production (non-dev) dstack images confirmed with `phala os-images` on 2026-11-04.",
   "composeHash": [
+    "223b105261c3b48155a51cb7ea13a007cdcd36fd9092497e01485e54dd817292",
     "edd3ff37e9a64d2258275dbde02fe6a5a8d98451373cd5e054c618b45afd7994",
     "8a0180ff698c44b5e743acca369fbfe9f309fbf084cf87415f6962fb8e1be6c8"
   ],
@@ -11,5 +12,5 @@
     "ec43cb8c5e04b6bb6c53b33b16076a01d83d01f7f4b703f2f78a0d947d6247e6": "dstack-0.6.1, is_dev=false, as listed by `phala os-images` (Phala Cloud API 2026-06-23) on 2026-11-04"
   },
   "verifierImage": "ghcr.io/dstack-tee/dstack-verifier@sha256:22aeb6808e38a56115f843d4d66f4852407e72f6080d5f8781fd82d9f819db41",
-  "composeHashSource": "[0] The build pinned in deploy/roost/docker-compose.yml since 2026-11-08 (image cde03fef\u2026, with the escrow settings ROOST_RPC_URLS and ROOST_CONTRACT_ID written in): attested by a real Phala TDX VM in the promoted lab run 20261108T124630Z-b8de (E-HOSTED-ESCROW-LIVE-01); the verifier accepted it, with the compose hash derived from our own file. [1] The earlier build (image 11a3b248\u2026, no escrow settings): equal to the hash a real VM attested on 2026-11-04, kept so the saved bundle from then still verifies. A compose hash changes with any edit to the compose file, including a new image digest or an environment line."
+  "composeHashSource": "[0] The build pinned in deploy/roost/docker-compose.yml since 2026-11-11 (image 0e09e816\u2026, ROOST_REQUIRE_SIGNED_INPUTS=1 written in, with the escrow settings): attested by a real Phala TDX VM in promoted run 20261111T050533Z-d6d9 (E-HOSTED-SIGNED-LIVE-01). Earlier entries follow, newest first. [0] The build pinned in deploy/roost/docker-compose.yml since 2026-11-08 (image cde03fef\u2026, with the escrow settings ROOST_RPC_URLS and ROOST_CONTRACT_ID written in): attested by a real Phala TDX VM in the promoted lab run 20261108T124630Z-b8de (E-HOSTED-ESCROW-LIVE-01); the verifier accepted it, with the compose hash derived from our own file. [1] The earlier build (image 11a3b248\u2026, no escrow settings): equal to the hash a real VM attested on 2026-11-04, kept so the saved bundle from then still verifies. A compose hash changes with any edit to the compose file, including a new image digest or an environment line."
 }
