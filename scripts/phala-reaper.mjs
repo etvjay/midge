@@ -8,6 +8,7 @@
  * --name limits the run to that one VM by its exact name, which makes a deletion test bounded.
  * Needs PHALA_CLOUD_API_KEY in .env or the environment. Never prints it.
  */
+import { npxEnv } from '../lab/lib/npx-env.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -49,7 +50,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(process.argv[1]), '..');
   const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i > -1 ? process.argv[i + 1] : d; };
   const yes = process.argv.includes('--yes');
-  const env = { ...process.env };
+  const env = npxEnv({ ...process.env });
   if (!env.PHALA_CLOUD_API_KEY) { try { const m = fs.readFileSync(path.join(root, '.env'), 'utf8').match(/^PHALA_CLOUD_API_KEY=(.*)$/m); if (m) env.PHALA_CLOUD_API_KEY = m[1].trim().replace(/^["']|["']$/g, ''); } catch { /* no .env */ } }
   if (!env.PHALA_CLOUD_API_KEY) { console.error('PHALA_CLOUD_API_KEY is not set'); process.exit(2); }
   const phala = (args) => spawnSync('npx', ['--yes', 'phala@1.2.0', ...args], { env, encoding: 'utf8', timeout: 120000 });
