@@ -22,7 +22,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SIGNER = 'v1.signer-prod.testnet';
 const SOLANA_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 const SEPOLIA_RPC = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
-const GROUP = 'payroll-live-1';
+const GROUP = 'payroll-live-2';
 const TS = Date.now().toString(36);
 const SOL_PAY = 1_000_000n; const ETH_PAY = ethers.parseEther('0.0005');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -75,7 +75,7 @@ async function main() {
   let syn = await chain.view('get_syndicate', { syndicate_id: GROUP }, CONTRACT);
   const policy = { payees: [
     { chain: 'solana-devnet', address: solPayee, max_amount: '2000000', max_total: '6000000' },
-    { chain: 'ethereum-sepolia', address: evmPayee, max_amount: '1000000000000000', max_total: '3000000000000000' }], max_fee_cost: '10000000000000000' };
+    { chain: 'ethereum-sepolia', address: evmPayee, max_amount: '1000000000000000', max_total: '3000000000000000' }], max_fee_cost: '10000000000000000', window_blocks: 1000 };
   if (!syn) {
     await M.account.callFunction({ contractId: CONTRACT, methodName: 'hatch', args: { syndicate_id: GROUP, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roomPk, expected_code_hash: 'rules-contract-live', timeout_blocks: 100000, payout_recipient: chain.masterId, release_policy: null }, deposit: BigInt('5000000000000000000000') });
     await M.account.callFunction({ contractId: CONTRACT, methodName: 'set_foreign_policy', args: { syndicate_id: GROUP, policy }, gas: 100_000_000_000_000n });
