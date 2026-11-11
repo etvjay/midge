@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { HostedRoost } from '../../src/roost-service/hosted-roost.js';
 import { sealToModel } from '../../src/enclave/e2ee.js';
+import { signInputWithNearKey, inputMessage } from '../../src/roost-service/signed-input.js';
 import { near, fmt, sleep, computePolicyHash } from '../lib/near.js';
 import { expectedCodeHash as resolveExpectedCodeHash } from '../lib/contract.js';
 
@@ -14,7 +15,7 @@ import { expectedCodeHash as resolveExpectedCodeHash } from '../lib/contract.js'
  */
 const fakeProvider = { simulated: true, attest: async () => Buffer.from('rogue-no-hardware'), info: async () => ({}) };
 
-export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = null, runTag, members = null }) {
+export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = null, runTag, members = null, signedInputs = false }) {
   const { member, coordinator, session } = roost; // member: no admin key; coordinator: has it
   // With `members` ({ flyers: [3], recipient }) the run uses fresh accounts and the caller removes them afterwards, so no
   // long-lived account accumulates state. Without it, the old fixed accounts f1..f3 and r1 are used and their funds returned.
@@ -25,7 +26,14 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   const intentKey = session.intentPublicKey;
   const synId = (n) => `lab-${runTag}-${n}`;
   const policy = (deadline = 500000000) => ({ allowed_recipients: [rcpt.id], max_release_bps_per_epoch: 10000, settle_deadline_block: deadline });
-  const bid = (flyerId, amount) => member.submitSealedIntent({ flyerId, cipherTextHex: sealToModel(JSON.stringify({ amount }), intentKey) });
+  // With signedInputs (the pinned hosted image requires them) each flyer seals the bid and signs it with their own account key for the round that sealedRound just opened.
+  let curRound = null;
+  const bid = (f, amount) => {
+    const cipherTextHex = sealToModel(JSON.stringify({ amount }), intentKey);
+    if (!signedInputs) return member.submitSealedIntent({ flyerId: f.id, cipherTextHex });
+    const kp = f.key.keyPair;
+    return member.submitSignedIntent({ flyerId: f.id, cipherTextHex, publicKey: kp.getPublicKey().toString(), signature: signInputWithNearKey(kp.toString(), inputMessage({ ...curRound, flyerId: f.id, seq: 1, cipherTextHex })), seq: 1 });
+  };
   const state = async (id) => chain.view('get_syndicate', { syndicate_id: id });
   const bal = (acc) => chain.balance(acc);
 
@@ -47,8 +55,9 @@ export async function chainRoundFlow(ctx, { chain, roost, expectedCodeHash = nul
   // signature the contract refuses is abandoned (it stays on record) before the same round runs again; opening an already-signed round is refused.
   async function sealedRound(flyers, amountEach, id) {
     const st = await state(id);
-    await coordinator.openRound({ contractId: chain.coordinatorId, syndicateId: id, epoch: Number(st.epoch), roundNonce: st.round_nonce });
-    for (const f of flyers) await bid(f.id, amountEach);
+    curRound = { contractId: chain.coordinatorId, syndicateId: id, epoch: Number(st.epoch), roundNonce: st.round_nonce };
+    await coordinator.openRound(curRound);
+    for (const f of flyers) await bid(f, amountEach);
     return coordinator.aggregate({ roundId: `${runTag}` });
   }
   async function settle(id, allocations, aggregate, { signer } = {}) {

@@ -63,16 +63,37 @@ export const isAccountId = (id) => typeof id === 'string' && ACCOUNT_RE.test(id)
 
 /**
  * Ask the chain whether `publicKey` is an access key of `accountId`. A full-access key counts; a function-call key counts only
- * if it is limited to our contract. Any failure to get a clear answer counts as "no" (fail closed).
+ * if it is limited to our contract.
+ *
+ * Three different answers, kept apart on purpose:
+ *  - the key is the account's: true;
+ *  - the provider says clearly that the key (or account) does not exist: false;
+ *  - the provider could not answer (rate limit, HTTP error, unreachable, no result, an error that is not "does not exist"): retried a few
+ *    times with a short pause, then THROWN naming the provider. It used to count as "no", so a rate-limited provider made the room refuse
+ *    every member's key as "not a key" (seen on a real VM on 2026-11-11). A key is still never accepted without every provider's yes.
  */
-export function makeAccountKeyCheck({ rpcUrl, contractId, fetchImpl = fetch }) {
+export function makeAccountKeyCheck({ rpcUrl, contractId, fetchImpl = fetch, retries = 3, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+  const host = (() => { try { return new URL(rpcUrl).host; } catch { return String(rpcUrl); } })();
+  const notThere = (e) => ['UNKNOWN_ACCESS_KEY', 'UNKNOWN_ACCOUNT'].includes(e?.cause?.name) || ['UNKNOWN_ACCESS_KEY', 'UNKNOWN_ACCOUNT'].includes(e?.name);
   return async (accountId, publicKey) => {
-    const res = await fetchImpl(rpcUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'query', params: { request_type: 'view_access_key', finality: 'final', account_id: accountId, public_key: publicKey } }) });
-    const body = await res.json();
-    if (body.error || !body.result || body.result.error) return false;
-    const perm = body.result.permission;
-    if (perm === 'FullAccess') return true;
-    return Boolean(perm && perm.FunctionCall && perm.FunctionCall.receiver_id === contractId);
+    let reason = 'no reply';
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      if (attempt > 0) await sleep(500 * 3 ** (attempt - 1));
+      let body;
+      try {
+        const res = await fetchImpl(rpcUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'query', params: { request_type: 'view_access_key', finality: 'final', account_id: accountId, public_key: publicKey } }) });
+        if (res.ok === false) { reason = `HTTP ${res.status}`; continue; }
+        body = await res.json();
+      } catch (e) { reason = String(e?.message ?? e).slice(0, 80); continue; }
+      if (body?.error) { if (notThere(body.error)) return false; reason = `${body.error.code ?? ''} ${body.error.message ?? body.error.name ?? 'error'}`.trim().slice(0, 80); continue; }
+      const r = body?.result;
+      if (!r) { reason = 'no result'; continue; }
+      if (typeof r.error === 'string') { if (/does not exist/i.test(r.error)) return false; reason = r.error.slice(0, 80); continue; }
+      const perm = r.permission;
+      if (perm === 'FullAccess') return true;
+      return Boolean(perm && perm.FunctionCall && perm.FunctionCall.receiver_id === contractId);
+    }
+    throw new Error(`${host} could not answer (${reason})`);
   };
 }
 
@@ -81,10 +102,10 @@ export function makeAccountKeyCheck({ rpcUrl, contractId, fetchImpl = fetch }) {
  * the key; one that cannot answer is an error and the key is not accepted. A single provider could otherwise vouch for a key that is not the account's
  * (GAP-050), so two or more different providers are required when the check is built, as for the escrow reader.
  */
-export function makeAgreeingAccountKeyCheck({ rpcUrls, contractId, fetchImpl = fetch }) {
+export function makeAgreeingAccountKeyCheck({ rpcUrls, contractId, fetchImpl = fetch, sleep }) {
   const urls = [...new Set((rpcUrls || []).map((u) => String(u).trim().replace(/\/+$/, '')).filter(Boolean))];
   if (urls.length < 2) throw new Error('the account-key check needs two or more different RPC providers: they must agree, so one is not enough');
-  const checks = urls.map((rpcUrl) => makeAccountKeyCheck({ rpcUrl, contractId, fetchImpl }));
+  const checks = urls.map((rpcUrl) => makeAccountKeyCheck({ rpcUrl, contractId, fetchImpl, ...(sleep ? { sleep } : {}) }));
   return async (accountId, publicKey) => {
     const answers = await Promise.all(checks.map((c) => c(accountId, publicKey)));
     return answers.every((a) => a === true);

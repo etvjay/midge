@@ -15,3 +15,21 @@ test('a map without a default, or naming nobody it can match, is refused rather 
   assert.throws(() => fundingPlan({ count: 2, names: null, fundNear: { default: '0.1', a: '0.2' } }), /names/);
   assert.throws(() => fundingPlan({ count: 2, names: ['a', 'b'], fundNear: { default: '0.1', zzz: '0.2' } }), /zzz/);
 });
+
+import { waitForKeyAgreement } from '../lab/lib/members.js';
+
+test('waitForKeyAgreement waits until the room\'s check says yes, however many tries that takes', async () => {
+  let n = 0;
+  await waitForKeyAgreement(async () => { n += 1; return n >= 3; }, 'a.testnet', 'ed25519:K', { sleep: async () => {} });
+  assert.equal(n, 3);
+});
+
+test('waitForKeyAgreement gives up with a clear message if the providers never agree', async () => {
+  await assert.rejects(() => waitForKeyAgreement(async () => false, 'a.testnet', 'ed25519:K', { tries: 4, sleep: async () => {} }), /never agreed.*a\.testnet/);
+});
+
+test('a check that throws (a provider that cannot be reached) is retried, not fatal, until it answers', async () => {
+  let n = 0;
+  await waitForKeyAgreement(async () => { n += 1; if (n < 2) throw new Error('timeout'); return true; }, 'a.testnet', 'ed25519:K', { sleep: async () => {} });
+  assert.equal(n, 2);
+});
