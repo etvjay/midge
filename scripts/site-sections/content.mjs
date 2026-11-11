@@ -133,7 +133,7 @@ export const HOME = {
         ] },
         { k: 'In Midge today', cells: [
           { t: 'Our room program, run on real TDX machines on 4 and 8 Nov; not running now', tone: 'glow', fig: 'phalaHosted' },
-          { t: 'Not used yet: only a model of its spending limits', tone: 'mute', fig: 'outlayerModel' },
+          { t: 'Only the signing step: a settlement signed inside OutLayer was accepted by the contract; the room is not there', tone: 'glow', fig: 'outlayerModel' },
           { t: 'Live: the room host members seal bids to', tone: 'lake', fig: 'modelHost' },
         ] },
       ],
@@ -206,7 +206,7 @@ export const HOME = {
       ['Which partner technology does Midge use?', 'NEAR Protocol (the contract, in Rust), NEAR AI Cloud (a model on Intel TDX whose report also carries NVIDIA GPU evidence), Phala Cloud (dstack confidential VMs on Intel TDX), NEAR Chain Signatures, NEAR Intents (1Click), public NEAR RPC (FastNEAR) and NearBlocks.'],
       ['How does NEAR AI Cloud fit in?', "Members seal their bids to a model running in NEAR AI Cloud's secure hardware, and the model proposes the split. Your browser can check that hardware on this page with a random number it picks."],
       ['How does Phala fit in?', 'The room can run as its own program in a confidential VM on Phala Cloud. It was run on real Intel TDX machines on 4 and 8 November; those machines were temporary and none is running now.'],
-      ['Does Midge use OutLayer?', 'Not yet. OutLayer runs one function per call on its own secure workers, each run with a fresh hardware report. Phala runs a whole machine we operate. Midge has a model of OutLayer-style spending limits for agents, but calls neither OutLayer nor a running Phala machine today.'],
+      ['Does Midge use OutLayer?', 'Only for one step, on testnet. OutLayer runs one function per call on its own secure workers, each run with a fresh hardware report. A small program there held a secret key no one can read and signed a settlement, and the Midge contract accepted it and paid out. The room itself, with its sealed bids and sums, does not run there: Phala runs a whole machine we operate, and no hosted room is running now.'],
       ['What is this site built with?', 'Static HTML, CSS and JavaScript. The hero was rendered in Blender and is drawn live with three.js. Every figure comes from a recorded run or is read live from NEAR.'],
     ] },
   ],
