@@ -369,3 +369,17 @@ Run `20261108T153206Z-a0f0`, PASS, 50 events, log verified, promoted (`docs/lab-
 **E-UNFUNDED-PRUNE-LIVE-01**, run `20261108T170650Z-a88e`, PASS on the first run, 40 events, log verified, promoted. The chain ran the recorded build (`854fzUj2…`) with the same 15 groups; an unfunded group read Unfunded; a stranger's early removal was refused with the never-funded message and the group stayed; the creator removed it at once (group and phase null, creator's index clean); a funded group was refused even for its creator and was untouched; the teardown left no account and no group (15 groups). **Not shown live, as stated beforehand:** the path after the waiting period (unit tests only).
 
 **E-MODEL-PIN-LIVE-01**, run `20261108T170912Z-53f2`, PASS on the first run, log verified, promoted. Against the real NEAR AI host: three reads gave identical measurements; the recorded baseline matched; a fetch pinned to it was accepted with the Intel chain verified and TCB UpToDate; a wrong value in each of the five fields was refused naming that field; a list holding a wrong and the right value was accepted. **Not shown:** that the baseline is NEAR AI's published build, stability over days, a real rotation.
+
+## A Dark Vault run by the hosted Roost on real hardware: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** The ongoing-group experiment (E-ONGOING-01) ran a Dark Vault across three rounds on testnet, but with a local room and a simulated attestation. The hosted-Roost experiments (E-HOSTED-LIVE-01, E-HOSTED-ESCROW-LIVE-01) ran one round on a real Phala TDX VM. Nothing yet had the real VM run a group that lives across several rounds. This does that, on the pinned image `cde03fef…`, against the real testnet contract with the VM's escrow check on.
+
+**E-HOSTED-DARKVAULT-LIVE-01 (hardware).** Five members (u1 to u5) and four recipients. Four founders deposit 0.1 each into a DARK_VAULT group whose room key is the VM's attested settlement key. The VM runs three rounds; the contract settles each.
+1. **The VM starts and attests** on the pinned image, as in the earlier hosted runs (compose equals our file byte for byte, official verifier accepts the quote, production OS image, not a simulator).
+2. **Round 1, a pool:** u1 to u4 bid 0.01, 0.01, 0.015, 0.015; the VM reads the chain's escrow, signs; the contract accepts; `rp` receives exactly 0.05; the epoch rises by exactly 1 and the round nonce changes.
+3. **A late fifth deposit, then round 2, a ballot:** u5 deposits 0.1 between rounds; the VM's escrow read counts u5; A wins 3 to 2; `ra` receives exactly 0.05; u5 is charged 0.01 like the others (0.09 left).
+4. **Round 3, a lending quote:** u3 wins at 400 bps; `rl` receives exactly 0.04.
+5. **The books close:** after round 3 the escrows are u1 0.08, u2 0.08, u3 0.035, u4 0.075, u5 0.09 and they sum to the group total 0.36; the epoch rose by 3 and every nonce was different.
+6. **Teardown leaves nothing:** the members exit with their remainders, the group is pruned, every account deleted, the VM deleted and the Phala account empty, the session costing under $0.10.
+
+**Not tested:** two rooms, a VM failing mid-group, the VM staying up beyond the session, a lying provider. **Weakness I expect to remain:** one operator controls every account and the VM; the attestation proves which image runs, not that the providers are honest.
