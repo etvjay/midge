@@ -145,6 +145,7 @@ export default {
       s.assert('prediction 5 (contract): a validly signed payout to an account outside the policy is refused', !steal.ok && /whitelist/i.test(steal.error || ''), { actual: steal.error });
       s.assert('the escrow is intact after the attempt', BigInt((await state(id)).total_escrow) === near('0.20'));
       // the Roost signed once for the thief above; a new sealed round is needed for the honest settlement
+      roost.abandonSignedRound(); // the contract refused the thief's settlement; the room keeps its signature on record and lets the round run again (the room refuses a second signature otherwise)
       sealed(roost, flyers(), (m) => BIDS[Object.keys(who).find((k) => who[k].id === m.id)]);
       const agg2 = roost.aggregateAndClear({ roundId: `${tag}-c2` });
       const st2 = await state(id);

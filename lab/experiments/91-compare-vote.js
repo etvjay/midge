@@ -52,7 +52,7 @@ export default {
       countBefore = Number(await chain.view('get_syndicate_count', {}));
       const mw = path.join(ctx.rootDir, 'contracts/public-market/target/wasm32-unknown-unknown/release/public_market.wasm');
       const sw = path.join(ctx.rootDir, 'contracts/public-multisig/target/wasm32-unknown-unknown/release/public_multisig.wasm');
-      s.assert('both baseline wasms are built', fs.existsSync(mw) && fs.existsSync(sw));
+      s.assert('the poll and multisig wasms are built (npm run build:wasm:market, npm run build:wasm:multisig)', fs.existsSync(mw) && fs.existsSync(sw));
       const names = [...MEMBERS, 'o', 'ra', 'rb', 't'];
       const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `v${tag.slice(-5)}`, count: names.length, fundNear: '0.4', names });
       P = Object.fromEntries(names.map((k, i) => [k, made[i]]));
