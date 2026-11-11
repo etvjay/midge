@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Midge Film Styleframes</title>
+<meta name="color-scheme" content="light">
+<style>
+@font-face{font-family:'Geist';font-weight:400 500;font-style:normal;font-display:block;src:url('assets/fonts/Geist-400.woff2') format('woff2');}
+@font-face{font-family:'Geist Mono';font-weight:400;font-style:normal;font-display:block;src:url('assets/fonts/GeistMono-400.woff2') format('woff2');}
+@font-face{font-family:'Newsreader';font-weight:300 400;font-style:normal;font-display:block;src:url('assets/fonts/Newsreader-300.woff2') format('woff2');}
+:root{--paper:#eef0ec;--card:#f7f8f5;--ink:#15181a;--ink2:#4a5250;--ink3:#5f6764;--line:rgba(21,24,26,.10);--lake:#1f5f5b;--room:#7cc4b8;--share:#d9824a;--deny:#e0675a;--dusk:#0f1416}
+*{box-sizing:border-box;margin:0}
+body{background:var(--card);color:var(--ink);font-family:Geist,system-ui,sans-serif;padding:40px 16px 72px}
+.wrap{max-width:1500px;margin:0 auto}
+header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:32px}
+header h1{font-family:Newsreader,Georgia,serif;font-weight:300;font-size:clamp(30px,4vw,44px);letter-spacing:-.02em}
+header p{color:var(--ink2);font-size:15px;line-height:1.55;margin-top:8px;max-width:70ch}
+figure{margin-bottom:44px}
+figcaption{display:flex;flex-wrap:wrap;gap:6px 24px;justify-content:space-between;padding-top:12px;font-size:13px;color:var(--ink2);line-height:1.5}
+figcaption b{font-family:"Geist Mono",monospace;font-weight:400;color:var(--ink)}
+figcaption span{max-width:86ch}
+
+/* ---------- the frame ---------- */
+.stage{position:relative;width:100%;aspect-ratio:16/9;container-type:inline-size;overflow:hidden;background:var(--paper);isolation:isolate}
+.stage *{position:absolute}
+.stage::after{content:"";inset:0;position:absolute;pointer-events:none;z-index:50;
+  background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(21,24,26,.07) 100%)}
+.d{font-family:Newsreader,Georgia,serif;font-weight:300;letter-spacing:-.025em;line-height:1.04;color:var(--ink)}
+.m{font-family:"Geist Mono",monospace;font-size:1.02cqw;color:var(--ink3);white-space:nowrap}
+.b{font-family:Geist,system-ui,sans-serif;color:var(--ink2)}
+.hair{background:rgba(21,24,26,.11)}
+.hair.h{height:1px;left:0;right:0}.hair.v{width:1px;top:0;bottom:40%;-webkit-mask-image:linear-gradient(#000 80%,transparent);mask-image:linear-gradient(#000 80%,transparent)}
+
+/* liquid colour field: blurred blobs clipped to a shape */
+.field{overflow:hidden;background:#0f2b2d}
+.field i{border-radius:50%;filter:blur(2.6cqw)}
+.glow{border-radius:50%;filter:blur(7cqw);pointer-events:none}
+.pt{width:1.05cqw;height:1.05cqw;border-radius:50%;background:#f4f6f1;transform:translate(-50%,-50%);
+  box-shadow:0 0 .5cqw rgba(244,246,241,.9),0 0 1.8cqw rgba(190,235,225,.55)}
+
+/* ===== frame 03 ===== */
+#f03 .wash{left:18%;top:-12%;width:64%;height:92%;background:radial-gradient(closest-side,rgba(124,196,184,.42),rgba(124,196,184,.16) 55%,transparent 100%);filter:blur(3cqw)}
+#f03 .wash2{left:52%;top:20%;width:36%;height:54%;background:radial-gradient(closest-side,rgba(200,222,240,.5),transparent);filter:blur(4cqw)}
+#f03 .room{left:50%;top:10.5%;width:27cqw;height:27cqw;transform:translateX(-50%);border-radius:.5cqw;
+  box-shadow:0 0 0 1px rgba(21,24,26,.55),0 2.4cqw 5cqw -1.6cqw rgba(15,43,45,.45)}
+#f03 .door{left:calc(50% + 13.5cqw - .22cqw);top:calc(10.5% + 7cqw);width:.44cqw;height:13cqw;background:var(--ink);border-radius:.1cqw;z-index:3;
+  box-shadow:0 0 1.4cqw rgba(190,235,225,.8)}
+#f03 .head{left:0;right:0;top:66.5%;text-align:center;font-size:4.7cqw}
+#f03 .tag{left:0;right:0;top:84.5%;text-align:center}
+#f03 .tl{left:6%;top:7%}#f03 .tr{right:6%;top:7%}
+
+/* ===== frame 06 ===== */
+#f06 .scene{inset:0;perspective:150cqw;perspective-origin:62% 30%}
+#f06 .plane{left:20%;top:-6%;width:74cqw;height:40cqw;transform-origin:50% 50%;transform:rotateX(58deg) rotateZ(-27deg);transform-style:preserve-3d}
+#f06 .plane.far{filter:blur(.0cqw)}
+#f06 .soft{inset:0;filter:blur(.55cqw);-webkit-mask-image:linear-gradient(64deg,#000 12%,transparent 46%);mask-image:linear-gradient(64deg,#000 12%,transparent 46%)}
+#f06 .sharp{inset:0;-webkit-mask-image:linear-gradient(64deg,transparent 14%,#000 44%);mask-image:linear-gradient(64deg,transparent 14%,#000 44%)}
+#f06 .bar{left:0;height:4.6cqw;border-radius:.25cqw;background:rgba(21,24,26,.055)}
+#f06 .bar .lab{right:1.4cqw;top:50%;transform:translateY(-50%);font-family:Geist,system-ui,sans-serif;font-size:1.5cqw;color:var(--ink);white-space:nowrap}
+#f06 .bar.key{background:none;overflow:hidden;box-shadow:0 1.6cqw 2.6cqw -1.2cqw rgba(15,43,45,.5)}
+#f06 .bar.key .lab{color:#f4f6f1;font-family:Newsreader,serif;font-size:1.9cqw;letter-spacing:-.01em}
+#f06 .bar.deny{background:rgba(224,103,90,.10);box-shadow:inset 0 0 0 1px rgba(224,103,90,.55)}
+#f06 .bar.deny .lab{color:#b8463a}
+#f06 .strike{left:-1%;right:-1%;top:50%;height:.16cqw;background:var(--deny);box-shadow:0 0 1.2cqw rgba(224,103,90,.7)}
+#f06 .gl{left:0;right:0;height:1px;background:rgba(21,24,26,.09)}
+#f06 .gv{top:-30%;bottom:-30%;width:1px;background:rgba(21,24,26,.09)}
+#f06 .redglow{left:26%;top:44%;width:26%;height:26%;background:radial-gradient(closest-side,rgba(224,103,90,.26),transparent);filter:blur(3cqw)}
+#f06 .tealglow{left:48%;top:-8%;width:44%;height:50%;background:radial-gradient(closest-side,rgba(124,196,184,.34),transparent);filter:blur(4cqw)}
+#f06 .head{left:6.5%;bottom:10.5%;font-size:5.4cqw}
+#f06 .tag{left:6.6%;bottom:35.5%}
+#f06 .refused{right:6.5%;bottom:11.5%;text-align:right;color:#b8463a}
+
+/* ===== frame 12 ===== */
+#f12 .roomwrap{left:17%;top:13%;width:25cqw;height:25cqw;filter:blur(.42cqw)}
+#f12 .room{inset:0;border-radius:.5cqw;box-shadow:0 0 0 1px rgba(21,24,26,.28)}
+#f12 .field{background:#c9cfc9}
+#f12 .field i{opacity:.55}
+#f12 .pt{background:#eef0ec;box-shadow:0 0 .4cqw rgba(238,240,236,.8)}
+#f12 svg{inset:0;width:100%;height:100%;overflow:visible}
+#f12 .warm{left:67.2%;top:27.2%;width:1.5cqw;height:1.5cqw;border-radius:50%;background:#f3a56b;transform:translate(-50%,-50%);z-index:5;
+  box-shadow:0 0 .7cqw #f6b98a,0 0 2.6cqw rgba(217,130,74,.85),0 0 7cqw rgba(217,130,74,.5)}
+#f12 .bloom{left:49%;top:2%;width:40%;height:58%;background:radial-gradient(closest-side,rgba(240,170,115,.42),rgba(240,170,115,.14) 55%,transparent);filter:blur(4cqw)}
+#f12 .ring{left:8.2%;top:17%;width:4.6cqw;height:4.6cqw}
+#f12 .rlab{left:8.2%;top:27.5%}
+#f12 .head{left:8%;top:63.5%;font-size:5cqw}
+#f12 .sub{left:8.2%;top:83%;font-size:1.75cqw}
+#f12 .own{left:70%;top:25.2%;color:#a85a28}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Midge film: three finished frames</h1>
+  <p>Stills at the finish the film would have: liquid colour, depth, light. Each shows one moment of its frame. If this look is right, the other eleven frames follow it.</p>
+</header>
+
+<!-- ============ FRAME 03 ============ -->
+<figure>
+<div class="stage" id="f03">
+  <div class="wash"></div><div class="wash2"></div>
+  <div class="hair h" style="top:10.5%"></div><div class="hair h" style="top:calc(10.5% + 27cqw)"></div>
+  <div class="hair v" style="left:calc(50% - 13.5cqw)"></div><div class="hair v" style="left:calc(50% + 13.5cqw)"></div>
+  <div class="room field">
+    <i style="left:-12%;top:-8%;width:62%;height:58%;background:#8fd4c4"></i>
+    <i style="left:52%;top:6%;width:46%;height:70%;background:#2f8f86"></i>
+    <i style="left:8%;top:58%;width:44%;height:40%;background:#58b3a5"></i>
+    <i style="left:58%;top:66%;width:38%;height:34%;background:#bfe9dc"></i>
+    <i style="left:30%;top:30%;width:26%;height:26%;background:#103a3b"></i>
+    <b class="pt" style="left:34%;top:42%"></b><b class="pt" style="left:50%;top:31%"></b>
+    <b class="pt" style="left:63%;top:49%"></b><b class="pt" style="left:45%;top:63%"></b>
+    <b class="pt" style="left:71%;top:29%"></b><b class="pt" style="left:27%;top:59%"></b>
+  </div>
+  <div class="door"></div>
+  <p class="m tl">03 · the idea</p><p class="m tr">the door closes</p>
+  <p class="d head">Midge separates deciding from holding.</p>
+  <p class="m tag">Private rooms with public rules</p>
+</div>
+<figcaption><b>Frame 03 · The idea</b><span>The room is a liquid teal field with the members as points of light inside it. Its colour spills softly onto the paper. Hairlines run out from its edges to the frame.</span></figcaption>
+</figure>
+
+<!-- ============ FRAME 06 ============ -->
+<figure>
+<div class="stage" id="f06">
+  <div class="tealglow"></div><div class="redglow"></div>
+  <div class="scene">
+    <!-- two copies of the same plane: one blurred near the camera, one sharp further away -->
+    <div class="soft"><div class="scene"><div class="plane" data-plane></div></div></div>
+    <div class="sharp"><div class="scene"><div class="plane" data-plane></div></div></div>
+  </div>
+  <p class="m tag">the rules, posted in public</p>
+  <p class="d head">The room can propose.<br>The contract decides.</p>
+  <p class="m refused">to: a stranger · refused</p>
+</div>
+<figcaption><b>Frame 06 · The rules</b><span>The rules sit on a tilted plane, soft near the camera and sharp further away. The top bar carries the room’s colour. The one payout outside the rules is struck in red, the only red in the film.</span></figcaption>
+</figure>
+
+<!-- ============ FRAME 12 ============ -->
+<figure>
+<div class="stage" id="f12">
+  <div class="bloom"></div>
+  <div class="hair h" style="top:13%"></div><div class="hair h" style="top:calc(13% + 25cqw)"></div>
+  <div class="hair v" style="left:17%"></div><div class="hair v" style="left:calc(17% + 25cqw)"></div>
+  <div class="roomwrap"><div class="room field">
+    <i style="left:-10%;top:-6%;width:60%;height:56%;background:#dfe4de"></i>
+    <i style="left:50%;top:10%;width:46%;height:66%;background:#aab3ad"></i>
+    <i style="left:10%;top:58%;width:46%;height:40%;background:#bcc4be"></i>
+    <b class="pt" style="left:34%;top:42%"></b><b class="pt" style="left:50%;top:31%"></b>
+    <b class="pt" style="left:63%;top:49%"></b><b class="pt" style="left:45%;top:63%"></b>
+    <b class="pt" style="left:27%;top:59%"></b>
+  </div></div>
+  <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="trail" x1="0" x2="1"><stop offset="0" stop-color="#d9824a" stop-opacity="0"/><stop offset=".55" stop-color="#d9824a" stop-opacity=".55"/><stop offset="1" stop-color="#f3a56b"/></linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter></defs>
+    <path d="M 770 350 Q 1010 258 1290 294" fill="none" stroke="url(#trail)" stroke-width="9" stroke-linecap="round" filter="url(#soft)" opacity=".7"/>
+    <path d="M 770 350 Q 1010 258 1290 294" fill="none" stroke="url(#trail)" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="198" cy="228" r="42" fill="none" stroke="#15181a" stroke-width="1.6"/>
+    <path d="M 198 186 L 198 196" stroke="#15181a" stroke-width="1.6" stroke-linecap="round"/>
+  </svg>
+  <i class="warm"></i>
+  <p class="m rlab">the timer has run</p>
+  <p class="m own">their own share</p>
+  <p class="d head">Any member leaves<br>with their own share.</p>
+  <p class="b sub">Alone. No permission needed.</p>
+</div>
+<figcaption><b>Frame 12 · The exit</b><span>The room has gone grey and slightly out of focus. One warm point of light leaves it along a curve, in sharp focus, and its glow warms the paper. Every other member stays where they were.</span></figcaption>
+</figure>
+</div>
+
+<template id="planeT">
+  <i class="gl" style="top:0"></i><i class="gl" style="top:25%"></i><i class="gl" style="top:50%"></i><i class="gl" style="top:75%"></i><i class="gl" style="top:100%"></i>
+  <i class="gv" style="left:0"></i><i class="gv" style="left:100%"></i><i class="gv" style="left:52%"></i>
+  <div class="bar key field" style="top:8%;width:100%">
+    <i style="left:-4%;top:-120%;width:30%;height:340%;background:#8fd4c4"></i>
+    <i style="left:26%;top:-100%;width:26%;height:300%;background:#1f5f5b"></i>
+    <i style="left:50%;top:-140%;width:24%;height:380%;background:#58b3a5"></i>
+    <i style="left:72%;top:-100%;width:30%;height:300%;background:#17494a"></i>
+    <span class="lab">Pay only these accounts</span>
+  </div>
+  <div class="bar" style="top:25%;width:100%"><span class="lab">up to this much</span></div>
+  <div class="bar" style="top:42%;width:100%"><span class="lab">before this date</span></div>
+  <div class="bar deny" style="top:63%;width:78%"><span class="lab">to: a stranger</span><i class="strike"></i></div>
+</template>
+<script>
+  // fill both copies of the tilted plane from one template (static markup only, no animation)
+  document.querySelectorAll('[data-plane]').forEach(function(p){p.appendChild(document.getElementById('planeT').content.cloneNode(true))});
+</script>
+</body>
+</html>

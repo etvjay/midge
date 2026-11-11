@@ -8,6 +8,7 @@ import { HostedRoostClient } from '../../src/roost-service/client.js';
 import { verifyHostedAttestation } from '../../src/roost-service/verify-hosted.js';
 import { expectedComposeHashes } from '../../src/roost-service/compose-hash.js';
 import { sealToModel } from '../../src/enclave/e2ee.js';
+import { signInputWithNearKey, inputMessage } from '../../src/roost-service/signed-input.js';
 
 const TIMER = 12; const BPS = 10000; const DEADLINE = 500000000;
 const SETTINGS = ['ROOST_RPC_URLS=https://test.rpc.fastnear.com,https://rpc.testnet.near.org', 'ROOST_CONTRACT_ID=c.fly-1793636729.testnet'];
@@ -98,7 +99,11 @@ export default {
         const round = { contractId: chain.coordinatorId, syndicateId: id, epoch: Number(st.epoch), roundNonce: st.round_nonce };
         const nonceBefore = st.round_nonce;
         await coordinator.openRound(round);
-        for (const who of [members.A, members.B, members.C]) await member.submitSealedIntent({ flyerId: who.id, cipherTextHex: sealToModel(JSON.stringify({ amount: '0.01' }), session.intentPublicKey) });
+        // The pinned image requires signed inputs: each member seals the bid and signs it with their own account key for this round.
+        for (const who of [members.A, members.B, members.C]) {
+          const cipherTextHex = sealToModel(JSON.stringify({ amount: '0.01' }), session.intentPublicKey); const kp = who.key.keyPair;
+          await member.submitSignedIntent({ flyerId: who.id, cipherTextHex, publicKey: kp.getPublicKey().toString(), signature: signInputWithNearKey(kp.toString(), inputMessage({ ...round, flyerId: who.id, seq: 1, cipherTextHex })), seq: 1 });
+        }
         const recipientBefore = BigInt((await members.R.account.getBalance()).toString());
         const t0 = Date.now();
         const res = await coordinator.runPool({ recipient: members.R.id, min: '0' });
