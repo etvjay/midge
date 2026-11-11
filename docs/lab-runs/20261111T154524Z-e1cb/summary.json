@@ -1,0 +1,27 @@
+{
+  "runId": "20261111T154524Z-e1cb",
+  "startedAt": "2026-11-11T15:45:24.948Z",
+  "rootHash": "6d1a607411363c47fbd892ce55499bf1e6fd6688ac2a4e7c41b157f70431c71d",
+  "verdicts": {
+    "E-CMP-INVEST-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CMP-QUOTE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-CMP-CROSS-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 297,
+  "commit": "e2674424263c429aa5dfac37e93cf7750d6a51c5"
+}
