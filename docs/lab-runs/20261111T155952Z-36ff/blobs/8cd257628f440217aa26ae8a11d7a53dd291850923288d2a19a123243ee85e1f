@@ -1,0 +1,4 @@
+Smart contract panicked: panicked at src/lib.rs:779:9:
+assertion `left == right` failed: [Deposit REJECT] Policy hash mismatch: depositor did not consent to current release policy.
+  left: Some("93c5fb11d608e974ffa01b14fb5bcdcb8d4c4873929ba7290910f1be643bca0a")
+ right: Some("134d14eac0c47d2b7f1ca4aaeb47df64654eba83c99c0960f8b6393a2dbdc741")
