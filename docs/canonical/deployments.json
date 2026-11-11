@@ -86,7 +86,16 @@
       "from": "2026-11-11T06:08Z",
       "deployTx": "9hQKCiWSx849T6kiW5aemSr6UJYDZS75ttQm7nsTyN5y",
       "gitCommit": "e0bb6aa",
-      "reason": "GAP-045/047/048: the contract itself asks the NEAR MPC signer for payments on Solana devnet and Ethereum Sepolia after checking a group's foreign-payment rules (set_foreign_policy, request_foreign_payment, on_foreign_signed, get_foreign_*), with a per-window running total, prune cleanup and finished groups still able to pay listed payees. The 15 groups are intact; none was in flight. The contract account was topped up by 1 NEAR first because the larger code needed more storage stake."
+      "reason": "GAP-045/047/048: the contract itself asks the NEAR MPC signer for payments on Solana devnet and Ethereum Sepolia after checking a group's foreign-payment rules (set_foreign_policy, request_foreign_payment, on_foreign_signed, get_foreign_*), with a per-window running total, prune cleanup and finished groups still able to pay listed payees. The 15 groups are intact; none was in flight. The contract account was topped up by 1 NEAR first because the larger code needed more storage stake.",
+      "until": "2026-11-11T06:38Z",
+      "knownDefect": "GAP-049: the signer path was the bare group id, so a pruned and re-hatched id would have controlled the same Solana and Ethereum addresses as the old group. Superseded the same day, before anyone but us used the feature."
+    },
+    {
+      "codeHash": "BVcq86Wz5Q3kcdBdcUhfQVfQtC6CmGwcXuMd52aW6gTp",
+      "from": "2026-11-11T06:38Z",
+      "deployTx": "CFN8bsUBUdZoLSEqbNYQB1usBdKo4tEGzyQQjjwpM7Vh",
+      "gitCommit": "1b9de0e",
+      "reason": "GAP-049: the signer path names the group's creation block (<id>:<block>, exposed by get_foreign_path), so a freed and re-hatched group id derives different foreign addresses. The 16 groups were intact and none was in flight."
     }
   ]
 }

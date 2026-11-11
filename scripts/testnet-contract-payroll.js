@@ -47,13 +47,29 @@ async function main() {
     return JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
   };
 
-  console.log(`[1/7] Addresses. Contract ${CONTRACT}, group ${GROUP}; keys derive from the contract, not from our account`);
-  const solGroup = nearKeyToSolanaAddress(await derive(1, GROUP, CONTRACT)); const evmGroup = await evmAddr(GROUP, CONTRACT);
+  console.log(`[1/7] Payees and the old funding addresses. Contract ${CONTRACT}, group ${GROUP}; keys derive from the contract, not from our account`);
   const solPayee = nearKeyToSolanaAddress(await derive(1, 'midge/solana/recipient', chain.masterId)); const evmPayee = await evmAddr('midge/evm/payee-2', chain.masterId);
   const solOld = nearKeyToSolanaAddress(await derive(1, 'midge/solana/group-1', chain.masterId)); const evmOld = await evmAddr('fly/dark-vault/epoch-1', chain.masterId);
-  console.log(`      group Solana ${solGroup}\n      group Sepolia ${evmGroup}\n      payees: ${solPayee} / ${evmPayee}`);
+  console.log('[2/7] The group first: hatch (room key), foreign policy, one deposit (its signing path names its creation block, so its addresses exist only once it does)');
+  let syn = await chain.view('get_syndicate', { syndicate_id: GROUP }, CONTRACT);
+  const policy = { payees: [
+    { chain: 'solana-devnet', address: solPayee, max_amount: '2000000', max_total: '6000000' },
+    { chain: 'ethereum-sepolia', address: evmPayee, max_amount: '1000000000000000', max_total: '3000000000000000' }], max_fee_cost: '10000000000000000', window_blocks: 1000 };
+  if (!syn) {
+    await M.account.callFunction({ contractId: CONTRACT, methodName: 'hatch', args: { syndicate_id: GROUP, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roomPk, expected_code_hash: 'rules-contract-live', timeout_blocks: TIMER_BLOCKS, payout_recipient: chain.masterId, release_policy: null }, deposit: BigInt('5000000000000000000000') });
+    await M.account.callFunction({ contractId: CONTRACT, methodName: 'set_foreign_policy', args: { syndicate_id: GROUP, policy }, gas: 100_000_000_000_000n });
+    const h = await chain.view('get_policy_hash', { syndicate_id: GROUP }, CONTRACT);
+    await master.callFunction({ contractId: CONTRACT, methodName: 'deposit', args: { syndicate_id: GROUP, policy_hash: h }, deposit: BigInt('100000000000000000000000'), gas: 100_000_000_000_000n });
+    syn = await chain.view('get_syndicate', { syndicate_id: GROUP }, CONTRACT);
+  }
+  console.log(`      group ${syn.id}, status ${syn.status}, escrow ${syn.total_escrow}, round nonce ${syn.round_nonce}`);
 
-  console.log('[2/7] Funding the contract-derived addresses from the old ones (signed as our account), if they are low');
+  // The signer path is group id + creation block (GAP-049): a freed and re-hatched id derives different addresses from the old group.
+  const groupPath = await chain.view('get_foreign_path', { syndicate_id: GROUP }, CONTRACT);
+  const solGroup = nearKeyToSolanaAddress(await derive(1, groupPath, CONTRACT)); const evmGroup = await evmAddr(groupPath, CONTRACT);
+  console.log(`      signer path ${groupPath}\n      group Solana ${solGroup}\n      group Sepolia ${evmGroup}\n      payees: ${solPayee} / ${evmPayee}`);
+
+  console.log('[3/7] Funding the contract-derived addresses from the old ones (signed as our account), if they are low');
   const solBal = async (a) => (await sol('getBalance', [a, { commitment: 'confirmed' }])).value;
   if ((await solBal(solGroup)) < 5_000_000) {
     const { value: { blockhash } } = await sol('getLatestBlockhash', [{ commitment: 'finalized' }]);
@@ -72,20 +88,6 @@ async function main() {
     console.log(`      Sepolia funded: ${sent.hash}`);
   }
   console.log(`      group balances: ${await solBal(solGroup)} lamports, ${ethers.formatEther(await eth.getBalance(evmGroup))} ETH`);
-
-  console.log('[3/7] The group: hatch (room key), foreign policy, one deposit');
-  let syn = await chain.view('get_syndicate', { syndicate_id: GROUP }, CONTRACT);
-  const policy = { payees: [
-    { chain: 'solana-devnet', address: solPayee, max_amount: '2000000', max_total: '6000000' },
-    { chain: 'ethereum-sepolia', address: evmPayee, max_amount: '1000000000000000', max_total: '3000000000000000' }], max_fee_cost: '10000000000000000', window_blocks: 1000 };
-  if (!syn) {
-    await M.account.callFunction({ contractId: CONTRACT, methodName: 'hatch', args: { syndicate_id: GROUP, syndicate_type: 'FLASH', quorum_threshold: 1, max_spend_near: 1, enclave_public_key: roomPk, expected_code_hash: 'rules-contract-live', timeout_blocks: TIMER_BLOCKS, payout_recipient: chain.masterId, release_policy: null }, deposit: BigInt('5000000000000000000000') });
-    await M.account.callFunction({ contractId: CONTRACT, methodName: 'set_foreign_policy', args: { syndicate_id: GROUP, policy }, gas: 100_000_000_000_000n });
-    const h = await chain.view('get_policy_hash', { syndicate_id: GROUP }, CONTRACT);
-    await master.callFunction({ contractId: CONTRACT, methodName: 'deposit', args: { syndicate_id: GROUP, policy_hash: h }, deposit: BigInt('100000000000000000000000'), gas: 100_000_000_000_000n });
-    syn = await chain.view('get_syndicate', { syndicate_id: GROUP }, CONTRACT);
-  }
-  console.log(`      group ${syn.id}, status ${syn.status}, escrow ${syn.total_escrow}, round nonce ${syn.round_nonce}`);
 
   const roomSign = (req) => {
     const params = req.recent_blockhash ?? `${req.evm_nonce ?? 0}:${req.max_priority_fee ?? 0}:${req.max_fee ?? 0}:${req.gas_limit ?? 0}`;
