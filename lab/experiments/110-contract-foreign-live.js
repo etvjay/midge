@@ -7,7 +7,8 @@ import { signatureFromMpc } from '../../src/multichain/evm-transfer.js';
 const SIGNER = 'v1.signer-prod.testnet';
 const SOLANA_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 const SEPOLIA_RPC = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
-const GROUP = 'payroll-live-2';
+// Targets the test contract m.<account> and group payroll-live-2 by default; MIDGE_RULES_PREFIX=c MIDGE_RULES_GROUP=<id> runs it against production.
+const GROUP = process.env.MIDGE_RULES_GROUP || 'payroll-live-2';
 const SOL_PAY = 1_000_000n; const ETH_PAY = ethers.parseEther('0.0005');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sol = async (method, params) => {
@@ -29,7 +30,7 @@ export default {
   ],
   async run(ctx) {
     const chain = await connect(ctx.rootDir);
-    const M = chain.sub('m'); const CONTRACT = M.id; const master = chain.master;
+    const M = chain.sub(process.env.MIDGE_RULES_PREFIX || 'm'); const CONTRACT = M.id; const master = chain.master;
     const eth = new ethers.JsonRpcProvider(SEPOLIA_RPC);
     const room = deriveSubKeyPair(chain.env.NEAR_PRIVATE_KEY, 'payroll-room');
     const TS = Date.now().toString(36);
@@ -62,8 +63,12 @@ export default {
       s.assert('the group exists on the test contract (run npm run verify:contract-payroll once if not)', !!syn, { actual: syn });
       policy = await view('get_foreign_policy', { syndicate_id: GROUP });
       s.assert('the contract holds the group\'s foreign policy', policy?.payees?.length === 2);
-      const solGroup = nearKeyToSolanaAddress(await derive(1, GROUP, CONTRACT)); const solOurs = nearKeyToSolanaAddress(await derive(1, GROUP, chain.masterId));
-      const evmGroup = await evmAddr(GROUP, CONTRACT); const evmOurs = await evmAddr(GROUP, chain.masterId);
+      const groupPath = await view('get_foreign_path', { syndicate_id: GROUP });
+      s.assert('the contract names a signer path for the group that includes the group id and its creation block', groupPath === `${GROUP}:${syn.created_at_block}`, { actual: groupPath });
+      const solGroup = nearKeyToSolanaAddress(await derive(1, groupPath, CONTRACT)); const solOurs = nearKeyToSolanaAddress(await derive(1, groupPath, chain.masterId));
+      const evmGroup = await evmAddr(groupPath, CONTRACT); const evmOurs = await evmAddr(groupPath, chain.masterId);
+      const bareSol = nearKeyToSolanaAddress(await derive(1, GROUP, CONTRACT));
+      s.assert('the addresses derived from the bare group id are NOT the ones the group uses, so a freed and re-hatched id cannot take over its money', bareSol !== solGroup);
       s.assert('the Solana address derived for the contract differs from the one for our own account with the same path', solGroup !== solOurs);
       s.assert('the Ethereum address derived for the contract differs from the one for our own account with the same path', evmGroup !== evmOurs);
       A = { solGroup, evmGroup, solPayee: policy.payees.find((p) => p.chain === 'solana-devnet').address, evmPayee: policy.payees.find((p) => p.chain === 'ethereum-sepolia').address };

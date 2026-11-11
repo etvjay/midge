@@ -6,6 +6,9 @@ import { DstackSocketProvider } from './provider.js';
 import { RoostAggregationError } from '../enclave/errors.js';
 import { createEscrowReader } from './escrow-reader.js';
 import { makeAccountKeyCheck } from './signed-input.js';
+import { preflight } from './preflight.js';
+import { matchApproval, invoiceHash } from './invoice.js';
+import { verifyAuditorPack } from './auditor.js';
 
 /**
  * HTTP surface of the hosted Roost.
@@ -135,7 +138,26 @@ export function createRoostServer({ roost, adminKey }) {
       if (req.method === 'POST' && url.pathname === '/payrun') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
         const body = await readJson(req);
-        await bind([body.employer], body); return send(res, 200, roost.runPayrun({ employer: body.employer, taxAddress: body.taxAddress, benefitsAddress: body.benefitsAddress, employerKeyHex: body.employerKeyHex, auditorKeyHex: body.auditorKeyHex, runId: body.runId }));
+        await bind([body.employer], body); return send(res, 200, roost.runPayrun({ employer: body.employer, taxAddress: body.taxAddress, benefitsAddress: body.benefitsAddress, employerKeyHex: body.employerKeyHex, auditorKeyHex: body.auditorKeyHex, runId: body.runId, requireInvoices: body.requireInvoices === true }));
+      }
+      // Payroll routes that need no coordinator key: a payee submits a sealed invoice; the employer opens lines for an auditor with a signed request;
+      // and three pure checks that read only what they are given, move no money and sign nothing.
+      if (req.method === 'POST' && url.pathname === '/invoices') return send(res, 200, roost.submitInvoice(await readJson(req)));
+      if (req.method === 'POST' && url.pathname === '/audit/open') return send(res, 200, await roost.openAuditLines(await readJson(req)));
+      if (req.method === 'POST' && url.pathname === '/preflight') {
+        const b = await readJson(req);
+        if (!b.payment || !b.policy) return send(res, 400, { error: 'payment and policy are required' });
+        return send(res, 200, preflight(b.payment, { policy: b.policy, spent: b.spent || {}, usedObligations: new Set(b.usedObligations || []), history: b.history || {}, person: b.person || null }));
+      }
+      if (req.method === 'POST' && url.pathname === '/invoice-check') {
+        const b = await readJson(req);
+        if (!b.invoice || !b.approval) return send(res, 400, { error: 'invoice and approval are required' });
+        return send(res, 200, { ...matchApproval(b.invoice, b.approval), invoiceHash: b.invoice.body ? invoiceHash(b.invoice.body) : null });
+      }
+      if (req.method === 'POST' && url.pathname === '/auditor-verify') {
+        const b = await readJson(req);
+        if (!b.pack || typeof b.onChainOrderHash !== 'string') return send(res, 400, { error: 'pack and onChainOrderHash are required' });
+        return send(res, 200, verifyAuditorPack(b.pack, b.onChainOrderHash));
       }
       if (req.method === 'POST' && url.pathname === '/cross') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });

@@ -526,3 +526,71 @@ fn a_refunded_group_can_still_pay_its_listed_foreign_payees_within_the_caps() {
     assert!(over.is_err());
     let _ = nonce;
 }
+
+// ---- GAP-049: the signer path names the group's creation block, so a re-used group id does not re-use the old group's foreign addresses ----
+
+#[test]
+fn the_signer_path_names_the_group_and_its_creation_block() {
+    use fly_coordinator::foreign::signer_path;
+    assert_eq!(signer_path("payroll-1", 100), "payroll-1:100");
+    assert_ne!(
+        signer_path("payroll-1", 100),
+        signer_path("payroll-1", 300),
+        "the same id at another block is another path"
+    );
+    assert_ne!(signer_path("payroll-1", 100), signer_path("payroll-2", 100));
+}
+
+#[test]
+fn a_rehatched_group_id_gets_a_different_signing_path_so_different_foreign_addresses() {
+    testing_env!(ctx("alice.near", NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let pk = hex::encode(key().verifying_key().to_bytes());
+    let id = c.hatch(
+        "reuse-1".into(),
+        Some("FLASH".into()),
+        Some(1),
+        Some(50),
+        pk.clone(),
+        "code".into(),
+        Some(30),
+        None,
+        None,
+    );
+    let before = c
+        .get_foreign_path(id.clone())
+        .expect("a path for a live group");
+    testing_env!(ctx("alice.near", NearToken::from_yoctonear(0), 200).build());
+    c.prune_syndicate(id.clone());
+    assert!(
+        c.get_foreign_path(id.clone()).is_none(),
+        "a pruned group has no path"
+    );
+    // Anyone may hatch the freed id, with their own room key.
+    testing_env!(ctx("mallory.near", NearToken::from_near(1), 300).build());
+    let mallory_pk = hex::encode(
+        SigningKey::from_bytes(&[7u8; 32])
+            .verifying_key()
+            .to_bytes(),
+    );
+    let id2 = c.hatch(
+        "reuse-1".into(),
+        Some("FLASH".into()),
+        Some(1),
+        Some(50),
+        mallory_pk,
+        "code".into(),
+        Some(30),
+        None,
+        None,
+    );
+    let after = c.get_foreign_path(id2).expect("a path for the new group");
+    assert_ne!(before, after, "the new group must not share the old group's signing path, or it would control the old group's foreign money");
+}
+
+#[test]
+fn an_unknown_group_has_no_signing_path() {
+    testing_env!(ctx("alice.near", NearToken::from_near(1), 100).build());
+    let c = FlyCoordinator::new();
+    assert!(c.get_foreign_path("nobody-1".into()).is_none());
+}

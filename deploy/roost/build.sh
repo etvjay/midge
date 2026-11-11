@@ -11,14 +11,16 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 stage() {
   local ctx="$1"
-  mkdir -p "$ctx/src/enclave" "$ctx/src/roost-service"
+  mkdir -p "$ctx/src/enclave" "$ctx/src/roost-service" "$ctx/src/multichain"
   cp deploy/roost/package.json deploy/roost/package-lock.json deploy/roost/Dockerfile "$ctx/"
   cp src/enclave/e2ee.js src/enclave/errors.js "$ctx/src/enclave/"
   cp src/roost-service/provider.js src/roost-service/hosted-roost.js src/roost-service/server.js "$ctx/src/roost-service/"
 # Programs and helpers that hosted-roost.js imports. tests/roost-image-stage.test.js fails if one is missing.
 cp src/roost-service/auction-programs.js src/roost-service/ballot-program.js src/roost-service/payrun-program.js \
    src/roost-service/pool-program.js src/roost-service/quote-programs.js src/roost-service/receipts.js \
-   src/roost-service/signed-input.js src/roost-service/escrow-reader.js "$ctx/src/roost-service/"
+   src/roost-service/signed-input.js src/roost-service/escrow-reader.js src/roost-service/invoice.js \
+   src/roost-service/auditor.js src/roost-service/preflight.js "$ctx/src/roost-service/"
+cp src/multichain/solana-transfer.js "$ctx/src/multichain/"
   find "$ctx" -exec touch -h -d '2026-01-01T00:00:00Z' {} +
 }
 
