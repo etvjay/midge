@@ -16,6 +16,7 @@ export default {
   requires: ['phala-key', 'network', 'docker'],
   hypothesis: 'Predictions are in docs/lab/PROGRAMME_PLAN.md, committed before this file existed. Inside a real confidential VM whose two providers can never resolve, a charged round is refused with 503 in bounded time, the sealed bid is still there afterwards, nothing can be signed, and retrying gives the same answer.',
   limits: [
+    'Does NOT run on the current signed-only compose: it sends an unsigned bid, which that compose refuses (GAP-050, run 20261111T094151Z-c01e). The promoted run is evidence for the older build.',
     'The providers are on the reserved .invalid domain, so this shows a total outage, not a partial one (partial failure is covered offline).',
     'It does not show recovery: the providers are fixed in the VM\'s measured compose file, so recovery needs a second VM.',
     'The compose file is a test fixture that differs from the real one only in the two provider URLs; it is attested here but is not a deployment members should trust.',
