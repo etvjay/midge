@@ -397,3 +397,16 @@ Same group, same image, with what the pinned image can do today: round 2 is a se
 5. The books close: u1 0.08, u2 0.08, u3 0.035, u4 0.075, u5 0.09, summing to the group total 0.36; the epoch rose by exactly 3 and every nonce was different.
 6. Teardown leaves nothing: group pruned, accounts deleted, VM deleted, account empty, under $0.10.
 **Not tested (and why):** a ballot, an RFQ and a pay run on hardware, because the pinned image cannot run them (GAP-046).
+
+## Contract-requested foreign payments: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** On 2026-11-10 a script ran a payroll in which the Midge contract (test deployment `m.fly-1793636729.testnet`) checked a group's rules and asked the NEAR MPC signer to sign two payments, on Solana devnet and Ethereum Sepolia. That was a one-off script, so by the project's own rule it is not yet proof. This is the same flow as a lab experiment, run again on the same contract and group (`payroll-live-1`), whose derived addresses are already funded.
+
+**E-CONTRACT-FOREIGN-LIVE-01 (testnet and two foreign testnets).**
+1. **The keys are the contract's.** The Solana and Ethereum addresses the signer derives for the contract and the group id differ from the ones it derives for our own account with the same path; the group's funded balances are non-zero.
+2. **An in-rules Solana payment:** the contract accepts the room-signed request, the signer's reply verifies against the contract-derived Solana key over the message the script rebuilds independently, the transaction lands on devnet, and the payee's balance rises by exactly the amount.
+3. **An in-rules Ethereum payment:** the signature recovers to the contract-derived Ethereum address over the EIP-1559 digest that ethers computes independently, the transaction lands on Sepolia with status 1, and the payee's balance rises by exactly the amount.
+4. **The books:** the contract's recorded running total for each payee rose by exactly the amount just paid, and each obligation is marked signed.
+5. **Refusals:** an unlisted payee, an amount over the per-payment cap, a reused obligation id and a request the room did not sign are each refused by the contract with its own message, and the recorded totals do not move.
+
+**Not tested:** the signer failing mid-request (covered by a unit test only), two-room groups, the production contract, the hosted Roost signing these requests (a test key signs). **Weakness I expect to remain:** one operator controls the room key, the contract and the payees; money at the foreign addresses is outside the NEAR exit.
