@@ -1,0 +1,76 @@
+{
+  "ranAt": "2026-11-11T04:29:46.145Z",
+  "contract": "m.fly-1793636729.testnet",
+  "group": "payroll-live-1",
+  "signerContract": "v1.signer-prod.testnet",
+  "predecessor": "m.fly-1793636729.testnet",
+  "codeHash": "7Wgw8jXPbKumLtm9navuB3C65c2jPpsFNzKZYuQ6otPL",
+  "foreignPolicy": {
+    "payees": [
+      {
+        "chain": "solana-devnet",
+        "address": "KLsn8JawHSc2KMRFK9qrxifgBEm8WJ568LsvSKbaVPc",
+        "max_amount": "2000000",
+        "max_total": "6000000"
+      },
+      {
+        "chain": "ethereum-sepolia",
+        "address": "0xB9A425FB45734FC29a9c941c2c05b34DE59FF7A4",
+        "max_amount": "1000000000000000",
+        "max_total": "3000000000000000"
+      }
+    ],
+    "max_fee_cost": "10000000000000000"
+  },
+  "addresses": {
+    "solanaGroup": "D7qNdAvErSo77e2q9iNpJCpGgXkDTrx3VzuVP2d8xvc1",
+    "sepoliaGroup": "0x01B58C67144E1208ec2744b642480A690B30D58E",
+    "solanaPayee": "KLsn8JawHSc2KMRFK9qrxifgBEm8WJ568LsvSKbaVPc",
+    "sepoliaPayee": "0xB9A425FB45734FC29a9c941c2c05b34DE59FF7A4"
+  },
+  "payments": [
+    {
+      "chain": "solana-devnet",
+      "obligation": "sol-mwbmcdnp",
+      "nearTx": "7aSiwMcDzwFJUnngW9AMjmLDKQACQLehyvAwr1CMvAHL",
+      "nearTxUrl": "https://testnet.nearblocks.io/txns/7aSiwMcDzwFJUnngW9AMjmLDKQACQLehyvAwr1CMvAHL",
+      "chainTx": "4C4kmPTrMDVNp3aScLXuq99646ewuJYdhVftUKwXPe6euud8YaXFGASoEHS4nYxBpebjyo9oyxV6uZwNTPhtNi2J",
+      "status": "finalized",
+      "url": "https://explorer.solana.com/tx/4C4kmPTrMDVNp3aScLXuq99646ewuJYdhVftUKwXPe6euud8YaXFGASoEHS4nYxBpebjyo9oyxV6uZwNTPhtNi2J?cluster=devnet"
+    },
+    {
+      "chain": "ethereum-sepolia",
+      "obligation": "eth-mwbmcdnp",
+      "nearTx": "356Hio8fKSgPwmc2FvzgWQdtggjzJGjCq14JEcyd1XX4",
+      "nearTxUrl": "https://testnet.nearblocks.io/txns/356Hio8fKSgPwmc2FvzgWQdtggjzJGjCq14JEcyd1XX4",
+      "chainTx": "0xd1b3f8b6600ec2ef473256bf8e6ec8c8e15b23ca2683668a8baab1ede66a0ee4",
+      "status": "confirmed",
+      "block": 12109383,
+      "url": "https://sepolia.etherscan.io/tx/0xd1b3f8b6600ec2ef473256bf8e6ec8c8e15b23ca2683668a8baab1ede66a0ee4"
+    }
+  ],
+  "refusals": [
+    {
+      "label": "payee not in the foreign policy",
+      "refused": true,
+      "nearTx": null,
+      "error": "Smart contract panicked: [Foreign REJECT] payee is not allowed on this chain"
+    },
+    {
+      "label": "amount over the per-payment cap",
+      "refused": true,
+      "nearTx": null,
+      "error": "Smart contract panicked: panicked at src/lib.rs:1793:9:\n[Foreign REJECT] amount is over the per-payment cap"
+    },
+    {
+      "label": "an obligation already requested",
+      "refused": true,
+      "nearTx": null,
+      "error": "Smart contract panicked: panicked at src/lib.rs:1782:9:\n[Foreign REJECT] obligation sol-mwbmcdnp was already requested"
+    }
+  ],
+  "reservedByContract": {
+    "solana": "1000000",
+    "sepolia": "500000000000000"
+  }
+}

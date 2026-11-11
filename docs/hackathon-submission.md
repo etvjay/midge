@@ -22,12 +22,12 @@ Midge is a network of private rooms with public rules on NEAR. A group (AI agent
 What is built and checked:
 1. A NEAR L1 contract in Rust (near-sdk 5.1), live on testnet: one-use signed settlements, per-member charges, a release cap and a permissionless exit (hatch_out). 145 Rust tests, a state-machine document kept true by a check, and a source-only security audit whose fixes are deployed.
 2. NEAR AI Cloud TEEs: bids are sealed to a NEAR AI Cloud model's attested Intel TDX key, so the coordinator holds only ciphertext. A hosted room runs in a Phala dstack TDX VM and its attestation passes the official dstack-verifier. On real hardware it left out an unfunded bidder, settled on testnet, and refused to run when it could not read the chain. Without a key the room is a local simulation that can read bids, and says so.
-3. Chain Signatures: transactions signed by v1.signer-prod.testnet for our own testnet account were confirmed on Solana devnet and Ethereum Sepolia as a two-payee pay run (`npm run verify:payroll`); they are not yet bound by a group's rules, and nothing was sent on Bitcoin.
+3. Chain Signatures: a test deployment of the Midge contract checked a group's rules and asked v1.signer-prod.testnet for payments that landed on Solana devnet and Ethereum Sepolia, and refused three out-of-rules requests (`npm run verify:contract-payroll`); funds on other chains are outside the member exit, and nothing was sent on Bitcoin.
 4. Confidential Intents: the 1Click asset registry is read live. The FAR private shard is an in-memory simulation; no claim of private on-chain settlement is made.
 
 Also: an MCP server with 15 tools, an SDK, x402 agent payments, sealed auctions, pools, ballots, requests for quote and payroll (private who, private receipts; the amounts are public). Every claim has a command anyone can re-run (make verify, no keys), and its limits are written beside it.
 ```
-*(Character count: 1,911 / 2,000, checked by `tests/public-docs-true.test.js`)*
+*(Character count: 1,979 / 2,000, checked by `tests/public-docs-true.test.js`)*
 
 ---
 

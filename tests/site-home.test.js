@@ -52,7 +52,7 @@ test('the honesty fixes hold: Phala not running, OutLayer not used, Chain Signat
   assert.match(all, /OutLayer[\s\S]{0,200}not used yet|Not used yet/);
   assert.match(all, /Solana devnet.{0,30}Ethereum Sepolia/);
   assert.match(all, /Nothing sent on Bitcoin|nothing has been sent on Bitcoin/i);
-  assert.match(all, /do not limit them yet/, 'the multichain payments are not bound by a group\'s rules, and the page says so');
+  assert.match(all, /outside the member exit/, 'foreign funds are outside the exit, and the page says so');
   assert.match(all, /read-only/i);
   assert.doesNotMatch(all, /running on testnet[^.\n]{0,40}Phala|Phala[^.\n]{0,40}running on testnet/i);
 });
