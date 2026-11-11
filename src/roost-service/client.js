@@ -38,4 +38,9 @@ export class HostedRoostClient {
   inputDigests() { return this.#call('GET', '/digests', undefined, true); }
   excludeMembers(members) { return this.#call('POST', '/exclude', { members }, true); }
   submitSignedIntent(params) { return this.#call('POST', '/signed-intents', params); }
+  submitInvoice(params) { return this.#call('POST', '/invoices', params); }
+  openAuditLines(params) { return this.#call('POST', '/audit/open', params); }
+  preflight(params) { return this.#call('POST', '/preflight', params); }
+  checkInvoice(invoice, approval) { return this.#call('POST', '/invoice-check', { invoice, approval }); }
+  verifyAuditorPack(pack, onChainOrderHash) { return this.#call('POST', '/auditor-verify', { pack, onChainOrderHash }); }
 }

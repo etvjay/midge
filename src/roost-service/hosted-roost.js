@@ -8,6 +8,8 @@ import { clearBallot } from './ballot-program.js';
 import { buildPayrun, fmtMicro } from './payrun-program.js';
 import { leafHash, merkleRoot, merkleProof, payrunOrderHash, receiptSigningMessage } from './receipts.js';
 import { inputMessage, verifyNearSignature, isAccountId } from './signed-input.js';
+import { verifyInvoice, matchApproval, invoiceHash } from './invoice.js';
+import { auditorPack, auditOpenMessage } from './auditor.js';
 
 /**
  * HostedRoost: the Roost as ordinary deterministic code, meant to run inside a dstack confidential VM.
@@ -96,6 +98,8 @@ export class HostedRoost {
     this.settlePublicKey = pair.publicKey.export({ format: 'der', type: 'spki' }).subarray(SPKI_ED25519_PREFIX_LEN).toString('hex');
     this.sealedIntents = [];
     this.aggregate = null; // last aggregate, awaiting at most one settlement signature
+    this.invoices = new Map(); // invoiceId -> accepted payee-signed invoice, this round
+    this.lastRun = null; // the receipts of the last pay run, kept in memory so the employer can open chosen lines for an auditor
   }
 
   /** Serialising a Roost must never expose state: only the public keys. */
@@ -261,7 +265,7 @@ export class HostedRoost {
     if (!Number.isSafeInteger(epoch) || epoch < 0) throw new RoostAggregationError('epoch must be a non-negative integer');
     if (this.#signedRounds.has(`${contractId}:${syndicateId}:${epoch}:${roundNonce}`)) throw new RoostAggregationError('this round was already signed; open a new round with a new nonce');
     this.round = { contractId, syndicateId, epoch, roundNonce };
-    this.sealedIntents = []; this.lastSeq = new Map(); this.aggregate = null; this.#escrow = null;
+    this.sealedIntents = []; this.lastSeq = new Map(); this.aggregate = null; this.#escrow = null; this.invoices = new Map(); this.lastRun = null;
     return { ...this.round };
   }
 
@@ -587,7 +591,7 @@ export class HostedRoost {
    * proof, the employer every line, the auditor totals only. Every payment's address and amount is public once settled; this
    * hides who a payee is (a one-time address only the room can map to a person), and adds a private paper trail.
    */
-  runPayrun({ employer, taxAddress, benefitsAddress, employerKeyHex, auditorKeyHex, runId = 'run' } = {}) {
+  runPayrun({ employer, taxAddress, benefitsAddress, employerKeyHex, auditorKeyHex, runId = 'run', requireInvoices = false } = {}) {
     this.#assertNoSignedAggregate();
     if (!this.requireSignedInputs) throw new RoostAggregationError('a pay run is only run on a host that requires signed inputs');
     if (!isAccountId(employer)) throw new RoostAggregationError('employer must be a plain account id');
@@ -599,7 +603,20 @@ export class HostedRoost {
     let body;
     try { body = JSON.parse(openFromModel(mine.cipherTextHex, this.#intentSecret)); } catch { throw new RoostAggregationError('the employer\'s pay run could not be read'); }
     let built;
-    try { built = buildPayrun({ lines: body?.lines, taxAddress, benefitsAddress, runId }); } catch (e) { throw new RoostAggregationError(e.message); }
+    // With requireInvoices every line must match a payee-signed invoice, field by field, or nothing runs and the queue is kept.
+    let invoiceHashes = null;
+    if (requireInvoices) {
+      invoiceHashes = {};
+      for (const l of Array.isArray(body?.lines) ? body.lines : []) {
+        const inv = this.invoices.get(String(l?.invoiceId));
+        if (!inv) throw new RoostAggregationError(`no invoice was submitted for ${l?.invoiceId}; the queue is kept`);
+        const approval = { invoiceId: l.invoiceId, period: l.period, chain: 'near', address: l.payee, asset: 'NEAR', amount: l.gross };
+        const m = matchApproval(inv, approval);
+        if (!m.ok) throw new RoostAggregationError(`invoice ${l.invoiceId} does not match the approved line: ${m.reasons.join('; ')}; the queue is kept`);
+        invoiceHashes[l.invoiceId] = invoiceHash(inv.body);
+      }
+    }
+    try { built = buildPayrun({ lines: body?.lines, taxAddress, benefitsAddress, runId, invoiceHashes }); } catch (e) { throw new RoostAggregationError(e.message); }
     // One payer: the employer. There is nobody to leave out, so a payer who cannot cover the gross pay stops the run (queue kept).
     const aff = this.#affordable([employer], (e) => e, () => built.grossMicro * YOCTO_PER_MICRO, [employer]);
     if (aff.excluded.length) throw new RoostAggregationError(`${employer} cannot cover the gross pay of this run; the queue is kept`);
@@ -613,11 +630,53 @@ export class HostedRoost {
     statements.auditor = { cipherHex: sealToModel(JSON.stringify({ runId, receiptsRoot: root, ...built.totals }), auditorKeyHex) };
     this.sealedIntents = [];
     const orderHash = payrunOrderHash(runId, root);
+    this.lastRun = { runId, receipts: built.receipts, root, orderHash, employer };
     const charges = [{ member: employer, amount: String(built.grossMicro * YOCTO_PER_MICRO) }];
     const bound = { [employer]: built.grossMicro * YOCTO_PER_MICRO };
     this.aggregate = { orderHash, totalMicro: built.grossMicro, signed: false, program: { allocations: built.allocations, charges, bound } };
-    const outcome = { ...(this.escrowReader ? { escrowBlock: aff.block } : {}), shape: 'payrun', runId, receiptsRoot: root, lines: built.totals.headcount, recipients: built.allocations.length, gross: fmtMicro(built.grossMicro), ignored, executionModel: 'HOSTED_SEALED_PAYRUN', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const outcome = { ...(this.escrowReader ? { escrowBlock: aff.block } : {}), shape: 'payrun', runId, receiptsRoot: root, ...(requireInvoices ? { invoicesMatched: built.totals.headcount } : {}), lines: built.totals.headcount, recipients: built.allocations.length, gross: fmtMicro(built.grossMicro), ignored, executionModel: 'HOSTED_SEALED_PAYRUN', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     return { outcome, orderHash, allocations: built.allocations, charges, statements, receiptsRoot: root, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
+   * A payee's invoice, sealed to this room's intent key. The invoice is the payee's own signed statement of the payment they ask for
+   * (invoice id, period, chain, destination, asset, amount). It is kept for this round only and is used only by a pay run started with
+   * requireInvoices, which compares it with the employer's line. One invoice per id: a second one for the same id is refused, so a
+   * different amount or destination cannot be substituted after the first was accepted.
+   */
+  submitInvoice({ cipherTextHex } = {}) {
+    if (typeof cipherTextHex !== 'string' || !/^[0-9a-fA-F]+$/.test(cipherTextHex)) throw new RoostAggregationError('cipherTextHex must be hex');
+    let inv;
+    try { inv = JSON.parse(openFromModel(cipherTextHex, this.#intentSecret)); } catch { throw new RoostAggregationError('the invoice could not be read'); }
+    const v = verifyInvoice(inv);
+    if (!v.ok) throw new RoostAggregationError(`the invoice signature does not verify: ${v.reason}`);
+    const id = String(inv.body?.invoiceId ?? '');
+    if (!/^[A-Za-z0-9._-]{1,64}$/.test(id)) throw new RoostAggregationError('invoiceId must be 1 to 64 plain characters');
+    if (this.invoices.has(id)) throw new RoostAggregationError(`an invoice for ${id} was already accepted this round`);
+    if (this.invoices.size >= 200) throw new RoostAggregationError('too many invoices this round');
+    this.invoices.set(id, inv);
+    return { accepted: true, invoiceId: id, invoiceHash: invoiceHash(inv.body), count: this.invoices.size };
+  }
+
+  /**
+   * Open chosen lines of the last pay run for an auditor. Only the employer can authorise it: the request is signed with a key of the
+   * employer's NEAR account (checked against the chain) over the run, the exact lines and the auditor's key. The pack is sealed to the
+   * auditor; it holds only the opened lines, each with a Merkle proof, and the auditor checks it against the order hash on chain.
+   */
+  async openAuditLines({ runId, indices, auditorKeyHex, employer, publicKey, signature } = {}) {
+    if (!this.lastRun || this.lastRun.runId !== runId) throw new RoostAggregationError('no such pay run in this room (the room keeps the last run of the current round)');
+    if (employer !== this.lastRun.employer) throw new RoostAggregationError('only the employer of this run can open its lines');
+    if (!Array.isArray(indices) || indices.length < 1 || indices.length > 50 || !indices.every((i) => Number.isSafeInteger(i))) throw new RoostAggregationError('indices must be 1 to 50 integers');
+    if (new Set(indices).size !== indices.length) throw new RoostAggregationError('indices must be distinct');
+    if (indices.some((i) => i < 0 || i >= this.lastRun.receipts.length)) throw new RoostAggregationError('an index is out of range for this run');
+    if (!/^[0-9a-f]{64}$/i.test(String(auditorKeyHex))) throw new RoostAggregationError('auditorKeyHex must be a 32-byte hex public key');
+    if (typeof this.accountKeyCheck !== 'function') throw new RoostAggregationError('this room cannot check account keys');
+    if (!verifyNearSignature(publicKey, auditOpenMessage({ runId, indices, auditorKeyHex }), signature)) throw new RoostAggregationError('the request signature does not verify (it covers the run, the lines and the auditor key)');
+    let belongs = false;
+    try { belongs = await this.accountKeyCheck(employer, publicKey); } catch { throw new RoostAggregationError('could not check the employer key against the chain'); }
+    if (!belongs) throw new RoostAggregationError(`${publicKey} is not a key of ${employer}`);
+    const pack = auditorPack({ runId, receipts: this.lastRun.receipts, open: indices });
+    return { runId, orderHash: this.lastRun.orderHash, lines: pack.lines, packCipherHex: sealToModel(JSON.stringify(pack), auditorKeyHex) };
   }
 
   /**

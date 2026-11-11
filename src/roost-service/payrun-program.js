@@ -13,7 +13,7 @@ const MAX_RECIPIENTS = 8;
 const toMicro = (v) => { if (typeof v !== 'string' && typeof v !== 'number') return null; const t = String(v); if (!AMOUNT_RE.test(t)) return null; const [w, f = ''] = t.split('.'); return BigInt(w) * 1_000_000n + BigInt(f.padEnd(6, '0')); };
 export const fmtMicro = (m) => { const whole = m / 1_000_000n; const frac = (m % 1_000_000n).toString().padStart(6, '0').replace(/0+$/, ''); return frac ? `${whole}.${frac}` : `${whole}`; };
 
-export function buildPayrun({ lines, taxAddress, benefitsAddress, runId = 'run' }) {
+export function buildPayrun({ lines, taxAddress, benefitsAddress, runId = 'run', invoiceHashes = null }) {
   if (!Array.isArray(lines) || lines.length === 0) throw new Error('a pay run needs at least one line');
   if (!isAccountId(taxAddress) || !isAccountId(benefitsAddress) || taxAddress === benefitsAddress) throw new Error('tax and benefits need two distinct plain account ids');
   const seen = new Set([taxAddress, benefitsAddress]);
@@ -40,7 +40,7 @@ export function buildPayrun({ lines, taxAddress, benefitsAddress, runId = 'run' 
   const recipients = rows.length + (taxTotal > 0n ? 1 : 0) + (benTotal > 0n ? 1 : 0);
   if (recipients > MAX_RECIPIENTS) throw new Error(`a settlement can pay at most ${MAX_RECIPIENTS} recipients; this pay run needs ${recipients}`);
   const allocations = rows.map((r) => ({ recipient: r.l.payee, amount: String(r.net * YOCTO_PER_MICRO) }));
-  const receipts = rows.map((r) => ({ v: 1, kind: 'pay', runId, invoiceId: r.l.invoiceId, period: r.l.period, payee: r.l.payee, person: r.l.person, gross: fmtMicro(r.gross), tax: fmtMicro(r.tax), benefits: fmtMicro(r.ben), net: fmtMicro(r.net) }));
+  const receipts = rows.map((r) => ({ v: 1, kind: 'pay', runId, invoiceId: r.l.invoiceId, period: r.l.period, payee: r.l.payee, person: r.l.person, gross: fmtMicro(r.gross), tax: fmtMicro(r.tax), benefits: fmtMicro(r.ben), net: fmtMicro(r.net), ...(invoiceHashes?.[r.l.invoiceId] ? { invoiceHash: invoiceHashes[r.l.invoiceId] } : {}) }));
   const keys = rows.map((r) => r.l.payeeKey);
   if (taxTotal > 0n) { allocations.push({ recipient: taxAddress, amount: String(taxTotal * YOCTO_PER_MICRO) }); receipts.push({ v: 1, kind: 'tax', runId, payee: taxAddress, total: fmtMicro(taxTotal) }); }
   if (benTotal > 0n) { allocations.push({ recipient: benefitsAddress, amount: String(benTotal * YOCTO_PER_MICRO) }); receipts.push({ v: 1, kind: 'benefits', runId, payee: benefitsAddress, total: fmtMicro(benTotal) }); }
