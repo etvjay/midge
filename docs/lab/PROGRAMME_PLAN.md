@@ -579,3 +579,15 @@ Not shown: the account-check providers failing on a live VM (unit tests only), r
 4. **Teardown:** the group removed; then the test copy is redeployed with the default build, so it equals production again (its code hash equals production's).
 
 **Not tested:** a failure on the Ethereum path (same code), a failure arriving after the window has rolled (unit tests), a signer that fails after a long delay. **Weakness I expect to remain:** this shows the contract's behaviour when a cross-contract call fails; it does not show the real MPC network failing, and the build under test has the extra feature the default build lacks.
+
+## A NEAR contract triggers an OutLayer program, and the result settles a Midge group: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** The first OutLayer proof (E-OUTLAYER-SETTLE-01) was run by an account through the CLI. OutLayer is meant to be called by contracts, with the result coming back through NEAR's yield/resume. `outlayer/caller` is a small contract (153 KB) with an owner-only `request` that calls `request_execution` on `outlayer.testnet` and a callback that stores the program's JSON output. It is deployed on the throwaway account `ol.<account>`, where the secret's access list already points. The program is the same `midge-room-signer`.
+
+**E-OUTLAYER-CONTRACT-01 (testnet, OutLayer testnet, the production contract).**
+1. **A contract, not an account, makes the call.** The caller contract is deployed on `ol.<account>` (its code hash recorded) with that account as owner. A `request` from our main account is refused ("only the owner may trigger a run"); one with less than 0.003 NEAR attached is refused.
+2. **The callback receives the program's output.** The owner's `request` with `{"op":"pubkey"}` makes the contract call OutLayer; when the callback has arrived (the results counter rises) `get_last` holds JSON with `ok: true` and the same public key the CLI runs reported earlier (`73889bf2…82fd2`).
+3. **A contract-triggered signature settles a Midge group.** On the production contract, a group whose room key is that public key: the caller contract's `request` with a `sign` input (one allocation of 0.02 NEAR within the bound) yields, in `get_last`, a signature; `settle_batch` with it is accepted and the recipient receives exactly 0.02 NEAR; the same signature with 0.03 is refused; a replay is refused.
+4. **Teardown:** the depositor leaves, the group is pruned, the accounts deleted. The caller contract stays on the throwaway account.
+
+**Not tested:** the OutLayer call failing (the callback records "failed"; a unit test shows it), the contract being called by a Midge contract rather than an externally owned caller (the Midge contract does not call OutLayer), the worker's TDX quote. **Weakness I expect to remain:** OutLayer's testnet call path failed intermittently in the earlier experiment (cause unknown), so this run may need retries; the platform is third-party.
