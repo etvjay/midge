@@ -98,7 +98,7 @@ export default {
         s.assert('the settlement key the contract will trust equals the attested one', session.settlePublicKey === attested.settlePublicKey);
         countBefore = Number(await chain.view('get_syndicate_count', {}));
         const names = [...MEMBERS, 'rp', 'ra', 'rb', 'rl'];
-        const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `hv${tag.slice(-5)}`, count: names.length, fundNear: '0.4', names });
+        const made = await createMembers(chain, { rootDir: ctx.rootDir, tag: `hv${tag.slice(-5)}`, count: names.length, fundNear: { default: '0.3', rp: '0.05', ra: '0.05', rl: '0.05', rb: '0.05' }, names }); // depositors need the deposit, gas and the exit reserve; recipients only receive
         P = Object.fromEntries(names.map((k, i) => [k, made[i]])); P.all = made;
         s.assert('nine accounts exist', made.length === 9);
         created.push(id);
