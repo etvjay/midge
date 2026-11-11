@@ -10,7 +10,7 @@ test('the fixture differs from the real compose file in the two provider URLs on
   const real = read('docker-compose.yml'); const fix = read('docker-compose.failclosed.yml');
   const body = fix.replace(/^# TEST FIXTURE[\s\S]*?\n# A test checks[^\n]*\n/, '');
   assert.notEqual(body, real);
-  assert.equal(body.replace('https://provider-a.invalid,https://provider-b.invalid', 'https://test.rpc.fastnear.com,https://rpc.testnet.near.org'), real);
+  assert.equal(body.replace('https://provider-a.invalid,https://provider-b.invalid', 'https://test.rpc.fastnear.com,https://near-testnet.drpc.org'), real);
 });
 test('its providers are on the reserved .invalid domain, so they can never resolve', () => {
   const line = read('docker-compose.failclosed.yml').match(/ROOST_RPC_URLS=(.*)/)[1];
