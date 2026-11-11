@@ -1820,6 +1820,12 @@ impl FlyCoordinator {
         );
     }
 
+    /// The signer path for this group's foreign keys (derive its addresses from this contract's account and this path). None for an unknown group.
+    pub fn get_foreign_path(&self, syndicate_id: String) -> Option<String> {
+        let gen = self.syndicates.get(&syndicate_id)?.created_at_block;
+        Some(foreign::signer_path(&syndicate_id, gen))
+    }
+
     pub fn get_foreign_policy(&self, syndicate_id: String) -> Option<ForeignPolicy> {
         env::storage_read(&foreign_policy_slot(&syndicate_id))
             .and_then(|raw| near_sdk::borsh::from_slice(&raw).ok())
@@ -2059,7 +2065,7 @@ impl FlyCoordinator {
         }
         .parse()
         .unwrap();
-        let args = near_sdk::serde_json::json!({ "request": { "payload_v2": payload, "path": syndicate_id, "domain_id": domain_id } }).to_string().into_bytes();
+        let args = near_sdk::serde_json::json!({ "request": { "payload_v2": payload, "path": foreign::signer_path(&syndicate_id, gen), "domain_id": domain_id } }).to_string().into_bytes();
         Promise::new(signer)
             .function_call(
                 "sign".to_string(),

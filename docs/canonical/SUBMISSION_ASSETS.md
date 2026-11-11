@@ -34,9 +34,9 @@ Deliberation is private. Each member seals a bid to a NEAR AI Cloud model's atte
 
 A hosted Roost with exact arithmetic also runs on a Phala confidential VM: its attestation passes the official dstack verifier on real Intel TDX hardware (saved evidence, one command to re-verify). A full member round on it is still to be shown.
 
-Also built: 18 MCP tools for agents, an SDK and HTTP API, a live attestation panel at midge.vercel.app, 165 Rust tests, MPC-signed payments on Solana devnet and Ethereum Sepolia that the contract requested, and a one-command verifier (npm run verify) that CI runs.
+Also built: 18 MCP tools for agents, an SDK and HTTP API, a live attestation panel at midge.vercel.app, 174 Rust tests, MPC-signed payments on Solana devnet and Ethereum Sepolia that the contract requested, and a one-command verifier (npm run verify) that CI runs.
 
-Limits: testnet only; payroll has run on testnet against a public pay run and hides who is paid (one-time addresses) and adds private receipts, but not the amounts, which stay public on NEAR, and stable distinct salaries still let an observer link a person across months; a pay run across Solana devnet and Ethereum Sepolia has landed (a test deployment of the contract checked the rules and asked the signer), nothing yet on Bitcoin.
+Limits: testnet only; payroll has run on testnet against a public pay run and hides who is paid (one-time addresses) and adds private receipts, but not the amounts, which stay public on NEAR, and stable distinct salaries still let an observer link a person across months; a pay run across Solana devnet and Ethereum Sepolia has landed (the contract checked the rules and asked the signer), nothing yet on Bitcoin.
 ```
 
 ---

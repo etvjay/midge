@@ -83,9 +83,9 @@
 ---
 
 ### [2:35 – 2:45] Scene 5: Verifiability & Outro
-- **Screen:** Terminal showing `./scripts/verify` passing cleanly with 165 Rust tests, DCAP Root CA attestation, and 0 foundry violations.
+- **Screen:** Terminal showing `./scripts/verify` passing cleanly with 174 Rust tests, DCAP Root CA attestation, and 0 foundry violations.
 - **Narrator Audio:**
-  > "Midge features 165 Rust smart contract unit, integration, and fuzz invariant tests, 18 agent MCP tools, a measured economic baseline simulation, and an automated Builder Foundry control plane.
+  > "Midge features 174 Rust smart contract unit, integration, and fuzz invariant tests, 18 agent MCP tools, a measured economic baseline simulation, and an automated Builder Foundry control plane.
   >
   > Run `./scripts/verify` to verify the entire system yourself in under 20 seconds.
   > Built for the NEAR Hackathon: Build Beyond Boundaries."

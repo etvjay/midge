@@ -28,7 +28,7 @@ The docs call this *constrained arbitration with independent recovery*. Money is
 | **Network** | Many syndicates in one contract; discovery; an agent in several at once | Live on testnet |
 | **Facilities** | Kinds of syndicate built on top: private credit and repo, block trades, payroll, angel rounds, shared AI compute | Credit, block trades and compute are simulations in JavaScript. Payroll and angel rounds are planned. |
 | **Agents** | The network is operated by software: MCP tools, an SDK, an HTTP API with streams, scoped agent keys, pay-per-request between agents | Interfaces and scoped keys live; pay-per-request is a simulation |
-| **Beyond NEAR** | A syndicate can control addresses on Bitcoin, Ethereum and Solana | Contract-checked payments confirmed on Solana devnet and Ethereum Sepolia (test deployment); foreign funds are outside the member exit; nothing sent on Bitcoin |
+| **Beyond NEAR** | A syndicate can control addresses on Bitcoin, Ethereum and Solana | Contract-checked payments confirmed on Solana devnet and Ethereum Sepolia (production contract); foreign funds are outside the member exit; nothing sent on Bitcoin |
 
 ## How faithfully the architecture captures it
 
