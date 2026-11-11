@@ -538,3 +538,18 @@ After PR #7 merged, CI rebuilt the image (`6605aa8c…`); both compose files wer
 - `20261111T102056Z-1b53` (**fail-closed**) PASS, 56 events, promoted, about $0.001. On the signed-only compose, with both escrow providers unresolvable and the two account-check providers real: the fixture attested; a bid signed with a key that is not the account's was refused; the account's own signed bid was **accepted**; the charged round was refused with 503 in 44 ms ("could not read escrow"); a retry gave the same answer; the bid was still there unchanged; nothing could be signed. All of predictions 1 to 8 held.
 - `20261111T102349Z-a216` (**pay run**) PASS, 89 events, promoted, about $0.0025: every prediction held again on the rebuilt image and the new compose; its attested compose hash `73f42e651241e148…` is now the newest pin.
 Not shown: the account-check providers failing on a live VM (unit tests only), recovery when providers return.
+
+## A sell-side, second-price RFQ with an unfunded high bidder and a tie, on the hardware room: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** The first hardware RFQ was a buyer asking for the lowest ask, paid at the winner's own ask. This is the other direction: a **seller** asks for the highest bid, the winner pays the **second-highest** bid, and the winner is the one charged, so the room must leave out a higher bidder who cannot afford it. A second round checks how a **tie** is broken. Settled on the production contract.
+
+**E-HOSTED-RFQ-LIVE-02 (hardware).** A taker `tk` who sells 2 units with a limit of 0.02 per unit, and four makers `m1` to `m4`; the group lists only `tk` as a recipient; makers `m1` (0.1), `m2` (0.2) and `m4` (0.05) deposit, and `m3` deposits nothing. Round A, second-price, bids (bid, ask): `m1` (0.031, 0.05), `m2` (0.045, 0.05), `m3` (0.060, 0.05), `m4` (0.010, 0.05).
+1. **The VM attests** on the current image and compose.
+2. **Round A: the unfunded high bidder is left out by name.** `m3` bids the most (0.060) but holds nothing; the VM excludes `m3` and says so (`excludedForEscrow` is exactly `[m3]`).
+3. **Round A: the highest eligible bid wins and pays the second price.** `m4`'s bid (0.010) is below the 0.02 limit and is ineligible. Of the quotes read (3), 2 are eligible. `m2` wins and pays the runner-up's bid: 2 x 0.031 = 0.062. The contract accepts; `tk` receives exactly 0.062; `m2` is charged exactly 0.062 (0.138 left); `m1`, `m3` and `m4` are charged nothing.
+4. **Round A: the winner's own bid stays sealed.** What the room returned contains the price 0.031 (that is the rule) but neither `m2`'s own bid 0.045, nor `m3`'s 0.060, nor `m4`'s 0.010.
+5. **Round B: a tie goes to the earlier submission.** First-price; `m2` submits 0.040 first and `m1` then submits 0.040. `m2` wins and `tk` receives exactly 2 x 0.040 = 0.080; `m2` is charged 0.080 (0.058 left); `m1` is not charged.
+6. **The order hashes are bound.** For both settlements the order hash in the transaction on chain equals the VM's.
+7. **Teardown leaves nothing:** makers exit with what is left, group pruned, accounts deleted, VM deleted, Phala account empty, under $0.10.
+
+**Not tested:** more than one tied pair, ties across more than two makers, a taker who is also a maker. **Weakness I expect to remain:** the room sees every bid, and the second price reveals the runner-up's bid to the public by design.
