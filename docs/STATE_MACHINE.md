@@ -65,6 +65,8 @@ Columns: **who** may call, **guard** (the refusals, quoted from the source), **e
 | `get_foreign_policy` | view | none | the foreign payees and caps a depositor can read before depositing | `the_policy_is_set_once_by_the_owner_before_funding` |
 | `get_foreign_obligation` | view | none | one requested payment and whether the signer signed it | `an_in_rules_payment_reserves_budget_and_records_the_obligation` |
 | `get_foreign_spent` | view | none | the total reserved for a payee in the current window (zero once the window has ended) | `a_failed_signer_call_releases_the_reservation` |
+| `set_test_signer` | the contract's own account | exists only in the `test-signer-override` build, which is deployed to the TEST copy and never to production | the account the contract asks for MPC signatures; for showing a signer failure live | `only_the_contract_itself_may_set_the_test_signer` |
+| `get_test_signer` | view | exists only in the `test-signer-override` build | the override, or nothing (then the network's real signer is used) | `with_no_override_the_signer_is_the_real_one` |
 | `get_group_phase` | view | none | where a group is: Open, PayoutInFlight (including a final payout, until its follow-up has run), Settled, Refunded or Unfunded (hatched, never funded); nothing for an unknown id | `a_group_nobody_has_funded_is_unfunded`, `a_funded_group_is_open_then_in_flight_then_open_again_then_settled`, `a_group_whose_last_member_left_is_refunded`, `the_phase_of_a_group_that_does_not_exist_is_nothing` |
 | `get_second_enclave_key` | view | none | the second key, if any | `two_room_syndicate_exposes_its_second_key_and_a_one_room_one_does_not` |
 

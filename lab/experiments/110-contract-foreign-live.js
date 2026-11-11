@@ -26,7 +26,7 @@ export default {
     'One operator controls the room key (a test key, not a hosted Roost), the contract and the payees.',
     'The contract is a test deployment (m.<account>); production c.<account> is not upgraded.',
     'Money at the group\'s foreign addresses is outside the NEAR escrow, so a member\'s exit does not reach it.',
-    'Solana devnet and Ethereum Sepolia only; nothing is sent on Bitcoin. The signer failing mid-request is covered by a unit test, not here.',
+    'Solana devnet and Ethereum Sepolia only; nothing is sent on Bitcoin. The signer failing mid-request is shown separately by E-FOREIGN-SIGNER-FAIL-LIVE-01.',
   ],
   async run(ctx) {
     const chain = await connect(ctx.rootDir);
