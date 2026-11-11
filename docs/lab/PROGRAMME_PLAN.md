@@ -383,3 +383,17 @@ Run `20261108T153206Z-a0f0`, PASS, 50 events, log verified, promoted (`docs/lab-
 6. **Teardown leaves nothing:** the members exit with their remainders, the group is pruned, every account deleted, the VM deleted and the Phala account empty, the session costing under $0.10.
 
 **Not tested:** two rooms, a VM failing mid-group, the VM staying up beyond the session, a lying provider. **Weakness I expect to remain:** one operator controls every account and the VM; the attestation proves which image runs, not that the providers are honest.
+
+### Results: the hosted Dark Vault, first run (written after the run; the predictions above were not edited)
+Run `20261111T043528Z-3f73`, **FAIL**, one run (kept locally, not promoted). **Predictions 1 and 2 held on real hardware:** the VM attested on the pinned image (16 checks, the official verifier accepted the quote) and ran round 1, a pool; the contract accepted the settlement the VM signed and `rp` received exactly 0.05. **Prediction 3 failed:** the VM refused the ballot with "a ballot is only counted on a host that requires signed inputs". The hosted server's entry point never turns signed inputs on, so ballots, RFQs and pay runs cannot run on the real VM; they had only ever run against local rooms (GAP-046). Round 3 then timed out because round 2 never happened and its expected totals were wrong, a consequence and not a second finding. **Prediction 6 held:** all nine accounts were deleted, the group pruned, the VM deleted and the Phala account empty, the session costing under $0.10.
+
+## The hosted Dark Vault, second run: predictions, written 2026-11-11 before the experiment exists or runs
+Same group, same image, with what the pinned image can do today: round 2 is a second **pool** (all five members bid 0.01, the late depositor included), not a ballot.
+**E-HOSTED-DARKVAULT-LIVE-02 (hardware).**
+1. The VM attests on the pinned image, as before.
+2. Round 1 (pool, four founders): `rp` receives exactly 0.05; epoch +1; the nonce changes.
+3. A late fifth deposit, then round 2 (pool, five members): the VM's escrow read counts u5; `ra` receives exactly 0.05; every member is charged 0.01, so u5 has 0.09.
+4. Round 3 (lending quote): u3 wins at 400 bps; `rl` receives exactly 0.04.
+5. The books close: u1 0.08, u2 0.08, u3 0.035, u4 0.075, u5 0.09, summing to the group total 0.36; the epoch rose by exactly 3 and every nonce was different.
+6. Teardown leaves nothing: group pruned, accounts deleted, VM deleted, account empty, under $0.10.
+**Not tested (and why):** a ballot, an RFQ and a pay run on hardware, because the pinned image cannot run them (GAP-046).
