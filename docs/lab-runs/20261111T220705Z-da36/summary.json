@@ -1,0 +1,15 @@
+{
+  "runId": "20261111T220705Z-da36",
+  "startedAt": "2026-11-11T22:07:05.756Z",
+  "rootHash": "8d306252f5091c7328c5958dfa0d9405109755e9395024006ac430f6a1585f6f",
+  "verdicts": {
+    "E-HOSTED-DARKVAULT-LIVE-02": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 85,
+  "commit": "df3e9aa662a0a58610dbac919a209f17c4dd3fe5"
+}

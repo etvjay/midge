@@ -35,7 +35,7 @@ export function fundingPlan({ count, names = null, fundNear = '0.15' }) {
 }
 
 /** Create `count` accounts named <tag><n>.<master>, each funded as `fundNear` says (see fundingPlan). Returns handles in order. */
-const CHECK_PROVIDERS = ['https://test.rpc.fastnear.com', 'https://rpc.testnet.near.org'];
+const CHECK_PROVIDERS = ['https://test.rpc.fastnear.com', 'https://near-testnet.drpc.org'];
 const agreeingCheck = (chain) => makeAgreeingAccountKeyCheck({ rpcUrls: CHECK_PROVIDERS, contractId: chain.coordinatorId });
 
 /** Poll `check(accountId, publicKey)` (the room's agreeing account-key check) until it says yes. A check that throws is a provider that could not be reached: retried like a no. */
