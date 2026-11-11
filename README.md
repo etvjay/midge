@@ -94,7 +94,7 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
   ```bash
   cd contracts/fly-coordinator && RUSTFLAGS="-C link-arg=-s" cargo build --target wasm32-unknown-unknown --release
   ```
-* **Release Binary:** `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (its size and hash change with the build; a byte-for-byte rebuild has **not** been checked against the on-chain hash)
+* **Release Binary:** `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (522,781 bytes; on 2026-11-11 a rebuild with the toolchain on the development machine hashed to `BVcq86Wz…`, the production contract's on-chain code hash, and `E-CHAIN-ROUND-LOCAL` fails if it does not; this is shown for that one toolchain on that one machine, not for any other)
 * **On-Chain Code Hash:** `BVcq86Wz5Q3kcdBdcUhfQVfQtC6CmGwcXuMd52aW6gTp` (deployed 2026-11-11: the signer path names the group's creation block, so a freed and re-hatched group id cannot take over the old group's foreign addresses). Earlier hashes (`EULUXozH…` from 2026-11-11, the first foreign-payment build, whose signer path was the bare group id; `854fzUj2…` from 2026-11-08, a never-funded group can be removed; `FMVXMpB3…` with the round-naming follow-up and the `get_group_phase` view, `AFtZmiNS…` from the 2026-11-08 security-audit fixes, `Gh8NAA2e…`, `9y8w4PU5…`, `4Zzj8DuT…` and others) are superseded; each is listed with the defect it carried in `docs/canonical/deployments.json`, and evidence recorded earlier cites the hash that was live then.
 * **Contract Specification:** [`contracts/fly-coordinator/README.md`](contracts/fly-coordinator/README.md)
 

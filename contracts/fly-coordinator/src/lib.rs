@@ -454,24 +454,6 @@ fn write_foreign_spent(
     );
 }
 
-/// The NEAR MPC signer this contract asks: the network's signer account. A build with the `test-signer-override` feature (the TEST copy of the contract only, never
-/// production) lets the contract's own account point it elsewhere so a signer failure can be shown live.
-fn foreign_signer_account() -> AccountId {
-    #[cfg(feature = "test-signer-override")]
-    if let Some(raw) = env::storage_read(b"test:signer") {
-        if let Some(a) = String::from_utf8(raw).ok().and_then(|s| s.parse().ok()) {
-            return a;
-        }
-    }
-    if env::current_account_id().as_str().ends_with(".testnet") {
-        "v1.signer-prod.testnet"
-    } else {
-        "v1.signer"
-    }
-    .parse()
-    .unwrap()
-}
-
 /// What a settlement in flight still has to do, kept until its follow-up step finishes or someone recovers it.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
@@ -2076,9 +2058,15 @@ impl FlyCoordinator {
         );
         env::log_str(&format!("EVENT_JSON:{{\"event\":\"foreign_payment_requested\",\"group\":\"{}\",\"obligation\":\"{}\",\"chain\":\"{}\",\"payee\":\"{}\",\"amount\":\"{}\"}}", syndicate_id, r.obligation_id, r.chain, r.payee, r.amount.0));
 
-        let signer: AccountId = foreign_signer_account();
+        let signer: AccountId = if env::current_account_id().as_str().ends_with(".testnet") {
+            "v1.signer-prod.testnet"
+        } else {
+            "v1.signer"
+        }
+        .parse()
+        .unwrap();
         let args = near_sdk::serde_json::json!({ "request": { "payload_v2": payload, "path": foreign::signer_path(&syndicate_id, gen), "domain_id": domain_id } }).to_string().into_bytes();
-        Promise::new(signer)
+        Promise::new(signer_override(signer))
             .function_call(
                 "sign".to_string(),
                 args,
@@ -2339,6 +2327,25 @@ impl FlyCoordinator {
             .get(&syndicate_id)
             .map(|s| s.policy_hash.clone())
     }
+}
+
+// ---- Test-only signer override ------------------------------------------------------------------------------------------------------------------------
+// Everything below is at the END of the file on purpose: the default (production) build must stay byte-identical to the deployed contract, and moving or
+// adding a line above would change the line numbers embedded in its panic locations. In the default build `signer_override` returns its argument and
+// compiles away; the `test-signer-override` build (the TEST copy only, never production) lets the contract's own account point the MPC signer elsewhere
+// so a signer failure can be shown live.
+#[cfg(not(feature = "test-signer-override"))]
+#[inline(always)]
+fn signer_override(real: AccountId) -> AccountId {
+    real
+}
+
+#[cfg(feature = "test-signer-override")]
+fn signer_override(real: AccountId) -> AccountId {
+    env::storage_read(b"test:signer")
+        .and_then(|raw| String::from_utf8(raw).ok())
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(real)
 }
 
 #[cfg(feature = "test-signer-override")]

@@ -109,6 +109,7 @@ export default {
       s.assert('the refused call changed nothing', (await view('get_test_signer', {})) === beforeSet, { actual: [beforeSet, await view('get_test_signer', {})] });
       const good = await chain.send(M.account, 'set_test_signer', { account: `nosigner-${tag}.${chain.masterId}` }, { contractId: CONTRACT, gas: 30000000000000n, label: 'set_test_signer from the contract itself' });
       s.assert('a call from the contract\'s own account is accepted', good.ok, { actual: good.error });
+      await chain.waitFor(async () => (await view('get_test_signer', {})) === `nosigner-${tag}.${chain.masterId}`, { what: 'the signer override to be visible', timeoutMs: 30000 }).catch(() => {});
       s.assert('the signer now points at an account that does not exist', (await view('get_test_signer', {})) === `nosigner-${tag}.${chain.masterId}`);
     }, { critical: true });
 

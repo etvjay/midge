@@ -23,7 +23,7 @@ echo ""
 
 # STEP 1: Rust L1 Smart Contract Tests & Lints
 echo "================================================================================"
-echo " [STEP 1/5] NEAR L1 Smart Contract Tests & Lints (Clippy, Fmt, near-sdk 5.1)"
+echo " [STEP 1/6] NEAR L1 Smart Contract Tests & Lints (Clippy, Fmt, near-sdk 5.1)"
 echo "================================================================================"
 cd contracts/fly-coordinator
 cargo clippy --quiet -- -D warnings
@@ -35,7 +35,7 @@ echo ""
 
 # STEP 2: WebAssembly Build Check
 echo "================================================================================"
-echo " [STEP 2/5] Release WebAssembly Compilation (wasm32-unknown-unknown)"
+echo " [STEP 2/6] Release WebAssembly Compilation (wasm32-unknown-unknown)"
 echo "================================================================================"
 cd contracts/fly-coordinator
 RUSTFLAGS="-C link-arg=-s" cargo build --target wasm32-unknown-unknown --release --quiet
@@ -52,7 +52,7 @@ echo ""
 
 # STEP 3: Complete 8-Layer Master Architectural Suite
 echo "================================================================================"
-echo " [STEP 3/5] 8-Layer Architectural & Cryptographic Verification Suite"
+echo " [STEP 3/6] 8-Layer Architectural & Cryptographic Verification Suite"
 echo "================================================================================"
 VERIFY_ALL_LOG="$(mktemp)"
 set -o pipefail
@@ -62,16 +62,28 @@ echo ""
 
 # STEP 4: Independent Testnet On-Chain Cryptographic Verification (Requires Network)
 echo "================================================================================"
-echo " [STEP 4/5] Independent Testnet On-Chain RPC Verification (Requires Network)"
+echo " [STEP 4/6] Independent Testnet On-Chain RPC Verification (Requires Network)"
 echo "================================================================================"
 node scripts/verify-onchain.js
 echo ""
 
 # STEP 5: Builder Foundry Governance Control Plane Audit
 echo "================================================================================"
-echo " [STEP 5/5] Builder Foundry Control Plane Audit (v1.0 Standard)"
+echo " [STEP 5/6] Builder Foundry Control Plane Audit (v1.0 Standard)"
 echo "================================================================================"
 node scripts/check-foundry.js
+node scripts/check-predictions-first.mjs
+echo ""
+
+# STEP 6: JavaScript unit tests, including the tests that keep the documents true and the cross-slice wholeness checks
+echo "================================================================================"
+echo " [STEP 6/6] JavaScript Unit, Truth-Check and System-Wholeness Tests (tests/*.test.js)"
+echo "================================================================================"
+UNIT_LOG="$(mktemp)"
+node --test tests/*.test.js > "$UNIT_LOG" 2>&1 || { cat "$UNIT_LOG"; rm -f "$UNIT_LOG"; echo ">>> [FAIL] JavaScript tests failed"; exit 1; }
+UNIT_COUNT=$(grep -E "^ℹ pass " "$UNIT_LOG" | awk '{print $3}')
+rm -f "$UNIT_LOG"
+echo ">>> [PASS] ${UNIT_COUNT} JavaScript tests passed."
 
 END_TIME=$(date +%s%N)
 ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
@@ -109,6 +121,7 @@ echo "║ 10. HTTP Gateway, SSE, x402 & MCP Server:     ✅ PASS (Integrated Dae
 echo "$INFER_LINE"
 echo "║ 12. On-Chain Testnet Ledger & Attack Proofs:  ✅ PASS (10 Verified On-Chain) ║"
 echo "║ 13. Builder Foundry Control Plane:            ✅ PASS (0 Violations)         ║"
+echo "║ 14. JavaScript Tests (truth + wholeness):     ✅ PASS (${UNIT_COUNT} tests)            ║"
 echo "╠══════════════════════════════════════════════════════════════════════════════╣"
 echo "║  Total Verification Duration: ${ELAPSED_SEC}s                                          ║"
 echo "║  VERDICT: ${VERDICT_TXT}  ║"
