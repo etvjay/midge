@@ -426,3 +426,6 @@ Same group, same image, with what the pinned image can do today: round 2 is a se
 5. **Teardown leaves nothing:** accounts deleted, group pruned, VM deleted, Phala account empty, session under $0.10.
 
 **Not tested:** an RFQ and a pay run on hardware (same mechanism, not exercised), two rooms, the VM staying up. **Weakness I expect to remain:** the account-key check asks one RPC provider; one operator controls every account and the VM.
+
+### Results: a ballot on the rebuilt hosted Roost (written after the run; the predictions above were not edited)
+**E-HOSTED-SIGNED-LIVE-01**, run `20261111T050533Z-d6d9`, PASS on the first run, log verified (65 events), promoted. All five predictions held on a real Phala TDX VM: it attested on the rebuilt image with the compose hash `223b105261c3b481…` (now the newest pin in `roost.expected.json`); an unsigned sealed intent was refused; a vote signed by a key that is not an access key of the member's account was refused; three real signed votes were accepted; A won 2 to 1, the contract accepted the settlement the VM signed, `ra` received exactly 0.03 and each member was charged exactly 0.01; the accounts, the group and the VM were removed and the Phala account is empty. This closes GAP-046. Not shown: an RFQ and a pay run on hardware.
