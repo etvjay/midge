@@ -151,7 +151,7 @@ Once `min(epoch_start_block + exit timer, settle_deadline_block)` has passed and
 
 The full function-by-function tables, with every guard and the test that covers it, are in `docs/STATE_MACHINE.md`; `make check` fails if the document and the source drift apart. The twelve contract invariants are in `foundry/invariants.json`; the survey of states that were never named is in `docs/IMPLICIT_STATE_MACHINES.md`.
 
-**What was checked.** 145 Rust tests (unit, integration, invariant, state-machine) pass under `E-RUST-CONTRACT`. `scripts/verify-onchain.js` checks that the chain's code hash matches the record. A source-only security audit of the contract and the room produced fifteen leads, tracked as GAP-026 to GAP-043. The contract fixes were deployed on 2026-11-08; GAP-026 and GAP-030 were re-checked live and the rest are covered by unit tests.
+**What was checked.** 165 Rust tests (unit, integration, invariant, state-machine) pass under `E-RUST-CONTRACT`. `scripts/verify-onchain.js` checks that the chain's code hash matches the record. A source-only security audit of the contract and the room produced fifteen leads, tracked as GAP-026 to GAP-043. The contract fixes were deployed on 2026-11-08; GAP-026 and GAP-030 were re-checked live and the rest are covered by unit tests.
 
 ### 2.2 The room (the Roost) in three forms
 
@@ -210,7 +210,7 @@ The programs are tested offline against the real host and service. Their runs ag
 
 A NEAR contract can ask the NEAR Chain Signatures network, a threshold-signing service, to sign for addresses on other chains. From one group identity the design derives a Bitcoin Taproot address, an Ethereum address and a Solana key, so a group's collective decision can move assets on those chains without wrapping tokens or trusting a bridge (`src/multichain/chain-signatures.js`).
 
-**Status.** A live `sign` call from `fly-1793636729.testnet` to `v1.signer-prod.testnet` succeeded on testnet; the transaction was re-read from an archival node on 2026-11-08, and the returned ECDSA signature was recovered against the derived key (GAP-005, closed; `docs/canonical/mpc-evidence.json`). Only the signing is live: no transaction was broadcast on Bitcoin, Ethereum or Solana. An earlier version of `docs/canonical/CURRENT_STATE.md` wrongly called the module simulated; that is corrected.
+**Status.** A live `sign` call from `fly-1793636729.testnet` to `v1.signer-prod.testnet` succeeded on testnet; the transaction was re-read from an archival node on 2026-11-08, and the returned ECDSA signature was recovered against the derived key (GAP-005, closed; `docs/canonical/mpc-evidence.json`). Signing and broadcasting are live: on 2026-11-10 a two-payee pay run paid one payee on Solana devnet and one on Ethereum Sepolia, each by a transaction the MPC network signed and the chain confirmed (`docs/canonical/multichain-payroll-evidence.json`). Those first payments were requested by our own testnet account. Since 2026-11-11 a test deployment of the Midge contract asks the signer itself: it checks the room's signature and the group's foreign-payment rules, builds the transaction, and its payments landed on both chains; it refused three out-of-rules requests (`docs/canonical/contract-payroll-evidence.json`). Money held on other chains is outside the member exit. Nothing has been sent on Bitcoin. An earlier version of `docs/canonical/CURRENT_STATE.md` wrongly called the module simulated; that is corrected.
 
 ---
 
@@ -400,7 +400,7 @@ Midge's contribution is a division of powers that can be checked. The money sits
 | 1Click asset audit | Live read of 210 assets | CLM-INTENTS-01 |
 | FAR private shard, Dark Vault pods | Simulated | CLM-VAULT-01 |
 | OutLayer-style sub-accounts | Tested as a JavaScript mirror | CLM-HATCH-01 |
-| Chain Signatures | A live `sign` call on testnet; signing only, nothing broadcast on another chain | `docs/canonical/mpc-evidence.json`, `docs/canonical/EVIDENCE_LEDGER.md` |
+| Chain Signatures | Contract-checked payments confirmed on Solana devnet and Ethereum Sepolia (test deployment); foreign funds are outside the member exit; nothing sent on Bitcoin | `docs/canonical/mpc-evidence.json`, `docs/canonical/multichain-payroll-evidence.json` |
 | Lending RFQ and block trades | Programs tested; test accounts only | CLM-RFQ-01, CLM-OTC-01 |
 | MCP server, SDK, REST | Integrated | CLM-MCP-01 (an older tool count), `src/mcp/server.js` |
 | Simulation in section 4 | Reproduces exactly | `scripts/baseline.js` |

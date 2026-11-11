@@ -1,0 +1,47 @@
+{
+  "ranAt": "2026-11-10T21:02:49.579Z",
+  "nearAccount": "fly-1793636729.testnet",
+  "signerContract": "v1.signer-prod.testnet",
+  "planHash": "efcae3887fd193ddc7ba55f928485887df33c2be587ba68a2117249584dcac93",
+  "plan": [
+    {
+      "payee": "payee-solana",
+      "chain": "solana-devnet",
+      "from": "2J75L6udJ52N7YmrDPQLN7gzV6CqWny6CaWGccvohi4f",
+      "to": "KLsn8JawHSc2KMRFK9qrxifgBEm8WJ568LsvSKbaVPc",
+      "amount": "1000000 lamports"
+    },
+    {
+      "payee": "payee-evm",
+      "chain": "ethereum-sepolia",
+      "from": "0x0309Dbc3e7F5C40Bb957723Cebb4BE5329BB22c0",
+      "to": "0xB9A425FB45734FC29a9c941c2c05b34DE59FF7A4",
+      "amount": "500000000000000 wei"
+    }
+  ],
+  "payments": [
+    {
+      "payee": "payee-solana",
+      "chain": "solana-devnet",
+      "nearSignTx": "CHUfJq3Fzod26eKNYbyBWQ6mmtSaT2wtS7WoWh6ygXpo",
+      "nearSignTxUrl": "https://testnet.nearblocks.io/txns/CHUfJq3Fzod26eKNYbyBWQ6mmtSaT2wtS7WoWh6ygXpo",
+      "chainTx": "3cqxW2Rg3rJyNS2Knz6td5advnzcFEndYviYUQBo2WW8MhJpyjz7UsUDVjx5LgvSFeeY1mfoGRS9LuR4XQQEn5GZ",
+      "status": "finalized",
+      "url": "https://explorer.solana.com/tx/3cqxW2Rg3rJyNS2Knz6td5advnzcFEndYviYUQBo2WW8MhJpyjz7UsUDVjx5LgvSFeeY1mfoGRS9LuR4XQQEn5GZ?cluster=devnet"
+    },
+    {
+      "payee": "payee-evm",
+      "chain": "ethereum-sepolia",
+      "nearSignTx": "DFbuXtn7pZsb9PEzC2JzhdTAK4HdFX3mmBsmapUu666Y",
+      "nearSignTxUrl": "https://testnet.nearblocks.io/txns/DFbuXtn7pZsb9PEzC2JzhdTAK4HdFX3mmBsmapUu666Y",
+      "chainTx": "0x1c511d7bd5f3a35fc0129a9122ecbfd8d4fb32ee4444fa6d7873043736d38474",
+      "status": "confirmed",
+      "block": 12107174,
+      "url": "https://sepolia.etherscan.io/tx/0x1c511d7bd5f3a35fc0129a9122ecbfd8d4fb32ee4444fa6d7873043736d38474"
+    }
+  ],
+  "payeeBalancesAfter": {
+    "solanaLamports": 4000000,
+    "sepoliaWei": "500000000000000"
+  }
+}

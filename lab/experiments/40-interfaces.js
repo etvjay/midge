@@ -10,10 +10,13 @@ import { EnclaveCrypto } from '../../src/enclave/crypto.js';
 import { httpRoutes, matchRoute, sdkMethods } from '../lib/surface.js';
 import { startMockGateway, MODEL as MOCK_MODEL } from '../../verifications/09-model-sealed-roost.js';
 import crypto from 'node:crypto';
+import { signInvoice } from '../../src/roost-service/invoice.js';
+import { auditorPack } from '../../src/roost-service/auditor.js';
+import { payrunOrderHash } from '../../src/roost-service/receipts.js';
 import { FlyChainClient, deriveSubKeyPair } from '../../src/chain/client.js';
 import { computeAllocationsHash as roostAllocationsHash } from '../../src/roost-service/hosted-roost.js';
 
-const PIN = { routes: 32, sdk: 32, mcp: 10 }; // a source change moves these and forces a human to look
+const PIN = { routes: 35, sdk: 35, mcp: 13 }; // a source change moves these and forces a human to look
 
 /** Stand-in for the NEAR AI attestation endpoint the compute facility calls, so the offline tier stays offline. */
 const ATTEST_FIXTURE = { gateway_attestation: { intel_quote: 'fixture-quote', signing_address: '0xfixture-gateway' }, model_attestations: [{ signing_address: '0xfixture-model', payload_matches_model: true }] };
@@ -184,6 +187,15 @@ export default {
         s.assert('getOmnichainIdentity returns the MPC contract and a root key', id.mpcContract === 'v1.signer-prod.testnet' && /^secp256k1:/.test(id.rootPublicKey), { actual: Object.keys(id) });
         const sig = await sdk.requestMpcSignature({ syndicateSubAccount: `${synId}.fly-coordinator.testnet`, targetChain: 'ETH', payloadHash: 'ab'.repeat(32), haqVerified: true });
         s.assert('requestMpcSignature returns a signature body, not an empty object', Object.keys(sig).filter((k) => !['mode', 'notice'].includes(k)).length > 0, { actual: sig });
+        // payroll checks: pure, so they answer the same in every mode and move nothing
+        const SOLP = '2J75L6udJ52N7YmrDPQLN7gzV6CqWny6CaWGccvohi4f';
+        const rules = { payees: [{ chain: 'solana-devnet', address: SOLP, max_amount: '2000000', max_total: '5000000' }], max_fee_cost: '1' };
+        const pf = await sdk.payrollPreflight({ payment: { obligationId: 'o1', chain: 'solana-devnet', payee: SOLP, amount: '9000000' }, policy: rules });
+        s.assert('payrollPreflight blocks a payment over the per-payment cap', pf.ok === false && pf.findings.some((f) => f.code === 'over-payment-cap'), { actual: pf });
+        const inv = signInvoice({ invoiceId: 'i1', period: '2026-11', chain: 'solana-devnet', address: SOLP, asset: 'SOL', amount: '1' }, crypto.generateKeyPairSync('ed25519').privateKey);
+        s.assert('checkInvoice accepts a matching approval and refuses a different destination', (await sdk.checkInvoice(inv, inv.body)).ok === true && (await sdk.checkInvoice(inv, { ...inv.body, address: 'x' })).ok === false);
+        const pk = auditorPack({ runId: 'r', receipts: [{ v: 1, kind: 'pay', runId: 'r', invoiceId: 'a', payee: 'p', person: 'P', gross: '1', tax: '0', benefits: '0', net: '1' }], open: [0] });
+        s.assert('verifyAuditorPack accepts the right order hash and refuses a wrong one', (await sdk.verifyAuditorPack(pk, payrunOrderHash('r', pk.root))).ok === true && (await sdk.verifyAuditorPack(pk, 'f'.repeat(64))).ok === false);
         const e2 = `em-${tag}`;
         await sdk.hatchSyndicate({ id: e2, quorumThreshold: 1, timeoutBlocks: 50 }); await sdk.deposit(e2, 'carol.near', 2);
         const early = await sdk.emergencyHatchOut(e2, 'carol.near').then(() => 'refunded', () => 'locked');
@@ -450,7 +462,7 @@ export default {
       const roost = createRoost({ backend: 'local' });
       const mcp = new FlyMcpServer({ mode: 'model', nestContract: nest, roostEnclave: roost });
       const call = async (n, a) => { hits.mcp.add(n); return mcp.executeTool(n, a); };
-      s.assert('tools/list returns the ten tools', mcp.listTools().tools.length === 10);
+      s.assert('tools/list returns the thirteen tools', mcp.listTools().tools.length === 13);
       const h = await call('midge_hatch_syndicate', { syndicateId: `mcp-${tag}`, expectedCodeHash: 'x', quorumThreshold: 1 });
       s.assert('hatch creates a real model-mode syndicate', h.id === `mcp-${tag}` && nest.syndicates.has(`mcp-${tag}`), { actual: h });
       const d = await call('midge_deposit', { syndicateId: `mcp-${tag}`, flyerId: 'agent.near', amountNear: 0.05 });
@@ -483,6 +495,13 @@ export default {
       s.assert('submit_sealed_intent refuses a plaintext amount', noCipher.ok === false, { actual: noCipher });
       const sealed = await call('midge_submit_sealed_intent', { syndicateId: 's', flyerId: 'f', cipherTextBase64: EnclaveCrypto.encryptIntent({ amount: 12345 }, sessionKey) });
       s.assert('submit_sealed_intent forwards ciphertext to the Roost and reports its count', sealed.count === 1 && sealed.bytes > 100, { actual: sealed });
+      const SOLQ = '2J75L6udJ52N7YmrDPQLN7gzV6CqWny6CaWGccvohi4f';
+      const pre = await call('midge_payroll_preflight', { payment: { obligationId: 'o1', chain: 'solana-devnet', payee: SOLQ, amount: '1' }, policy: { payees: [{ chain: 'solana-devnet', address: SOLQ, max_amount: '2', max_total: '5' }], max_fee_cost: '1' } });
+      s.assert('midge_payroll_preflight passes an in-rules payment', pre.ok === true, { actual: pre });
+      const inv2 = signInvoice({ invoiceId: 'i1', period: '2026-11', chain: 'solana-devnet', address: SOLQ, asset: 'SOL', amount: '1' }, crypto.generateKeyPairSync('ed25519').privateKey);
+      s.assert('midge_check_invoice matches its own approval', (await call('midge_check_invoice', { invoice: inv2, approval: inv2.body })).ok === true);
+      const pk2 = auditorPack({ runId: 'r', receipts: [{ v: 1, kind: 'pay', runId: 'r', invoiceId: 'a', payee: 'p', person: 'P', gross: '1', tax: '0', benefits: '0', net: '1' }], open: [0] });
+      s.assert('midge_verify_auditor_pack verifies against the order hash', (await call('midge_verify_auditor_pack', { pack: pk2, onChainOrderHash: payrunOrderHash('r', pk2.root) })).ok === true);
       s.assert('and does not echo the amount', !JSON.stringify(sealed).includes('12345'));
       s.assert('the Roost really holds the bid', (await roost.aggregateAndClear()).aggregateOrder.totalInputAmount === 12345);
 
@@ -510,7 +529,7 @@ export default {
         const init = await rpc(1, 'initialize', {});
         s.assert('initialize reports a protocol version and server name', Boolean(init.result?.protocolVersion) && Boolean(init.result?.serverInfo?.name), { actual: init.result });
         const list = await rpc(2, 'tools/list', {});
-        s.assert('tools/list over stdio returns the ten tools', list.result?.tools?.length === 10, { actual: list.result?.tools?.length });
+        s.assert('tools/list over stdio returns the thirteen tools', list.result?.tools?.length === 13, { actual: list.result?.tools?.length });
         const call = await rpc(3, 'tools/call', { name: 'midge_verify_haq_attestation', arguments: { nonce: 'not-a-real-nonce' } });
         hits.mcp.add('stdio:midge_verify_haq_attestation');
         const txt = call.result?.content?.[0]?.text || '';

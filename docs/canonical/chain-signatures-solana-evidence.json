@@ -1,0 +1,24 @@
+{
+  "ranAt": "2026-11-10T20:59:57.422Z",
+  "network": "solana-devnet",
+  "signerContract": "v1.signer-prod.testnet",
+  "domainId": 1,
+  "scheme": "Ed25519",
+  "nearAccount": "fly-1793636729.testnet",
+  "derivationPaths": {
+    "group": "midge/solana/group-1",
+    "recipient": "midge/solana/recipient"
+  },
+  "groupAddress": "2J75L6udJ52N7YmrDPQLN7gzV6CqWny6CaWGccvohi4f",
+  "recipientAddress": "KLsn8JawHSc2KMRFK9qrxifgBEm8WJ568LsvSKbaVPc",
+  "lamports": "1000000",
+  "recentBlockhash": "2NtR4kjLYyk5FALjcQRaCJLs184DTQbFei6LHGfgbhcQ",
+  "nearSignTx": "Hwg1CrKpKF6uRLiMAvjgVAU5zK3UBnj7gHX2BigFrxFn",
+  "nearSignTxUrl": "https://testnet.nearblocks.io/txns/Hwg1CrKpKF6uRLiMAvjgVAU5zK3UBnj7gHX2BigFrxFn",
+  "signatureBase58": "5sxsAt3sQdWpbPkxMoem3wNXAqjDXyGrcv12UhvtgnwUGQPiXQ7RZaUWX5xQftZMi1bbHmxb9TjGiGG374BVA6n1",
+  "signatureVerifiedLocally": true,
+  "solanaSignature": "5sxsAt3sQdWpbPkxMoem3wNXAqjDXyGrcv12UhvtgnwUGQPiXQ7RZaUWX5xQftZMi1bbHmxb9TjGiGG374BVA6n1",
+  "solanaStatus": "finalized",
+  "recipientBalanceAfter": 1000000,
+  "explorer": "https://explorer.solana.com/tx/5sxsAt3sQdWpbPkxMoem3wNXAqjDXyGrcv12UhvtgnwUGQPiXQ7RZaUWX5xQftZMi1bbHmxb9TjGiGG374BVA6n1?cluster=devnet"
+}

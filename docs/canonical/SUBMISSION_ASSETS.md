@@ -34,9 +34,9 @@ Deliberation is private. Each member seals a bid to a NEAR AI Cloud model's atte
 
 A hosted Roost with exact arithmetic also runs on a Phala confidential VM: its attestation passes the official dstack verifier on real Intel TDX hardware (saved evidence, one command to re-verify). A full member round on it is still to be shown.
 
-Also built: 10 MCP tools for agents, an SDK and HTTP API, a live attestation panel at midge.vercel.app, 53 Rust tests, one verified Chain Signatures signature, and a one-command verifier (npm run verify) that CI runs.
+Also built: 18 MCP tools for agents, an SDK and HTTP API, a live attestation panel at midge.vercel.app, 165 Rust tests, MPC-signed payments on Solana devnet and Ethereum Sepolia that the contract requested, and a one-command verifier (npm run verify) that CI runs.
 
-Limits: testnet only; payroll has run on testnet against a public pay run and hides who is paid (one-time addresses) and adds private receipts, but not the amounts, which stay public on NEAR, and stable distinct salaries still let an observer link a person across months; nothing broadcast on other chains yet.
+Limits: testnet only; payroll has run on testnet against a public pay run and hides who is paid (one-time addresses) and adds private receipts, but not the amounts, which stay public on NEAR, and stable distinct salaries still let an observer link a person across months; a pay run across Solana devnet and Ethereum Sepolia has landed (a test deployment of the contract checked the rules and asked the signer), nothing yet on Bitcoin.
 ```
 
 ---
@@ -48,8 +48,10 @@ Limits: testnet only; payroll has run on testnet against a public pay run and hi
 | **Privacy & Private AI** | Primary | Bids sealed to a NEAR AI Cloud model's attested key; per-round Intel TDX chain, TCB and nonce-binding verification; member-side key verification; signed response receipts; live attestation panel; 8 of 8 live rounds exact | The sum is done by a language model; the hosted Roost (exact sums, own TEE) is attested on real hardware but a full member round on it is not yet shown |
 | **AI Swarms** | Secondary | Syndicates with on-chain discovery (`list_syndicates`, `list_syndicates_by_member`), a 10-flyer sealed-bid round settled through the Nest simulation | The 20 buyers / 5 sellers scripted demo is not built |
 | **AI Security & Defense** | Secondary | Immutable `ReleasePolicy` (recipients, caps, deadline); on-chain rejection of malicious settlements; unilateral `hatch_out`; 53 Rust tests including property tests | Function-call access key scoped to the contract (`hatch_out` only, 0.2 NEAR gas allowance): `E-SECURITY-FCKEY-01` runs eight injected-agent attacks, all refused before execution, with a control showing a full-access key loses the funds. It bounds a compromised agent; it does not show that a model resists injection (the live model ignored the injection in 3 of 3 runs, which proves nothing about the key) |
+| **Real-World Money** | Secondary | Sealed pay runs with one-time payout addresses and Merkle receipts each person verifies; payee-signed invoices matched to the employer's approval; an auditor pack that opens chosen lines; a pre-flight check; payments on Solana devnet and Ethereum Sepolia that the Midge contract asks the MPC signer for, after checking the group's rules (3 out-of-rules requests refused); live dry quotes from 1Click | Amounts are public on NEAR; money held on other chains is outside the member exit; no tax or compliance logic; testnets only |
 
-Tracks not claimed: Unstoppable DeFi (the 1Click integration is read-only and the economic table is a simulation), Agent Economy.
+
+Tracks not claimed: Unstoppable DeFi (1Click is used for dry quotes only, no swap is opened, and the economic table is a simulation), Agent Economy.
 
 ---
 

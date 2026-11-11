@@ -1,0 +1,33 @@
+{
+  "ranAt": "2026-11-11T04:40:59.417Z",
+  "baseUrl": "https://1click.chaindefuser.com/v0",
+  "assetsListed": 229,
+  "quotes": [
+    {
+      "label": "wNEAR to SOL (Solana payee)",
+      "destinationAsset": "nep141:sol.omft.near",
+      "recipient": "KLsn8JawHSc2KMRFK9qrxifgBEm8WJ568LsvSKbaVPc",
+      "amountIn": "1.0",
+      "amountOut": "0.044010851",
+      "usdIn": "3.690000000000",
+      "usdOut": "3.655981392570",
+      "minAmountOut": "43570742",
+      "timeEstimateSeconds": 19,
+      "dry": true
+    },
+    {
+      "label": "wNEAR to ETH (Ethereum payee)",
+      "destinationAsset": "nep141:eth.omft.near",
+      "recipient": "0xB9A425FB45734FC29a9c941c2c05b34DE59FF7A4",
+      "amountIn": "1.0",
+      "amountOut": "0.001738338753817411",
+      "usdIn": "3.690000000000",
+      "usdOut": "3.593719855929",
+      "minAmountOut": "1720955366279236",
+      "timeEstimateSeconds": 29,
+      "dry": true
+    }
+  ],
+  "confidentialMode": "confidential quotes need an auth token: 1Click requires an authenticated user for them",
+  "note": "Dry quotes only: no deposit address, no swap. 1Click is mainnet only. Confidential quotes need an authenticated user (HTTP 401 without a token, 2026-11-11)."
+}
