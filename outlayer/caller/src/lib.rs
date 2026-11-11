@@ -52,15 +52,13 @@ impl Caller {
     /// Ask the OutLayer program to run with this input (a JSON string) and keep what comes back. Owner only; attach at least 0.003 NEAR.
     #[payable]
     pub fn request(&mut self, input_json: String) -> Promise {
-        assert_eq!(
-            env::predecessor_account_id(),
-            self.owner,
-            "only the owner may trigger a run"
-        );
-        assert!(
-            env::attached_deposit().as_yoctonear() >= MIN_DEPOSIT_YOCTO,
-            "attach at least 0.003 NEAR to pay for the run"
-        );
+        // env::panic_str always carries its message to the caller, whatever the build profile does with ordinary panics.
+        if env::predecessor_account_id() != self.owner {
+            env::panic_str("only the owner may trigger a run");
+        }
+        if env::attached_deposit().as_yoctonear() < MIN_DEPOSIT_YOCTO {
+            env::panic_str("attach at least 0.003 NEAR to pay for the run");
+        }
         let secrets_account = self
             .project_id
             .split('/')
