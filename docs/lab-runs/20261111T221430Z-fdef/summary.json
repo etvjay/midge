@@ -1,0 +1,15 @@
+{
+  "runId": "20261111T221430Z-fdef",
+  "startedAt": "2026-11-11T22:14:30.957Z",
+  "rootHash": "a1408f4e944f439dd9c7617a0d4fe92b372974af7b80b982aaba438cc39648b3",
+  "verdicts": {
+    "E-HOSTED-RFQ-LIVE-02": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 74,
+  "commit": "df3e9aa662a0a58610dbac919a209f17c4dd3fe5"
+}

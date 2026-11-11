@@ -11,7 +11,7 @@ import { sealToModel } from '../../src/enclave/e2ee.js';
 import { signInputWithNearKey, inputMessage } from '../../src/roost-service/signed-input.js';
 
 const TIMER = 12; const BPS = 10000; const DEADLINE = 500000000;
-const SETTINGS = ['ROOST_RPC_URLS=https://test.rpc.fastnear.com,https://rpc.testnet.near.org', 'ROOST_CONTRACT_ID=c.fly-1793636729.testnet'];
+const SETTINGS = ['ROOST_RPC_URLS=https://test.rpc.fastnear.com,https://near-testnet.drpc.org', 'ROOST_CONTRACT_ID=c.fly-1793636729.testnet'];
 
 export default {
   id: 'E-HOSTED-ESCROW-LIVE-01',

@@ -6,7 +6,7 @@
 # that the attestation measures, so editing this file changes the code identity on purpose.
 services:
   roost:
-    image: ghcr.io/etvjay/midge-roost@sha256:6605aa8cd2865ebf81b98297f43fb5a4e26a69fb7eea94775ca0f285cba4e1d2
+    image: ghcr.io/etvjay/midge-roost@sha256:8b24055ff9035eb4be3fe39c33fce0a2058408ba4268898269c29385e1ab4658
     restart: unless-stopped
     environment:
       # Set as an encrypted environment variable in Phala Cloud; only the CVM can decrypt it.
@@ -22,7 +22,7 @@ services:
       - ROOST_REQUIRE_SIGNED_INPUTS=1
       # The providers that must ALL confirm a member's account key before a signed bid is accepted. Separate from the escrow providers above so an outage of one
       # does not silently change the other, and measured by the attestation like them (GAP-050).
-      - ROOST_ACCOUNT_CHECK_RPC_URLS=https://test.rpc.fastnear.com,https://rpc.testnet.near.org
+      - ROOST_ACCOUNT_CHECK_RPC_URLS=https://test.rpc.fastnear.com,https://near-testnet.drpc.org
     volumes:
       - /var/run/dstack.sock:/var/run/dstack.sock
     ports:
