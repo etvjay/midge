@@ -5,7 +5,7 @@
 
 **NEAR HACKATHON: Build Beyond Boundaries (November 1–14, 2026)**  
 **Primary Track:** Privacy & Private AI  
-**Secondary Tracks:** AI Swarms, Agent Economy, Unstoppable DeFi, Security  
+**Secondary Tracks:** AI Swarms, AI Security & Defense, Real-World Money  
 
 > **Naming:** Midge was previously called "Fly". Internal identifiers keep the old codename on purpose (the `fly-coordinator` crate, `FlyNestContract`, `FLY_*` environment variables, and the deployed testnet account `c.fly-1793636729.testnet`), so the on-chain evidence and the reproducible-build hash in this README stay valid. Midge is an independent hackathon prototype with **no token**, and is **not affiliated with Fly.trade or Fly.io**.
 
@@ -109,7 +109,7 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
     2. **Flyer 1 Deposit (0.02 NEAR):** [`6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT`](https://testnet.nearblocks.io/txns/6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT) — Depositor explicitly consents to `policy_hash`.
     3. **Flyer 2 Deposit (0.02 NEAR):** [`3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm`](https://testnet.nearblocks.io/txns/3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm) — Depositor explicitly consents to `policy_hash`.
     4. **Batch Settlement (6.14 TGas burnt in total):** [`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF) — Verifies Ed25519 6-tuple signature over sorted `allocations_hash`, applies pro-rata balance deductions with exact dust conservation, and dispatches 0.04 NEAR payout.
-  - **Security Track Attack Demos (On-Chain Rejection Proofs):**
+  - **AI Security & Defense Track Attack Demos (On-Chain Rejection Proofs):**
     5. **[Security Proof] Non-Whitelisted Recipient Rejection:** [`ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh`](https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh) — Enclave signature attempting to route funds to an unauthorized address was **rejected on-chain** with failure receipt.
     6. **[Security Proof] Over-Cap BPS Release Rejection:** [`pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW`](https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW) — Settlement attempting to exceed the group's release cap was **rejected on-chain** ("Allocation sum exceeds max_release_bps_per_epoch cap").
     7. **[Security Proof] Second Settlement Rejection:** [`FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg`](https://testnet.nearblocks.io/txns/FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg) — A settlement submitted again for a group that had already settled was **rejected on-chain** because the group was already settled ("Syndicate is not active"). That shows a replay cannot pay twice; the nonce check itself (C-05) is covered by the contract's tests and was exercised live in a separate experiment: an earlier round's signed settlement replayed after a later round was refused for a nonce mismatch (`docs/lab/ONGOING_RESULTS.md`, `E-ONGOING-01`).

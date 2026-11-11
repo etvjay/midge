@@ -7,7 +7,7 @@
 
 * **Project Name:** Midge — Private Rooms with Public Rules, on NEAR
 * **Primary Track:** Privacy & Private AI
-* **Secondary Tracks:** AI Swarms, Agent Economy, Unstoppable DeFi
+* **Secondary Tracks:** AI Swarms, AI Security & Defense, Real-World Money
 * **Target Network:** NEAR L1 Testnet (contract `c.fly-1793636729.testnet`; nothing has run on mainnet)
 * **Repository:** Public GitHub Repository
 * **Built Within Window:** November 1–14, 2026
