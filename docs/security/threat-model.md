@@ -1,7 +1,7 @@
 # Midge: Threat Model & Security Architecture
 
 **Status:** updated 2026-11-08 (the previous version was dated 2026-11-02 and had drifted). `tests/public-docs-true.test.js` fails if an id, path or count here disagrees with the repository. It cannot prove a defence works; the evidence for each is named under it.
-**Scope:** the contract `c.fly-1793636729.testnet` on NEAR testnet (live code hash `854fzUj2TxAmdmK6UtmbXBqGZvc2BgtfRdgUJXMBHGes`, deployed 2026-11-08; earlier hashes are listed in `docs/canonical/deployments.json`) and the three forms of the Roost.
+**Scope:** the contract `c.fly-1793636729.testnet` on NEAR testnet (live code hash `EULUXozHaRFAXedLEtBWwgKLXdGYcEyc3fgYp4n4Xa3Q`, deployed 2026-11-11; the previous one, `854fzUj2TxAmdmK6UtmbXBqGZvc2BgtfRdgUJXMBHGes`, is superseded; earlier hashes are listed in `docs/canonical/deployments.json`) and the three forms of the Roost.
 
 ---
 

@@ -7,7 +7,8 @@ import { signatureFromMpc } from '../../src/multichain/evm-transfer.js';
 const SIGNER = 'v1.signer-prod.testnet';
 const SOLANA_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 const SEPOLIA_RPC = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
-const GROUP = 'payroll-live-2';
+// Targets the test contract m.<account> and group payroll-live-2 by default; MIDGE_RULES_PREFIX=c MIDGE_RULES_GROUP=<id> runs it against production.
+const GROUP = process.env.MIDGE_RULES_GROUP || 'payroll-live-2';
 const SOL_PAY = 1_000_000n; const ETH_PAY = ethers.parseEther('0.0005');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sol = async (method, params) => {
@@ -29,7 +30,7 @@ export default {
   ],
   async run(ctx) {
     const chain = await connect(ctx.rootDir);
-    const M = chain.sub('m'); const CONTRACT = M.id; const master = chain.master;
+    const M = chain.sub(process.env.MIDGE_RULES_PREFIX || 'm'); const CONTRACT = M.id; const master = chain.master;
     const eth = new ethers.JsonRpcProvider(SEPOLIA_RPC);
     const room = deriveSubKeyPair(chain.env.NEAR_PRIVATE_KEY, 'payroll-room');
     const TS = Date.now().toString(36);
