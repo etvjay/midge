@@ -64,3 +64,22 @@ test('reaper: the age is read from the uptime string the real listing gives', ()
   assert.deepEqual(r.keep.map((c) => c.cvmName), ['midge-lab-a']);
   assert.deepEqual(r.unknownAge.map((c) => c.cvmName), ['midge-lab-e'], 'an uptime it cannot read is reported and left alone');
 });
+
+// ---- npx cache: the Phala tools must not depend on the user's shared npm cache (a root-owned directory in it broke the reaper on 2026-11-11)
+import { npxEnv } from '../lab/lib/npx-env.js';
+
+test('npxEnv gives the Phala tools their own npm cache, keeps every other variable, and can be overridden', () => {
+  const e = npxEnv({ PHALA_CLOUD_API_KEY: 'k', PATH: '/bin' }, '/home/x');
+  assert.equal(e.npm_config_cache, '/home/x/.cache/midge-npx');
+  assert.equal(e.PHALA_CLOUD_API_KEY, 'k'); assert.equal(e.PATH, '/bin');
+  assert.equal(npxEnv({ MIDGE_NPM_CACHE: '/tmp/c' }, '/home/x').npm_config_cache, '/tmp/c');
+  assert.notEqual(npxEnv({}, '/home/x').npm_config_cache, '/home/x/.npm/_cacache', 'never the shared cache');
+});
+
+test('every place that runs npx for Phala passes the isolated environment', async () => {
+  const fs = await import('node:fs');
+  for (const f of ['scripts/phala-reaper.mjs', 'lab/lib/phala.js']) {
+    const src = fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+    assert.match(src, /npxEnv\(/, `${f} must build its environment with npxEnv`);
+  }
+});
