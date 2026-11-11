@@ -13,11 +13,12 @@ import { OtcBlockTradeFacility } from '../facilities/otc-block-trade.js';
 import { ConfidentialComputeSyndicate } from '../facilities/compute-syndicate.js';
 import { ResilienceEngine } from '../resilience/failure-matrix.js';
 import { preflight } from '../roost-service/preflight.js';
+import { explainPreflight } from '../advisor/preflight-explainer.js';
 import { matchApproval, invoiceHash } from '../roost-service/invoice.js';
 import { verifyAuditorPack } from '../roost-service/auditor.js';
 
 export class FlyApiDaemon {
-  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null, roostBackend = null, chainClient = null, roostOptions = {}, simulateHaq = false } = {}) {
+  constructor({ port = 0, host = '127.0.0.1', allowedOrigins = null, apiKey = null, mode = null, roostBackend = null, chainClient = null, roostOptions = {}, simulateHaq = false, preflightAdvisor = null } = {}) {
     this.port = port;
     this.host = host;
     this.allowedOrigins = allowedOrigins;
@@ -47,6 +48,8 @@ export class FlyApiDaemon {
     this.roostOptions = roostOptions;
     // An operator's explicit, visible choice to pretend the attestation gate passed (demos). Never taken from a request.
     this.simulateHaq = simulateHaq === true;
+    // Optional, advice-only: an attested advisor that may explain a pre-flight result from redacted facts. Null means the explainer is off.
+    this.preflightAdvisor = preflightAdvisor;
     this.roosts = new Map();
     this.maxRoosts = 1000;
     this.farShard = new FarPrivateShardBridge();
@@ -657,7 +660,11 @@ export class FlyApiDaemon {
       const body = await this.parseBody(req);
       if (!body.payment || !body.policy) return this.sendJson(res, 400, { error: 'payment and policy are required' }, req);
       const ctx = { policy: body.policy, spent: body.spent || {}, usedObligations: new Set(body.usedObligations || []), history: body.history || {}, person: body.person || null };
-      return this.sendJson(res, 200, preflight(body.payment, ctx), req);
+      const decision = preflight(body.payment, ctx);
+      if (body.explain !== true) return this.sendJson(res, 200, decision, req);
+      const explanation = await explainPreflight({ payment: body.payment, result: decision, context: ctx, advisor: this.preflightAdvisor, enabled: Boolean(this.preflightAdvisor) });
+      const { result: _unchanged, ...advice } = explanation;
+      return this.sendJson(res, 200, { ...decision, explanation: advice }, req);
     }
 
     if (method === 'POST' && pathname === '/v1/payroll/invoice/check') {

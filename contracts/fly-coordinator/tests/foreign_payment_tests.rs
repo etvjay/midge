@@ -46,6 +46,7 @@ fn policy() -> ForeignPolicy {
             },
         ],
         max_fee_cost: U128(600_000_000_000_000),
+        window_blocks: 1000,
     }
 }
 
@@ -322,4 +323,206 @@ fn a_successful_signer_call_keeps_the_reservation_and_marks_it_signed() {
             .0,
         1_000_000
     );
+}
+
+// ---- GAP-047: the running total is per window, so a reservation that never resolves locks capacity for one window and no longer forever ----
+
+#[test]
+fn the_running_total_is_per_window_and_returns_after_the_window() {
+    let (mut c, id, nonce) = funded(true);
+    pay(&mut c, &id, &nonce, sol_req("w-1", SOL_PAYEE, 2_000_000));
+    // 2,000,000 reserved in this window; the total cap is 3,000,000, so another 2,000,000 does not fit.
+    let sig = sign(&c, &id, &nonce, &sol_req("w-2", SOL_PAYEE, 2_000_000));
+    testing_env!(ctx("host.near", NearToken::from_yoctonear(0), 130).build());
+    let again = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = c.request_foreign_payment(
+            id.clone(),
+            nonce.clone(),
+            sol_req("w-2", SOL_PAYEE, 2_000_000),
+            sig.clone(),
+        );
+    }));
+    assert!(
+        again.is_err(),
+        "inside the window the second payment is over the running total"
+    );
+    // After the window (1000 blocks from the first reservation at block 120) the allowance is back.
+    testing_env!(ctx("host.near", NearToken::from_yoctonear(0), 1200).build());
+    let _ = c.request_foreign_payment(
+        id.clone(),
+        nonce.clone(),
+        sol_req("w-2", SOL_PAYEE, 2_000_000),
+        sig,
+    );
+    assert_eq!(
+        c.get_foreign_spent(id, "solana-devnet".into(), SOL_PAYEE.into())
+            .0,
+        2_000_000,
+        "a fresh window holds only the new reservation"
+    );
+}
+
+#[test]
+fn a_release_in_an_old_window_does_not_touch_the_new_windows_total() {
+    let (mut c, id, nonce) = funded(true);
+    pay(&mut c, &id, &nonce, sol_req("old-1", SOL_PAYEE, 1_000_000));
+    // The window passes, a new reservation opens a new window.
+    let req2 = sol_req("new-1", SOL_PAYEE, 2_000_000);
+    let sig2 = sign(&c, &id, &nonce, &req2);
+    testing_env!(ctx("host.near", NearToken::from_yoctonear(0), 1500).build());
+    let _ = c.request_foreign_payment(id.clone(), nonce.clone(), req2, sig2);
+    // The signer failure for the OLD obligation arrives late.
+    testing_env_with_promise_results(
+        ctx(CONTRACT, NearToken::from_yoctonear(0), 1510).build(),
+        PromiseResult::Failed,
+    );
+    let _ = c.on_foreign_signed(
+        id.clone(),
+        "old-1".into(),
+        "solana-devnet".into(),
+        SOL_PAYEE.into(),
+        U128(1_000_000),
+    );
+    assert_eq!(
+        c.get_foreign_spent(id, "solana-devnet".into(), SOL_PAYEE.into())
+            .0,
+        2_000_000,
+        "the new window keeps its own reservation"
+    );
+}
+
+#[test]
+fn the_window_must_be_long_enough_to_mean_something() {
+    testing_env!(ctx("alice.near", NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let pk = hex::encode(key().verifying_key().to_bytes());
+    let id = c.hatch(
+        "win-1".into(),
+        Some("FLASH".into()),
+        Some(1),
+        Some(50),
+        pk,
+        "code".into(),
+        Some(30),
+        None,
+        None,
+    );
+    let mut p = policy();
+    p.window_blocks = 10;
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.set_foreign_policy(id, p)));
+    assert!(r.is_err(), "a ten-block window is refused");
+}
+
+// ---- GAP-048: pruning a group clears its foreign policy, and a re-hatched id starts clean ----
+
+#[test]
+fn pruning_a_group_clears_its_foreign_policy_and_a_rehatch_starts_clean() {
+    testing_env!(ctx("alice.near", NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let pk = hex::encode(key().verifying_key().to_bytes());
+    let id = c.hatch(
+        "prune-1".into(),
+        Some("FLASH".into()),
+        Some(1),
+        Some(50),
+        pk.clone(),
+        "code".into(),
+        Some(30),
+        None,
+        None,
+    );
+    c.set_foreign_policy(id.clone(), policy());
+    let nonce = c.get_syndicate(id.clone()).unwrap().round_nonce;
+    pay(&mut c, &id, &nonce, sol_req("p-1", SOL_PAYEE, 1_000_000));
+    // The creator removes the never-funded group at once.
+    testing_env!(ctx("alice.near", NearToken::from_yoctonear(0), 200).build());
+    c.prune_syndicate(id.clone());
+    assert!(
+        c.get_foreign_policy(id.clone()).is_none(),
+        "the policy is gone"
+    );
+    // The same id is hatched again later.
+    testing_env!(ctx("alice.near", NearToken::from_near(1), 300).build());
+    let id2 = c.hatch(
+        "prune-1".into(),
+        Some("FLASH".into()),
+        Some(1),
+        Some(50),
+        pk,
+        "code".into(),
+        Some(30),
+        None,
+        None,
+    );
+    assert!(
+        c.get_foreign_obligation(id2.clone(), "p-1".into())
+            .is_none(),
+        "the old obligation is not inherited"
+    );
+    assert_eq!(
+        c.get_foreign_spent(id2.clone(), "solana-devnet".into(), SOL_PAYEE.into())
+            .0,
+        0,
+        "the old running total is not inherited"
+    );
+    c.set_foreign_policy(id2, policy()); // would panic "already set" if the old policy had survived
+}
+
+#[test]
+fn a_stranger_cannot_prune_a_group_that_has_a_foreign_policy() {
+    testing_env!(ctx("alice.near", NearToken::from_near(1), 100).build());
+    let mut c = FlyCoordinator::new();
+    let pk = hex::encode(key().verifying_key().to_bytes());
+    let id = c.hatch(
+        "prune-2".into(),
+        Some("FLASH".into()),
+        Some(1),
+        Some(50),
+        pk,
+        "code".into(),
+        Some(30),
+        None,
+        None,
+    );
+    c.set_foreign_policy(id.clone(), policy());
+    // Long after the seven-day mark anyone may normally remove an unfunded group; with a foreign policy only the owner may.
+    testing_env!(ctx("mallory.near", NearToken::from_yoctonear(0), 100 + 700_000).build());
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.prune_syndicate(id)));
+    assert!(
+        r.is_err(),
+        "removing the group would strand money at its foreign addresses"
+    );
+}
+
+// ---- F3: a finished group can still pay its listed foreign payees, so money at its foreign addresses is not stranded ----
+
+#[test]
+fn a_refunded_group_can_still_pay_its_listed_foreign_payees_within_the_caps() {
+    let (mut c, id, nonce) = funded(true);
+    // The only member leaves after the exit timer: the group becomes AbortedRefunded.
+    testing_env!(ctx("flyer1.near", NearToken::from_yoctonear(0), 400).build());
+    let _ = c.hatch_out(id.clone());
+    let nonce_now = c.get_syndicate(id.clone()).unwrap().round_nonce;
+    assert!(
+        matches!(
+            c.get_group_phase(id.clone()),
+            Some(fly_coordinator::GroupPhase::Refunded)
+        ),
+        "precondition: the group is refunded"
+    );
+    let req = sol_req("late-1", SOL_PAYEE, 500_000);
+    let sig = sign(&c, &id, &nonce_now, &req);
+    testing_env!(ctx("host.near", NearToken::from_yoctonear(0), 410).build());
+    let _ = c.request_foreign_payment(id.clone(), nonce_now.clone(), req, sig);
+    assert!(c
+        .get_foreign_obligation(id.clone(), "late-1".into())
+        .is_some());
+    // The caps still apply after the group is finished.
+    let big = sol_req("late-2", SOL_PAYEE, 2_000_001);
+    let sig2 = sign(&c, &id, &nonce_now, &big);
+    let over = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = c.request_foreign_payment(id, nonce_now, big, sig2);
+    }));
+    assert!(over.is_err());
+    let _ = nonce;
 }

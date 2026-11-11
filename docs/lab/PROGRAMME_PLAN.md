@@ -413,3 +413,38 @@ Same group, same image, with what the pinned image can do today: round 2 is a se
 
 ### Results: contract-requested foreign payments (written after the run; the predictions above were not edited)
 **E-CONTRACT-FOREIGN-LIVE-01**, run `20261111T045220Z-5a19`, PASS on the first run, log verified, promoted. All five predictions held: the keys derived for the contract differ from those for our own account with the same path; an in-rules Solana payment and an in-rules Ethereum payment were each requested by the contract, verified against independently rebuilt messages and digests, landed, and the payees gained exactly the amounts; the contract's running totals rose by exactly what was paid and both obligations are marked signed; four out-of-rules requests (unlisted payee, over the cap, reused obligation, a request the room did not sign) were each refused with their own reason and the totals did not move. Still not shown: the signer failing mid-request on a live chain, two-room groups, the production contract, and a hosted Roost signing these requests. No mutation check of the experiment's assertions was run.
+
+## A ballot on the rebuilt hosted Roost, signed inputs required: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** The first hosted Dark Vault run failed because the pinned image never required signed inputs, so the room refused a ballot (GAP-046). CI has since rebuilt the image from the merged fix (digest `0e09e816…3804d4`) and the compose file now sets `ROOST_REQUIRE_SIGNED_INPUTS=1`. This runs a ballot on a real Phala TDX VM with that image.
+
+**E-HOSTED-SIGNED-LIVE-01 (hardware).** Three members a, b, c deposit 0.05 each into a group whose room key is the VM's attested settlement key; two recipients ra and rb.
+1. **The VM attests on the new image.** Phala's app-compose equals our compose file byte for byte, the file carries `ROOST_REQUIRE_SIGNED_INPUTS=1` and the new digest, and the official verifier accepts the quote (so the setting is part of what is measured).
+2. **The room is in signed-input mode.** An unsigned sealed intent sent to `/intents` is refused with "only accepts signed inputs".
+3. **Signed inputs are checked against the chain.** A vote signed with a key that is not an access key of the member's NEAR account is refused; the three real signed votes are accepted.
+4. **The ballot runs.** Votes A, A, B; A wins 2 to 1; the VM signs; the contract accepts; `ra` receives exactly 0.03; each member is charged exactly 0.01.
+5. **Teardown leaves nothing:** accounts deleted, group pruned, VM deleted, Phala account empty, session under $0.10.
+
+**Not tested:** an RFQ and a pay run on hardware (same mechanism, not exercised), two rooms, the VM staying up. **Weakness I expect to remain:** the account-key check asks one RPC provider; one operator controls every account and the VM.
+
+### Results: a ballot on the rebuilt hosted Roost (written after the run; the predictions above were not edited)
+**E-HOSTED-SIGNED-LIVE-01**, run `20261111T050533Z-d6d9`, PASS on the first run, log verified (65 events), promoted. All five predictions held on a real Phala TDX VM: it attested on the rebuilt image with the compose hash `223b105261c3b481…` (now the newest pin in `roost.expected.json`); an unsigned sealed intent was refused; a vote signed by a key that is not an access key of the member's account was refused; three real signed votes were accepted; A won 2 to 1, the contract accepted the settlement the VM signed, `ra` received exactly 0.03 and each member was charged exactly 0.01; the accounts, the group and the VM were removed and the Phala account is empty. This closes GAP-046. Not shown: an RFQ and a pay run on hardware.
+
+### Results: contract-requested foreign payments, re-run on the windowed contract (written after the run; the predictions above were not edited)
+After GAP-047 and GAP-048 were fixed (a per-window running total, prune cleanup, finished groups still able to pay listed payees) the test contract was redeployed and the same experiment, **E-CONTRACT-FOREIGN-LIVE-01**, was run against it on a new group, `payroll-live-2`: run `20261111T052928Z-c176`, PASS, log verified, promoted. All five predictions held again. Not shown live: a window rollover, a failed signer call, a finished group paying, and the prune rules (unit tests only).
+
+## The redacted pre-flight advisory: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** An optional explainer that asks the attested NEAR AI Cloud model to put a pre-flight result into plain words. It is built so using it does not weaken the room's confidentiality: the model is sent finding codes and ratios rounded to the nearest ten percent, never a name, address, id or exact amount, and it is off unless the operator turns it on. This runs it against the real model.
+
+**E-PREFLIGHT-ADVICE-LIVE-01 (live NEAR AI Cloud, no chain).** A scenario with a person, two Solana addresses, an obligation id and exact amounts, whose deterministic pre-flight has two warnings (changed destination, unusual amount).
+1. **The model gets only the redacted message.** The message contains none of the scenario's identifying strings (names, both addresses, the obligation id, any exact amount) and nothing shaped like an address, and is under 600 characters.
+2. **Coarse by design.** Two payments in the same ten-percent bucket produce an identical message.
+3. **The model is the attested one.** The attestation chain verifies with TCB `UpToDate`, and the model's signed receipt verifies (hashes, signature, signer equals the attested key).
+4. **Advice only.** The reply is plain text; the pre-flight decision returned beside it is identical to the one computed without the model; a reply containing an address-shaped string would be refused.
+5. **Off by default.** With the advisory not enabled the model is not called (zero requests).
+
+**Not tested:** whether the explanation is useful to an operator (I expect it to mostly restate the codes), the room running this inside the hosted VM, and any model other than Qwen/Qwen3.6-35B-A3B-FP8. **Weakness I expect to remain:** the model still learns the finding codes, the chain family, rounded ratios and that a payment is being checked.
+
+### Results: the redacted pre-flight advisory (written after the run; the predictions above were not edited)
+**E-PREFLIGHT-ADVICE-LIVE-01**, run `20261111T054638Z-e227`, PASS on the first run, log verified, promoted. All five predictions held against the real attested model (Qwen/Qwen3.6-35B-A3B-FP8, TCB UpToDate): the message contained none of the scenario's identifying strings and nothing shaped like an address; two payments in the same ten-percent bucket produced the same message; the attestation chain and the model's signed receipt verified; the decision beside the advice was identical to the deterministic one; and with the advisory off, or on with no advisor configured, no request was made. Found on the way, openly: the reply mostly restates the codes, so it adds little beyond the deterministic wording; and rounding to the nearest ten percent sent a payment at 95% of its cap as "100%". A mutation check (guard removed and the redaction made to include the destination) was caught by the same wire check the tests use. Not shown: usefulness to an operator, the explainer inside the hosted VM, other models.

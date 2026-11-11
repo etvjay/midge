@@ -38,6 +38,7 @@ class SyndicateListResult extends Array {
  * and anthropic/cursor tool-calling standards.
  */
 import { preflight as payrollPreflightCheck } from '../roost-service/preflight.js';
+import { explainPreflight } from '../advisor/preflight-explainer.js';
 import { matchApproval as matchInvoiceApproval, invoiceHash as hashInvoice } from '../roost-service/invoice.js';
 import { verifyAuditorPack as verifyPack } from '../roost-service/auditor.js';
 
@@ -45,7 +46,7 @@ export const FLY_MCP_TOOLS = [
   {
     name: 'midge_payroll_preflight',
     description: 'Checks a planned foreign-chain payment against a group\'s foreign-payment rules (allowed payee on that chain, per-payment cap, running total, duplicate obligation, address format, Ethereum fee cap) and warns on a changed destination or an unusual amount. A pure check: it moves no money and signs nothing, and the contract still decides.',
-    inputSchema: { type: 'object', properties: { payment: { type: 'object' }, policy: { type: 'object' }, spent: { type: 'object' }, usedObligations: { type: 'array', items: { type: 'string' } }, history: { type: 'object' }, person: { type: 'string' } }, required: ['payment', 'policy'] },
+    inputSchema: { type: 'object', properties: { payment: { type: 'object' }, policy: { type: 'object' }, spent: { type: 'object' }, usedObligations: { type: 'array', items: { type: 'string' } }, history: { type: 'object' }, person: { type: 'string' }, explain: { type: 'boolean', description: 'Also return a plain-words explanation. Uses an attested advisor only if the operator configured one, and then sends it only check codes and ratios rounded to ten percent: no names, addresses, ids or exact amounts. Advice only; it never changes the decision.' } }, required: ['payment', 'policy'] },
   },
   {
     name: 'midge_check_invoice',
@@ -220,11 +221,13 @@ export class FlyMcpServer {
     rfqFacility = null,
     otcFacility = null,
     rooms = null,
+    preflightAdvisor = null,
   } = {}) {
     // Mode resolution: explicit argument -> FLY_MODE env -> default 'chain'
     const envMode = process.env.FLY_MODE;
     this.mode = mode || envMode || (nestContract && !chainClient ? 'model' : 'chain');
     this.nestContract = nestContract;
+    this.preflightAdvisor = preflightAdvisor;
     this.roostEnclave = roostEnclave;
     this.chainClient = chainClient;
 
@@ -299,7 +302,13 @@ export class FlyMcpServer {
     const isChain = this.mode === 'chain' && this.chainClient;
 
     switch (name) {
-      case 'midge_payroll_preflight': return this.formatOutput(payrollPreflightCheck(args.payment, { policy: args.policy, spent: args.spent || {}, usedObligations: new Set(args.usedObligations || []), history: args.history || {}, person: args.person || null }));
+      case 'midge_payroll_preflight': {
+        const ctx = { policy: args.policy, spent: args.spent || {}, usedObligations: new Set(args.usedObligations || []), history: args.history || {}, person: args.person || null };
+        const decision = payrollPreflightCheck(args.payment, ctx);
+        if (args.explain !== true) return this.formatOutput(decision);
+        const { result: _unchanged, ...advice } = await explainPreflight({ payment: args.payment, result: decision, context: ctx, advisor: this.preflightAdvisor, enabled: Boolean(this.preflightAdvisor) });
+        return this.formatOutput({ ...decision, explanation: advice });
+      }
       case 'midge_check_invoice': return this.formatOutput({ ...matchInvoiceApproval(args.invoice, args.approval), invoiceHash: args.invoice?.body ? hashInvoice(args.invoice.body) : null });
       case 'midge_verify_auditor_pack': return this.formatOutput(verifyPack(args.pack, args.onChainOrderHash));
       case 'midge_hatch_syndicate': {
