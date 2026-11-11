@@ -78,7 +78,15 @@
       "from": "2026-11-08",
       "deployTx": "9NpTkTeGtjskciBPX4osGLkTdy5HDuEDQCfSTSNJUtVt",
       "gitCommit": "f912749",
-      "reason": "GAP-030 (second part): prune_syndicate also removes a group that was hatched and never funded (its creator at once; anyone after 604,800 blocks, about seven days). The 15 groups are intact and none was in flight (docs/lab/unfunded-prune-pre-deploy-snapshot.json). Deployed by scripts/deploy-contract.mjs. Live check: E-UNFUNDED-PRUNE-LIVE-01."
+      "reason": "GAP-030 (second part): prune_syndicate also removes a group that was hatched and never funded (its creator at once; anyone after 604,800 blocks, about seven days). The 15 groups are intact and none was in flight (docs/lab/unfunded-prune-pre-deploy-snapshot.json). Deployed by scripts/deploy-contract.mjs. Live check: E-UNFUNDED-PRUNE-LIVE-01.",
+      "until": "2026-11-11T06:08Z"
+    },
+    {
+      "codeHash": "EULUXozHaRFAXedLEtBWwgKLXdGYcEyc3fgYp4n4Xa3Q",
+      "from": "2026-11-11T06:08Z",
+      "deployTx": "9hQKCiWSx849T6kiW5aemSr6UJYDZS75ttQm7nsTyN5y",
+      "gitCommit": "e0bb6aa",
+      "reason": "GAP-045/047/048: the contract itself asks the NEAR MPC signer for payments on Solana devnet and Ethereum Sepolia after checking a group's foreign-payment rules (set_foreign_policy, request_foreign_payment, on_foreign_signed, get_foreign_*), with a per-window running total, prune cleanup and finished groups still able to pay listed payees. The 15 groups are intact; none was in flight. The contract account was topped up by 1 NEAR first because the larger code needed more storage stake."
     }
   ]
 }
