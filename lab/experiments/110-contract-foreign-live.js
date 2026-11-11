@@ -7,7 +7,7 @@ import { signatureFromMpc } from '../../src/multichain/evm-transfer.js';
 const SIGNER = 'v1.signer-prod.testnet';
 const SOLANA_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 const SEPOLIA_RPC = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
-const GROUP = 'payroll-live-1';
+const GROUP = 'payroll-live-2';
 const SOL_PAY = 1_000_000n; const ETH_PAY = ethers.parseEther('0.0005');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sol = async (method, params) => {

@@ -1,5 +1,7 @@
 pub mod foreign;
-pub use foreign::{ForeignObligation, ForeignPayee, ForeignPaymentRequest, ForeignPolicy};
+pub use foreign::{
+    ForeignObligation, ForeignPayee, ForeignPaymentRequest, ForeignPolicy, ForeignSpent,
+};
 use near_sdk::json_types::U128;
 
 use near_sdk::store::{IterableMap, LookupMap};
@@ -383,12 +385,15 @@ fn foreign_policy_slot(id: &str) -> Vec<u8> {
     k
 }
 
-fn foreign_obligation_slot(id: &str, obligation: &str) -> Vec<u8> {
-    format!("fo:{}:{}:{}", id.len(), id, obligation).into_bytes()
+/// Obligation and running-total slots carry the group's creation block (its "generation"), so a group id that is pruned and hatched again
+/// starts with none of the old obligations or totals (GAP-048). The old entries stay in storage, unreachable: there is no way to list and
+/// delete every key under a prefix, and they are small.
+fn foreign_obligation_slot(id: &str, gen: u64, obligation: &str) -> Vec<u8> {
+    format!("fo:{}:{}:{}:{}", id.len(), id, gen, obligation).into_bytes()
 }
 
-fn foreign_spent_slot(id: &str, chain: &str, payee: &str) -> Vec<u8> {
-    format!("fs:{}:{}:{}:{}", id.len(), id, chain, payee).into_bytes()
+fn foreign_spent_slot(id: &str, gen: u64, chain: &str, payee: &str) -> Vec<u8> {
+    format!("fs:{}:{}:{}:{}:{}", id.len(), id, gen, chain, payee).into_bytes()
 }
 
 /// Ethereum addresses compare without case; Solana addresses are exact.
@@ -403,16 +408,49 @@ fn normalize_foreign(chain: &str, address: &str) -> String {
     }
 }
 
-fn read_foreign_spent(id: &str, chain: &str, payee_norm: &str) -> u128 {
-    env::storage_read(&foreign_spent_slot(id, chain, payee_norm))
+/// The reservation record for a payee: what the stored window holds, and whether that window has ended at block `now`.
+fn read_foreign_spent_record(
+    id: &str,
+    gen: u64,
+    chain: &str,
+    payee_norm: &str,
+) -> Option<ForeignSpent> {
+    env::storage_read(&foreign_spent_slot(id, gen, chain, payee_norm))
         .and_then(|raw| near_sdk::borsh::from_slice(&raw).ok())
-        .unwrap_or(0)
 }
 
-fn write_foreign_spent(id: &str, chain: &str, payee_norm: &str, v: u128) {
+/// (window start, reserved so far) for the window that contains `now`: a stored window that has ended counts as empty.
+fn current_foreign_window(
+    id: &str,
+    gen: u64,
+    chain: &str,
+    payee_norm: &str,
+    window_blocks: u64,
+    now: u64,
+) -> (u64, u128) {
+    match read_foreign_spent_record(id, gen, chain, payee_norm) {
+        Some(r) if now < r.window_start.saturating_add(window_blocks) => {
+            (r.window_start, r.spent.0)
+        }
+        _ => (now, 0),
+    }
+}
+
+fn write_foreign_spent(
+    id: &str,
+    gen: u64,
+    chain: &str,
+    payee_norm: &str,
+    window_start: u64,
+    spent: u128,
+) {
     env::storage_write(
-        &foreign_spent_slot(id, chain, payee_norm),
-        &near_sdk::borsh::to_vec(&v).unwrap(),
+        &foreign_spent_slot(id, gen, chain, payee_norm),
+        &near_sdk::borsh::to_vec(&ForeignSpent {
+            window_start,
+            spent: U128(spent),
+        })
+        .unwrap(),
     );
 }
 
@@ -1770,6 +1808,11 @@ impl FlyCoordinator {
             );
             seen.push(key);
         }
+        assert!(
+            policy.window_blocks >= foreign::MIN_FOREIGN_WINDOW_BLOCKS,
+            "[Foreign REJECT] the running-total window must be at least {} blocks",
+            foreign::MIN_FOREIGN_WINDOW_BLOCKS
+        );
         env::storage_write(
             &foreign_policy_slot(&syndicate_id),
             &near_sdk::borsh::to_vec(&policy)
@@ -1787,16 +1830,29 @@ impl FlyCoordinator {
         syndicate_id: String,
         obligation_id: String,
     ) -> Option<ForeignObligation> {
-        env::storage_read(&foreign_obligation_slot(&syndicate_id, &obligation_id))
+        let gen = self.syndicates.get(&syndicate_id)?.created_at_block;
+        env::storage_read(&foreign_obligation_slot(&syndicate_id, gen, &obligation_id))
             .and_then(|raw| near_sdk::borsh::from_slice(&raw).ok())
     }
 
+    /// What is reserved for this payee in the current window (zero once the window has ended).
     pub fn get_foreign_spent(&self, syndicate_id: String, chain: String, payee: String) -> U128 {
-        U128(read_foreign_spent(
+        let Some(syn) = self.syndicates.get(&syndicate_id) else {
+            return U128(0);
+        };
+        let window = self
+            .get_foreign_policy(syndicate_id.clone())
+            .map(|p| p.window_blocks)
+            .unwrap_or(u64::MAX);
+        let (_, spent) = current_foreign_window(
             &syndicate_id,
+            syn.created_at_block,
             &chain,
             &normalize_foreign(&chain, &payee),
-        ))
+            window,
+            env::block_height(),
+        );
+        U128(spent)
     }
 
     /// request_foreign_payment(): pay a payee on another chain. The room signs the payment; the contract checks that signature, the
@@ -1816,11 +1872,8 @@ impl FlyCoordinator {
             .get(&syndicate_id)
             .unwrap_or_else(|| env::panic_str("Syndicate not found"))
             .clone();
-        assert_eq!(
-            syn.status,
-            SyndicateStatus::Active,
-            "[HAQ REJECT] Syndicate is not active."
-        );
+        // A finished group (Settled or AbortedRefunded) may still pay its listed foreign payees within the caps, so money left at its foreign
+        // addresses is not stranded once the members have left. Only a group that was pruned is gone.
         assert_eq!(
             syn.round_nonce, attestation_nonce,
             "[HAQ REJECT] Nonce mismatch. Replay attack blocked."
@@ -1871,7 +1924,12 @@ impl FlyCoordinator {
 
         // The group's rules.
         assert!(
-            env::storage_read(&foreign_obligation_slot(&syndicate_id, &r.obligation_id)).is_none(),
+            env::storage_read(&foreign_obligation_slot(
+                &syndicate_id,
+                syn.created_at_block,
+                &r.obligation_id
+            ))
+            .is_none(),
             "[Foreign REJECT] obligation {} was already requested",
             r.obligation_id
         );
@@ -1887,10 +1945,19 @@ impl FlyCoordinator {
             r.amount.0 > 0 && r.amount.0 <= rule.max_amount.0,
             "[Foreign REJECT] amount is over the per-payment cap"
         );
-        let spent = read_foreign_spent(&syndicate_id, &r.chain, &wanted);
+        let gen = syn.created_at_block;
+        let now = env::block_height();
+        let (window_start, spent) = current_foreign_window(
+            &syndicate_id,
+            gen,
+            &r.chain,
+            &wanted,
+            policy.window_blocks,
+            now,
+        );
         assert!(
             spent.saturating_add(r.amount.0) <= rule.max_total.0,
-            "[Foreign REJECT] total would pass the running cap for this payee"
+            "[Foreign REJECT] total would pass the running cap for this payee in this window"
         );
 
         // Build the transaction the signer will sign, from the fields just checked.
@@ -1963,7 +2030,14 @@ impl FlyCoordinator {
         };
 
         // Reserve the budget and record the obligation before asking, so a second request cannot spend the same budget.
-        write_foreign_spent(&syndicate_id, &r.chain, &wanted, spent + r.amount.0);
+        write_foreign_spent(
+            &syndicate_id,
+            gen,
+            &r.chain,
+            &wanted,
+            window_start,
+            spent + r.amount.0,
+        );
         let ob = ForeignObligation {
             chain: r.chain.clone(),
             payee: r.payee.clone(),
@@ -1972,7 +2046,7 @@ impl FlyCoordinator {
             signed: false,
         };
         env::storage_write(
-            &foreign_obligation_slot(&syndicate_id, &r.obligation_id),
+            &foreign_obligation_slot(&syndicate_id, gen, &r.obligation_id),
             &near_sdk::borsh::to_vec(&ob)
                 .unwrap_or_else(|_| env::panic_str("could not record the obligation")),
         );
@@ -2022,30 +2096,49 @@ impl FlyCoordinator {
             1,
             "expected one promise result"
         );
+        // The group may have been pruned while the signer was working; then there is nothing to update.
+        let gen = self
+            .syndicates
+            .get(&syndicate_id)
+            .map(|g| g.created_at_block);
         match env::promise_result(0) {
             PromiseResult::Successful(bytes) => {
-                if let Some(raw) =
-                    env::storage_read(&foreign_obligation_slot(&syndicate_id, &obligation_id))
-                {
-                    if let Ok(mut ob) = near_sdk::borsh::from_slice::<ForeignObligation>(&raw) {
-                        ob.signed = true;
-                        env::storage_write(
-                            &foreign_obligation_slot(&syndicate_id, &obligation_id),
-                            &near_sdk::borsh::to_vec(&ob).unwrap(),
-                        );
+                if let Some(gen) = gen {
+                    let slot = foreign_obligation_slot(&syndicate_id, gen, &obligation_id);
+                    if let Some(raw) = env::storage_read(&slot) {
+                        if let Ok(mut ob) = near_sdk::borsh::from_slice::<ForeignObligation>(&raw) {
+                            ob.signed = true;
+                            env::storage_write(&slot, &near_sdk::borsh::to_vec(&ob).unwrap());
+                        }
                     }
                 }
                 Some(String::from_utf8_lossy(&bytes).to_string())
             }
             PromiseResult::Failed => {
-                env::storage_remove(&foreign_obligation_slot(&syndicate_id, &obligation_id));
-                let spent = read_foreign_spent(&syndicate_id, &chain, &payee);
-                write_foreign_spent(
-                    &syndicate_id,
-                    &chain,
-                    &payee,
-                    spent.saturating_sub(amount.0),
-                );
+                if let Some(gen) = gen {
+                    let slot = foreign_obligation_slot(&syndicate_id, gen, &obligation_id);
+                    let since = env::storage_read(&slot)
+                        .and_then(|raw| near_sdk::borsh::from_slice::<ForeignObligation>(&raw).ok())
+                        .map(|o| o.since_block);
+                    env::storage_remove(&slot);
+                    // Give the amount back only if it was reserved in the window that is still current: a release arriving after the
+                    // window has ended must not reduce the next window's total.
+                    if let (Some(since), Some(rec)) = (
+                        since,
+                        read_foreign_spent_record(&syndicate_id, gen, &chain, &payee),
+                    ) {
+                        if since >= rec.window_start {
+                            write_foreign_spent(
+                                &syndicate_id,
+                                gen,
+                                &chain,
+                                &payee,
+                                rec.window_start,
+                                rec.spent.0.saturating_sub(amount.0),
+                            );
+                        }
+                    }
+                }
                 None
             }
         }
@@ -2100,6 +2193,16 @@ impl FlyCoordinator {
         let policy_hash = syn.policy_hash.clone();
         let total_settled = syn.total_settled_payouts.as_yoctonear();
 
+        // A group with a foreign policy may control money at foreign addresses that no NEAR balance shows. Removing it would strand that money, so
+        // only its owner may do it, and as an explicit act (a stranger cannot after the seven days).
+        if env::storage_read(&foreign_policy_slot(&syndicate_id)).is_some() {
+            assert_eq!(
+                env::predecessor_account_id(),
+                owner,
+                "[Prune REJECT] only the owner may remove a group that has a foreign policy: it may control money on other chains"
+            );
+            env::storage_remove(&foreign_policy_slot(&syndicate_id));
+        }
         self.syndicates.remove(&syndicate_id);
         env::storage_remove(&second_key_slot(&syndicate_id));
         env::storage_remove(&window_slot(&syndicate_id));

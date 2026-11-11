@@ -38,3 +38,12 @@ The attestation of the real Phala TDX VM captured on 2026-11-04 is saved in
     npm run verify:hosted-bundle
 
 It needs network access for Intel's collateral. It shows what that VM attested at capture time; it cannot show that a VM is running now.
+
+
+## Signed inputs only (decision 2026-11-11)
+The pinned compose file sets `ROOST_REQUIRE_SIGNED_INPUTS=1`, and the setting applies to **every** program the room runs: pool, quote, auction, ballot, RFQ and pay run. A bid or vote must be signed with a key of the member's own NEAR account, and the room checks that key against the chain. An unsigned sealed intent is refused with "only accepts signed inputs".
+
+**For testers and tools:** seal-and-sign in one call with `signedBidParams` from `src/roost-service/signed-input.js`, then send the result to `POST /signed-intents` (`HostedRoostClient.submitSignedIntent`). Anything that sends to `/intents` unsigned is refused by this compose. The earlier hosted pool and quote experiments (E-HOSTED-ESCROW-LIVE-01 and E-HOSTED-DARKVAULT-LIVE-02) ran on earlier compose hashes, which stay pinned in `roost.expected.json`, with unsigned input.
+
+## Forgotten VMs
+Every session arms a detached dead-man's switch, which dies if the machine reboots. Schedule `node scripts/phala-reaper.mjs --yes` (for example every 30 minutes) as a second line: it deletes any `midge-*` VM older than two hours.

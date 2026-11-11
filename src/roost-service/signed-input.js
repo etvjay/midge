@@ -1,3 +1,4 @@
+import { sealToModel } from '../enclave/e2ee.js';
 import crypto from 'node:crypto';
 
 /**
@@ -73,4 +74,15 @@ export function makeAccountKeyCheck({ rpcUrl, contractId, fetchImpl = fetch }) {
     if (perm === 'FullAccess') return true;
     return Boolean(perm && perm.FunctionCall && perm.FunctionCall.receiver_id === contractId);
   };
+}
+
+/**
+ * Everything a member sends to a signed-only room, in one call: seal the body to the room's intent key, then sign the sealed bytes together with
+ * the round (contract, group, epoch, nonce), the account and a sequence number. Returns the parameters for `submitSignedIntent`.
+ * The hosted Roost requires signed inputs for every program (pool, quote, auction, ballot, RFQ, pay run), so this is how a member bids.
+ */
+export function signedBidParams({ round, flyerId, body, secretKey, publicKey, intentPublicKey, seq = 1 }) {
+  const cipherTextHex = sealToModel(JSON.stringify(body), intentPublicKey);
+  const signature = signInputWithNearKey(secretKey, inputMessage({ ...round, flyerId, seq, cipherTextHex }));
+  return { flyerId, cipherTextHex, publicKey, signature, seq };
 }

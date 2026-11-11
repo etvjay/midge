@@ -27,6 +27,10 @@ pub struct ForeignPayee {
 pub struct ForeignPolicy {
     pub payees: Vec<ForeignPayee>,
     pub max_fee_cost: U128,
+    /// How long a running total lasts, in blocks. A payee's `max_total` is the most that may be reserved inside one window, so a reservation
+    /// that never resolves (its signature may or may not exist, and the contract cannot see the other chain) locks capacity for one window
+    /// and not forever. The same idea as the NEAR release cap.
+    pub window_blocks: u64,
 }
 
 /// One payment the room asks for. Fields not used by the chain are None.
@@ -88,6 +92,17 @@ pub fn foreign_payment_message(
         r.amount.0,
         params
     )
+}
+
+/// A window shorter than this means nothing (it is about two minutes of NEAR blocks).
+pub const MIN_FOREIGN_WINDOW_BLOCKS: u64 = 100;
+
+/// What has been reserved for one payee in the current window.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ForeignSpent {
+    pub window_start: u64,
+    pub spent: U128,
 }
 
 pub const KNOWN_CHAINS: [&str; 2] = ["solana-devnet", "ethereum-sepolia"];

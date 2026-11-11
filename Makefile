@@ -37,5 +37,6 @@ review:
 
 check:
 	@node scripts/check-foundry.js
+	@node scripts/check-predictions-first.mjs
 
 all: verify demo
