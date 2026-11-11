@@ -55,7 +55,13 @@ fn the_callback_stores_what_it_receives_and_a_failure_is_recorded_not_lost() {
     ));
     assert_eq!(c.get_last(), out);
     assert!(c.get_last().unwrap().contains("public_key"));
+    assert_eq!(c.get_results(), 1);
     c.store_result(Err(near_sdk::PromiseError::Failed));
+    assert_eq!(
+        c.get_results(),
+        2,
+        "every callback is counted, even when it carries the same output"
+    );
     assert!(
         c.get_last().unwrap().contains("failed"),
         "a failed OutLayer call is recorded as such"

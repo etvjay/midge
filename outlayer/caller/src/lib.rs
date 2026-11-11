@@ -45,6 +45,7 @@ impl Caller {
             project_id,
             last: None,
             runs: 0,
+            results: 0,
         }
     }
 
@@ -99,6 +100,11 @@ impl Caller {
         self.runs
     }
 
+    /// How many callbacks have arrived: a run is finished when this passes the value it had before the request.
+    pub fn get_results(&self) -> u64 {
+        self.results
+    }
+
     pub fn get_owner(&self) -> AccountId {
         self.owner.clone()
     }
@@ -111,6 +117,7 @@ impl Caller {
 // Not an entry point (it takes a type that cannot be passed over JSON): the callback calls it, and the tests call it directly.
 impl Caller {
     pub fn store_result(&mut self, result: Result<Value, PromiseError>) -> Option<String> {
+        self.results += 1;
         self.last = Some(match result {
             Ok(v) => v.to_string(),
             Err(_) => json!({ "ok": false, "error": "the OutLayer call failed" }).to_string(),
