@@ -451,3 +451,18 @@ After GAP-047 and GAP-048 were fixed (a per-window running total, prune cleanup,
 
 ### Results: contract-requested foreign payments on the upgraded production contract (written after the run; the predictions above were not edited)
 After the production contract `c.fly-1793636729.testnet` was upgraded (code hash `EULUXozH…`, 15 groups intact), the same experiment, **E-CONTRACT-FOREIGN-LIVE-01**, was run against it (`MIDGE_RULES_PREFIX=c`) on a new group `payroll-prod-1` that had been created and funded by `npm run verify:contract-payroll` with a short exit timer: run `20261111T061602Z-acbc`, PASS, log verified, promoted. All five predictions held again. The group was by then finished (the member had taken the deposit back), so the run also showed a finished group paying its listed payees within the caps. The run's log does not record which contract it ran on; this paragraph and the deployment history are the record.
+
+## A pay run with invoices and an auditor pack on the hardware room: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** The hosted room's pay run (sealed lines, one-time payee accounts, Merkle receipts under the on-chain order hash) had only run against local rooms. The room now also accepts payee-signed invoices, matches them to the employer's lines, and opens chosen lines for an auditor on the employer's signed request. This runs all of it on a real Phala TDX VM on the rebuilt image, with settlement on the production contract.
+
+**E-HOSTED-PAYRUN-LIVE-01 (hardware).** An employer and three payees (accounts created for the run), a tax account and a benefits account; the employer deposits 0.2 NEAR into a group whose room key is the VM's attested settlement key and whose policy lists the payees, tax and benefits.
+1. **The VM attests** on the rebuilt image with signed inputs required, as before.
+2. **A mismatch stops the run.** The three payees send sealed signed invoices; the employer's queued run has one line whose amount differs from its invoice; the VM refuses the run, names the mismatch, and the queue is kept.
+3. **The corrected run settles.** After reopening the round and resubmitting, a run whose lines all match runs; the VM signs; the production contract accepts; each payee account receives exactly its net, the tax and benefits accounts exactly their totals, and the employer is charged exactly the gross total.
+4. **Receipts are bound to invoices.** Each payee opens their own statement with their own key; it verifies against the order hash found in the settlement transaction on chain; its receipt carries the hash of that payee's invoice; another payee's key cannot open it.
+5. **The auditor sees only what the employer opens.** The employer signs a request for one line; the VM returns a pack sealed to the auditor; the auditor decrypts it and verifies it against the on-chain order hash; it contains the one opened line and no other person's name; a request signed by anyone else is refused.
+6. **The stateless checks answer on the VM.** A pre-flight of an over-cap foreign payment is blocked; an invoice check passes for a matching approval and fails for a changed destination.
+7. **Teardown leaves nothing:** accounts deleted, the group left in a state that can be pruned or is pruned, the VM deleted, the Phala account empty, under $0.10.
+
+**Not tested:** foreign-chain payments from the hardware room (the contract path is covered by its own experiment), two rooms, the VM staying up. **Weakness I expect to remain:** one operator controls every account and the VM; every payment's address and amount is public on NEAR once settled (this hides who a payee is, not how much); the coordinator holds the key that triggers the run.
