@@ -51,7 +51,7 @@ export default [
         const total = results.reduce((a, m) => a + Number(m[2]), 0); const failed = results.reduce((a, m) => a + Number(m[3]), 0);
         s.assert('no Rust test failed', failed === 0, { actual: failed });
         // A pinned count on purpose: it catches tests being deleted. Raised 53 -> 66 on 2026-11-07 for the pro-rata overflow fix (GAP-022), the charged settlement and the cross-language hash vector.
-        s.assert('the expected number of Rust tests ran (145: 128 unit, 6 integration, 5 invariant, 6 state machine)', total === 145, { expected: 145, actual: total }); // raised 140 -> 145 for removing a never-funded group (GAP-030); // raised 129 -> 140 for the nonce-checked follow-up (GAP-028) and the phase view; // raised 66 -> 79 -> 82 -> 92 -> 106 -> 118 on 2026-11-07 (two-room agreement, the exit-rule tests, GAP-008) -> 129 on 2026-11-08: audit-fix tests (+5 unit) and tests/state_machine_tests.rs (+6) recovery, GAP-024 release window, then GAP-025 timer consent
+        s.assert('the expected number of Rust tests ran (174, the default build; the two signer-override tests run only with that feature)', total === 174, { expected: 174, actual: total }); // raised 145 -> 174 for the foreign-payment, windowed-total, prune and signer tests (found stale by the 2026-11-11 sweep); raised 140 -> 145 for removing a never-funded group (GAP-030); // raised 129 -> 140 for the nonce-checked follow-up (GAP-028) and the phase view; // raised 66 -> 79 -> 82 -> 92 -> 106 -> 118 on 2026-11-07 (two-room agreement, the exit-rule tests, GAP-008) -> 129 on 2026-11-08: audit-fix tests (+5 unit) and tests/state_machine_tests.rs (+6) recovery, GAP-024 release window, then GAP-025 timer consent
       });
     },
   },
