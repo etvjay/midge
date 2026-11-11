@@ -1,0 +1,15 @@
+{
+  "runId": "20261111T093310Z-5c32",
+  "startedAt": "2026-11-11T09:33:10.491Z",
+  "rootHash": "560018ba18538ba6ab59fba481f586f9a0a4aed00f5859aee50b48b26605460c",
+  "verdicts": {
+    "E-OUTLAYER-SETTLE-01": {
+      "attempts": [
+        "FAIL"
+      ],
+      "verdict": "FAIL"
+    }
+  },
+  "events": 41,
+  "commit": "9b18791320a6152e3cd74bbf3db787934b1c9dab"
+}

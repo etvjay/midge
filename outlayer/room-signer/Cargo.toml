@@ -1,0 +1,20 @@
+[package]
+name = "midge-room-signer"
+version = "0.1.0"
+edition = "2021"
+description = "Proof of concept: a Midge room's settlement-signing step as an OutLayer WASM program. Holds no key of its own: the Ed25519 seed is a protected OutLayer secret that only this code, running in the TEE, can read."
+
+[[bin]]
+name = "midge-room-signer"
+path = "src/main.rs"
+
+[dependencies]
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+
+[profile.release]
+opt-level = "s"
+lto = true

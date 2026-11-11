@@ -35,7 +35,7 @@ export function figures(proof, root) {
     phalaHosted: { value: 'Attested, not running now', label: 'our room program on Phala', source: 'docs/canonical/CURRENT_STATE.md', quote: 'no hosted Roost is running now' },
     chainSignatures: { value: 'Rules checked, on testnet', label: 'contract-requested payments on Solana and Ethereum', source: 'docs/canonical/CURRENT_STATE.md', quote: "the Midge contract checked the group's foreign-payment rules and asked the signer for both payments" },
     intentsAssets: { value: '210', label: 'assets read live through 1Click', source: 'docs/canonical/CURRENT_STATE.md', quote: '210 assets audited live across NEAR, BTC, ETH, SOL' },
-    outlayerModel: { value: 'Not used yet', label: 'OutLayer-style limits, as a model', source: 'docs/canonical/CURRENT_STATE.md', quote: '**TESTED (JS MODEL)**' },
+    outlayerModel: { value: 'Signing step only', label: 'a settlement signed inside OutLayer, accepted by the contract', source: 'docs/canonical/CURRENT_STATE.md', quote: 'a settlement signed by an OutLayer program was accepted by the production contract' },
     agentTools: { value: 'Live', label: 'SDK, API and MCP tools on testnet', source: 'docs/canonical/WHAT_IS_MIDGE.md', quote: 'Every route, SDK method and MCP tool exercised' },
     simulations: { value: 'Models only', label: 'lending, block trades, shared AI', source: 'docs/canonical/WHAT_IS_MIDGE.md', quote: 'Credit, block trades and compute are simulations in JavaScript' },
     stuckPayout: { value: '100 blocks', label: 'after which anyone can finish a stuck payout', source: 'docs/WHITEPAPER.md', quote: 'anyone can finish its books after 100 blocks' },
