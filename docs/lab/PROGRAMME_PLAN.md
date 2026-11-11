@@ -509,3 +509,17 @@ A review note pointed out that the contract derived a group's foreign keys from 
 
 ### Results: the fail-closed hardware test on the current compose (written after the run; nothing was predicted again)
 **E-HOSTED-FAILCLOSED-LIVE-01** was re-run on the current compose (signed inputs required, image `c08dfb45…`): run `20261111T094151Z-c01e`, **FAIL**, promoted as evidence. The fixture attested (14 checks), then the experiment's bid was refused ("this Roost only accepts signed inputs"), because the experiment sends an unsigned bid. This is the consequence of the signed-only decision for an experiment I had not listed. Reading the code shows a second effect, recorded as GAP-050: with signed inputs required, accepting a bid needs the account-key check, which asks the first RPC provider only, so with the providers unreachable no bid can be queued, and bid intake rests on one provider for key checks. The fail-closed property on the current compose is therefore **not shown**; the older promoted run stands for the older build.
+
+## A sealed-quote RFQ on the hardware room: predictions, written 2026-11-11 before the experiment exists or runs
+
+**What it is, in plain words.** A request for quote (RFQ): a taker wants to buy some units at no more than a limit; makers each send a sealed bid and ask; the room picks the lowest eligible ask, charges the taker, pays the winning maker, and tells nobody what the losing makers quoted. The hosted room has this program (`runRfq`) and it has run only on local rooms. This runs it on a real Phala TDX VM, settled on the production contract.
+
+**E-HOSTED-RFQ-LIVE-01 (hardware).** A taker `tk` and three makers `m1`, `m2`, `m3` (accounts created for the run); a group whose room key is the VM's attested settlement key and whose policy lists the three makers; the taker deposits 0.2 NEAR. The taker buys 2 units with a limit of 0.05 each, first-price. Quotes (bid, ask): `m1` (0.011, 0.041), `m2` (0.011, 0.032), `m3` (0.011, 0.067).
+1. **The VM attests** on the current image and compose (signed inputs required), as before.
+2. **A request that could cost more than the taker has is refused and the queue is kept.** A first attempt for 10 units at the same limit (up to 0.5 NEAR against a deposit of 0.2) is refused with "cannot cover" and asking again gives the same refusal.
+3. **The best eligible quote wins and the books are exact.** After reopening the round and resubmitting a 2-unit request: `m3` (ask 0.067, over the 0.05 limit) is received but not eligible (3 received, 2 eligible); `m2` wins at its own ask; the VM signs; the production contract accepts; `m2` receives exactly 0.064 NEAR (2 x 0.032), the taker is charged exactly 0.064 (0.136 left), and `m1` and `m3` receive nothing.
+4. **The losers stay sealed.** Nothing the room returned (outcome, terms, allocations) contains `m1`'s ask 0.041 or `m3`'s ask 0.067 or any bid.
+5. **The order hash is bound.** The order hash in the settlement transaction on chain equals the one the VM computed.
+6. **Teardown leaves nothing:** accounts deleted, group pruned, VM deleted, account empty, under $0.10.
+
+**Not tested:** a sell-side RFQ, second-price, a tie, a taker whose request is hidden from makers beyond the room (the room sees everything), two rooms. **Weakness I expect to remain:** the room sees every quote, so this hides quotes from the other makers and from the public, not from the room; the amount paid is public once settled.
