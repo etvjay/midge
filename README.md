@@ -14,18 +14,38 @@ You need Node.js 18 or newer. The full check also needs Rust.
 npm ci
 npm run verify:fast                       # about 30 seconds, Node.js only: the JavaScript tests and the claims ledgers
 ./scripts/verify                          # the whole check, about 6 minutes on a fresh clone, no keys
+npm run verify:onchain                    # reads the live contract and compares its code hash with the one recorded in deployments.json
 node lab/verify-run.js docs/lab-runs/20261112T173152Z-e25d   # re-checks one recorded hardware run offline
 ```
 
-The full check exited 0 on a fresh clone of `master` on 2026-11-12. Two checks skip without keys: the live NEAR AI inference check, and anything that rents hardware. The recorded runs of those are in `docs/lab-runs/`, each with a hash-chained log you can check offline.
+The full check exited 0 on a fresh clone of `master` on 2026-11-12. Two checks skip without keys, which are the live NEAR AI inference check and anything that rents hardware. The recorded runs of those are in `docs/lab-runs/`, each with a hash-chained log you can check offline.
+
+## The contracts on testnet
+
+| Account | What it is | Code hash |
+|---|---|---|
+| [`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet) | The contract every claim here is about. It holds the escrow, the rules, the signed one-use settlements and the exit. | `BVcq86Wz5Q3kcdBdcUhfQVfQtC6CmGwcXuMd52aW6gTp`, live since 2026-11-11 06:38 UTC |
+| `m.fly-1793636729.testnet` | A copy the lab uses for experiments that need a build with a test-only setting. It is not the contract being judged. | Its own build |
+
+`npm run verify:onchain` reads the live code hash from the chain. The contract has run 12 code hashes in all, and [`docs/canonical/deployments.json`](docs/canonical/deployments.json) lists each one with the reason for the change. The contract source is in `contracts/fly-coordinator`, and the build reproduces the deployed bytes (CLM-BUILD-MATCHES-DEPLOYED-01).
+
+## Tests and recorded runs
+
+- The contract has 174 Rust tests (unit, integration, invariant and state machine), and the JavaScript side has 473 tests, which include checks that this README and the other public documents agree with the code.
+- The lab has 66 experiments with a recorded run, and 65 have at least one passing run. The one exception failed on hardware, is kept as a failure and is explained in GAP-046.
+- Each experiment states its predictions before it runs, and its log is hash-chained so a change to any event shows. The runs are in `docs/lab-runs/`, and [`docs/LAB.md`](docs/LAB.md) explains the method.
+- Failed runs are kept. For example, the AI review of a pay run failed twice before it passed, and all three runs are in `docs/lab-runs/`.
+
+## One full loop
+
+The run `docs/lab-runs/20261112T031407Z-8c64` is a complete pay run on real hardware, and the detailed report is next to it in `report.md`. First, a Phala TDX machine started the room, and the checker verified its hardware attestation and the pinned code before any member trusted it. Second, an employer and three payees sent sealed, signed lines and invoices, and the room refused the run because one invoice said 0.03 and the approved line said 0.035. Third, after the line was corrected the room signed a settlement, and the contract accepted it in transaction [`J7xyrFuf…`](https://testnet.nearblocks.io/txns/J7xyrFufPi9Lv2FWQn56cxWwqzfHyzC53gJYU7wNkQGV). Fourth, the chain showed exact amounts, 0.043 to one payee, 0.012 to the tax account and 0.006 to the benefits account, and the employer was charged the gross total. Fifth, each payee opened their own signed receipt and checked it against the order hash on the chain, and another payee's key could not open it. Sixth, the employer opened one line for an auditor, who verified it against the chain and saw no other person. Seventh, the accounts, the group and the machine were deleted, at a cost of about $0.002. Amounts and recipients stay public on NEAR, so what the loop hides is who each address belongs to.
 
 ## What is real today
 
-Each row names a recorded run or a test you can inspect. Every claim has an entry in [`foundry/claims.jsonl`](foundry/claims.jsonl), and every known problem is in [`foundry/gaps.jsonl`](foundry/gaps.jsonl).
+Each row names a recorded run or a ledger entry. Every claim has an entry in [`foundry/claims.jsonl`](foundry/claims.jsonl), and every known problem is in [`foundry/gaps.jsonl`](foundry/gaps.jsonl).
 
 | Thing | Status | Evidence |
 |---|---|---|
-| The contract with escrow, rules, signed one-use settlements and the exit | On testnet; live code hash `BVcq86Wz…` | [`docs/DEPLOYMENTS.md`](docs/DEPLOYMENTS.md) |
 | The room on real Phala TDX hardware | Ran and settled on the contract | `docs/lab-runs/20261112T173152Z-e25d` |
 | Pay run with signed invoices, private receipts and an auditor pack | Ran on hardware | `docs/lab-runs/20261112T031407Z-8c64` |
 | Sealed quotes (RFQ), buy and sell side | Ran on hardware | `docs/lab-runs/20261112T032202Z-a3a8`, `docs/lab-runs/20261112T032438Z-98db` |
@@ -39,13 +59,15 @@ A replay of an earlier settlement was recorded and refused because the group was
 
 ## What is not shown
 
-- Anything on mainnet.
-- Independent operators. One operator ran every room and account in the tests.
-- Private amounts. Deposits, balances and payments are public, so a pay run hides who is paid and shows how much.
-- Private rules. Anyone can read who may be paid, the limits and the deadline. Hiding them is planned and not built ([`docs/ROADMAP.md`](docs/ROADMAP.md)).
-- Payroll at scale. A settlement pays at most 8 recipients (GAP-053).
-- The deployer key of the testnet contract is still held, so its holder could change the contract (GAP-044).
-- Simulations stay labelled as simulations: the FAR shard, Dark Vault pods, the compute syndicate and the agent swarm demos.
+- Reach and trust.
+  - Nothing runs on mainnet.
+  - One operator ran every room and account in the tests, so no independent operators have been shown.
+  - The deployer key of the testnet contract is still held, so its holder could change the contract (GAP-044).
+- Privacy.
+  - Deposits, balances and payments are public, so a pay run hides who is paid and shows how much.
+  - Anyone can read who may be paid, the limits and the deadline. Hiding them is planned and not built ([`docs/ROADMAP.md`](docs/ROADMAP.md)).
+- Scale. A settlement pays at most 8 recipients (GAP-053).
+- Simulations stay labelled as simulations, and they are the FAR shard, Dark Vault pods, the compute syndicate and the agent swarm demos.
 
 ## Where to read more
 
