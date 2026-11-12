@@ -1,0 +1,15 @@
+{
+  "runId": "20261112T033738Z-90d0",
+  "startedAt": "2026-11-12T03:37:38.341Z",
+  "rootHash": "ddfc1f96d4561d0cf35f4ba4d5664a6981eceb0a19380a21a2c0ac6cab81f422",
+  "verdicts": {
+    "E-HOSTED-ACCTCHECK-FAIL-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 55,
+  "commit": "ab13215baf9e0fa03b2d13d922ed6a5ab1fa56ae"
+}

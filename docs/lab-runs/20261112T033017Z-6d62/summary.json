@@ -1,0 +1,15 @@
+{
+  "runId": "20261112T033017Z-6d62",
+  "startedAt": "2026-11-12T03:30:17.539Z",
+  "rootHash": "b3218354cf120fdf41ebcd21f59c1d1dd1d6b6add0459649433325e631cca684",
+  "verdicts": {
+    "E-HOSTED-ESCROW-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 69,
+  "commit": "ab13215baf9e0fa03b2d13d922ed6a5ab1fa56ae"
+}
