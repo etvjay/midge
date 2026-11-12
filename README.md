@@ -1,38 +1,63 @@
 # Midge: Private Rooms with Public Rules, on NEAR
-**A network of private rooms with public rules: groups decide together in private, their money follows rules everyone can see, and any member can leave with their own share.**
 
-*In technical terms the pattern is called constrained arbitration with independent recovery. Words used here are defined in [`docs/GLOSSARY.md`](docs/GLOSSARY.md): a **group** (code: syndicate) has a **room** (code: Roost) run by a **host**, **rules** (code: Nest, the contract) and an **exit** (code: `hatch_out`).*
+Midge lets a group make a decision in private and pay out money under rules that everyone can read. Members deposit into a program on the NEAR blockchain (a smart contract), and its rules fix who can be paid, how much can leave in a given period, and by what date. Members send their bids, votes or amounts to a private room that only protected hardware can open, and the room works out one result and asks the contract to pay it. The contract pays only when the result fits the rules, and any member can take back their own share alone after a waiting period, even if the room stops working.
 
-**NEAR HACKATHON: Build Beyond Boundaries (November 1–14, 2026)**  
-**Primary Track:** Privacy & Private AI  
-**Secondary Tracks:** AI Swarms, AI Security & Defense, Real-World Money  
+Deposits, balances and payments are public on NEAR, and so are the rules and the list of accounts that may be paid. What stays private is what members bid, vote or decide. Everything that runs on a chain runs on a testnet.
 
-> **Naming:** Midge was previously called "Fly". Internal identifiers keep the old codename on purpose (the `fly-coordinator` crate, `FlyNestContract`, `FLY_*` environment variables, and the deployed testnet account `c.fly-1793636729.testnet`), so the on-chain evidence and the reproducible-build hash in this README stay valid. Midge is an independent hackathon prototype with **no token**, and is **not affiliated with Fly.trade or Fly.io**.
+The words used in this repository are defined in [`docs/GLOSSARY.md`](docs/GLOSSARY.md). In the code, a group is called a syndicate, the room is called the Roost and is run by a host, the rules are called the Nest (the contract), and the exit is called `hatch_out`.
+
+> Naming: Midge was previously called "Fly". Internal identifiers keep the old codename on purpose (the `fly-coordinator` crate, `FlyNestContract`, the `FLY_*` environment variables, and the deployed testnet account `c.fly-1793636729.testnet`), so the on-chain evidence and the reproducible-build hash in this README stay valid. Midge is an independent hackathon prototype with no token, and it is not affiliated with Fly.trade or Fly.io.
 
 ---
 
-## 1. Core Thesis & What Midge Solves
+## 1. What Midge does and why
 
-When autonomous AI agent swarms and human capital collectives coordinate financial actions on public blockchains, they face an intractable trilemma: **custody risk**, **alpha leakage**, and **liveness failure**. 
+Groups of autonomous AI agents and groups of people who pool money face three problems when they coordinate on public blockchains. Whoever holds the money can lose it or take it (custody risk), other people can see a plan and trade against it (information leakage, often called alpha leakage), and the group cannot act when a key is lost or a service stops (liveness failure).
 
-### The Problem: Quantified Evidence & Boundaries
-Empirical research establishes significant execution losses across public chains, but also demands intellectual discipline:
-* **Mempool Extraction is Material, Not Uniform:** EigenPhi research on Ethereum DEXes estimates **~$60M in annual trader sandwich losses**, declining from nearly $10M/month in late 2024 to ~$2.5M by October 2025 across 60,000–90,000 monthly attacks on $65B–$100B+ DEX volume, with block builders capturing the majority via priority gas fees.
-* **Slippage Exploitation on High-Speed Chains:** On Solana, Bitquery research identified **6.9M sandwich attacks** affecting **2.2M wallets** and extracting **~$29.7M before costs** (October 2025–October 2026), with swaps allowing 20%–50% slippage caught 14 times as often as those allowing under 3%.
-* **Graph Privacy is Fragile:** A 2025 study on Tornado Cash showed **5.1%–12.6%** deposit-withdrawal linkage from address reuse and transactional graphs (and up to 34.7% under FIFO temporal heuristics). Public transaction graphs easily compromise hidden computation if funding trails are exposed.
-* **Agent Infrastructure is Growing, But Early:** Coinbase AgentKit reports **20,000+ deployed agents** and **600,000+ transactions** (combining Base and Base Sepolia testnets), but production capital under autonomous swarm management remains early and unmeasured.
-* *Critical Caveat:* These figures reflect differing scopes, accounting methods, and timeframes; they cannot be added together into a single global loss metric.
+### The problem, with figures
 
-### Architectural Solution: Constrained Arbitration with Independent Recovery
-Existing Web3 paradigms fail autonomous swarms:
-- **Public Multisigs (SputnikDAO / Safe):** Require slow committee voting, leak execution parameters to mempool front-runners, and deadlock if keys are lost.
-- **Custodial TEE Platforms (OutLayer / Shade):** Shade provides single-worker agents without pooled depositor accounting. OutLayer provides a 1–30 day customer recovery window, but explicitly notes this is *not* an end-user protection mechanism.
+The research below shows real losses, and the sources differ in scope, so the figures cannot be added into one global number.
 
-**Midge solves this by unbundling coordination from custody:**
-1. **Public Escrow on NEAR L1:** Deposits, depositor accounts, and available escrow balances are public on NEAR L1 (`contracts/fly-coordinator`).
-2. **Confidential Coordination:** Members seal their bids (or ballots, or amounts) so only the room can open them, and sign each one with their NEAR key. The room is run by a **host** in secure hardware that proves which code it is running. Two kinds are built. Our program on **Phala** (Intel TDX) opens the sealed inputs, does the arithmetic exactly and signs a result only if it fits the rules; it has run on a real TDX machine and verified 12 of 12 attestation checks, and ran a full round together with the NEAR AI advisor on testnet. The **NEAR AI Cloud** model-sealed host seals inputs to an attested model key, and a language model does the sum (accepted only if three runs agree; 8 of 8 live rounds exact). The attested NEAR AI model also acts as an **advisor** that proposes how to split a total and sees only the total. Without a NEAR AI key the room falls back to a local simulation that can read every bid and says so at startup. A group can also use **two hosts** that must both sign; that is tested on testnet with two local hosts, not yet on two machines.
-3. **Constrained Settlement Authority:** The TEE is **never a custodian**. It cannot hold withdrawal keys or direct arbitrary payouts. It can only propose settlements strictly conforming to an immutable `ReleasePolicy` (allowlisted recipient accounts, a release cap paced over time windows of twice the exit timer, and deadlines; the pacing is only as strict as the timer a group chooses; since GAP-025 the timer is part of what depositors consent to, and the contract refuses a timer under 10 blocks, a sanity floor and not a recommendation; groups opened before that fix keep the old rules) to which depositors explicitly consented upon depositing.
-4. **Independent Non-Custodial Recovery (`hatch_out`):** If an enclave or operator crashes, stalls, or disappears past `timeout_blocks`, any individual depositor can unilaterally reclaim 100% of their remaining eligible balance directly from the contract. This operation requires zero operator cooperation, zero enclave signatures, and does not touch or dilute any other participant's escrow.
+- Public transactions leak plans. EigenPhi research on Ethereum exchanges estimates about $60 million a year in trader losses to sandwich attacks, falling from nearly $10 million a month in late 2024 to about $2.5 million by October 2025, across 60,000 to 90,000 attacks a month on $65 billion to more than $100 billion of exchange volume, and block builders captured most of it through priority gas fees. On Solana, Bitquery research found 6.9 million sandwich attacks that affected 2.2 million wallets and extracted about $29.7 million before costs between October 2025 and October 2026, and swaps that allowed 20% to 50% slippage were caught 14 times as often as swaps that allowed under 3%.
+- Transaction graphs leak identities. A 2025 study of Tornado Cash linked 5.1% to 12.6% of deposits to withdrawals by using address reuse and transaction graphs, and up to 34.7% when it assumed first-in-first-out timing. Public transaction graphs can undo private computation when the funding trail is visible.
+- Agent infrastructure is early. Coinbase AgentKit reports more than 20,000 deployed agents and more than 600,000 transactions, combining Base and the Base Sepolia testnet, and the amount of real capital that autonomous agent groups manage is still early and unmeasured.
+
+### Why existing approaches fall short
+
+A shared wallet that needs a committee vote for every payment is slow, it exposes payment details to bots that watch pending transactions, and it can deadlock when keys are lost. A service that runs code in secure hardware and controls the funds itself depends on its operator for recovery. Midge keeps the money and the rules in a public contract, keeps the inputs private, and lets each depositor leave alone.
+
+### How Midge works
+
+Midge separates coordination from custody. It has four parts.
+
+- Public escrow on NEAR. Deposits, depositor accounts and available escrow balances are public on NEAR (`contracts/fly-coordinator`).
+- A private room. Members seal their bids, ballots or amounts so that only the room can open them, and they sign each one with their NEAR key. The room is run by a host in secure hardware that proves which code it is running, and two kinds are built. Our own program runs on Phala (Intel TDX), opens the sealed inputs, does the arithmetic exactly, and signs a result only if it fits the rules. It verified 12 of 12 attestation checks on a real TDX machine, it ran a full round together with the NEAR AI advisor on testnet, and since 2026-11-11 it has run a pool, a lending quote, a ballot, a request for quote on both the buy and sell side, and a pay run on real hardware, each settled on the production contract. The second kind is the NEAR AI Cloud model-sealed host, which seals inputs to an attested model key and lets a language model do the sum, accepting the answer only if three runs agree (8 of 8 live rounds were exact). The attested NEAR AI model also acts as an advisor that proposes how to split a total and sees only the total. Without a NEAR AI key the room falls back to a local simulation that can read every bid, and it says so at startup. A group can also use two hosts that must both sign, which is tested on testnet with two local hosts and not yet on two machines.
+- Limited authority over settlement. The room never holds money, it cannot hold withdrawal keys, and it cannot direct arbitrary payouts. It can only propose a settlement that fits the group's fixed `ReleasePolicy`, which lists the allowed recipient accounts, a release cap paced over time windows of twice the exit timer, and deadlines. Depositors consent to the policy and to the exit timer when they deposit (since GAP-025), and the contract refuses a timer under 10 blocks, which is a sanity floor and not a recommendation. The pacing is only as strict as the timer a group chooses, and groups opened before that fix keep the old rules.
+- Independent recovery (`hatch_out`). If the room or its operator crashes, stalls or disappears past `timeout_blocks`, any depositor can take back 100% of their remaining eligible balance directly from the contract. The exit needs no cooperation from the operator and no signature from the room, and it does not touch any other member's escrow.
+
+### What is shown, and what is not yet
+
+Shown, with promoted and hash-verified runs in `docs/lab-runs/` and a ledger entry for each claim in `foundry/claims.jsonl`:
+
+- The contract is live on testnet with signed one-use settlements, per-member charges, a release cap and the permissionless exit.
+- The hosted room has run on real Phala TDX hardware and settled on the production contract, including a pay run with payee-signed invoices and an auditor pack.
+- A contract has asked NEAR's signer for payments that landed on Solana devnet and Ethereum Sepolia.
+
+Not shown yet:
+
+- Anything on mainnet.
+- Independent operators. One operator ran every room and every account in the tests.
+- Confidential amounts. Deposits, balances and payments are public on NEAR, so payroll offers private payees and private receipts, and its amounts are public.
+- Private rules. The rules, the allowed recipient accounts and every payment are public on NEAR, so an outside observer can see who may be paid, the limits, and who was paid. Hiding the rules from outsiders while the contract still enforces them would need commitments or zero-knowledge proofs, and neither is built.
+- The contract's deployer key has not been deleted yet (GAP-044), so whoever holds it could change the testnet contract.
+
+### Roadmap
+
+Three steps would reduce what an outside observer learns from the public rules. None is built, and the details are in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+- Commit to the rules and reveal only what is used. The contract would store a hash of the allowed recipients, and only the accounts that are paid would appear. It needs a contract change and a redeploy.
+- Prove that a payment fits hidden rules with a zero-knowledge proof. It would hide the rules completely, but the payment itself stays public, and it would take weeks.
+- Pay out through NEAR Confidential Intents. It would hide the amounts and counterparties of the payout, but it needs a partner token and mainnet, and its validators are permissioned.
 
 ---
 
@@ -311,22 +336,6 @@ Midge is designed as a **network of private rooms with public rules** (a group i
 
 ---
 
-## 6. Architectural Comparison
-
-For an exhaustive architectural comparison contrasting Midge with 10 industry systems (**Shade Agents**, **OutLayer**, **NEAR Confidential Intents**, **Enzyme Finance**, **Safe**, **Railgun**, **Aztec**, **Secret Network**, **Oasis Sapphire**, and **Flashbots SUAVE/BuilderNet**), see:  
-📖 **[`docs/canonical/COMPARISON.md`](docs/canonical/COMPARISON.md)**
-
-For reusable independent-exit escrow contract architecture, see:  
-📖 **[`contracts/fly-coordinator/README.md`](contracts/fly-coordinator/README.md)**
-
-For video demo choreography and script, see:  
-🎬 **[`docs/canonical/DEMO_SCRIPT.md`](docs/canonical/DEMO_SCRIPT.md)**
-
-For hackathon track justifications and submission assets, see:  
-📋 **[`docs/canonical/SUBMISSION_ASSETS.md`](docs/canonical/SUBMISSION_ASSETS.md)**
-
----
-
 ## 6b. Known Limits and Disclosures
 
 - **Contract deployer key.** The testnet coordinator account `c.fly-1793636729.testnet` still holds one full-access key (the deployer's). A group's release policy is fixed once the group is hatched, but whoever holds that key can redeploy the *code*, and it was used to upgrade the contract twice on 2026-11-11 (history: `docs/canonical/deployments.json`). Deleting the key is irreversible and is left until everything else is verified; whether it is deleted before submission is not decided. Anyone can check the current state with `view_access_key_list`. Until the key is deleted, treat the contract code as replaceable by the deployer.
@@ -392,7 +401,6 @@ Much of this code, documentation and the verification scripts were written with 
 │   └── fixtures/                 # Recorded fixtures for offline deterministic verification
 └── docs/                         # Canonical SDLC Documentation
     ├── canonical/
-    │   ├── COMPARISON.md         # 10-system comparative landscape analysis
     │   ├── DEMO_SCRIPT.md        # Video recording script
     │   ├── SUBMISSION_ASSETS.md  # X post, project description, 5-track rationale
     │   ├── baseline-simulation.json # Baseline economic Monte Carlo simulation data

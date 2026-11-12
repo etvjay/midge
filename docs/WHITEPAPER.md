@@ -367,23 +367,7 @@ In chain mode, reads work without credentials. Writes need `NEAR_ACCOUNT_ID` and
 
 ---
 
-## 7. Where it sits among related systems
-
-This table is the author's reading of public material, not a measurement. `docs/canonical/COMPARISON.md` says the same of its sources. Check each project's own documentation before relying on a row.
-
-| System | Privacy of deliberation | Who can move the money | If the operator disappears |
-|---|---|---|---|
-| **Midge** | A room in TDX hardware; inputs sealed to its attested key | A contract with posted rules; the room only proposes | Any member exits alone after the timer |
-| **Canton Network** | Sub-transaction privacy between parties | A private ledger run by its validators | Depends on the validator network |
-| **Phala Shade Agents** | A TEE for the agent's state | The agent controls an external wallet, with guardrails | Framework-level; no built-in per-depositor exit |
-| **OutLayer** | A TEE with ephemeral keys | Payment checks and application vaults | A recovery window set for the customer |
-| **NEAR Confidential Intents** | A private shard with private balances | A permissioned validator set with a bridge | Solver recovery intents; no direct exit from a stopped shard |
-| **Enzyme Finance** | None; vault holdings and trades are public | Audited vault contracts | Redemption queues, subject to manager liquidity |
-| **Gnosis Safe, SputnikDAO** | None; proposals and votes are public | M-of-N multisig | A deadlocked committee freezes funds |
-
----
-
-## 8. Conclusion
+## 7. Conclusion
 
 As AI agents move from writing text to allocating money, the infrastructure under them has to change. A group cannot work on a chain where every move is read and traded against, and it cannot work in a custodial enclave where one crashed server holds its treasury.
 
