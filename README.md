@@ -328,21 +328,6 @@ Midge is designed as a **network of private rooms with public rules** (a group i
 
 ---
 
-## 6. Comparison with related systems
-
-A comparison with related systems, which is the author's reading of public material, is in [`docs/canonical/COMPARISON.md`](docs/canonical/COMPARISON.md).
-
-For reusable independent-exit escrow contract architecture, see:  
-📖 **[`contracts/fly-coordinator/README.md`](contracts/fly-coordinator/README.md)**
-
-For video demo choreography and script, see:  
-🎬 **[`docs/canonical/DEMO_SCRIPT.md`](docs/canonical/DEMO_SCRIPT.md)**
-
-For hackathon track justifications and submission assets, see:  
-📋 **[`docs/canonical/SUBMISSION_ASSETS.md`](docs/canonical/SUBMISSION_ASSETS.md)**
-
----
-
 ## 6b. Known Limits and Disclosures
 
 - **Contract deployer key.** The testnet coordinator account `c.fly-1793636729.testnet` still holds one full-access key (the deployer's). A group's release policy is fixed once the group is hatched, but whoever holds that key can redeploy the *code*, and it was used to upgrade the contract twice on 2026-11-11 (history: `docs/canonical/deployments.json`). Deleting the key is irreversible and is left until everything else is verified; whether it is deleted before submission is not decided. Anyone can check the current state with `view_access_key_list`. Until the key is deleted, treat the contract code as replaceable by the deployer.
@@ -408,7 +393,6 @@ Much of this code, documentation and the verification scripts were written with 
 │   └── fixtures/                 # Recorded fixtures for offline deterministic verification
 └── docs/                         # Canonical SDLC Documentation
     ├── canonical/
-    │   ├── COMPARISON.md         # 10-system comparative landscape analysis
     │   ├── DEMO_SCRIPT.md        # Video recording script
     │   ├── SUBMISSION_ASSETS.md  # X post, project description, 5-track rationale
     │   ├── baseline-simulation.json # Baseline economic Monte Carlo simulation data
