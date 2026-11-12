@@ -120,7 +120,7 @@ export function createRoostServer({ roost, adminKey }) {
       if (req.method === 'POST' && url.pathname === '/pool') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
         const body = await readJson(req);
-        await bind([], body); return send(res, 200, roost.runPool({ recipient: body.recipient, min: body.min, cap: body.cap, roundId: body.roundId }));
+        await bind([], body); return send(res, 200, roost.runPool({ recipient: body.recipient, min: body.min, cap: body.cap, mode: body.mode, roundId: body.roundId }));
       }
       if (req.method === 'POST' && url.pathname === '/quote') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
@@ -130,7 +130,7 @@ export function createRoostServer({ roost, adminKey }) {
       if (req.method === 'POST' && url.pathname === '/ballot') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
         const body = await readJson(req);
-        await bind(Array.isArray(body.roll) ? body.roll : [], body); return send(res, 200, roost.runBallot({ options: body.options, roll: body.roll, share: body.share, quorumBps: body.quorumBps, rule: body.rule, roundId: body.roundId }));
+        await bind(Array.isArray(body.roll) ? body.roll : [], body); return send(res, 200, roost.runBallot({ options: body.options, roll: body.roll, share: body.share, quorumBps: body.quorumBps, rule: body.rule, weights: body.weights, thresholdBps: body.thresholdBps, roundId: body.roundId }));
       }
       if (req.method === 'POST' && url.pathname === '/rfq') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });

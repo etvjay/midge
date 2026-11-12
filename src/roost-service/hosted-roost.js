@@ -401,9 +401,11 @@ export class HostedRoost {
    * member is charged exactly their own amount. Settled with settle_batch_charged. A bid that cannot be read, or is under
    * `min` or over the `cap`, is left out and its flyerId reported, never its content.
    */
-  runPool({ recipient, min = '0', cap = null, roundId = '' } = {}) {
+  runPool({ recipient, min = '0', cap = null, mode = 'first-come', roundId = '' } = {}) {
     this.#assertNoSignedAggregate();
     if (typeof recipient !== 'string' || recipient.length === 0 || recipient.includes(':') || recipient.includes(',')) throw new RoostAggregationError('recipient must be a plain account id');
+    if (mode !== 'first-come' && mode !== 'pro-rata') throw new RoostAggregationError("mode must be 'first-come' or 'pro-rata'");
+    if (mode === 'pro-rata' && (cap === null || cap === undefined)) throw new RoostAggregationError('a pro-rata pool needs a cap');
     const minMicro = toMicro(min); const capMicro = cap === null ? null : toMicro(cap);
     if (minMicro === null || (cap !== null && capMicro === null)) throw new RoostAggregationError('min and cap must be decimals with at most 6 places');
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot run a pool on an empty sealed bid queue');
@@ -412,14 +414,14 @@ export class HostedRoost {
       try { const payload = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); const amountMicro = toMicro(payload?.amount); if (amountMicro === null) throw new Error('malformed'); bids.push({ flyerId: intent.flyerId, amountMicro, order }); } catch { unreadable.push(intent.flyerId); }
     });
     const aff = this.#affordable(bids, (b) => b.flyerId, (b) => b.amountMicro * YOCTO_PER_MICRO);
-    const out = clearPool({ bids: aff.kept, minMicro, capMicro });
+    const out = clearPool({ bids: aff.kept, minMicro, capMicro, mode });
     this.sealedIntents = [];
-    const pub = { ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), format: 'pool', recipient, sold: out.sold, members: out.contributions.length, total: formatMicro(out.totalMicro), leftOut: [...unreadable, ...out.leftOut], executionModel: 'HOSTED_SEALED_POOL', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), format: 'pool', recipient, sold: out.sold, members: out.contributions.length, total: formatMicro(out.totalMicro), leftOut: [...unreadable, ...out.leftOut], ...(mode === 'pro-rata' ? { mode, scaled: out.scaled } : {}), executionModel: 'HOSTED_SEALED_POOL', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (!out.sold) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     const allocations = [{ recipient, amount: String(out.totalMicro * YOCTO_PER_MICRO) }];
     const charges = out.contributions.map((c) => ({ member: c.flyerId, amount: String(c.amountMicro * YOCTO_PER_MICRO) }));
     const bound = Object.fromEntries(out.contributions.map((c) => [c.flyerId, c.amountMicro * YOCTO_PER_MICRO]));
-    const orderHash = sha256Hex(`midge-pool-v1:${roundId}:${recipient}:${pub.total}:${out.contributions.length}:${pub.leftOut.length}:${this.#orderSalt()}${aff.tag}`);
+    const orderHash = sha256Hex(`midge-pool-v1:${roundId}:${recipient}:${pub.total}:${out.contributions.length}:${pub.leftOut.length}${mode === 'pro-rata' ? ':prorata' : ''}:${this.#orderSalt()}${aff.tag}`);
     this.aggregate = { orderHash, totalMicro: out.totalMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
@@ -492,7 +494,7 @@ export class HostedRoost {
    * (share x roll size) is paid to that option's recipient, charged equally to the whole roll. The published outcome names the
    * winner or the reason nothing was decided, never a tally or a turnout. Refuses to run on a host that accepts unsigned inputs.
    */
-  runBallot({ options, roll, share, quorumBps = 5000, rule = 'majority', roundId = '' } = {}) {
+  runBallot({ options, roll, share, quorumBps = 5000, rule = 'majority', weights = null, thresholdBps = null, roundId = '' } = {}) {
     this.#assertNoSignedAggregate();
     if (!this.requireSignedInputs) throw new RoostAggregationError('a ballot is only counted on a host that requires signed inputs');
     if (!options || typeof options !== 'object') throw new RoostAggregationError('options must map option ids to recipients');
@@ -500,6 +502,14 @@ export class HostedRoost {
     if (ids.length < 2 || ids.length > 8) throw new RoostAggregationError('a ballot needs 2 to 8 options');
     for (const [k, v] of Object.entries(options)) if (!/^[A-Za-z0-9_-]{1,32}$/.test(k) || k === 'abstain' || !isAccountId(v)) throw new RoostAggregationError('each option needs a plain id (not abstain) and a recipient account');
     if (!Array.isArray(roll) || roll.length < 1 || roll.length > 50 || new Set(roll).size !== roll.length || !roll.every(isAccountId)) throw new RoostAggregationError('roll must list 1 to 50 distinct accounts');
+    if (weights !== null && weights !== undefined) {
+      if (typeof weights !== 'object' || Array.isArray(weights)) throw new RoostAggregationError('weights must map roll members to whole numbers');
+      for (const [id, w] of Object.entries(weights)) {
+        if (!roll.includes(id)) throw new RoostAggregationError(`a weight was given for ${id}, who is not on the roll`);
+        if (!Number.isSafeInteger(w) || w < 1 || w > 1_000_000) throw new RoostAggregationError('each weight must be a whole number from 1 to 1,000,000');
+      }
+    }
+    if (rule === 'supermajority' && !(Number.isSafeInteger(thresholdBps) && thresholdBps >= 5001 && thresholdBps <= 10000)) throw new RoostAggregationError('a supermajority needs a threshold of 5001 to 10000 basis points');
     const shareMicro = toMicro(share);
     if (shareMicro === null || shareMicro === 0n) throw new RoostAggregationError('share must be a positive decimal with at most 6 places');
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot count an empty ballot box');
@@ -517,7 +527,7 @@ export class HostedRoost {
     }
     // A member left out for escrow is gone from the vote entirely: counting their ballot as an 'outsider' would publish that they voted.
     const leftOut = new Set(aff.excluded);
-    const out = clearBallot({ options: ids, roll: payingRoll, ballots: ballots.filter((b) => !leftOut.has(b.flyerId)), quorumBps, rule });
+    const out = clearBallot({ options: ids, roll: payingRoll, ballots: ballots.filter((b) => !leftOut.has(b.flyerId)), quorumBps, rule, weights: weights ?? null, thresholdBps: rule === 'supermajority' ? thresholdBps : null });
     this.sealedIntents = [];
     const recipient = out.decided ? options[out.winner] : null;
     const pub = { shape: 'ballot', rule, decided: out.decided, winner: out.winner, recipient, reason: out.reason, quorumMet: out.quorumMet, outsiders: out.outsiders, unreadable, ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
@@ -526,7 +536,7 @@ export class HostedRoost {
     const allocations = [{ recipient, amount: String(poolMicro * YOCTO_PER_MICRO) }];
     const charges = payingRoll.map((m) => ({ member: m, amount: String(shareMicro * YOCTO_PER_MICRO) }));
     const bound = Object.fromEntries(payingRoll.map((m) => [m, shareMicro * YOCTO_PER_MICRO]));
-    const orderHash = sha256Hex(`midge-ballot-v1:${roundId}:${rule}:${out.winner}:${recipient}:${poolMicro}:${[...payingRoll].sort().join(',')}:${this.#orderSalt()}${aff.tag}`);
+    const orderHash = sha256Hex(`midge-ballot-v1:${roundId}:${rule}:${out.winner}:${recipient}:${poolMicro}:${[...payingRoll].sort().join(',')}${rule === 'supermajority' ? `:t${thresholdBps}` : ''}${weights ? `:w${Object.entries(weights).sort(([x], [y]) => (x < y ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join(',')}` : ''}:${this.#orderSalt()}${aff.tag}`);
     this.aggregate = { orderHash, totalMicro: poolMicro, signed: false, program: { allocations, charges, bound } };
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }

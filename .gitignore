@@ -34,3 +34,7 @@ contracts/**/target-*/
 
 # Writing rules for public copy are kept on the author's machine only.
 /docs/WRITING_RULES.md
+
+# Understand Anything knowledge graph (generated locally, never published)
+/.ua/
+/.understand-anything/

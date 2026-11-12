@@ -40,7 +40,9 @@ const ballot = {
     roll: { type: 'array', required: true, description: 'the accounts allowed to vote (1 to 50)' },
     share: { type: 'string', required: true, description: 'what each voter puts in, in NEAR, up to 6 decimals' },
     quorumBps: { type: 'integer', required: false, default: 5000, description: 'turnout needed, in basis points of the roll' },
-    rule: { type: 'string', required: false, default: 'majority', enum: ['majority', 'plurality'] },
+    rule: { type: 'string', required: false, default: 'majority', enum: ['majority', 'plurality', 'supermajority'] },
+    thresholdBps: { type: 'integer', required: false, default: null, description: 'for the supermajority rule: the share of non-abstaining weight the winner needs, 5001 to 10000 basis points' },
+    weights: { type: 'object', required: false, default: null, description: 'optional vote weights: roll account -> whole number from 1 to 1,000,000 (default 1). Quorum and shares are counted in weight. Public in the request; charges stay one equal share each' },
   },
   normalise(p) {
     const q = { ...p };
@@ -51,9 +53,9 @@ const ballot = {
   // Only what the host does not check: its runBallot owns every other rule (shapes, option and roll counts, a positive share), so there is
   // one source of truth and a wrong shape comes back as INVALID_PARAMS from the host's own error.
   validate(p) {
-    return Number.isInteger(p.quorumBps) && p.quorumBps >= 0 && p.quorumBps <= 10000 && ['majority', 'plurality'].includes(p.rule);
+    return Number.isInteger(p.quorumBps) && p.quorumBps >= 0 && p.quorumBps <= 10000 && ['majority', 'plurality', 'supermajority'].includes(p.rule);
   },
-  run: (host, p) => host.runBallot({ options: p.options, roll: p.roll, share: p.share, quorumBps: p.quorumBps, rule: p.rule }),
+  run: (host, p) => host.runBallot({ options: p.options, roll: p.roll, share: p.share, quorumBps: p.quorumBps, rule: p.rule, weights: p.weights ?? null, thresholdBps: p.thresholdBps ?? null }),
   // Everyone on the roll is charged a share whether or not they voted, so their escrow must be read too.
   payers: (p) => (Array.isArray(p.roll) ? p.roll : []),
 };
@@ -65,7 +67,7 @@ const hostProgram = (id, summary, params, call, extra = {}) => ({
 
 const pool = hostProgram('pool',
   'Members seal how much they put in; the room totals the sealed amounts and pays the total to one recipient, charging each member their own amount (up to an optional cap).',
-  { recipient: { type: 'string', required: true, description: 'the account paid the total' }, min: { type: 'string', required: false, default: '0', description: 'the least total worth paying' }, cap: { type: 'string', required: false, default: null, description: 'the most the pool will take' } },
+  { recipient: { type: 'string', required: true, description: 'the account paid the total' }, min: { type: 'string', required: false, default: '0', description: 'the least total worth paying' }, cap: { type: 'string', required: false, default: null, description: 'the most the pool will take' }, mode: { type: 'string', required: false, default: 'first-come', enum: ['first-come', 'pro-rata'], description: 'what happens past the cap: first-come leaves out the last to arrive; pro-rata scales every amount by the same ratio (needs a cap)' } },
   (h, p) => h.runPool(p));
 
 const auction = hostProgram('auction',
