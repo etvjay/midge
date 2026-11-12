@@ -62,6 +62,18 @@ Midge provides a zero-setup, deterministic verification harness requiring standa
 # or: make verify
 # or: npm run verify
 ```
+**No Rust toolchain?** The checks that need only Node.js take about 30 seconds and passed on a clean checkout:
+
+```bash
+npm run test:unit        # the JavaScript tests, including the document-truth and cross-surface checks
+make check               # the claims and gaps ledgers, and that every new experiment's predictions were written first
+node lab/verify-run.js docs/lab-runs/20261111T220404Z-581c   # re-checks one promoted hardware run's hash chain offline
+```
+
+The hosted-room experiments need Phala credentials to re-run; the promoted runs in `docs/lab-runs/` are what you can check offline.
+
+**A note on history.** On 2026-11-12 the history of `master` was rewritten once to remove a directory committed by mistake. The tree is identical before and after; 12 commit ids changed, and a few records (nine lab-run logs and the pinned image's build attestation) name an old id. The mapping and the reasoning are in [`docs/canonical/COMMIT-MAP-2026-11-12.md`](docs/canonical/COMMIT-MAP-2026-11-12.md).
+
 *Total verification runtime: about **100 s** on the author's machine (deterministic; 174 Rust tests; the full node and lab suites; on-chain RPC read with an 8 s deadline; no external keys needed). The first version of this suite ran in under 2 s; it has grown since.*
 
 ---
@@ -129,11 +141,12 @@ Midge is deployed and live on NEAR Testnet at coordinator account:
   ./scripts/verify
   ```
 * **See:**
-  - `[STEP 1/5]` The NEAR L1 Rust smart contract tests (unit, integration, invariant and state-machine tests; 145 at the time of writing, pinned by lab experiment `E-RUST-CONTRACT`) pass with Clippy and Fmt (`near-sdk 5.1`).
-  - `[STEP 2/5]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm`.
-  - `[STEP 3/5]` 8-layer cryptographic verification suite executes, validating live Intel TDX DCAP verification, 1Click asset registry, escape hatch FMEA, Dark Vault MPC, confidential RFQ & OTC, resilience matrix, and live NEAR AI Cloud TEE inference response signature.
-  - `[STEP 4/5]` Independent on-chain verifier audits 10 live testnet transactions & cryptographic attack rejection proofs on `c.fly-1793636729.testnet`.
-  - `[STEP 5/5]` Builder Foundry Control Plane passes with 0 invariant violations across the claims and gaps ledgers (`foundry/claims.jsonl`, `foundry/gaps.jsonl`).
+  - `[STEP 1/6]` The NEAR L1 Rust smart contract tests (unit, integration, invariant and state-machine tests; 174 by default, pinned by lab experiment `E-RUST-CONTRACT`) pass with Clippy and Fmt (`near-sdk 5.1`).
+  - `[STEP 2/6]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm`.
+  - `[STEP 3/6]` 8-layer cryptographic verification suite executes, validating live Intel TDX DCAP verification, 1Click asset registry, escape hatch FMEA, Dark Vault MPC, confidential RFQ & OTC, resilience matrix, and live NEAR AI Cloud TEE inference response signature.
+  - `[STEP 4/6]` Independent on-chain verifier audits 10 live testnet transactions & cryptographic attack rejection proofs on `c.fly-1793636729.testnet`.
+  - `[STEP 5/6]` Builder Foundry Control Plane passes with 0 invariant violations across the claims and gaps ledgers (`foundry/claims.jsonl`, `foundry/gaps.jsonl`).
+  - `[STEP 6/6]` The JavaScript test suite (`tests/*.test.js`, over 460 tests) passes, including the tests that keep the documents true and one cross-surface check that links every claim to a passing, hash-verified run (`tests/system-wholeness.test.js`).
 
 ---
 
