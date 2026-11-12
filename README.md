@@ -51,6 +51,14 @@ Not shown yet:
 - Private rules. The rules, the allowed recipient accounts and every payment are public on NEAR, so an outside observer can see who may be paid, the limits, and who was paid. Hiding the rules from outsiders while the contract still enforces them would need commitments or zero-knowledge proofs, and neither is built.
 - The contract's deployer key has not been deleted yet (GAP-044), so whoever holds it could change the testnet contract.
 
+### Roadmap
+
+Three steps would reduce what an outside observer learns from the public rules. None is built, and the details are in [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+- Commit to the rules and reveal only what is used. The contract would store a hash of the allowed recipients, and only the accounts that are paid would appear. It needs a contract change and a redeploy.
+- Prove that a payment fits hidden rules with a zero-knowledge proof. It would hide the rules completely, but the payment itself stays public, and it would take weeks.
+- Pay out through NEAR Confidential Intents. It would hide the amounts and counterparties of the payout, but it needs a partner token and mainnet, and its validators are permissioned.
+
 ---
 
 ## 2. Measured Economic Baseline Simulation
