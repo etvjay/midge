@@ -6,7 +6,7 @@
 # that the attestation measures, so editing this file changes the code identity on purpose.
 services:
   roost:
-    image: ghcr.io/etvjay/midge-roost@sha256:310f1130b431551645a065c37c6c2b2c181590bb31b3bb04c0272b5aacb82fd7
+    image: ghcr.io/etvjay/midge-roost@sha256:76dd150f0588d46ae2a93b42cb78ee467f8c9bd7d34af54a660e702f66034783
     restart: unless-stopped
     environment:
       # Set as an encrypted environment variable in Phala Cloud; only the CVM can decrypt it.
