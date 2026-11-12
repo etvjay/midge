@@ -6,8 +6,6 @@ Deposits, balances and payments are public on NEAR, and so are the rules and the
 
 The words used in this repository are defined in [`docs/GLOSSARY.md`](docs/GLOSSARY.md). In the code, a group is called a syndicate, the room is called the Roost and is run by a host, the rules are called the Nest (the contract), and the exit is called `hatch_out`.
 
-The project was built for the NEAR hackathon Build Beyond Boundaries (November 1 to 14, 2026). The primary track is Privacy & Private AI, and the secondary tracks are AI Swarms, AI Security & Defense, and Real-World Money.
-
 > Naming: Midge was previously called "Fly". Internal identifiers keep the old codename on purpose (the `fly-coordinator` crate, `FlyNestContract`, the `FLY_*` environment variables, and the deployed testnet account `c.fly-1793636729.testnet`), so the on-chain evidence and the reproducible-build hash in this README stay valid. Midge is an independent hackathon prototype with no token, and it is not affiliated with Fly.trade or Fly.io.
 
 ---
@@ -24,11 +22,9 @@ The research below shows real losses, and the sources differ in scope, so the fi
 - Transaction graphs leak identities. A 2025 study of Tornado Cash linked 5.1% to 12.6% of deposits to withdrawals by using address reuse and transaction graphs, and up to 34.7% when it assumed first-in-first-out timing. Public transaction graphs can undo private computation when the funding trail is visible.
 - Agent infrastructure is early. Coinbase AgentKit reports more than 20,000 deployed agents and more than 600,000 transactions, combining Base and the Base Sepolia testnet, and the amount of real capital that autonomous agent groups manage is still early and unmeasured.
 
-### Why existing tools fall short
+### Why existing approaches fall short
 
-Public multisigs such as SputnikDAO and Safe need slow committee votes and leak execution parameters to front-running bots in the mempool. They also deadlock if keys are lost.
-
-Custodial platforms that run code in secure hardware, such as OutLayer and Shade, cover different ground. Shade provides single-worker agents without pooled depositor accounting. OutLayer provides a customer recovery window of 1 to 30 days, and its documentation says plainly that the window is not a protection for end users.
+A shared wallet that needs a committee vote for every payment is slow, it exposes payment details to bots that watch pending transactions, and it can deadlock when keys are lost. A service that runs code in secure hardware and controls the funds itself depends on its operator for recovery. Midge keeps the money and the rules in a public contract, keeps the inputs private, and lets each depositor leave alone.
 
 ### How Midge works
 
@@ -52,6 +48,7 @@ Not shown yet:
 - Anything on mainnet.
 - Independent operators. One operator ran every room and every account in the tests.
 - Confidential amounts. Deposits, balances and payments are public on NEAR, so payroll offers private payees and private receipts, and its amounts are public.
+- Private rules. The rules, the allowed recipient accounts and every payment are public on NEAR, so an outside observer can see who may be paid, the limits, and who was paid. Hiding the rules from outsiders while the contract still enforces them would need commitments or zero-knowledge proofs, and neither is built.
 - The contract's deployer key has not been deleted yet (GAP-044), so whoever holds it could change the testnet contract.
 
 ---
@@ -331,10 +328,9 @@ Midge is designed as a **network of private rooms with public rules** (a group i
 
 ---
 
-## 6. Architectural Comparison
+## 6. Comparison with related systems
 
-For an exhaustive architectural comparison contrasting Midge with 10 industry systems (**Shade Agents**, **OutLayer**, **NEAR Confidential Intents**, **Enzyme Finance**, **Safe**, **Railgun**, **Aztec**, **Secret Network**, **Oasis Sapphire**, and **Flashbots SUAVE/BuilderNet**), see:  
-📖 **[`docs/canonical/COMPARISON.md`](docs/canonical/COMPARISON.md)**
+A comparison with related systems, which is the author's reading of public material, is in [`docs/canonical/COMPARISON.md`](docs/canonical/COMPARISON.md).
 
 For reusable independent-exit escrow contract architecture, see:  
 📖 **[`contracts/fly-coordinator/README.md`](contracts/fly-coordinator/README.md)**
