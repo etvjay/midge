@@ -54,15 +54,3 @@ One pattern, which is a private room with public rules and an exit, serves sever
 | A network of rooms | Many groups on one contract, and one member in several | Listing, finding and joining rooms | Live on testnet. Rooms do not yet interact with each other |
 
 Private system and collaborative system are not separate products. They are the umbrella term for anything that has to coordinate privately while it is held to public rules.
-
-## Rules for writing
-
-1. Use plain words first. A technical term appears one screen down, once, with its plain meaning.
-2. A claim says what ran, where it ran, and what did not run. A local host is not hardware, and one operator is not independent users.
-3. Deposits and balances are public on NEAR, and what stays private is what members bid, vote or decide.
-4. Define every new term in plain words where it first appears.
-5. The release cap is paced over a window of twice the exit timer and is only as strict as that timer. State it in real time ("25% per 27 seconds at a 24-block timer"), never as "at most X% per epoch", and never imply that the cap alone bounds how fast funds can leave. A real group must choose its timer on purpose.
-6. Payroll and anything like it is "private who, with private receipts". A payment is a public NEAR transfer, so its amount is public, and the words "confidential amounts" and "shielded allocations" are never used.
-7. Say what is sealed and what is not. Invoices are sealed to the room, statements are sealed to the payee, and the auditor pack is sealed to the auditor. The pre-flight, the invoice check and the auditor verification take plain JSON, so run them on your own machine (or locally in the SDK) if the request itself must not be seen, and never call the pre-flight confidential without saying so.
-8. The advice is advice. The model never approves, blocks or signs anything and never sees an identity, and the deterministic pre-flight is the decision.
-9. Do not name other projects in order to compare Midge with them or to criticise them. Name a third-party product only where Midge uses it.
