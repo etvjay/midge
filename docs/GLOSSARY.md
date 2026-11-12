@@ -15,6 +15,7 @@ Midge is a network of private rooms with public rules. A group decides together 
 | Room | The private place where members' sealed inputs are opened and the result is worked out | the Roost |
 | Host | The secure hardware and program that runs a room, which is either our program on Phala or an attested AI model on NEAR AI Cloud | Roost backend (`hosted`, `model-sealed`) |
 | Rules | The NEAR contract, which fixes who can be paid, how much can be released in each window and until when, and refuses anything else | the Nest, `fly-coordinator`, the release policy |
+| Settlement checks | What the contract and the verifiers check before money moves: the room's signature, the current round, and the hardware attestation of the room | HAQ, `[HAQ REJECT]` in error messages |
 | Member | Anyone with a NEAR account who puts money in and takes part | flyer |
 | Sealed input | A bid, ballot or amount that is encrypted so only the room can read it, and signed by the member | sealed intent, sealed bid |
 | Round | One cycle of sealed inputs, a result and a settlement | epoch, round nonce |

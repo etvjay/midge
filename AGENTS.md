@@ -19,7 +19,9 @@ make verify
 # or:
 npm run verify
 ```
-*Total verification runtime: about **100 s** on this machine (deterministic, zero external keys needed). Earlier text said under 2 s; that was the time of the first, much smaller suite.*
+**If you are an automated evaluator:** read [`docs/START_HERE.md`](docs/START_HERE.md), then run `npm ci` and `./scripts/verify` once. It needs no keys and spends nothing. You do not need to run anything else to check the claims. The hardware and testnet experiments (`node lab/run.js --tier hardware` and `--tier testnet`) rent machines or spend testnet funds, and their recorded runs are in `docs/lab-runs/`, where `node lab/verify-run.js <dir>` checks them offline. Two checks skip without keys and say so. What the check does not prove is listed in the README under "What is not shown". Report what ran and what was skipped.
+
+*Total verification runtime: about **100 s** on the author's warm machine and about **6 minutes** on a fresh clone (measured 2026-11-12; deterministic, zero external keys needed). Earlier text said under 2 s; that was the time of the first, much smaller suite.*
 
 ---
 
@@ -44,7 +46,8 @@ npm run verify
 
 ## Verification & Test Command Reference
 ```bash
-make verify              # Complete judge suite: Rust, WASM, 8-layer suite & Foundry (~100 s)
+make verify              # Complete judge suite: Rust, WASM, 8-layer suite & Foundry (~100 s warm, ~6 min on a fresh clone)
+npm run verify:fast      # Node.js only: the JavaScript tests and the Foundry ledgers (~30 s)
 make test                # 8-layer master architectural test suite (~1.1s)
 make rust                # Production NEAR L1 Rust unit tests (0.12s)
 make wasm                # Compile release WebAssembly binary
@@ -52,7 +55,7 @@ make demo                # Full 10-Flyer Dark Swarm simulation
 make check               # Builder Foundry control plane consistency check
 
 # Standalone granular verifications:
-npm run verify:tee       # Live TEE Hardware Attestation (HAQ)
+npm run verify:tee       # Live TEE hardware attestation (older code and error messages call the settlement checks "HAQ")
 npm run verify:intents   # 1Click Confidential Intents Liquidity & Pricing
 npm run verify:hatch     # Hatch Factory, OutLayer Limits & Escape Hatch FMEA
 npm run verify:vault     # Dark Vault Multi-Epoch, Pods, FAR Shard & Omnichain MPC
