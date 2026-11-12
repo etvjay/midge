@@ -79,7 +79,7 @@ Verify any of them: `node lab/verify-run.js docs/lab-runs/<id>`.
 | **Roost, model-sealed** (`src/enclave`) | Bids sealed to an attested NEAR AI model | **Live** (`E-MODEL-SEALED-LIVE-01`) |
 | **Advisor** (`src/advisor`) | An attested NEAR AI model proposes how to split a total among the policy's recipients; the Roost bounds it, the contract enforces it; the model's signed answer is stored as a record anyone can verify against the allocations hash the contract logs | **Live** (`E-ADVISOR-LIVE-01`, with `E-ADVISOR-MODEL` offline). The model sees only the total and the recipient ids, never a bid |
 | **Roost, local** | Keyless simulation; can read bids | Used by offline tests |
-| **HAQ** attestation | Proof the Nest gates on | Verified live for the hosted Roost |
+| Hardware attestation (older text calls the settlement checks "HAQ") | Proof the Nest gates on | Verified live for the hosted Roost |
 | **Pod** (`src/syndicate/pod.js`) | Sub-swarm with a capital cap (`SCOUT`, `EXECUTION`, `RISK`, `CREDIT`) | **Model**; no on-chain enforcement |
 | **OutLayer** (`src/policies/outlayer.js`) | Spending and receiver limits for autonomous Flyers | **Model** |
 | **FAR Shard / IMT** | Private shard; IMT balances 1:1 with locked collateral | **Model** |

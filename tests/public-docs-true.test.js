@@ -7,7 +7,7 @@ import path from 'node:path';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
-const DOCS = ['README.md', 'docs/canonical/CURRENT_STATE.md', 'docs/security/threat-model.md', 'docs/hackathon-submission.md'];
+const DOCS = ['README.md', 'docs/README_FULL.md', 'docs/START_HERE.md', 'docs/canonical/CURRENT_STATE.md', 'docs/security/threat-model.md', 'docs/hackathon-submission.md'];
 const jsonl = (p) => read(p).split('\n').filter(Boolean).map((l) => JSON.parse(l));
 const claims = jsonl('foundry/claims.jsonl'); const gaps = jsonl('foundry/gaps.jsonl');
 const deployments = JSON.parse(read('docs/canonical/deployments.json')).deployments;

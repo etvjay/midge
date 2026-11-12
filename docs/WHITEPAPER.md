@@ -411,7 +411,7 @@ What runs without keys: `make verify`. Live checks need a NEAR key, a Phala key 
 ## Reproduce
 
 ```bash
-make verify          # Rust, WASM, the architectural suite and the Foundry check; about 100 s, no keys
+make verify          # Rust, WASM, the architectural suite and the Foundry check; about 100 s warm and about 6 minutes on a fresh clone, no keys
 make check           # the control plane: claims, gaps, invariants, the state-machine document
 node --test tests/whitepaper-true.test.js   # that this document still cites only what exists
 npm run baseline     # the simulation in section 4

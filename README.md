@@ -1,413 +1,242 @@
-# Midge: Private Rooms with Public Rules, on NEAR
+# Midge
 
-Midge lets a group make a decision in private and pay out money under rules that everyone can read. Members deposit into a program on the NEAR blockchain (a smart contract), and its rules fix who can be paid, how much can leave in a given period, and by what date. Members send their bids, votes or amounts to a private room that only protected hardware can open, and the room works out one result and asks the contract to pay it. The contract pays only when the result fits the rules, and any member can take back their own share alone after a waiting period, even if the room stops working.
+Private rooms with public rules, on NEAR.
 
-Deposits, balances and payments are public on NEAR, and so are the rules and the list of accounts that may be paid. What stays private is what members bid, vote or decide. Everything that runs on a chain runs on a testnet.
+A group decides in private and pays out under rules that everyone can read. Members deposit into a smart contract whose rules fix who can be paid, how much can leave in a period, and by what date. Members send their bids, votes or amounts sealed to a room that runs in secure hardware. The room works out the result and signs it, and the contract pays only what fits the rules.
 
-The words used in this repository are defined in [`docs/GLOSSARY.md`](docs/GLOSSARY.md). In the code, a group is called a syndicate, the room is called the Roost and is run by a host, the rules are called the Nest (the contract), and the exit is called `hatch_out`.
+> Decide in private. Settle in public. Leave on your own if the room disappears.
 
-> Naming: Midge was previously called "Fly". Internal identifiers keep the old codename on purpose (the `fly-coordinator` crate, `FlyNestContract`, the `FLY_*` environment variables, and the deployed testnet account `c.fly-1793636729.testnet`), so the on-chain evidence and the reproducible-build hash in this README stay valid. Midge is an independent hackathon prototype with no token, and it is not affiliated with Fly.trade or Fly.io.
+**Chain:** NEAR testnet
+**Site:** https://midge.vercel.app (not yet updated for the latest hardware runs)
+**Demo video:** link added at submission
+**Playground:** in progress. Until it exists, the commands below check everything.
 
----
+### [Start here](docs/START_HERE.md)
 
-## 1. What Midge does and why
+The start-here guide gives the commands that check this project, what each one proves, and what it skips.
 
-Groups of autonomous AI agents and groups of people who pool money face three problems when they coordinate on public blockchains. Whoever holds the money can lose it or take it (custody risk), other people can see a plan and trade against it (information leakage, often called alpha leakage), and the group cannot act when a key is lost or a service stops (liveness failure).
+Deposits, balances and payments are public on NEAR, and so are the rules and the list of accounts that may be paid. What stays private is what members bid, vote or decide. Everything that runs on a chain runs on a testnet. The words used here are defined in [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
-### The problem, with figures
-
-The research below shows real losses, and the sources differ in scope, so the figures cannot be added into one global number.
-
-- Public transactions leak plans. EigenPhi research on Ethereum exchanges estimates about $60 million a year in trader losses to sandwich attacks, falling from nearly $10 million a month in late 2024 to about $2.5 million by October 2025, across 60,000 to 90,000 attacks a month on $65 billion to more than $100 billion of exchange volume, and block builders captured most of it through priority gas fees. On Solana, Bitquery research found 6.9 million sandwich attacks that affected 2.2 million wallets and extracted about $29.7 million before costs between October 2025 and October 2026, and swaps that allowed 20% to 50% slippage were caught 14 times as often as swaps that allowed under 3%.
-- Transaction graphs leak identities. A 2025 study of Tornado Cash linked 5.1% to 12.6% of deposits to withdrawals by using address reuse and transaction graphs, and up to 34.7% when it assumed first-in-first-out timing. Public transaction graphs can undo private computation when the funding trail is visible.
-- Agent infrastructure is early. Coinbase AgentKit reports more than 20,000 deployed agents and more than 600,000 transactions, combining Base and the Base Sepolia testnet, and the amount of real capital that autonomous agent groups manage is still early and unmeasured.
-
-### Why existing approaches fall short
-
-A shared wallet that needs a committee vote for every payment is slow, it exposes payment details to bots that watch pending transactions, and it can deadlock when keys are lost. A service that runs code in secure hardware and controls the funds itself depends on its operator for recovery. Midge keeps the money and the rules in a public contract, keeps the inputs private, and lets each depositor leave alone.
-
-### How Midge works
-
-Midge separates coordination from custody. It has four parts.
-
-- Public escrow on NEAR. Deposits, depositor accounts and available escrow balances are public on NEAR (`contracts/fly-coordinator`).
-- A private room. Members seal their bids, ballots or amounts so that only the room can open them, and they sign each one with their NEAR key. The room is run by a host in secure hardware that proves which code it is running, and two kinds are built. Our own program runs on Phala (Intel TDX), opens the sealed inputs, does the arithmetic exactly, and signs a result only if it fits the rules. It verified 12 of 12 attestation checks on a real TDX machine, it ran a full round together with the NEAR AI advisor on testnet, and since 2026-11-11 it has run a pool, a lending quote, a ballot, a request for quote on both the buy and sell side, and a pay run on real hardware, each settled on the production contract. The second kind is the NEAR AI Cloud model-sealed host, which seals inputs to an attested model key and lets a language model do the sum, accepting the answer only if three runs agree (8 of 8 live rounds were exact). The attested NEAR AI model also acts as an advisor that proposes how to split a total and sees only the total. Without a NEAR AI key the room falls back to a local simulation that can read every bid, and it says so at startup. A group can also use two hosts that must both sign, which is tested on testnet with two local hosts and not yet on two machines.
-- Limited authority over settlement. The room never holds money, it cannot hold withdrawal keys, and it cannot direct arbitrary payouts. It can only propose a settlement that fits the group's fixed `ReleasePolicy`, which lists the allowed recipient accounts, a release cap paced over time windows of twice the exit timer, and deadlines. Depositors consent to the policy and to the exit timer when they deposit (since GAP-025), and the contract refuses a timer under 10 blocks, which is a sanity floor and not a recommendation. The pacing is only as strict as the timer a group chooses, and groups opened before that fix keep the old rules.
-- Independent recovery (`hatch_out`). If the room or its operator crashes, stalls or disappears past `timeout_blocks`, any depositor can take back 100% of their remaining eligible balance directly from the contract. The exit needs no cooperation from the operator and no signature from the room, and it does not touch any other member's escrow.
-
-### What is shown, and what is not yet
-
-Shown, with promoted and hash-verified runs in `docs/lab-runs/` and a ledger entry for each claim in `foundry/claims.jsonl`:
-
-- The contract is live on testnet with signed one-use settlements, per-member charges, a release cap and the permissionless exit.
-- The hosted room has run on real Phala TDX hardware and settled on the production contract, including a pay run with payee-signed invoices and an auditor pack.
-- A contract has asked NEAR's signer for payments that landed on Solana devnet and Ethereum Sepolia.
-
-Not shown yet:
-
-- Anything on mainnet.
-- Independent operators. One operator ran every room and every account in the tests.
-- Confidential amounts. Deposits, balances and payments are public on NEAR, so payroll offers private payees and private receipts, and its amounts are public.
-- Private rules. The rules, the allowed recipient accounts and every payment are public on NEAR, so an outside observer can see who may be paid, the limits, and who was paid. Hiding the rules from outsiders while the contract still enforces them would need commitments or zero-knowledge proofs, and neither is built.
-- The contract's deployer key has not been deleted yet (GAP-044), so whoever holds it could change the testnet contract.
-
-### Roadmap
-
-Three steps would reduce what an outside observer learns from the public rules. None is built, and the details are in [`docs/ROADMAP.md`](docs/ROADMAP.md).
-
-- Commit to the rules and reveal only what is used. The contract would store a hash of the allowed recipients, and only the accounts that are paid would appear. It needs a contract change and a redeploy.
-- Prove that a payment fits hidden rules with a zero-knowledge proof. It would hide the rules completely, but the payment itself stays public, and it would take weeks.
-- Pay out through NEAR Confidential Intents. It would hide the amounts and counterparties of the payout, but it needs a partner token and mainnet, and its validators are permissioned.
+**The fastest way to judge this project needs no keys and no wallet.** Run `npm ci`, then `npm run verify:fast` (about 30 seconds) and `npm run verify:onchain`. The second one reads the live contract from the chain and compares its code hash with the one recorded in this repository. A page that does the same in your browser is being built. To see the pay run paper trail, run `npm run demo:paper-trail`.
 
 ---
 
-## 2. Measured Economic Baseline Simulation
+## The problem
 
-To quantify the economic benefit of confidential sealed-intent aggregation over transparent mempools, Midge includes a fully reproducible Monte Carlo simulation (`scripts/baseline.js`) evaluating an 8-agent swarm executing swaps against a Constant Product Market Maker (CPMM) AMM pool ($x \cdot y = k$, $396,000 USDC / 100,000 wNEAR, reference price $3.96/wNEAR derived from the live 1Click API registry):
+A group that pools money on a public chain has two bad choices. If the plan is public, everyone can see it and trade against it. If one operator holds the money, the operator can lose it or take it, and the group depends on that operator to get it back.
 
-| Metric | Public Sequential Execution (Mempool + MEV Bot) | Midge Sealed-Intent Batch (Uniform Clearing) | Delta / Economic Benefit |
-| :--- | :--- | :--- | :--- |
-| **Realized Slippage** | 16.67% ± 0.37% (95% CI: [16.30%, 17.05%]) | 15.60% ± 0.37% (95% CI: [15.23%, 15.97%]) | **-1.07% Lower Slippage** |
-| **Adversary MEV Profit** | $519.44 ± $16.00 (95% CI: [$503.44, $535.43]) | **$0.00 ± $0.00** | **Zero by assumption** (the modelled adversary cannot see sealed intents) |
-| **Net Value Preserved** | Baseline Exposure | **+$481.09 ± $10.06 Saved** | **+$481.09 per 8-Agent Swarm** |
+Midge splits the job. The contract holds the money and enforces the rules. A room in secure hardware opens the sealed inputs and works out the result, and it can only propose a payment the rules allow. Any member can take their own share back after a timer, with no help from the room or its operator.
 
-*Read this as a model, not a measurement.* The adversary profit is zero because the simulation assumes a sealed batch hides intents from the adversary; it prices that exposure and does not show it on a live network. Deposits and balances remain public on NEAR L1.
+## How it works
 
-*Methodology & Reproducibility:* $N = 100$ independent runs, deterministic seed `0x464c59`, 95% Student's $t$-distribution confidence intervals.  
-Run command: `npm run baseline` (or `node scripts/baseline.js`). Output recorded in [`docs/canonical/baseline-simulation.json`](docs/canonical/baseline-simulation.json).
+```mermaid
+graph TD
+  Members["Members<br/>deposit, agreeing to the rules"] --> Contract
+  Members --> Inputs["Sealed, signed inputs<br/>bids, votes, amounts"]
+  Inputs --> Room["The room<br/>secure hardware, pinned code"]
+  Room --> Result["One result<br/>and a signature over it"]
+  Result --> Contract["The contract on NEAR<br/>holds the escrow and the rules"]
+  Contract --> Pay["Pays only what fits the rules"]
+  Contract --> Exit["Any member can take back their own share after the timer"]
+```
 
----
+The room never holds money, and it holds no withdrawal key. Before the contract pays, it checks five things about the room's settlement, shown below. A settlement that fails any check is refused and nothing moves.
 
-## 3. Judge & Evaluator Reproduction Guide ("Do X, See Y")
+```mermaid
+graph LR
+  Settle["Room submits a settlement"] --> Sig["Signature is from the room key<br/>fixed when the group was created"]
+  Sig --> Round["It names the current round<br/>so an old one cannot be replayed"]
+  Round --> Who["Every recipient is on the allowed list"]
+  Who --> Cap["Amounts fit the release cap<br/>and each member's escrow"]
+  Cap --> Time["It arrives before the deadline"]
+  Time --> Paid["Pays and charges each member"]
+  Sig -->|any check fails| Refused["Refused, nothing moves"]
+  Round -->|any check fails| Refused
+  Who -->|any check fails| Refused
+  Cap -->|any check fails| Refused
+  Time -->|any check fails| Refused
+```
 
-Midge provides a zero-setup, deterministic verification harness requiring standard Node.js (v18+) and Cargo/Rust (1.80+). All verifications can be inspected with a single canonical command:
+The exit does not depend on the room. If the room stalls or its operator disappears past the timer, a member calls `hatch_out` and gets back their own remaining balance. It touches no other member's escrow.
+
+```mermaid
+graph LR
+  Stall["Room stalls or disappears"] --> Timer["Timer passes<br/>set when the group was created"]
+  Timer --> Call["A member calls hatch_out"]
+  Call --> Back["Their own remaining balance returns<br/>no one else's is touched"]
+```
+
+The hardware proves which code the room runs, through a Phala TDX attestation checked against the Intel certificate chain and a pinned image. It does not prove the code is bug free, and the room can read the inputs it is given. The trust model is in [`docs/WHITEPAPER.md`](docs/WHITEPAPER.md).
+
+## What the room can do
+
+| Program | What the room does | Where it has run |
+|---|---|---|
+| Pay run | Checks payee-signed invoices against the employer's lines, pays one-time addresses and the tax and benefits accounts, gives each payee a signed private receipt, and opens chosen lines for an auditor | Real hardware |
+| Sealed quotes (RFQ) | Buy and sell side. The lowest eligible ask or the highest eligible bid wins, and the taker's side stays sealed | Real hardware |
+| Ballot | Counts signed ballots by head or by weight, with a majority, plurality or supermajority rule, and publishes only the winner | Real hardware |
+| Pool | Totals sealed amounts into one payment and charges each member their own. Over a cap it takes amounts first-come or scales all of them pro rata | Real hardware |
+| Auction | First-price, second-price and uniform-price, with a reserve | Testnet, on a local host |
+| Block trade | A pro-rata cross | Testnet, on a local host |
+
+A settlement pays at most 8 recipients (GAP-053).
+
+## The paper trail
+
+A pay run leaves two records. NEAR holds the public one, and the room holds the private one. A single hash that the contract records with the payment ties them together, so each side can be checked against the other.
+
+- **Signed invoices.** Each payee signs an invoice for the exact amount and address they ask for, and seals it to the room. If any line differs from its invoice, the room refuses the whole run and keeps the employer's queue.
+- **The sub-transaction view.** The chain shows one transfer to the tax account, one to the benefits account, and one to each payee's one-time address. The employer's statement shows every line behind them, and the lines add up to the transfers exactly.
+- **Private receipts.** Each payee gets a signed receipt that carries the hash of their own invoice, and checks it against the order hash on the chain. A changed receipt fails, and no other payee's key opens it.
+- **The auditor pack.** The employer chooses which lines to open and signs that request with their account key. The auditor verifies those lines against the chain and sees no other person, and an accountant can be given totals with no names or addresses.
+
+Run it on your machine in under a second, with no keys:
 
 ```bash
-./scripts/verify
-# or: make verify
-# or: npm run verify
+npm run demo:paper-trail
 ```
-**No Rust toolchain?** The checks that need only Node.js take about 30 seconds and passed on a clean checkout:
+
+It runs the same room code that runs on the hardware, with a simulated attestation, and exits 1 if any check fails. The part that shows the sub-transaction view looks like this:
+
+```text
+5. The sub-transaction view: the private lines add up to the public transfers
+  ✓ the 4 tax lines add up to the one tax transfer (0.027)
+  ✓ the 4 benefits lines add up to the one benefits transfer (0.009)
+  ✓ each person's net equals the transfer to their one-time address
+  ✓ the gross lines add up to what the employer is charged (0.18)
+  ✓ every transfer together equals the employer's charge, so nothing is created or lost
+```
+
+The same flow ran on real hardware in `docs/lab-runs/20261112T031407Z-8c64`, and the full loop is told below. An optional review by an attested NEAR AI Cloud model reads a redacted version of the run, flags what looks wrong in the tax and benefits lines and what could let an outsider guess who was paid, and has its findings checked by code. It is advice only and never changes a run. The limits are plain: amounts and addresses are public on NEAR, so a person with a unique and unchanged salary can still be matched across months.
+
+## The contracts on testnet
+
+| Account | What it is | Code hash |
+|---|---|---|
+| [`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet) | The contract every claim here is about. It holds the escrow, the rules, the signed one-use settlements and the exit. | `BVcq86Wz5Q3kcdBdcUhfQVfQtC6CmGwcXuMd52aW6gTp`, live since 2026-11-11 06:38 UTC |
+| `m.fly-1793636729.testnet` | A copy the lab uses for experiments that need a build with a test-only setting. It is not the contract being judged. | Its own build |
+
+The contract has run 12 code hashes in all, and [`docs/canonical/deployments.json`](docs/canonical/deployments.json) lists each one with the reason for the change. The source is in `contracts/fly-coordinator`, and the build reproduces the deployed bytes (CLM-BUILD-MATCHES-DEPLOYED-01).
+
+**What has actually run**, each with a recorded run you can check offline:
+
+| Stage | Evidence |
+|---|---|
+| The room on real Phala TDX hardware, settling on the contract | `docs/lab-runs/20261112T173152Z-e25d` |
+| Pay run with signed invoices, private receipts and an auditor pack | `docs/lab-runs/20261112T031407Z-8c64` |
+| Sealed quotes, buy side and sell side | `docs/lab-runs/20261112T032202Z-a3a8`, `docs/lab-runs/20261112T032438Z-98db` |
+| Signed ballot, then a weighted supermajority ballot | `docs/lab-runs/20261112T032730Z-3b68`, `docs/lab-runs/20261112T173152Z-e25d` |
+| Pools, first-come and pro-rata | `docs/lab-runs/20261112T031652Z-b62e`, `docs/lab-runs/20261112T173152Z-e25d` |
+| A contract asks an OutLayer program to sign a settlement, and the group settles | CLM-OUTLAYER-CONTRACT-01 |
+| A contract asks NEAR's signer for a payment on Solana devnet and Ethereum Sepolia | CLM-CONTRACT-FOREIGN-01 (Chain Signatures, LIVE on testnet) |
+| An optional AI review of a pay run, checked by code, against the attested NEAR AI Cloud model | `docs/lab-runs/20261112T173632Z-569c` |
+
+A replay of an earlier settlement was recorded and refused because the group was already settled, not for a nonce mismatch.
+
+## One full loop
+
+The run `docs/lab-runs/20261112T031407Z-8c64` is a complete pay run on real hardware, and the detailed report is next to it in `report.md`. First, a Phala TDX machine started the room, and the checker verified its hardware attestation and the pinned code before any member trusted it. Second, an employer and three payees sent sealed, signed lines and invoices, and the room refused the run because one invoice said 0.03 and the approved line said 0.035. Third, after the line was corrected the room signed a settlement, and the contract accepted it in transaction [`J7xyrFuf…`](https://testnet.nearblocks.io/txns/J7xyrFufPi9Lv2FWQn56cxWwqzfHyzC53gJYU7wNkQGV). Fourth, the chain showed exact amounts, 0.043 to one payee, 0.012 to the tax account and 0.006 to the benefits account, and the employer was charged the gross total. Fifth, each payee opened their own signed receipt and checked it against the order hash on the chain, and another payee's key could not open it. Sixth, the employer opened one line for an auditor, who verified it against the chain and saw no other person. Seventh, the accounts, the group and the machine were deleted, at a cost of about $0.002. Amounts and recipients stay public on NEAR, so what the loop hides is who each address belongs to.
+
+## Verify it yourself
+
+You need Node.js 18 or newer. The full check also needs Rust.
 
 ```bash
-npm run test:unit        # the JavaScript tests, including the document-truth and cross-surface checks
-make check               # the claims and gaps ledgers, and that every new experiment's predictions were written first
-node lab/verify-run.js docs/lab-runs/20261111T220404Z-581c   # re-checks one promoted hardware run's hash chain offline
+npm ci
+npm run verify:fast                       # about 30 seconds, Node.js only: the JavaScript tests and the claims ledgers
+./scripts/verify                          # the whole check, about 6 minutes on a fresh clone, no keys
+npm run verify:onchain                    # reads the live contract and compares its code hash with the one recorded in deployments.json
+node lab/verify-run.js docs/lab-runs/20261112T173152Z-e25d   # re-checks one recorded hardware run offline
 ```
 
-The hosted-room experiments need Phala credentials to re-run; the promoted runs in `docs/lab-runs/` are what you can check offline.
+The full check exited 0 on a fresh clone of `master` on 2026-11-12. Two checks skip without keys, which are the live NEAR AI inference check and anything that rents hardware. The hardware runs cannot be repeated without a Phala account, so their logs are in `docs/lab-runs/`, hash-chained so a change to any event shows.
 
-**A note on history.** On 2026-11-12 the history of `master` was rewritten once to remove a directory committed by mistake. The tree is identical before and after; 12 commit ids changed, and a few records (nine lab-run logs and the pinned image's build attestation) name an old id. The mapping and the reasoning are in [`docs/canonical/COMMIT-MAP-2026-11-12.md`](docs/canonical/COMMIT-MAP-2026-11-12.md).
+- The contract has 174 Rust tests (unit, integration, invariant and state machine). The JavaScript side has 473 tests, which include checks that this README and the other public documents agree with the code.
+- The lab has 66 experiments with a recorded run, and 65 have at least one passing run. The one exception failed on hardware, is kept as a failure and is explained in GAP-046.
+- Each experiment states its predictions before it runs. Failed runs are kept. The AI review of a pay run, for example, failed twice before it passed, and all three runs are in `docs/lab-runs/`.
+- Every claim has an entry in [`foundry/claims.jsonl`](foundry/claims.jsonl) with the command that reproduces it, and every known problem, open or closed, is in [`foundry/gaps.jsonl`](foundry/gaps.jsonl).
 
-*Total verification runtime: about **100 s** on the author's machine (deterministic; 174 Rust tests; the full node and lab suites; on-chain RPC read with an 8 s deadline; no external keys needed). The first version of this suite ran in under 2 s; it has grown since.*
+## Install and run
 
----
-
-### Step 0: Run the Live Autonomous Agent Testnet Demo
-* **Do:**
-  ```bash
-  npm run demo
-  # or: make demo
-  # or: node scripts/demo.js
-  ```
-* **See:**
-  - An autonomous agent discovers syndicates via Model Context Protocol (MCP) tool `midge_list_syndicates`.
-  - Hatches a syndicate with bounded `ReleasePolicy` (allowlisted recipient, 10,000 BPS cap, block deadline).
-  - Autonomous flyers deposit escrow with cryptographic policy consent.
-  - **Security Proof A:** Enclave signature attempting to route funds to an account that is not on the allowed list is **rejected on-chain** with failure receipt (the payout named a recipient, `f2.fly-1793636729.testnet`, that was not on the allowed list; [`ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh`](https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh)).
-  - **Security Proof B:** Enclave signature attempting to exceed the per-epoch release cap is **rejected on-chain** ([`pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW`](https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW)).
-  - **Valid Settlement:** Deliberation inside Intel TDX Roost settles a batch payout (6.14 TGas burnt across the transaction and its receipts, read from an archival node on 2026-11-08; [`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF)).
-  - **Sovereign Escape Hatch:** Stalled enclave exits unilaterally via `midge_hatch_out`, refunding 100% of the member's escrow (5.32 TGas burnt the same way; [`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB)).
-
----
-
-### Step 1: Inspect Live NEAR Testnet Deployment & Transactions
-Midge is deployed and live on NEAR Testnet at coordinator account:  
-👉 **[`c.fly-1793636729.testnet`](https://testnet.nearblocks.io/address/c.fly-1793636729.testnet)**
-
-#### Reproducible WASM Build & Cryptographic Verification
-* **Toolchain:** `rustc 1.84+ / cargo 1.98.0` with `wasm32-unknown-unknown`
-* **Build Command:**
-  ```bash
-  cd contracts/fly-coordinator && RUSTFLAGS="-C link-arg=-s" cargo build --target wasm32-unknown-unknown --release
-  ```
-* **Release Binary:** `contracts/fly-coordinator/target/wasm32-unknown-unknown/release/fly_coordinator.wasm` (522,781 bytes; on 2026-11-11 a rebuild with the toolchain on the development machine hashed to `BVcq86Wz…`, the production contract's on-chain code hash, and `E-CHAIN-ROUND-LOCAL` fails if it does not; this is shown for that one toolchain on that one machine, not for any other)
-* **On-Chain Code Hash:** `BVcq86Wz5Q3kcdBdcUhfQVfQtC6CmGwcXuMd52aW6gTp` (deployed 2026-11-11: the signer path names the group's creation block, so a freed and re-hatched group id cannot take over the old group's foreign addresses). Earlier hashes (`EULUXozH…` from 2026-11-11, the first foreign-payment build, whose signer path was the bare group id; `854fzUj2…` from 2026-11-08, a never-funded group can be removed; `FMVXMpB3…` with the round-naming follow-up and the `get_group_phase` view, `AFtZmiNS…` from the 2026-11-08 security-audit fixes, `Gh8NAA2e…`, `9y8w4PU5…`, `4Zzj8DuT…` and others) are superseded; each is listed with the defect it carried in `docs/canonical/deployments.json`, and evidence recorded earlier cites the hash that was live then.
-* **Contract Specification:** [`contracts/fly-coordinator/README.md`](contracts/fly-coordinator/README.md)
-
-* **Do (Independent On-Chain Verification):**
-  ```bash
-  npm run verify:onchain
-  # or: node scripts/verify-onchain.js (use --offline when without network)
-  ```
-* **See (10 Cryptographically Verified Transactions on NEAR Testnet Ledger):**
-  - **Happy Path (Bounded Settlement Authority with ReleasePolicy):**
-    1. **Syndicate Hatch:** [`3x3WcdZeZn8hKeQ3JMUp5QZUzLSqibE93JcTTxCszbht`](https://testnet.nearblocks.io/txns/3x3WcdZeZn8hKeQ3JMUp5QZUzLSqibE93JcTTxCszbht) — Binds immutable `ReleasePolicy` whitelist and records policy hash `a21710781748478e...`.
-    2. **Flyer 1 Deposit (0.02 NEAR):** [`6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT`](https://testnet.nearblocks.io/txns/6pSSdmikbqSe6i6UTsrgAPXo9s7AXEsy5fY3RneuJfuT) — Depositor explicitly consents to `policy_hash`.
-    3. **Flyer 2 Deposit (0.02 NEAR):** [`3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm`](https://testnet.nearblocks.io/txns/3psg5UnW8W5po5XtdU6MGEqizJf9brMCtuceJhdwmEYm) — Depositor explicitly consents to `policy_hash`.
-    4. **Batch Settlement (6.14 TGas burnt in total):** [`F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF`](https://testnet.nearblocks.io/txns/F1bNKiN4CyPR8v2AxCR4UAiTJ7uhWRLieDnJ6LaHQseF) — Verifies Ed25519 6-tuple signature over sorted `allocations_hash`, applies pro-rata balance deductions with exact dust conservation, and dispatches 0.04 NEAR payout.
-  - **AI Security & Defense Track Attack Demos (On-Chain Rejection Proofs):**
-    5. **[Security Proof] Non-Whitelisted Recipient Rejection:** [`ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh`](https://testnet.nearblocks.io/txns/ExMmWDawYYjZ7gyg3KZe4Hpf6YZJx68Pjzrw7M4bmLAh) — Enclave signature attempting to route funds to an unauthorized address was **rejected on-chain** with failure receipt.
-    6. **[Security Proof] Over-Cap BPS Release Rejection:** [`pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW`](https://testnet.nearblocks.io/txns/pH4syNzprgLHb5f8sVxrS8krPufbx4kL8g5Sve3A4fW) — Settlement attempting to exceed the group's release cap was **rejected on-chain** ("Allocation sum exceeds max_release_bps_per_epoch cap").
-    7. **[Security Proof] Second Settlement Rejection:** [`FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg`](https://testnet.nearblocks.io/txns/FMpQxKoBP8dvqdJaB5hHWaHnWYwF9qzPVUx9RAYgxErg) — A settlement submitted again for a group that had already settled was **rejected on-chain** because the group was already settled ("Syndicate is not active"). That shows a replay cannot pay twice; the nonce check itself (C-05) is covered by the contract's tests and was exercised live in a separate experiment: an earlier round's signed settlement replayed after a later round was refused for a nonce mismatch (`docs/lab/ONGOING_RESULTS.md`, `E-ONGOING-01`).
-  - **Stalled Enclave Escape Hatch (`hatch_out`):**
-    8. **Escape Hatch Syndicate Hatch:** [`GEWxs59E2xxnDTUQajBzTNvUKgRgzsKFCcrQxVpgjmmp`](https://testnet.nearblocks.io/txns/GEWxs59E2xxnDTUQajBzTNvUKgRgzsKFCcrQxVpgjmmp)
-    9. **Flyer 2 Escape Deposit:** [`DzQvbzpfwPhS59CyESMAwW2YMcBTkzYV341utodbwYAh`](https://testnet.nearblocks.io/txns/DzQvbzpfwPhS59CyESMAwW2YMcBTkzYV341utodbwYAh)
-    10. **Non-Custodial Escape Hatch (5.32 TGas burnt in total):** [`BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB`](https://testnet.nearblocks.io/txns/BiKpqM7jFkVZxex985V9hjJ7mcqpgWbjtXBEL2u7FbZB) — Sovereign refund of 100% escrow balance executed without operator action.
-  - **Multi-Syndicate Discovery:**
-    - `list_syndicates()` returned 6 active/settled syndicates on testnet.
-    - `list_syndicates_by_member("f2.fly-1793636729.testnet")` returned 3 syndicates on testnet.
-
----
-
-### Step 1: Run Canonical Complete Verification
-* **Do:**
-  ```bash
-  ./scripts/verify
-  ```
-* **See:**
-  - `[STEP 1/6]` The NEAR L1 Rust smart contract tests (unit, integration, invariant and state-machine tests; 174 by default, pinned by lab experiment `E-RUST-CONTRACT`) pass with Clippy and Fmt (`near-sdk 5.1`).
-  - `[STEP 2/6]` Release WebAssembly contract compiles cleanly to `target/wasm32-unknown-unknown/release/fly_coordinator.wasm`.
-  - `[STEP 3/6]` 8-layer cryptographic verification suite executes, validating live Intel TDX DCAP verification, 1Click asset registry, escape hatch FMEA, Dark Vault MPC, confidential RFQ & OTC, resilience matrix, and live NEAR AI Cloud TEE inference response signature.
-  - `[STEP 4/6]` Independent on-chain verifier audits 10 live testnet transactions & cryptographic attack rejection proofs on `c.fly-1793636729.testnet`.
-  - `[STEP 5/6]` Builder Foundry Control Plane passes with 0 invariant violations across the claims and gaps ledgers (`foundry/claims.jsonl`, `foundry/gaps.jsonl`).
-  - `[STEP 6/6]` The JavaScript test suite (`tests/*.test.js`, over 460 tests) passes, including the tests that keep the documents true and one cross-surface check that links every claim to a passing, hash-verified run (`tests/system-wholeness.test.js`).
-
----
-
-### Step 2: Verify Live Intel TDX DCAP-QVL Remote Attestation
-* **Do:**
-  ```bash
-  npm run verify:tee
-  ```
-* **See:**
-  - Generates a fresh 32-byte cryptographic session nonce.
-  - Queries `https://cloud-api.near.ai/v1/attestation/report` for active enclave model `Qwen/Qwen3.6-35B-A3B-FP8`.
-  - Parses raw 5,006-byte Intel TDX Quote v4 binary: verifies Quote Version (4), Attestation Key Type (2: ECDSA-256), and TEE Type (0x81: Intel TDX).
-  - Validates `REPORTDATA` 64-byte field binding the gateway signer and client nonce.
-  - **DCAP-QVL Verification:** Executes `dcap-qvl verify` validating Intel PCK certificates, SGX/TDX Intermediate CA, and Intel SGX Root CA. Reports TCB status `UpToDate` with 0 security advisories.
-  - **Tamper Resilience:** Mutates a byte in the TD Report and confirms DCAP immediately rejects it with cryptographic failure.
-
----
-
-### Step 3: Verify Live NEAR Chain Signatures MPC Call
-* **Do:**
-  ```bash
-  npm run verify:mpc
-  ```
-* **See:**
-  - Connects to NEAR Testnet and queries the official MPC signing contract: `v1.signer-prod.testnet`.
-  - Derives omnichain public keys and native addresses:
-    - **EVM (Ethereum / Arbitrum / Base):** `0x0309Dbc3e7F5C40Bb957723Cebb4BE5329BB22c0`
-    - **Bitcoin Taproot (BIP-341/350 bech32m):** `tb1p6ju0fp902dwqfxk80k82cdtj2kk3eutdez7xwqxap3p4ydvfkj8qyldyzl`
-    - **Solana Ed25519 (Base58):** `FKP1RDHJnkxGNx8umRSNzp1k15UM9P2W6dFZDFEGATz5`
-  - Calls `sign` on `v1.signer-prod.testnet` (tx: [`6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk`](https://testnet.nearblocks.io/txns/6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk)).
-  - Reconstructs uncompressed ECDSA public key from $(r, s, v)$ and cryptographically verifies it against the derived key byte-for-byte.
-
----
-
-### Step 4: Verify Hatch Protocol & Escape Hatch FMEA
-* **Do:**
-  ```bash
-  npm run verify:hatch
-  ```
-* **See:**
-  - Audits local OutLayer deposit caps and Ed25519 signature bounds.
-  - Directly queries deployed testnet contract (`c.fly-1793636729.testnet`) via public RPC without keys:
-    - Confirms `syn-flash-1793637420` reached `Settled` with 0 escrow remaining and 0.06 NEAR paid.
-    - Confirms `syn-escape-1793637435` reached `AbortedRefunded` with 0 escrow remaining after unilateral `hatch_out`.
-
----
-
-### Step 5: Verify HTTP Daemon, SSE, x402 & MCP Tooling
-* **Do:**
-  ```bash
-  npm run verify:api
-  ```
-* **See:**
-  - Boots `FlyApiDaemon` on ephemeral port.
-  - Verifies Server-Sent Events (SSE) streaming at `/v1/stream/syndicate/{id}`.
-  - Executes x402 micro-commerce flow: initial HTTP 402, payment invoice generation, HMAC bearer proof verification, and protected resource release.
-  - Audits Model Context Protocol (MCP) server: 18 tools exposed to LLM agents, of which the syndicate tools are (`midge_hatch_syndicate`, `midge_deposit`, `midge_settle`, `midge_hatch_out`, `midge_list_syndicates`, `midge_get_my_syndicates`, `midge_submit_sealed_intent`, `midge_verify_haq_attestation`, `midge_create_confidential_rfq`, `midge_match_otc_block`), and the rest drive the hosted rooms (`midge_describe_rooms`, `midge_open_room_round`, `midge_submit_room_input`, `midge_run_room`, `midge_abandon_room_round`). The first five syndicate tools are chain-backed in `FLY_MODE=chain` (they need write credentials and refuse otherwise); the RFQ and OTC tools drive the simulated facilities; `midge_verify_haq_attestation` reports `NOT_VERIFIED` for a local simulation Roost.
-  - Verifies Security Controls: public `/health`, protected `/v1/roost/session-key?syndicateId={id}` returning HTTP 401 without `X-Midge-Api-Key` and HTTP 200 with it, and payload limit guard (>512KB rejected with HTTP 413).
-
----
-
-### Step 6: Run Autonomous Syndicate Network Demo
-* **Do:**
-  ```bash
-  npm run demo:network
-  # or: node scripts/network-demo.js
-  ```
-* **See:**
-  - Demonstrates multi-syndicate network topology: 3 specialized autonomous syndicates (`syn-research-alpha`, `syn-trading-beta`, `syn-compute-gamma`) hosted within the single coordinator contract.
-  - Cross-syndicate agent membership: `agent-cross.near` concurrently participates as a depositor in Alpha (Research) and Beta (Trading).
-  - On-chain registry discovery: queries `list_syndicates(from, limit)` and `get_syndicates_by_member(account_id)` via secondary index.
-  - Inter-syndicate value exchange: Beta purchases proprietary volatility alpha from Alpha using the x402 payment scheme.
-  - Concurrent execution lifecycles: Beta achieves quorum and settles batch payout, while stalled Gamma safely executes non-custodial `hatch_out` refunds with 0 stuck escrow.
-
----
-
-## 3. Real vs. Simulated Implementation Matrix
-
-To ensure complete transparency and intellectual honesty for human and automated AI judges (Claude Code, Codex), the following table documents the exact execution status of every protocol component:
-
-| Component | Implementation File | Status | Nature | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| **NEAR L1 Smart Contract** | `contracts/fly-coordinator/src/lib.rs` | **LIVE DEMONSTRATED** | **DEPLOYED & REAL CODE** | Deployed to testnet at `c.fly-1793636729.testnet` (code hash `BVcq86Wz5Q3kcdBdcUhfQVfQtC6CmGwcXuMd52aW6gTp`, deployed 2026-11-11). Written in Rust (`near-sdk 5.1`). 174 Rust tests (unit, integration, invariant, state-machine). Real on-chain settlements, escape-hatch refunds, and three rejection transactions recorded on an earlier deployment (a payout to an unlisted account, a payout over the cap, and a second settlement of an already-settled group). |
-| **TEE Remote Attestation** | `verifications/01-hardware-attestation.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & DCAP-QVL** | Queries live NEAR AI Cloud (`cloud-api.near.ai/v1/attestation/report`) with fresh nonces. Parses binary Intel TDX Quote v4. Verified via `dcap-qvl` to Intel SGX Root CA with TCB `UpToDate`, 0 advisories, and tamper rejection. (GAP-006 CLOSED). |
-| **Chain Signatures MPC** | `scripts/testnet-mpc.js`, `src/multichain/chain-signatures.js` | **LIVE DEMONSTRATED** | **LIVE EXTERNAL & MPC SIGNED** | Executed live threshold signing on `v1.signer-prod.testnet` (tx: `6ekiiKnp7QGMWYZWzE5cC8DZWwBmw8mS8MPm9JAvYsnk`). Derived BTC Taproot, EVM, and Solana addresses. Cryptographically verified ECDSA recovery. (GAP-005 CLOSED). |
-| **TEE Inference Attestation** | `scripts/verify-inference.js` | **LIVE (needs `NEARAI_API_KEY`)** | **LIVE EXTERNAL; opt-in.** `make verify` skips it and never uses a key. To run it, get your own key at https://cloud.near.ai, `export NEARAI_API_KEY=<key>`, then `npm run verify:inference` (one small paid request; rewrites `docs/canonical/inference-evidence.json`) | Sends one real completion to NEAR AI Cloud (`Qwen/Qwen3.6-35B-A3B-FP8`, a NEAR-hosted TEE model), fetches the response signature, reads `signature_kind`, rebuilds the signed text (`provider_tee`: `<model>:<req_hash>:<resp_hash>`; `gateway`: `<req_hash>:<resp_hash>`), recovers the EIP-191 signer and requires it to equal the matching signer address listed in the attestation report. A tampered hash is rejected. Saved to `docs/canonical/inference-evidence.json`. **Not yet verified:** the model attestation's own TDX quote and NVIDIA GPU evidence; the prompt is a one-line placeholder and the result is not yet part of a settlement. With no key the check is reported as SKIPPED, never as passed. |
-| **1Click Asset Registry** | `verifications/02-confidential-intents.js` | **VERIFIED** | **LIVE EXTERNAL** | Audits 210 cross-chain assets from live 1Click Swap API with deterministic snapshot fallback for test resilience. |
-| **The Hatch & OutLayer** | `src/contracts/nest.js`, `src/policies/outlayer.js` | **TESTED** | **LOCAL & ON-CHAIN AUDITED** | OutLayer policy guard enforces deposit limits. Escape hatch logic verified both in local state machine and on deployed testnet contract. The settlement-signing step also ran as an OutLayer program on OutLayer testnet and the production contract accepted its signature (`outlayer/room-signer`, `node lab/run.js --only E-OUTLAYER-SETTLE-01`); it is not a room. A NEAR contract (`outlayer/caller`) also triggered that program through `request_execution`, received the result in its callback, and the returned signature settled a group on the production contract (`E-OUTLAYER-CONTRACT-01`). |
-| **Syndicate Network & Discovery** | `scripts/network-demo.js` | **DEMONSTRATED** | **REAL SCRIPT & DISCOVERY** | Demonstrates 3 specialized syndicates in one coordinator contract, cross-syndicate member discovery (`list_syndicates`, `get_syndicates_by_member`), x402 inter-syndicate commerce, and escape hatch exit. |
-| **API Daemon & SSE** | `src/api/server.js` | **INTEGRATED** | **REAL SERVER** | A localhost REST daemon bound to `127.0.0.1`, `X-Midge-Api-Key` enforcement, origin-restricted CORS, 512KB body size limits, real-time SSE streams, and HMAC-verified x402 payment proofs. |
-| **Model Context Protocol** | `src/mcp/server.js`, `bin/midge-mcp.js` | **INTEGRATED** | **REAL TOOLING** | 18 tools exposed over stdio JSON-RPC 2.0 with dual `chain` and `model` mode support, compatible with Claude Code, Codex, and Claude Desktop. |
-| **Local Roost (keyless simulation)** | `src/enclave/roost.js` | **TESTED** | **LOCAL PROCESS** | Used only without a NEAR AI key, or when asked for with `MIDGE_ROOST_BACKEND=local`. Exact sums, but the process that runs it can read every bid, and it says so at startup (GAP-004). A Roost hosted in a TEE we can attest is not built. |
-| **Model-Sealed Roost** | `src/enclave/model-sealed-roost.js`, `src/enclave/e2ee.js` | **LIVE DEMONSTRATED** | **NEAR AI CLOUD (E2EE)** | Bids are sealed by each member to a NEAR AI Cloud model's attested key (Intel TDX chain verified, TCB `UpToDate`); the coordinator relays ciphertext only. Three runs must agree and the count must match, so it fails closed. 8 of 8 live rounds exact (3 to 50 bids, 4 injection attempts), receipts verified. The sum is done by a language model, not exact code; the next row is our own exact program in a TDX VM. This is the default whenever `NEARAI_API_KEY` is set; members verify the model key themselves (no key needed) and refuse one the coordinator merely asserts. **Running the live check** (`npm run verify:roost-model`, with your own `NEARAI_API_KEY`) also compares the host's boot measurements with a baseline we recorded (`docs/canonical/model-measurements.json`, only what was observed, not verified). If NEAR AI has shipped a new build since, the check prints a warning that the host differs from the baseline and carries on, because the host is still attested and verified; `--require-pin` turns that into a failure and `--no-pin` skips the comparison. Evidence: `docs/canonical/roost-model-evidence.json`. |
-| **Hosted Roost (dstack CVM)** | `src/roost-service/`, `deploy/roost/` | **LIVE DEMONSTRATED (attestation)** | `npm run verify:hosted-bundle` | Exact aggregation, in-process keys bound into the TDX report data, settlement signed only for what the sealed bids support (64 offline checks). Deployed on a real Phala TDX VM on 2026-11-04: the official `dstack-verifier` accepted its attestation on all 12 checks (Intel quote, event-log replay, published production OS image, TCB UpToDate, report data = sha512(our keys, a fresh nonce), compose hash derived from our own compose file). Verified from a saved bundle (`docs/canonical/roost-hosted-evidence.json`); the VM was deleted to stay inside a small credit. A full member round on a live VM is not yet demonstrated, and the model-sealed Roost stays the default with a NEAR AI key. |
-| **FAR Private Shard** | `src/settlement/far-shard.js` | **TESTED** | **LOCAL SIMULATION** | Evaluated as an in-process PBFT 200ms cryptographic state machine with IMT tokens and decoupled graphs (GAP-002) pending native L1 private sharding validator nodes. |
-| **Confidential RFQ & OTC** | `src/facilities/rfq-adjudication.js`, `otc-block-trade.js` | **TESTED** | **LOCAL SIMULATION** | In-memory sealed-bid borrow matching and midpoint crossing dark pool simulations. This row is the standalone facility models; the hosted room's own RFQ program has separately run on a real TDX VM and settled on the production contract (buy side, sell side with second price, a tie: `E-HOSTED-RFQ-LIVE-01` and `-02`). |
-
----
-
-## 4. Trust Model & Security Boundaries
-
-1. **Root of Trust at Hatch (Trust-the-Creator Model):**
-   - The enclave public key and `payout_recipient` are defined by the syndicate creator upon calling `hatch()`.
-   - **Important:** If an owner sets their own wallet as `payout_recipient` and their own keypair as `enclave_public_key`, they can sign a settlement payout to themselves.
-   - Therefore, Midge operates on a **Trust-the-Creator / Verified-Roost model**: Flyers MUST inspect the syndicate's `payout_recipient` and `enclave_public_key` (cross-checking the hardware attestation report) BEFORE depositing escrow.
-   - `expected_code_hash` is permanently recorded on-chain as audited reference metadata.
-
-2. **Public Deposits vs. Confidential Deliberation:**
-   - **What is Public:** Syndicate creation parameters, flyer account IDs, deposited NEAR amounts, and the final batch payout recipient are recorded on NEAR L1.
-   - **What is Confidential:** Individual order parameters (exact token pairs, execution strategies, price limits, slippage tolerance, and inter-agent credit purchases) are encrypted with the Roost's public key and processed exclusively in TEE memory.
-
-3. **Domain Separation & Cryptographic Settlement:**
-   - Every Ed25519 settlement batch signature binds the strict 6-tuple:  
-     `current_account_id:syndicate_id:epoch:round_nonce:allocations_hash:aggregate_order_hash`.
-   - Any front-runner attempting to alter allocations, recipients, or replay a signature across contracts, syndicates, or epochs will fail contract verification.
-
-4. **Non-Custodial Escape Valve (`hatch_out`):**
-   - Escrows are stored in a contract-level `LookupMap<(syndicate_id, account_id), NearToken>`.
-   - If an enclave stalls beyond `timeout_blocks`, any individual depositor can invoke `hatch_out()` to retrieve their exact deposited balance.
-   - Other flyers' escrows remain untouched. The contract safely clears the flyer's escrow entry and updates the active flyer counter.
-   - If an asynchronous refund `Promise` fails, `on_hatch_out_payout` restores the escrow entry without exceeding the 50-flyer capacity cap.
-
-5. **Sybil Griefing & Resource Bounds:**
-   - Syndicates enforce a hard limit of 50 active flyers and a minimum deposit of 0.01 NEAR.
-   - Sybil griefing (50 accounts depositing 0.01 NEAR to fill capacity) is bounded: the attacker must lock up capital until `timeout_blocks` elapses. Dynamic per-flyer storage staking is documented in GAP-007.
-
----
-
-## 5. Network Topology & Discovery Architecture
-
-> [!NOTE]
-> Network discovery methods (`list_syndicates`, `list_syndicates_by_member`, NEP-297 events) are deployed and live on NEAR Testnet at `c.fly-1793636729.testnet`. Autonomous agents discover active syndicates and their own memberships directly through RPC view calls with bounded gas.
-
-Midge is designed as a **network of private rooms with public rules** (a group is called a syndicate in the code and in the contract): a single NEAR L1 coordinator smart contract hosts multiple independent syndicates, each specialized in a financial or computational mission (e.g. signal research, algorithmic execution, AI compute).
-
-```
-                      ┌─────────────────────────────────────────┐
-                      │   NEAR L1 Coordinator Smart Contract    │
-                      │       (c.fly-1793636729.testnet)        │
-                      └────┬─────────────────┬────────────────┬─┘
-                           │                 │                │
-            ┌──────────────▼─────┐    ┌──────▼──────┐   ┌─────▼──────────────┐
-            │ Research Syndicate │    │ Execution   │   │ Compute Syndicate  │
-            │ syn-research-alpha │    │ syn-trading │   │ syn-compute-gamma  │
-            └─────────┬──────────┘    └──────▲──────┘   └────────────────────┘
-                      │                      │
-                      └───────[ x402 ]───────┘
-                     Micropayment Commerce
+```bash
+git clone https://github.com/etvjay/midge.git
+cd midge
+npm ci
+make test        # the architecture suite, about 7 seconds
+make rust        # the contract tests
+make wasm        # builds the contract
+node lab/run.js  # the offline lab experiments
 ```
 
-1. **On-Chain Discovery & Pagination:**
-   - **`list_syndicates(from_index, limit)`**: Allows autonomous agents and indexers to discover active syndicates with bounded gas (default page size: 10, max cap: 50).
-   - **`list_syndicates_by_member(account_id, from_index, limit)`**: Dedicated secondary index (`member_syndicates: LookupMap<AccountId, Vec<String>>`) enabling instant O(1) membership lookup for agents participating across multiple syndicates.
-   - **`get_syndicate_count()`**: Fast O(1) count for pagination boundaries.
+[`docs/DEPLOYMENTS.md`](docs/DEPLOYMENTS.md) covers the site, and the lab's hardware and testnet tiers need keys described in [`docs/LAB.md`](docs/LAB.md).
 
-2. **Cross-Syndicate Value Exchange (x402 Micropayments):**
-   - Syndicates interact through HTTP 402 agent commerce: e.g. Trading Syndicate Beta purchases proprietary volatility alpha signals from Research Syndicate Alpha, authenticated via HMAC bearer receipts and settled peer-to-peer.
+## Documentation
 
-3. **NEP-297 Standard Event Stream:**
-   - The coordinator emits standard `EVENT_JSON:{"standard":"fly","version":"1.0.0","event":"..."}` logs on `syndicate_hatched`, `syndicate_deposited`, `syndicate_settled`, and `syndicate_hatched_out`.
-   - Compensating failure events (`syndicate_settlement_failed`, `syndicate_hatch_out_failed`) ensure off-chain indexers and agent daemons remain perfectly synchronized if asynchronous payout transfers fail.
+| Topic | Document |
+|---|---|
+| The words, in plain language | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) |
+| A short guide for agents and judges | [`docs/START_HERE.md`](docs/START_HERE.md) |
+| What exists today, real or simulated | [`docs/canonical/CURRENT_STATE.md`](docs/canonical/CURRENT_STATE.md) |
+| The design and the trust model | [`docs/WHITEPAPER.md`](docs/WHITEPAPER.md) |
+| Contract states and invariants | [`docs/STATE_MACHINE.md`](docs/STATE_MACHINE.md) |
+| The demo script | [`docs/canonical/DEMO_SCRIPT.md`](docs/canonical/DEMO_SCRIPT.md) |
+| The submission text | [`docs/hackathon-submission.md`](docs/hackathon-submission.md) |
+| What is planned and not built | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
+| The full earlier README, with the problem figures, the measured baseline and the file index | [`docs/README_FULL.md`](docs/README_FULL.md) |
 
----
+**Evidence and method**
 
-## 6b. Known Limits and Disclosures
+| Topic | Document |
+|---|---|
+| The evidence behind each claim | [`docs/canonical/EVIDENCE_LEDGER.md`](docs/canonical/EVIDENCE_LEDGER.md) |
+| How the lab runs and records experiments | [`docs/LAB.md`](docs/LAB.md) |
+| Every code hash the contract has run, with reasons | [`docs/canonical/deployments.json`](docs/canonical/deployments.json) |
+| Decisions and why | [`docs/canonical/DECISIONS.md`](docs/canonical/DECISIONS.md) |
+| Self-assessment against the judging dimensions | [`docs/canonical/RESCORE_2026-11-07.md`](docs/canonical/RESCORE_2026-11-07.md) |
 
-- **Contract deployer key.** The testnet coordinator account `c.fly-1793636729.testnet` still holds one full-access key (the deployer's). A group's release policy is fixed once the group is hatched, but whoever holds that key can redeploy the *code*, and it was used to upgrade the contract twice on 2026-11-11 (history: `docs/canonical/deployments.json`). Deleting the key is irreversible and is left until everything else is verified; whether it is deleted before submission is not decided. Anyone can check the current state with `view_access_key_list`. Until the key is deleted, treat the contract code as replaceable by the deployer.
-- **Aggregation.** The model-sealed Roost relies on a language model for the sum (three agreeing runs, count check, strict reply format). The hosted room (our program on Phala) computes it exactly and has run on a real Intel TDX machine.
-- **Chain Signatures.** Transactions signed for our own testnet account were broadcast and confirmed on Solana devnet and Ethereum Sepolia (`npm run verify:payroll`). Separately, the Midge contract (the production contract, upgraded 2026-11-11) checked a group's rules and asked the signer for payments that landed on both chains, and refused three out-of-rules requests (`npm run verify:contract-payroll`); funds held on other chains are outside the member exit. Bitcoin addresses are derived; nothing has been sent on Bitcoin. Both chains are testnets.
-- **Facilities.** RFQ/repo, OTC block trades and the FAR private shard are in-memory simulations. Payroll has run on testnet against a public pay run (one-time payee addresses and signed receipts; amounts public) and on a real TDX VM with payee-signed invoices and an auditor pack (`E-HOSTED-PAYRUN-LIVE-01`); a deterministic pre-flight check of each payment against the group's rules answers on the room, gateway, SDK and MCP (its request is plain JSON, not sealed), with an optional, off-by-default explanation by the attested model that is sent only finding codes and rounded ratios (`CLM-PREFLIGHT-ADVICE-01`); angel rounds are planned. On a public chain, individual payouts and their amounts are visible unless a private settlement layer is used, which we do not have; payroll would offer private payees (one-time addresses) and private receipts, not confidential amounts.
-- **Testnet only.** No mainnet deployment, no audit by a third party, and no external users yet.
+**Security and attacks**
 
-## 6c. Built With (AI assistance and libraries)
+| Topic | Document |
+|---|---|
+| Threat model | [`docs/security/threat-model.md`](docs/security/threat-model.md) |
+| Security review | [`docs/security/review-2026-11-02.md`](docs/security/review-2026-11-02.md) |
 
-Much of this code, documentation and the verification scripts were written with AI coding assistants (Claude Code from Anthropic, and a second coding agent) working under human direction; every claim in the README is meant to point to a command or a transaction. Third-party components: `near-sdk` (Rust) and `near-api-js`, `ethers`, `@noble/curves`, `@noble/ciphers`, `@noble/hashes`, `dcap-qvl` (Intel quote verification), the dstack simulator and `dstack-verifier` (Phala, used as locked-down containers for tests), NEAR AI Cloud (inference, attestation), NEAR Chain Signatures, the 1Click API (read-only), and Node.js 24. The brand and the static site in `site/` were designed with AI assistance as well.
+Each defensive claim has a paired experiment that tries to break it, and failures are kept.
 
-## 7. Repository Architecture & File Index
+| Experiment | What it attacks |
+|---|---|
+| [`50-security-agent.js`](lab/experiments/50-security-agent.js) | A hijacked agent's limited key, which must not move funds past the rules |
+| [`87-two-room-live.js`](lab/experiments/87-two-room-live.js) | Two rooms that must agree: a lying second room, one room twice, one signature alone, a member who equivocates, a vanished room |
+| [`106-hosted-failclosed-live.js`](lab/experiments/106-hosted-failclosed-live.js) | Both escrow providers unreachable, on hardware: the room must refuse and not guess |
+| [`118-hosted-acctcheck-fail-live.js`](lab/experiments/118-hosted-acctcheck-fail-live.js) | One account-check provider down, on hardware |
+| [`119-foreign-signer-fail-live.js`](lab/experiments/119-foreign-signer-fail-live.js) | NEAR's signer failing in the middle of a request |
+| [`invariants.rs`](contracts/fly-coordinator/tests/invariants.rs) and [`state_machine_tests.rs`](contracts/fly-coordinator/tests/state_machine_tests.rs) | The contract's invariants and state machine, with generated inputs |
 
-```
-├── Makefile                      # Targets: make verify, make test, make wasm, make demo, make check
-├── scripts/
-│   ├── verify                    # Canonical judge verification script (about 100 s)
-│   ├── demo.js                   # Primary testnet agent demo runner (hatch to exit via MCP)
-│   ├── baseline.js               # Measured economic baseline Monte Carlo simulation (CPMM vs SIA)
-│   ├── security-review.js        # Independent Gemini-powered automated security auditor
-│   ├── check-foundry.js          # Builder Foundry v1.0 governance control plane auditor
-│   ├── network-demo.js           # Multi-syndicate network discovery & x402 commerce demo
-│   ├── verify-inference.js       # NEAR AI Cloud TEE inference response signature verification
-│   ├── testnet-e2e.js            # Live NEAR testnet E2E settlement & escape hatch runner
-│   └── testnet-mpc.js            # Live NEAR Chain Signatures MPC threshold signing script
-├── foundry/                      # Builder Foundry Control Plane (v1.0 Standard)
-│   ├── state.json                # Project status & verification git head
-│   ├── claims.jsonl              # audited claims with evidence paths, states and limitations
-│   ├── gaps.jsonl                # gaps with closure conditions, evidence and regression guards
-│   ├── assumptions.md            # Documented assumptions & resolutions
-│   └── contradictions.md         # Documented contradictions & mitigation strategies
-├── contracts/
-│   └── fly-coordinator/          # NEAR L1 coordinator smart contract (Rust / near-sdk 5.1)
-│       ├── README.md             # Reusable independent-exit escrow architecture & API guide
-│       ├── Cargo.toml
-│       ├── src/lib.rs            # hatch(), deposit(), settle_batch(), hatch_out(), list_syndicates()
-│       ├── tests/
-│       │   ├── unit_tests.rs     # unit tests
-│       │   ├── integration_tests.rs # multi-agent lifecycle & safety tests
-│       │   ├── invariants.rs     # property-based invariant suites
-│       │   └── state_machine_tests.rs # the state-machine table's tests
-│       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm
-├── src/
-│   ├── chain/
-│   │   └── client.js             # On-chain NEAR client wrapping RPC view and change calls
-│   ├── contracts/nest.js         # Nest coordinator contract state machine mirror
-│   ├── enclave/
-│   │   ├── roost.js              # Local simulation of the Roost (no secrecy claim)
-│   │   ├── model-sealed-roost.js # Bids sealed to a NEAR AI Cloud model's attested key (X25519 + XChaCha20-Poly1305)
-│   │   └── attestation.js        # TDX quote v4 checks, Intel chain, optional measurement pin
-│   ├── roost-service/            # The hosted Roost (Phala TDX), room programs, escrow reader
-│   ├── multichain/
-│   │   └── chain-signatures.js   # NEAR Chain Signatures MPC (EVM, Bitcoin Taproot, Solana)
-│   ├── api/
-│   │   └── server.js             # localhost REST daemon, SSE streams, X-Midge-Api-Key, 512KB limit
-│   ├── mcp/
-│   │   └── server.js             # Standalone MCP server (18 tools for AI agent swarms)
-│   ├── sdk/
-│   │   └── client.js             # Midge TypeScript/JavaScript SDK client
-│   └── facilities/               # RFQ, OTC dark pool, and compute credit syndicate modules
-├── verifications/                # 9 standalone architectural verification scripts
-│   └── fixtures/                 # Recorded fixtures for offline deterministic verification
-└── docs/                         # Canonical SDLC Documentation
-    ├── canonical/
-    │   ├── DEMO_SCRIPT.md        # Video recording script
-    │   ├── SUBMISSION_ASSETS.md  # X post, project description, 5-track rationale
-    │   ├── baseline-simulation.json # Baseline economic Monte Carlo simulation data
-    │   ├── testnet-evidence.json # Live NEAR testnet transaction records
-    │   ├── mpc-evidence.json     # Live Chain Signatures MPC transaction record
-    │   └── EVIDENCE_LEDGER.md    # Evidence ledger with testnet explorer links
-    └── security/
-        ├── threat-model.md       # Assets, actors, trust boundaries & Intel TDX failure modes
-        └── review-2026-11-02.md  # Independent automated smart contract security review
-```
+## What is not shown
+
+- Reach and trust.
+  - Nothing runs on mainnet.
+  - One operator ran every room and account in the tests, so independent operators have not been shown.
+  - The deployer key of the testnet contract is still held, so its holder could change the contract (GAP-044).
+- Privacy.
+  - Deposits, balances and payments are public, so a pay run hides who is paid and shows how much.
+  - Anyone can read who may be paid, the limits and the deadline. Hiding them is planned and not built ([`docs/ROADMAP.md`](docs/ROADMAP.md)).
+  - The room can read the inputs it is given. The hardware proves which code runs, and it does not make the room blind.
+- Scale. A settlement pays at most 8 recipients (GAP-053).
+- Simulations stay labelled as simulations, and they are the FAR shard, Dark Vault pods, the compute syndicate and the agent swarm demos.
+
+## Originality
+
+The first commit in this repository is dated 2026-11-02, the second day of the hackathon, and the code in `contracts/`, `src/`, `lab/`, `tests/` and `scripts/` was written during it. The libraries it builds on were not: the NEAR SDK, the `@noble` cryptography packages, Phala's dstack and cloud, NEAR AI Cloud, OutLayer, NEAR's Chain Signatures and Intel's DCAP quote verifier. They are used as published.
+
+Claude Code wrote much of the code and the documents, under the author's direction, and most commits carry a `Co-Authored-By` line that names it. The author set the design and approved every hardware run and every push.
+
+## Licence
+
+MIT. See [`LICENSE`](LICENSE).
+
+## A note on names and history
+
+Midge was previously called Fly. Internal identifiers keep the old codename on purpose (the `fly-coordinator` crate, the `FLY_*` environment variables and the deployed testnet account `c.fly-1793636729.testnet`), so the on-chain evidence and the reproducible build still match. In the code a group is a syndicate, the room is the Roost, the rules and the contract are the Nest, and the exit is `hatch_out`. "HAQ" appears in older code and in the contract's error messages, such as `[HAQ REJECT]`, and labels the settlement checks.
+
+On 2026-11-12 the history of `master` was rewritten once to remove a directory committed by mistake. The tree is identical before and after, and [`docs/canonical/COMMIT-MAP-2026-11-12.md`](docs/canonical/COMMIT-MAP-2026-11-12.md) maps the old commit ids to the new ones.

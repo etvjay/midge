@@ -40,7 +40,7 @@ Also: an MCP server with 18 tools, an SDK, x402 agent payments, sealed auctions,
 
 ### Exact Build & Verification Commands
 ```bash
-# 1. Run Complete Canonical Verification Suite (about 100 s, no keys)
+# 1. Run Complete Canonical Verification Suite (about 6 minutes on a fresh clone, no keys)
 ./scripts/verify
 
 # 2. Run NEAR L1 Smart Contract Rust Unit & Invariant Tests
