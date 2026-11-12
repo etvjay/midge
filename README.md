@@ -17,7 +17,7 @@ The start-here guide gives the commands that check this project, what each one p
 
 Deposits, balances and payments are public on NEAR, and so are the rules and the list of accounts that may be paid. What stays private is what members bid, vote or decide. Everything that runs on a chain runs on a testnet. The words used here are defined in [`docs/GLOSSARY.md`](docs/GLOSSARY.md).
 
-**The fastest way to judge this project needs no keys and no wallet.** Run `npm ci`, then `npm run verify:fast` (about 30 seconds) and `npm run verify:onchain`. The second one reads the live contract from the chain and compares its code hash with the one recorded in this repository. A page that does the same in your browser is being built.
+**The fastest way to judge this project needs no keys and no wallet.** Run `npm ci`, then `npm run verify:fast` (about 30 seconds) and `npm run verify:onchain`. The second one reads the live contract from the chain and compares its code hash with the one recorded in this repository. A page that does the same in your browser is being built. To see the pay run paper trail, run `npm run demo:paper-trail`.
 
 ---
 
@@ -80,6 +80,34 @@ The hardware proves which code the room runs, through a Phala TDX attestation ch
 | Block trade | A pro-rata cross | Testnet, on a local host |
 
 A settlement pays at most 8 recipients (GAP-053).
+
+## The paper trail
+
+A pay run leaves two records. NEAR holds the public one, and the room holds the private one. A single hash that the contract records with the payment ties them together, so each side can be checked against the other.
+
+- **Signed invoices.** Each payee signs an invoice for the exact amount and address they ask for, and seals it to the room. If any line differs from its invoice, the room refuses the whole run and keeps the employer's queue.
+- **The sub-transaction view.** The chain shows one transfer to the tax account, one to the benefits account, and one to each payee's one-time address. The employer's statement shows every line behind them, and the lines add up to the transfers exactly.
+- **Private receipts.** Each payee gets a signed receipt that carries the hash of their own invoice, and checks it against the order hash on the chain. A changed receipt fails, and no other payee's key opens it.
+- **The auditor pack.** The employer chooses which lines to open and signs that request with their account key. The auditor verifies those lines against the chain and sees no other person, and an accountant can be given totals with no names or addresses.
+
+Run it on your machine in under a second, with no keys:
+
+```bash
+npm run demo:paper-trail
+```
+
+It runs the same room code that runs on the hardware, with a simulated attestation, and exits 1 if any check fails. The part that shows the sub-transaction view looks like this:
+
+```text
+5. The sub-transaction view: the private lines add up to the public transfers
+  ✓ the 4 tax lines add up to the one tax transfer (0.027)
+  ✓ the 4 benefits lines add up to the one benefits transfer (0.009)
+  ✓ each person's net equals the transfer to their one-time address
+  ✓ the gross lines add up to what the employer is charged (0.18)
+  ✓ every transfer together equals the employer's charge, so nothing is created or lost
+```
+
+The same flow ran on real hardware in `docs/lab-runs/20261112T031407Z-8c64`, and the full loop is told below. An optional review by an attested NEAR AI Cloud model reads a redacted version of the run, flags what looks wrong in the tax and benefits lines and what could let an outsider guess who was paid, and has its findings checked by code. It is advice only and never changes a run. The limits are plain: amounts and addresses are public on NEAR, so a person with a unique and unchanged salary can still be matched across months.
 
 ## The contracts on testnet
 
