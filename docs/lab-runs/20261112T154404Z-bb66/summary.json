@@ -1,0 +1,21 @@
+{
+  "runId": "20261112T154404Z-bb66",
+  "startedAt": "2026-11-12T15:44:04.951Z",
+  "rootHash": "501e0f47bda4b8416acee8cd88b483a15fc78b95eab4d42c14662e924a6ae7e2",
+  "verdicts": {
+    "E-BALLOT-WEIGHTED-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    },
+    "E-POOL-PRORATA-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 59,
+  "commit": "2da0909b4e39ca32a5964dbbbff8852b118fedb5"
+}
