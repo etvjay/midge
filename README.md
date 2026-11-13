@@ -77,7 +77,7 @@ The hardware proves which code the room runs, through a Phala TDX attestation ch
 | Ballot | Counts signed ballots by head or by weight, with a majority, plurality or supermajority rule, and publishes only the winner | Real hardware |
 | Pool | Totals sealed amounts into one payment and charges each member their own. Over a cap it takes amounts first-come or scales all of them pro rata | Real hardware |
 | Auction | First-price, second-price and uniform-price, with a reserve | Testnet, on a local host |
-| Block trade | A pro-rata cross | Testnet, on a local host |
+| Block trade | Firm sealed orders cross at a public reference price, and the larger side fills pro rata | Real hardware |
 
 A settlement pays at most 8 recipients (GAP-053).
 
