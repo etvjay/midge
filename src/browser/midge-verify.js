@@ -200,5 +200,6 @@ export async function checkSettlementOrderHash({ rpcUrls, txHash, senderId, expe
   if (hashes.size > 1) return { claim, verdict: 'failed', detail: `the providers disagree: ${[...hashes].join(', ')}` };
   const [hash] = hashes;
   if (!answers.every((a) => a.ok)) return { claim, verdict: 'failed', detail: 'the transaction did not succeed' };
+  if (expectedOrderHash === null || expectedOrderHash === undefined) return { claim: 'the settlement transaction succeeded on chain, and every provider reports the same order hash', verdict: 'recomputed', detail: `read from ${answers.length} providers: ${hash}` };
   return hash === expectedOrderHash ? { claim, verdict: 'recomputed', detail: `read from ${answers.length} providers: ${hash}` } : { claim, verdict: 'failed', detail: `the chain records ${hash}; the receipts prove into ${expectedOrderHash}` };
 }
