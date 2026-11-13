@@ -111,7 +111,10 @@ export default {
     } finally {
       await ctx.step('prediction 5: teardown of the chain side (members exit with their remainders, group pruned, accounts deleted)', async (st) => {
         if (!P) { st.assert('nothing to tear down', true); return; }
-        const rep = await teardownMembers(chain, { rootDir: ctx.rootDir, members: P.all, pruneIds: created, exitWaitMs: 180000 });
+        // Nobody ever deposited, and the contract lets only a never-funded group's creator prune it at once, so the coordinator account does.
+        const pruned = await chain.send(coord.account, 'prune_syndicate', { syndicate_id: id }, { gas: 30000000000000n, label: 'prune the unfunded group as its creator' });
+        st.assert('the creator pruned the never-funded group', pruned.ok, { actual: pruned.error });
+        const rep = await teardownMembers(chain, { rootDir: ctx.rootDir, members: P.all, pruneIds: [], exitWaitMs: 180000 });
         st.observe('teardown', { pruned: rep.pruned.length, notPruned: rep.notPruned, deleted: rep.deleted.length, kept: rep.kept, failed: rep.failed });
         st.assert('the group was pruned and every account deleted', rep.notPruned.length === 0 && rep.failed.length === 0 && rep.deleted.length === 3, { actual: rep });
         st.assert('the contract holds the groups it started with', Number(await chain.view('get_syndicate_count', {})) === countBefore, { expected: countBefore });
