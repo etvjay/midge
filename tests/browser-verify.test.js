@@ -150,6 +150,10 @@ test('the settlement check reads the order hash from two providers and compares 
   assert.equal((await f({ 'a.example': txReply('ab'.repeat(32)), 'b.example': txReply('cd'.repeat(32)) })).verdict, 'failed');
   assert.equal((await f({ 'a.example': txReply('ab'.repeat(32), false), 'b.example': txReply('ab'.repeat(32), false) })).verdict, 'failed');
   assert.equal((await f({ 'a.example': txReply('ab'.repeat(32)), 'b.example': async () => { throw new Error('offline'); } })).verdict, 'unavailable');
+  const noExpect = (map) => V.checkSettlementOrderHash({ rpcUrls: URLS, txHash: 'T', senderId: 'c.near', expectedOrderHash: null, fetchImpl: routed(map) });
+  assert.equal((await noExpect({ 'a.example': txReply('ab'.repeat(32)), 'b.example': txReply('ab'.repeat(32)) })).verdict, 'recomputed', 'with no expected hash, agreement and success are enough');
+  assert.equal((await noExpect({ 'a.example': txReply('ab'.repeat(32)), 'b.example': txReply('cd'.repeat(32)) })).verdict, 'failed');
+  assert.equal((await noExpect({ 'a.example': txReply('ab'.repeat(32), false), 'b.example': txReply('ab'.repeat(32), false) })).verdict, 'failed');
 });
 
 test('the verifier bundles for the browser with no Node built-ins', async () => {

@@ -1,0 +1,15 @@
+{
+  "runId": "20261113T092857Z-c271",
+  "startedAt": "2026-11-13T09:28:57.334Z",
+  "rootHash": "6e827a264fe757805785b351239fa2bd50a2983dfb95b1e44a4188913bd7dc2e",
+  "verdicts": {
+    "E-ROOM-GAPS-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 40,
+  "commit": "0c2fa434053982cf1af5eaa748af43cbcff1e2d4"
+}

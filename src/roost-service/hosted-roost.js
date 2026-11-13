@@ -25,6 +25,14 @@ import { auditorPack, auditOpenMessage } from './auditor.js';
 
 export const REPORT_DATA_DOMAIN = 'midge-roost-v1';
 /** What a pay run's approver signs: the round, the run id and the run's order hash, so an approval cannot be reused for another run or round. */
+export const DECISION_DOMAIN = 'midge-decision-v1';
+/**
+ * What the room signs for a vote that moves no money. It starts with the domain, never with a contract id, so it can never be
+ * mistaken for a settlement message (the contract builds those from its own account id).
+ */
+export function decisionMessage({ contractId, syndicateId, epoch, roundNonce, roundId, rule, winner, reason, paramsHash }) {
+  return `${DECISION_DOMAIN}:${contractId}:${syndicateId}:${epoch}:${roundNonce}:${roundId}:${rule}:${winner ?? 'none'}:${reason || '-'}:${paramsHash}`;
+}
 export const PAYRUN_APPROVAL_DOMAIN = 'midge-payrun-approval-v1';
 export function payrunApprovalMessage({ contractId, syndicateId, epoch, roundNonce, runId, orderHash }) {
   return `${PAYRUN_APPROVAL_DOMAIN}:${contractId}:${syndicateId}:${epoch}:${roundNonce}:${runId}:${orderHash}`;
@@ -515,13 +523,17 @@ export class HostedRoost {
       }
     }
     if (rule === 'supermajority' && !(Number.isSafeInteger(thresholdBps) && thresholdBps >= 5001 && thresholdBps <= 10000)) throw new RoostAggregationError('a supermajority needs a threshold of 5001 to 10000 basis points');
-    const shareMicro = toMicro(share);
-    if (shareMicro === null || shareMicro === 0n) throw new RoostAggregationError('share must be a positive decimal with at most 6 places');
+    const decideOnly = share === null; // only an explicit null; a missing share stays an error, so a dropped field never turns a payout vote into a silent no-payout one
+    const shareMicro = decideOnly ? null : toMicro(share);
+    if (!decideOnly && (shareMicro === null || shareMicro === 0n)) throw new RoostAggregationError('share must be a positive decimal with at most 6 places, or null for a vote that moves no money');
+    if (decideOnly && !this.round) throw new RoostAggregationError('a decision is signed for an open round; open one first');
+    if (decideOnly && (typeof roundId !== 'string' || roundId.length === 0 || roundId.includes(':'))) throw new RoostAggregationError('a decision needs a roundId without \':\'');
     if (this.sealedIntents.length === 0) throw new RoostAggregationError('cannot count an empty ballot box');
     const ballots = []; const unreadable = [];
     this.#inRoundOrder().forEach((intent, order) => {
       try { const b = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); if (typeof b?.choice !== 'string') throw new Error('malformed'); ballots.push({ flyerId: intent.flyerId, choice: b.choice, order }); } catch { unreadable.push(intent.flyerId); }
     });
+    if (decideOnly) return this.#decide({ ids, roll, ballots, unreadable, quorumBps, rule, weights, thresholdBps, roundId });
     // Every roll member is charged a share whether or not they voted, so the roll is what must be able to pay.
     const aff = this.#affordable(roll, (m) => m, () => shareMicro * YOCTO_PER_MICRO, roll);
     const payingRoll = aff.kept;
@@ -546,12 +558,26 @@ export class HostedRoost {
     return { outcome: pub, orderHash, allocations, charges, settlePublicKey: this.settlePublicKey };
   }
 
+  // A vote that moves no money: count as runBallot does, then sign the decision once for this round. No aggregate is left, so
+  // nothing can be settled, and the round is marked signed so it cannot be opened again to decide twice.
+  #decide({ ids, roll, ballots, unreadable, quorumBps, rule, weights, thresholdBps, roundId }) {
+    const out = clearBallot({ options: ids, roll, ballots, quorumBps, rule, weights: weights ?? null, thresholdBps: rule === 'supermajority' ? thresholdBps : null });
+    this.sealedIntents = []; this.aggregate = null;
+    const paramsHash = sha256Hex(`${[...ids].sort().join(',')}|${[...roll].sort().join(',')}|${weights ? Object.entries(weights).sort(([x], [y]) => (x < y ? -1 : 1)).map(([k, v]) => `${k}=${v}`).join(',') : '-'}|q${quorumBps}|t${rule === 'supermajority' ? thresholdBps : '-'}`);
+    const message = decisionMessage({ ...this.round, roundId, rule, winner: out.decided ? out.winner : 'none', reason: out.reason, paramsHash });
+    const signature = crypto.sign(null, Buffer.from(message, 'utf8'), this.#settleKey).toString('hex');
+    this.#signedRounds.add(`${this.round.contractId}:${this.round.syndicateId}:${this.round.epoch}:${this.round.roundNonce}`);
+    const pub = { shape: 'ballot', rule, payout: false, decided: out.decided, winner: out.winner, recipient: null, reason: out.reason, quorumMet: out.quorumMet, outsiders: out.outsiders, unreadable, executionModel: 'HOSTED_SEALED_BALLOT', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    return { outcome: pub, decision: { message, signature, settlePublicKey: this.settlePublicKey }, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey };
+  }
+
   /**
    * Two-sided request for quote. The taker seals one signed request { side: 'buy'|'sell', units, limit, salt }; each maker in
    * `makers` seals a signed two-way quote { bid, ask }, so a maker never learns which way the taker trades or how much. A buy goes
    * to the lowest ask at or under the limit, a sell to the highest bid at or over it ('first' pays the winner's own quote, 'second'
    * the runner-up's). On a buy the taker is charged and the winning maker paid; on a sell the winning maker is charged and the
-   * taker paid. The settlement reveals who pays whom and the notional, not the units or the price per unit: the order hash carries
+   * taker paid. A quote may carry validUntil (milliseconds since the epoch, by the room's clock); one that has passed when the round
+   * clears is left out and listed as expired. The settlement reveals who pays whom and the notional, not the units or the price per unit: the order hash carries
    * the taker's secret salt so an observer cannot recover them by trying every pair. Only the cash leg moves.
    */
   runRfq({ taker, makers, pricing = 'first', roundId = '' } = {}) {
@@ -569,13 +595,15 @@ export class HostedRoost {
     const limitMicro = toMicro(req.limit);
     if (limitMicro === null || limitMicro === 0n) throw new RoostAggregationError('limit must be a positive decimal with at most 6 places');
     if (typeof req.salt !== 'string' || req.salt.length < 16) throw new RoostAggregationError('the request needs a secret salt of 16 or more characters (the order hash would otherwise be guessable)');
-    const makerSet = new Set(makers); const quotes = []; const unreadable = []; const outsiders = [];
+    const makerSet = new Set(makers); const quotes = []; const unreadable = []; const outsiders = []; const expired = []; const now = this.clock();
     this.#inRoundOrder().forEach((intent, order) => {
       if (intent.flyerId === taker) return;
       if (!makerSet.has(intent.flyerId)) { outsiders.push(intent.flyerId); return; }
       try {
         const b = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); const bid = toMicro(b?.bid); const ask = toMicro(b?.ask);
         if (bid === null || ask === null || bid === 0n || ask === 0n || bid > ask) throw new Error('malformed or crossed');
+        if (b.validUntil !== undefined && !Number.isSafeInteger(b.validUntil)) throw new Error('validUntil must be whole milliseconds');
+        if (b.validUntil !== undefined && b.validUntil < now) { expired.push(intent.flyerId); return; }
         quotes.push({ flyerId: intent.flyerId, valueMicro: req.side === 'buy' ? ask : bid, order });
       } catch { unreadable.push(intent.flyerId); }
     });
@@ -586,7 +614,7 @@ export class HostedRoost {
     } else aff = this.#affordable(quotes, (q) => q.flyerId, (q) => BigInt(req.units) * q.valueMicro * YOCTO_PER_MICRO);
     const out = clearBestQuote({ direction: req.side === 'buy' ? 'lowest' : 'highest', quotes: req.side === 'buy' ? quotes : aff.kept, limitMicro, pricing });
     this.sealedIntents = [];
-    const pub = { ...(this.escrowReader ? { excludedForEscrow: req.side === 'buy' ? [] : aff.excluded, escrowBlock: aff.block } : {}), shape: 'rfq', pricing, taker, won: out.won, winner: out.winner, quotesReceived: out.quotesReceived, quotesEligible: out.quotesEligible, outsiders, unreadable, executionModel: 'HOSTED_SEALED_RFQ', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { ...(this.escrowReader ? { excludedForEscrow: req.side === 'buy' ? [] : aff.excluded, escrowBlock: aff.block } : {}), shape: 'rfq', pricing, taker, won: out.won, winner: out.winner, quotesReceived: out.quotesReceived, quotesEligible: out.quotesEligible, outsiders, expired, unreadable, executionModel: 'HOSTED_SEALED_RFQ', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (!out.won) { this.aggregate = null; return { outcome: pub, terms: null, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     const costMicro = BigInt(req.units) * out.priceMicro; const amount = String(costMicro * YOCTO_PER_MICRO);
     let allocations; let charges; let bound;
@@ -741,7 +769,8 @@ export class HostedRoost {
       try {
         const b = JSON.parse(openFromModel(intent.cipherTextHex, this.#intentSecret)); const limitMicro = toMicro(b?.limit);
         if ((b?.side !== 'buy' && b?.side !== 'sell') || !Number.isSafeInteger(b?.units) || b.units < 1 || b.units > 1_000_000 || limitMicro === null) throw new Error('malformed');
-        (b.side === 'buy' ? buys : sells).push({ flyerId: intent.flyerId, units: b.units, limitMicro, order });
+        if (b.minUnits !== undefined && (!Number.isSafeInteger(b.minUnits) || b.minUnits < 1 || b.minUnits > b.units)) throw new Error('minUnits must be a whole number from 1 to units');
+        (b.side === 'buy' ? buys : sells).push({ flyerId: intent.flyerId, units: b.units, limitMicro, order, ...(b.minUnits ? { minUnits: b.minUnits } : {}) });
       } catch { unreadable.push(intent.flyerId); }
     });
     const aff = this.#affordable(buys, (b) => b.flyerId, // a buyer is charged at the public reference price for at most min(units, maxUnits), never at their own limit
@@ -750,7 +779,7 @@ export class HostedRoost {
     const queued = this.sealedIntents; // kept so a cross that cannot be settled does not cost every member their order
     this.sealedIntents = [];
     const cashTotal = out.matchedUnits * referenceMicro;
-    const pub = { ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), shape: 'cross', referencePrice: formatMicro(referenceMicro), maxUnits, matchedUnits: Number(out.matchedUnits), cash: formatMicro(cashTotal), buyers: out.buyFills.length, sellers: out.sellFills.length, ordersReceived: out.buysReceived + out.sellsReceived, unreadable, executionModel: 'HOSTED_SEALED_CROSS', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    const pub = { ...(this.escrowReader ? { excludedForEscrow: aff.excluded, escrowBlock: aff.block } : {}), shape: 'cross', referencePrice: formatMicro(referenceMicro), maxUnits, matchedUnits: Number(out.matchedUnits), cash: formatMicro(cashTotal), buyers: out.buyFills.length, sellers: out.sellFills.length, ordersReceived: out.buysReceived + out.sellsReceived, cancelledBelowMinimum: out.belowMinimum.length, unreadable, executionModel: 'HOSTED_SEALED_CROSS', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     if (out.matchedUnits === 0n) { this.aggregate = null; return { outcome: pub, orderHash: null, allocations: [], charges: [], settlePublicKey: this.settlePublicKey }; }
     if (out.sellFills.length > 8) { this.sealedIntents = queued; throw new RoostAggregationError('a settlement can pay at most 8 sellers'); }
     const allocations = out.sellFills.map((f) => ({ recipient: f.flyerId, amount: String(f.cashMicro * YOCTO_PER_MICRO) }));

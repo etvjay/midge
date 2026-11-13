@@ -2,6 +2,7 @@
  * Checks a visitor can run in their own browser, with no Node built-ins and no trust in this site:
  *   - a recorded lab run: its hash chain, its sequence, its closing commitment, and its verdicts re-derived from the raw events;
  *   - a pay run receipt or auditor pack against the order hash a chain recorded;
+ *   - a decision the room signed for a vote, and a model receipt from the pay run reviewer;
  *   - the live contract's code hash against the hash recorded in this repository, asked of two or more RPC providers.
  *
  * Every check ends in one of four verdicts, because calling a check that did not run a pass or a failure would be wrong either way:
@@ -153,6 +154,38 @@ export function verifyAuditorPack(pack, onChainOrderHash) {
  * Ask two or more RPC providers for the contract account's code hash and compare it with the recorded one. All providers must answer and agree.
  * Returns one row. `fetchImpl` is injected so the check can be tested without a network.
  */
+const edVerify = (sigHex, text, pkHex) => { try { return ed25519.verify(hexToBytes(sigHex), utf8ToBytes(text), hexToBytes(pkHex)); } catch { return false; } };
+
+/**
+ * A decision the room signed for a vote that moved no money (hosted-roost decisionMessage). Checks the signature against the room's
+ * settlement key (the one its attestation names) and reads the fields back.
+ */
+export function verifyDecision({ message, signatureHex, settlePublicKeyHex }) {
+  const parts = String(message).split(':');
+  const names = ['domain', 'contractId', 'syndicateId', 'epoch', 'roundNonce', 'roundId', 'rule', 'winner', 'reason', 'paramsHash'];
+  const fields = parts.length === names.length ? Object.fromEntries(names.map((n, i) => [n, parts[i]])) : null;
+  const shapeOk = fields !== null && fields.domain === 'midge-decision-v1';
+  const signed = edVerify(signatureHex, message, settlePublicKeyHex);
+  return { ok: shapeOk && signed, fields, checks: { shape: shapeOk, signature: signed } };
+}
+
+/**
+ * A NEAR AI Cloud model receipt as the pay run reviewer saves it: the model signs `model:requestSha256:responseSha256` with the key
+ * its attestation names. Same checks as src/advisor/attested-advisor.js checkReceipt, minus the response body, which is not saved.
+ */
+export function verifyModelReceipt(r) {
+  const checks = [];
+  const add = (name, ok) => checks.push({ name, ok: Boolean(ok) });
+  const sig = r?.signature;
+  add('the receipt carries the model\'s signature', sig && typeof sig.signature === 'string');
+  const text = `${r?.model}:${r?.requestSha256}:${r?.responseSha256}`;
+  add('the signed text is exactly this model, this request hash and this response hash', sig?.text === text);
+  const signer = String(sig?.signing_address || '').replace(/^0x/i, '').toLowerCase();
+  add('the signer is the model key the receipt names', signer.length === 64 && signer === String(r?.modelPublicKey || '').toLowerCase());
+  add('the signature verifies', sig && edVerify(sig.signature, text, signer));
+  return { ok: checks.every((c) => c.ok), checks };
+}
+
 export async function checkContractCodeHash({ rpcUrls, contractId, expectedCodeHash, fetchImpl = globalThis.fetch }) {
   const claim = `${contractId} runs the code hash recorded in this repository`;
   const urls = [...new Set((rpcUrls || []).map((u) => String(u).trim().replace(/\/+$/, '')).filter(Boolean))];
@@ -200,5 +233,6 @@ export async function checkSettlementOrderHash({ rpcUrls, txHash, senderId, expe
   if (hashes.size > 1) return { claim, verdict: 'failed', detail: `the providers disagree: ${[...hashes].join(', ')}` };
   const [hash] = hashes;
   if (!answers.every((a) => a.ok)) return { claim, verdict: 'failed', detail: 'the transaction did not succeed' };
+  if (expectedOrderHash === null || expectedOrderHash === undefined) return { claim: 'the settlement transaction succeeded on chain, and every provider reports the same order hash', verdict: 'recomputed', detail: `read from ${answers.length} providers: ${hash}` };
   return hash === expectedOrderHash ? { claim, verdict: 'recomputed', detail: `read from ${answers.length} providers: ${hash}` } : { claim, verdict: 'failed', detail: `the chain records ${hash}; the receipts prove into ${expectedOrderHash}` };
 }

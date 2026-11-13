@@ -148,5 +148,5 @@ export async function reviewPayrun({ lines, rulesText = '', stated = {}, earlier
   if (!parsed.ok) return { ...base, used: false, reason: `the reply was rejected: ${parsed.problems.join('; ')}` };
   const findings = parsed.findings.map((f) => ({ ...f, check: crossCheck(f, analysis, stated) }));
   const rec = asked.record || {};
-  return { ...base, used: true, findings, summary: parsed.summary, questions: parsed.questions, sent: message, receipt: { model: rec.model, requestSha256: rec.requestSha256, responseSha256: rec.responseSha256, tcbStatus: rec.tcbStatus, modelPublicKey: rec.modelPublicKey } };
+  return { ...base, used: true, findings, summary: parsed.summary, questions: parsed.questions, sent: message, receipt: { model: rec.model, requestSha256: rec.requestSha256, responseSha256: rec.responseSha256, tcbStatus: rec.tcbStatus, modelPublicKey: rec.modelPublicKey, signature: rec.signature ? { text: rec.signature.text, signature: rec.signature.signature, signing_address: rec.signature.signing_address, kind: rec.signature.kind } : null } };
 }
