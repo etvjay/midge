@@ -12,7 +12,7 @@ const sign = (message) => signInputWithNearKey(V.secretKey, message);
 const visitor = { visitorPublicKey: VISITOR_KEY, payeeKeyHex: generateClientKey().publicKeyHex, youIndex: 3 };
 const mkRound = (over = {}) => {
   const chain = over.chain || fakeChain(); const room = over.room || fakeRoom({ accountKeyCheck: async (id, pk) => chain.accounts.get(id)?.publicKey === pk });
-  const states = []; const ledger = { rows: new Map(), add(r) { this.rows.set(r.id, r); }, remove(id) { this.rows.delete(id); }, all() { return [...this.rows.values()]; } };
+  const states = []; const ledger = { rows: new Map(), add(r) { this.rows.set(r.id, { ...r, at: r.at ?? new Date().toISOString() }); }, remove(id) { this.rows.delete(id); }, all() { return [...this.rows.values()]; } };
   // Delegates on every call, so a test can replace a method on `room` after the round exists. The fake needs the payee addresses to key the payslips.
   const wrapped = { getSession: (...a) => room.getSession(...a), openRound: (...a) => room.openRound(...a), submitSignedIntent: (...a) => room.submitSignedIntent(...a), approvePayrun: (...a) => room.approvePayrun(...a), signSettlement: (...a) => room.signSettlement(...a),
     runPayrun: (p) => room.runPayrun({ ...p, __payees: [...chain.accounts.keys()].filter((k) => /a[123]\.|v\./.test(k)) }) };
@@ -32,6 +32,8 @@ test('a whole round: accounts, group, deposit, sealed run, approval by the visit
   assert.equal(wait.summaryCipherHex, 'summary-cipher');
   assert.ok(wait.orderHash);
   assert.equal(chain.groups.get(wait.round.syndicateId).escrow, 18n * NEAR / 100n, 'the employer deposited exactly the gross total');
+  assert.ok(chain.finalReads > 0, 'the deposit was confirmed at final finality before the room was asked to run, because the room reads escrow at a finalised block');
+  const employerFunding = chain.funding.find((f) => /er\./.test(f.id)); assert.ok(employerFunding.fundNear >= 0.18 + 0.15, 'the employer is funded with the deposit plus enough for the exit call, which reserves 0.06 NEAR of gas');
   await round.approve({ ticket, publicKey: VISITOR_KEY, signature: sign(wait.approvalMessage) });
   const result = await done;
   assert.equal(result.settleTx, 'H-settle'); assert.equal(result.orderHash, wait.orderHash);
@@ -118,4 +120,21 @@ test('lines that the visitor edited into something unusable are refused before a
   const lines = defaultLines(); lines[0].gross = '5';
   await assert.rejects(round.start({ ticket: '1'.repeat(32), ...visitor, lines }), /gross/i);
   assert.equal(chain.accounts.size, 0);
+});
+
+test('a cleanup that did not finish is retried later, and a round that is still running is left alone', async () => {
+  const chain = fakeChain();
+  const { round, ledger } = mkRound({ chain });
+  await round.sweepStartup();
+  const old = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  chain.accounts.set(`stale.${FUNDER}`, {}); ledger.add({ kind: 'account', id: `stale.${FUNDER}`, at: old });
+  chain.accounts.set(`fresh.${FUNDER}`, {}); ledger.add({ kind: 'account', id: `fresh.${FUNDER}` });
+  const ticket = '9'.repeat(32);
+  const done = round.start({ ticket, ...visitor, lines: defaultLines() });
+  await round.waitFor(ticket, 'awaiting-approval');
+  await round.sweepStale({ olderThanMs: 10 * 60 * 1000 });
+  assert.ok(!chain.accounts.has(`stale.${FUNDER}`), 'the old row was cleaned up');
+  assert.ok(chain.accounts.has(`fresh.${FUNDER}`), 'a recent row was left alone');
+  assert.ok([...chain.groups.keys()].length === 1, 'the running round\'s group was not touched');
+  round.abandon(ticket); await done.catch(() => {}); await round.idle();
 });

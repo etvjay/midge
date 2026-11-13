@@ -11,14 +11,14 @@ export const NEAR = 10n ** 24n;
 
 // A fake chain with just the contract behaviour the round depends on: hatch, deposit, settle, exit, prune, and accounts that can be created and deleted.
 export function fakeChain({ failOn = null } = {}) {
-  const accounts = new Map(); const groups = new Map(); const sent = [];
+  const accounts = new Map(); const groups = new Map(); const sent = []; const funding = [];
   const chain = {
-    contractId: 'c.f.testnet', funderId: FUNDER, funder: { accountId: FUNDER }, accounts, groups, sent,
+    contractId: 'c.f.testnet', funderId: FUNDER, funder: { accountId: FUNDER }, accounts, groups, sent, funding,
     accountIdFor: (p) => `${p}.${FUNDER}`,
     keys: new Map(),
     derive: (id) => { if (!chain.keys.has(id)) { const k = nearKeyPair(); chain.keys.set(id, { keyPair: { toString: () => k.secretKey, getPublicKey: () => ({ toString: () => k.publicKey }) }, publicKey: k.publicKey }); } return chain.keys.get(id); },
     handleFor: (id) => ({ id, account: { accountId: id }, keyPair: chain.derive(id).keyPair }),
-    async createAccount({ prefix, publicKey }) { const id = `${prefix}.${FUNDER}`; accounts.set(id, { publicKey }); return { id, account: publicKey ? null : { accountId: id } }; },
+    async createAccount({ prefix, publicKey, fundNear }) { const id = `${prefix}.${FUNDER}`; funding.push({ id, fundNear: Number(fundNear) }); accounts.set(id, { publicKey }); return { id, account: publicKey ? null : { accountId: id } }; },
     async deleteAccount(h) { accounts.delete(h.id); return true; },
     async exists(id) { return accounts.has(id); },
     async view(method, args) {
@@ -26,6 +26,8 @@ export function fakeChain({ failOn = null } = {}) {
       const g = groups.get(args.syndicate_id); if (!g) return null;
       return { epoch: g.epoch, round_nonce: g.nonce, total_escrow: String(g.escrow), is_settling: false, status: g.status };
     },
+    finalReads: 0,
+    async viewFinal(method, args) { chain.finalReads += 1; return chain.view(method, args); },
     async waitFor(fn) { for (let i = 0; i < 5; i += 1) { const v = await fn(); if (v) return v; } throw new Error('timed out'); },
     async send(account, method, args, { deposit = 0n } = {}) {
       sent.push({ from: account.accountId, method, args });

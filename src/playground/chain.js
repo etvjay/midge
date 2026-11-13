@@ -64,6 +64,12 @@ export function createChain({ rpcUrl = 'https://test.rpc.fastnear.com', funderId
 
   async function view(method, args = {}, contract = contractId) { return retry(() => provider.callFunction({ contractId: contract, method, args })); }
 
+  /** A contract view at FINAL finality. The room reads escrow at a finalised block, so a deposit counts for the room only once it is final here too. */
+  async function viewFinal(method, args = {}, contract = contractId) {
+    const r = await retry(() => provider.query({ request_type: 'call_function', finality: 'final', account_id: contract, method_name: method, args_base64: Buffer.from(JSON.stringify(args)).toString('base64') }));
+    return JSON.parse(Buffer.from(r.result).toString('utf8'));
+  }
+
   async function send(account, methodName, args, { deposit = 0n, gas = 60000000000000n, contract = contractId, label } = {}) {
     let res = null; let thrown = null;
     try { res = await account.callFunctionRaw({ contractId: contract, methodName, args, deposit, gas }); } catch (e) { thrown = e; }
@@ -95,5 +101,5 @@ export function createChain({ rpcUrl = 'https://test.rpc.fastnear.com', funderId
   /** Deletes a service-held account and sends what is left to the funder. Returns true if it is gone. */
   async function deleteAccount(handle) { try { await handle.account.deleteAccount(funderId); return true; } catch { return !(await visible(handle.id)); } }
 
-  return { provider, funder, funderId, contractId, derive, accountIdFor, handleFor, createAccount, view, send, waitFor, transfersOf, balance, exists, deleteAccount, toYocto };
+  return { provider, funder, funderId, contractId, derive, accountIdFor, handleFor, createAccount, view, viewFinal, send, waitFor, transfersOf, balance, exists, deleteAccount, toYocto };
 }

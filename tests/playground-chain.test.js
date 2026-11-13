@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createChain, MAX_ACCOUNT_ID } from '../src/playground/chain.js';
+import { createChain, MAX_ACCOUNT_ID, computePolicyHash } from '../src/playground/chain.js';
+import { computePolicyHash as labHash } from '../lab/lib/near.js';
 
 const KEY = 'ed25519:3D4YudUQRE39Lc4JHghuB5WM8kbgDDa2kvs57CyzZwnEjPUJ4kjQGLhYMVtEuCfFkCm9jHEdz6RobrW5pSF5PWBg';
 const FUNDER = 'play.fly-1793636729.testnet';
@@ -58,4 +59,17 @@ test('waitFor returns the first truthy value and times out with its label', asyn
   let n = 0;
   assert.equal(await chain.waitFor(async () => (++n >= 3 ? 'ready' : null), { what: 'x', timeoutMs: 1000, everyMs: 1 }), 'ready');
   await assert.rejects(chain.waitFor(async () => null, { what: 'the group', timeoutMs: 20, everyMs: 5 }), /the group/);
+});
+
+test('the policy hash is the same one the lab computes, so a deposit consents to the policy the group was hatched with', () => {
+  const pol = { allowed_recipients: ['b.testnet', 'a.testnet'], max_release_bps_per_epoch: 10000, settle_deadline_block: 500000000 };
+  assert.equal(computePolicyHash(pol, 12), labHash(pol, 12));
+});
+
+test('viewFinal reads the contract at final finality, because the room reads escrow at a finalised block', async () => {
+  const seen = [];
+  const chain = mk({ provider: { query: async (q) => { seen.push(q); return { result: Buffer.from(JSON.stringify({ total_escrow: '5' })) }; } } });
+  assert.deepEqual(await chain.viewFinal('get_syndicate', { syndicate_id: 'g' }), { total_escrow: '5' });
+  assert.equal(seen[0].finality, 'final'); assert.equal(seen[0].method_name, 'get_syndicate');
+  assert.deepEqual(JSON.parse(Buffer.from(seen[0].args_base64, 'base64').toString()), { syndicate_id: 'g' });
 });

@@ -68,7 +68,7 @@ export default {
 
     await ctx.step('prediction 3: the round settles with exact books and leaves only the visitor\'s account; abandoned, failed and unsigned rounds clean up', async (s) => {
       const mk = (chain = fakeChain(), room = fakeRoom({ accountKeyCheck: async (id, pk) => chain.accounts.get(id)?.publicKey === pk }), approvalTimeoutMs = 5000) => {
-        const ledger = { rows: new Map(), add(r) { this.rows.set(r.id, r); }, remove(id) { this.rows.delete(id); }, all() { return [...this.rows.values()]; } };
+        const ledger = { rows: new Map(), add(r) { this.rows.set(r.id, { ...r, at: r.at ?? new Date().toISOString() }); }, remove(id) { this.rows.delete(id); }, all() { return [...this.rows.values()]; } };
         const wrapped = { getSession: (...a) => room.getSession(...a), openRound: (...a) => room.openRound(...a), submitSignedIntent: (...a) => room.submitSignedIntent(...a), approvePayrun: (...a) => room.approvePayrun(...a), signSettlement: (...a) => room.signSettlement(...a), runPayrun: (p) => room.runPayrun({ ...p, __payees: [...chain.accounts.keys()].filter((k) => /a[123]\.|v\./.test(k)) }) };
         return { chain, room, ledger, round: createRound({ chain, room: wrapped, keyCheck: async () => true, ledger, approvalTimeoutMs, sleep: async () => {} }) };
       };

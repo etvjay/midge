@@ -41,7 +41,7 @@ export function buildPlayground({ env, overrides = {} }) {
     server, handler, round, queue, gate, chain, room, waker, ledger,
     async start(port) {
       await round.sweepStartup();
-      timers.push(setInterval(() => handler.sweep(), 15_000), setInterval(() => waker?.tick().catch(() => {}), 60_000));
+      timers.push(setInterval(() => handler.sweep(), 15_000), setInterval(() => waker?.tick().catch(() => {}), 60_000), setInterval(() => round.sweepStale().catch(() => {}), 5 * 60_000));
       await new Promise((resolve) => server.listen(port, resolve));
       return server.address().port;
     },
