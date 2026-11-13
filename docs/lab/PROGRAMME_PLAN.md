@@ -778,3 +778,6 @@ The brief was frozen after round 3 on the development set (`src/advisor/payrun-a
 
 ### Re-run on the final brief, 2026-11-13, written before the re-runs
 The predictions for `E-PAYRUN-ANALYST-REPRO-01` and `E-HOSTED-PAYRUN-LIVE-02` above are unchanged and apply to the brief now in the repository (the one the accuracy test validated). Both experiments are re-run once each. If a re-run fails, that is reported as it is, and the earlier runs stay as the record of the first brief.
+
+### Results: the re-runs on the final brief (written after the runs; the predictions above were not edited)
+**E-PAYRUN-ANALYST-REPRO-01**, run `20261113T041735Z-1296`, PASS: in 10 of 10 reviews of the run with the planted mistake the only finding was `zero-deduction` on the planted line, verified; in 10 of 10 of the corrected run there were no findings; no false claims; all 20 replies parsed on the first attempt. **E-HOSTED-PAYRUN-LIVE-02**, run `20261113T041922Z-5bc2`, PASS on the first attempt, about $0.0023: every prediction held again on a new group, with the reviewer catching Cy's line (`zero-deduction`, verified, first attempt) and the settlement in transaction `GNzfiVES…`. Both claims (`CLM-PAYRUN-ANALYST-03`, `CLM-HOSTED-PAYRUN-02`) now cite these runs; the first runs on the earlier brief are kept as history.
