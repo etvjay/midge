@@ -28,8 +28,24 @@ export function clearBestQuote({ direction, quotes, limitMicro, pricing = 'first
  * units are min(total buy, total sell). The short side is filled in full; the long side is filled in proportion to order size
  * (largest remainder, ties to the fixed order), so no fill exceeds its order. `maxUnits`, if given, is a public cap on any one
  * order's size, which limits the over-ordering that pro-rata invites. Every fill is at the reference price.
+ * An order's optional minUnits is the smallest fill it accepts (see the loop below).
  */
 export function clearCross({ buys, sells, referenceMicro, maxUnits = null }) {
+  // An order may carry minUnits: a fill below it cancels the order, and the cross is computed again without it until no fill is
+  // below its order's minimum. The loop ends because every pass removes at least one order.
+  const belowMinimum = [];
+  let b = buys; let sl = sells;
+  for (;;) {
+    const out = crossOnce({ buys: b, sells: sl, referenceMicro, maxUnits });
+    const minOf = new Map([...b, ...sl].filter((o) => o.minUnits).map((o) => [o.flyerId, BigInt(o.minUnits)]));
+    const under = [...out.buyFills, ...out.sellFills].filter((f) => minOf.has(f.flyerId) && f.units < minOf.get(f.flyerId)).map((f) => f.flyerId);
+    if (under.length === 0) return { ...out, buysReceived: buys.length, sellsReceived: sells.length, belowMinimum };
+    belowMinimum.push(...under);
+    b = b.filter((o) => !under.includes(o.flyerId)); sl = sl.filter((o) => !under.includes(o.flyerId));
+  }
+}
+
+function crossOnce({ buys, sells, referenceMicro, maxUnits = null }) {
   const clamp = (u) => (maxUnits === null ? BigInt(u) : BigInt(Math.min(u, maxUnits)));
   const take = (list, ok) => list.filter((o) => o.units > 0 && ok(o)).map((o) => ({ ...o, ordered: clamp(o.units) })).sort((a, b) => a.order - b.order);
   const eb = take(buys, (b) => b.limitMicro >= referenceMicro);
