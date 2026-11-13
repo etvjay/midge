@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Midge replay, check a hardware run yourself</title>
+<meta name="description" content="Recorded runs of the Midge room on real secure hardware. Your browser re-checks each log from the raw events.">
+<meta name="theme-color" content="#0f1416">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400&family=Newsreader:wght@300;400&display=swap">
+<link rel="stylesheet" href="replay.css">
+</head>
+<body>
+<header class="top"><a class="mark" href="../">Midge</a><span class="where">Replay</span></header>
+<main>
+  <section class="intro">
+    <p class="kicker">Replay</p>
+    <h1>Check a hardware run yourself</h1>
+    <p class="lede">These are recorded runs of the room on real secure hardware, each settled on a NEAR testnet contract. Your browser re-checks every log from its raw events, and nothing is sent anywhere. A check that cannot run says so, and never passes by default.</p>
+    <dl class="legend" aria-label="What the four verdicts mean">
+      <div><dt class="chip v-recomputed">recomputed</dt><dd>It ran in your browser and agrees.</dd></div>
+      <div><dt class="chip v-failed">failed</dt><dd>It ran and disagrees.</dd></div>
+      <div><dt class="chip v-unavailable">unavailable</dt><dd>It could not run here.</dd></div>
+      <div><dt class="chip v-reported-not-verified">reported, not verified</dt><dd>A record says it, and this page did not check it.</dd></div>
+    </dl>
+  </section>
+
+  <noscript><p class="nojs">This page re-checks the logs in your browser, so it needs JavaScript. The same logs are in <code>docs/lab-runs</code> in the repository, and <code>node lab/verify-run.js &lt;folder&gt;</code> checks them from a terminal.</p></noscript>
+
+  <section aria-labelledby="pick-h">
+    <h2 id="pick-h" class="sr">Choose a run</h2>
+    <div id="runs" class="runs" role="group" aria-label="Recorded runs"></div>
+  </section>
+
+  <section id="run" class="run" aria-live="polite"></section>
+
+  <section id="trail" class="trail" aria-labelledby="trail-h"></section>
+
+  <section class="limits" aria-labelledby="limits-h">
+    <h2 id="limits-h">What this page does not prove</h2>
+    <ul>
+      <li>A log that checks out was not changed after it was written. It does not show the events were honestly produced, so the transaction hashes in each run are linked for you to open on the explorer.</li>
+      <li>The attestation of the hardware is in each run as a recorded event. Checking the Intel certificate chain needs the verifier in <code>npm run verify:tee</code>, which this page does not repeat.</li>
+      <li>Amounts and addresses are public on NEAR. What the paper trail hides is who each address belongs to, and a person with a unique and unchanged amount can still be matched across months.</li>
+      <li>One operator ran every account in these tests. No independent operators have been shown, and nothing here runs on mainnet.</li>
+    </ul>
+  </section>
+</main>
+<footer class="foot"><a href="../">Back to Midge</a><a href="https://github.com/etvjay/midge">Source on GitHub</a></footer>
+<script src="replay.data.js"></script>
+<script src="replay.bundle.js"></script>
+</body>
+</html>
