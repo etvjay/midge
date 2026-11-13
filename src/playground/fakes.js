@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { generateClientKey } from '../enclave/e2ee.js';
 import { nearKeyPair, verifyNearSignature } from '../roost-service/signed-input.js';
 import { payrunApprovalMessage } from '../roost-service/hosted-roost.js';
@@ -26,6 +27,7 @@ export function fakeChain({ failOn = null } = {}) {
       const g = groups.get(args.syndicate_id); if (!g) return null;
       return { epoch: g.epoch, round_nonce: g.nonce, total_escrow: String(g.escrow), is_settling: false, status: g.status };
     },
+    async balance() { return 10n * NEAR; },
     finalReads: 0,
     async viewFinal(method, args) { chain.finalReads += 1; return chain.view(method, args); },
     async waitFor(fn) { for (let i = 0; i < 5; i += 1) { const v = await fn(); if (v) return v; } throw new Error('timed out'); },
@@ -73,3 +75,23 @@ export function fakeRoom({ refuseApproval = false, accountKeyCheck = null } = {}
   };
 }
 
+
+/**
+ * A stand-in for the model that answers in the reviewer's fixed shape and signs its receipt with a real ed25519 key, so the browser's receipt check has
+ * something real to verify. It flags every line whose tax rate is 0, which is the planted mistake.
+ */
+export function fakeAdvisor() {
+  const pair = crypto.generateKeyPairSync('ed25519');
+  const pk = pair.publicKey.export({ format: 'der', type: 'spki' }).subarray(12).toString('hex');
+  const sha = (t) => crypto.createHash('sha256').update(t).digest('hex');
+  return {
+    async ask({ user }) {
+      const msg = JSON.parse(user);
+      const findings = msg.lines.filter((l) => l.taxRatePct === 0).map((l) => ({ line: l.line, code: 'zero-deduction', severity: 'warn', note: `Line ${l.line} has no tax withheld.` }));
+      const plaintext = JSON.stringify({ findings, summary: findings.length ? 'One line has no tax withheld.' : 'No problems found.', questions: [] });
+      const model = 'Fake/Model'; const requestSha256 = sha(user); const responseSha256 = sha(plaintext);
+      const text = `${model}:${requestSha256}:${responseSha256}`;
+      return { plaintext, record: { model, requestSha256, responseSha256, tcbStatus: 'UpToDate', modelPublicKey: pk, signature: { text, signature: crypto.sign(null, Buffer.from(text), pair.privateKey).toString('hex'), signing_address: pk, kind: 'provider_tee' } } };
+    },
+  };
+}

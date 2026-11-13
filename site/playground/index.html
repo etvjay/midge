@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Midge playground</title>
+<meta name="description" content="Approve a real pay run. A model on NEAR AI Cloud reviews it, a room on secure hardware signs it, and the NEAR contract pays you on testnet.">
+<meta name="theme-color" content="#0f1416">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400&family=Newsreader:wght@300;400&display=swap">
+<link rel="stylesheet" href="../replay/replay.css">
+<link rel="stylesheet" href="playground.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="rail" aria-label="Replay and playground">
+    <a class="mark" href="../">Midge</a>
+    <nav class="modes" aria-label="Mode">
+      <a class="mode" href="../replay/">Replay<span>Check recorded runs</span></a>
+      <details class="railnav" open>
+        <summary>Steps</summary>
+        <ol class="stepnav" id="stepnav"></ol>
+      </details>
+      <a class="mode" href="./" aria-current="page">Playground<span>Take part in a live round</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <section class="intro">
+      <p class="kicker">Playground</p>
+      <h1>Approve a pay run yourself</h1>
+      <p class="lede">You approve a real pay run on NEAR testnet. A model on NEAR AI Cloud reviews it first, a program in a secure hardware enclave works out the payments and signs them, and the NEAR contract pays them, including your own line, to an account that only you hold the key to. Every result is checked in your browser.</p>
+      <div id="status" class="statusbar" aria-live="polite"></div>
+    </section>
+
+    <noscript><p class="nojs">The playground runs in your browser, so it needs JavaScript. The recorded runs on the Replay page can be read without it.</p></noscript>
+
+    <div id="steps"></div>
+
+    <section class="limits" aria-labelledby="limits-h">
+      <h2 id="limits-h">What this does not prove</h2>
+      <ul>
+        <li>The service that runs the round is the employer and the coordinator. It chooses you as the approver for your round, and the group's public rules don't fix the approver yet, so the contract doesn't see your approval. Only the room checks it.</li>
+        <li>The service, and not the room or the contract, makes sure that a model reviewed exactly the lines you send. The model's own hardware attestation is recorded but not checked on this page.</li>
+        <li>Everything here uses NEAR testnet, where the coins have no value. One operator runs the service, the room and every other account, and one round runs at a time.</li>
+        <li>Amounts and addresses are public on NEAR. The room keeps who each address belongs to, and the sealed payslips are the only record of that link.</li>
+      </ul>
+    </section>
+    <footer class="foot"><a href="../">Back to Midge</a><a href="../replay/">Replay recorded runs</a><a href="https://github.com/etvjay/midge">Source on GitHub</a></footer>
+  </main>
+</div>
+<script src="config.js"></script>
+<script src="playground.bundle.js"></script>
+</body>
+</html>

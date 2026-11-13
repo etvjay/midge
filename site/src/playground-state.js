@@ -14,7 +14,8 @@ export const PRESETS = {
 const emptyRound = () => ({ step: null, position: null, etaSeconds: null, detail: {} });
 
 export function initialState() {
-  return { step: 'run', lines: PRESETS.clean(), review: null, reviewError: null, reviewedKey: null, ticket: null, round: emptyRound(), result: null, error: null };
+  const lines = PRESETS.clean(); lines[3] = { ...lines[3], person: 'You' }; // the last line is yours, and you can rename it
+  return { step: 'run', lines, review: null, reviewError: null, reviewedKey: null, ticket: null, round: emptyRound(), result: null, error: null };
 }
 
 export const canReview = (s) => s.step === 'run' && lineProblems(s.lines).length === 0;
