@@ -781,3 +781,28 @@ The predictions for `E-PAYRUN-ANALYST-REPRO-01` and `E-HOSTED-PAYRUN-LIVE-02` ab
 
 ### Results: the re-runs on the final brief (written after the runs; the predictions above were not edited)
 **E-PAYRUN-ANALYST-REPRO-01**, run `20261113T041735Z-1296`, PASS: in 10 of 10 reviews of the run with the planted mistake the only finding was `zero-deduction` on the planted line, verified; in 10 of 10 of the corrected run there were no findings; no false claims; all 20 replies parsed on the first attempt. **E-HOSTED-PAYRUN-LIVE-02**, run `20261113T041922Z-5bc2`, PASS on the first attempt, about $0.0023: every prediction held again on a new group, with the reviewer catching Cy's line (`zero-deduction`, verified, first attempt) and the settlement in transaction `GNzfiVES…`. Both claims (`CLM-PAYRUN-ANALYST-03`, `CLM-HOSTED-PAYRUN-02`) now cite these runs; the first runs on the earlier brief are kept as history.
+
+## Maker-checker for pay runs, and an employee pay run on hardware with no invoices: predictions, written 2026-11-13 before the experiments exist or run
+
+**What it is, in plain words.** In real payroll the person who prepares a pay run cannot also approve it. The room gains that rule. A pay run may name an approver, who must be a different account from the employer who prepared it. The room then builds the run as before, seals a summary of it to the approver (headcount, the totals, every transfer, and the run's order hash), and refuses to sign the settlement until the approver signs an approval of that exact run, bound to the round, with a key the chain says belongs to the approver's account. Changing any line changes the order hash, so an approval cannot be carried over to a different run. Without an approver the pay run behaves exactly as before. The contract does not check the approval; the room does, inside the attested hardware. Invoices are left out of the story: an employee pay run has none.
+
+**E-PAYRUN-MAKER-CHECKER-01 (offline, local room).**
+1. **No approver, no change.** A pay run without an approver signs as before.
+2. **With an approver, nothing is signed until the approval.** Asking the room to sign before the approval is refused and names the missing approval.
+3. **The approver must differ from the preparer.** Naming the employer as the approver is refused.
+4. **Only the approver's real key counts.** An approval signed with a key that is not the approver's account key, an approval by the employer, an approval for a different order hash or run id, and an approval for another round are each refused.
+5. **The approver sees the run.** The summary sealed to the approver opens with the approver's key, carries the same order hash, headcount, totals and transfers, and does not open with another key.
+6. **One approval, then one signature.** After a valid approval the room signs once, the signed message is the usual one, and a second approval or a second signature is refused.
+7. **Mutations the experiment must catch:** skipping the approval check in signing; accepting the employer as approver; not binding the approval to the order hash; not checking the key against the account.
+
+**E-HOSTED-PAYRUN-LIVE-03 (hardware, production contract, about $0.003 plus testnet NEAR that returns at teardown).** An employer (the preparer), a different approver, four employees (Alice, Bo, Cy, Dee; gross 0.05, 0.04, 0.03, 0.06) on fresh one-time addresses, a tax account and a benefits account. No invoices.
+1. **The VM attests** a newly pinned image built from the merge that adds maker-checker.
+2. **The reviewer catches the planted mistake.** Cy's line has no tax withheld; the attested reviewer flags it on Cy's line, verified by the code, with at most one retry, from a request with nothing identifying in it.
+3. **The corrected run waits for its approver.** The employer submits the corrected run; the room refuses to sign before approval; an approval signed by a stranger's key is refused; the approver opens the sealed summary, its totals match the run, and the approver's signed approval is accepted.
+4. **It settles exactly** on the production contract: 0.04, 0.032, 0.024 and 0.048 to the four addresses, 0.027 tax, 0.009 benefits, 0.18 charged.
+5. **The sub-transaction sums hold** against the transfers on chain.
+6. **Each payslip verifies** against the order hash read from the chain; a changed one and a foreign one fail.
+7. **The auditor pack opens one line** (Bo's) and names no one else; a request from another key is refused.
+8. **Everything a page needs is saved as evidence,** including the approver's summary and the approval.
+9. **Teardown leaves nothing:** eight accounts deleted, group pruned, VM deleted, under $0.10.
+**Weaknesses I expect to remain:** one operator holds every account; the contract does not see the approval, so a room that ignored it would not be caught on chain (the attestation shows which code runs); two accounts can belong to one person.
