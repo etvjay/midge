@@ -41,12 +41,26 @@
           <div><dt class="chip v-recomputed">recomputed</dt><dd>Your browser ran the check, and it agrees.</dd></div>
           <div><dt class="chip v-failed">failed</dt><dd>It ran, and it disagrees.</dd></div>
           <div><dt class="chip v-unavailable">unavailable</dt><dd>It could not run here.</dd></div>
-          <div><dt class="chip v-reported-not-verified">reported, not verified</dt><dd>The run's log says it. This page did not repeat it.</dd></div>
+          <div><dt class="chip v-reported-not-verified">reported, not verified</dt><dd>The run's log says it, and the page did not repeat it.</dd></div>
         </dl>
       </details>
     </section>
 
-    <noscript><p class="nojs">This page re-checks the recorded logs in your browser, so it needs JavaScript. The same logs are in <code>docs/lab-runs</code> in the repository, and <code>node lab/verify-run.js &lt;folder&gt;</code> checks them from a terminal.</p></noscript>
+    <details class="legendbox words">
+      <summary>Words used on this page</summary>
+      <dl class="glossary">
+        <div><dt>Room</dt><dd>A program that Midge starts inside a locked hardware enclave. Members send it sealed inputs, it applies a public rule, and it signs the result.</dd></div>
+        <div><dt>Group</dt><dd>A set of members on the NEAR contract who deposit money and agree to the room's rule.</dd></div>
+        <div><dt>Sealed</dt><dd>Encrypted so that only the room can read it.</dd></div>
+        <div><dt>Signed</dt><dd>Signed with the member's own NEAR key, so the room knows who sent it.</dd></div>
+        <div><dt>Round</dt><dd>One run of the rule, from the sealed inputs to a signed result.</dd></div>
+        <div><dt>Order hash</dt><dd>A fingerprint of the result. The room signs it and the contract records it.</dd></div>
+        <div><dt>Attested</dt><dd>The hardware produced a signed report of exactly which software it runs.</dd></div>
+        <div><dt>NEAR</dt><dd>The currency of the NEAR network. The runs here used NEAR testnet, where the coins have no value.</dd></div>
+      </dl>
+    </details>
+
+    <noscript><p class="nojs">The page re-checks the recorded logs in your browser, so it needs JavaScript. The same logs are in <code>docs/lab-runs</code> in the repository, and <code>node lab/verify-run.js &lt;folder&gt;</code> checks them from a terminal.</p></noscript>
 
     <div id="case"></div>
 

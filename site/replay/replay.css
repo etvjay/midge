@@ -210,3 +210,20 @@ button.act:disabled { opacity: 0.5; cursor: progress; }
   .cell:nth-child(2) { border-right: 0; } .cell:nth-child(-n+2) { border-bottom: 1px solid var(--d-line); }
   .check, .row { grid-template-columns: minmax(0, 1fr); } .check .d, .row .detail { grid-column: 1; }
 }
+
+/* ---- who is in the run, and the glossary ---- */
+.cast { margin-top: 12px; border: 1px solid var(--line); border-radius: var(--r); padding: 16px; background: var(--slip); }
+.cast h3 { font: 400 18px/1.2 var(--serif); margin-bottom: 12px; }
+.cast-rows { display: grid; gap: 8px; }
+.cast-row { display: grid; grid-template-columns: 36px 160px minmax(0, 1.3fr) minmax(0, 1.6fr); gap: 4px 16px; align-items: baseline; font-size: 14px; }
+.cast .role { font: 400 12px/1.4 var(--mono); color: var(--lake); }
+.cast .who { font-weight: 500; }
+.cast .acct { color: var(--ink-2); overflow-wrap: anywhere; font-size: 12px; }
+.cast a.acct { text-decoration-color: var(--line); }
+.cast .does { color: var(--ink-2); }
+.cast .cap { margin-top: 12px; color: var(--ink-3); font-size: 14px; max-width: 76ch; }
+.words { margin: 8px 0 16px; }
+.glossary { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; margin-top: 14px; }
+.glossary dt { font-weight: 500; }
+.glossary dd { color: var(--ink-2); font-size: 14px; }
+@media (max-width: 920px) { .cast-row { grid-template-columns: 36px minmax(0, 1fr); } .cast .acct, .cast .does { grid-column: 2; } }

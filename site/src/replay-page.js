@@ -18,7 +18,8 @@ const el = (tag, attrs = {}, ...kids) => {
 const put = (parent, ...kids) => { for (const k of kids.flat()) if (k) parent.append(k); return parent; };
 const chip = (v) => el('span', { class: `chip v-${v}` }, v === 'reported-not-verified' ? 'reported, not verified' : v);
 const short = (h, n = 8) => (h && h.length > n * 2 + 1 ? `${h.slice(0, n)}…${h.slice(-4)}` : h);
-const check = (v, claim, detail) => el('div', { class: 'check' }, chip(v), el('span', {}, claim), detail ? el('span', { class: 'd' }, detail) : null);
+const sentence = (t) => { const x = String(t); return x.charAt(0).toUpperCase() + x.slice(1) + (/[.?!]$/.test(x) ? '' : '.'); };
+const check = (v, claim, detail) => el('div', { class: 'check' }, chip(v), el('span', {}, sentence(claim)), detail ? el('span', { class: 'd' }, detail) : null);
 const nearOf = (yocto) => { const v = BigInt(yocto); const w = v / 10n ** 24n; const f = (v % 10n ** 24n).toString().padStart(24, '0').slice(0, 6).replace(/0+$/, ''); return f ? `${w}.${f}` : `${w}`; };
 const micro = (s) => { const [w, f = ''] = String(s).split('.'); return BigInt(w) * 1_000_000n + BigInt(f.padEnd(6, '0').slice(0, 6)); };
 const worst = (vs) => (vs.includes('failed') ? 'failed' : vs.includes('unavailable') ? 'unavailable' : vs.includes('reported-not-verified') && !vs.includes('recomputed') ? 'reported-not-verified' : 'recomputed');
@@ -40,7 +41,7 @@ const numOf = (i) => steps.slice(0, i + 1).filter((x) => !x.off).length;
 function section(i, lead, ...body) {
   const s = steps[i];
   return put(el('section', { class: `step${s.off ? ' off' : ''}`, id: s.id, 'aria-labelledby': `${s.id}-h` }),
-    el('span', { class: 'pill' }, s.off ? `Not modelled · ${D.beats[s.beat]}` : `Step ${numOf(i)} · ${D.beats[s.beat]}`),
+    el('span', { class: 'pill' }, s.off ? `Not modelled, ${D.beats[s.beat].toLowerCase()}` : `Step ${numOf(i)}, ${D.beats[s.beat].toLowerCase()}`),
     el('h2', { id: `${s.id}-h` }, s.title), lead ? el('p', { class: 'lead' }, lead) : null, ...body);
 }
 
@@ -68,6 +69,27 @@ function liveTx(tx, expectedOrderHash, onDone) {
     tx.label ? el('p', { class: 'sub' }, tx.label.replace(/^settle_batch_charged ?/, 'settled: ')) : null, box);
 }
 
+// Who is in the run: the account ids come from the run's own log, found by the short role the experiment gave each account.
+function accountIds(runId) {
+  const ids = new Map();
+  for (const m of D.runs[runId].eventsText.matchAll(/\b([a-z0-9]{5,14})\.(fly-\d+\.testnet)\b/g)) ids.set(m[1], `${m[1]}.${m[2]}`);
+  return ids;
+}
+function castPanel(rows, caption) {
+  return el('section', { class: 'cast', 'aria-label': 'Who is in this run' },
+    el('h3', {}, 'Who is in this run'),
+    el('div', { class: 'cast-rows' }, rows.map((r) => el('div', { class: 'cast-row' },
+      el('span', { class: 'role' }, r.role), el('span', { class: 'who' }, r.name),
+      r.id ? el('a', { class: 'acct mono', href: `${NB}/address/${r.id}`, target: '_blank', rel: 'noopener' }, r.id) : el('span', { class: 'acct' }, ''),
+      el('span', { class: 'does' }, r.does)))),
+    el('p', { class: 'cap' }, caption));
+}
+function castOf(u) {
+  const ids = accountIds(u.runId);
+  const rows = u.cast.map((c) => ({ ...c, id: [...ids].find(([local]) => local.slice(7) === c.role)?.[1] || null }));
+  return castPanel(rows, 'The test created these accounts for this run and deleted them when it ended. What each account did is taken from the test script that ran it, and the room\'s replies don\'t reveal the losing values.');
+}
+
 // The head of every replay: the log's own check (with a way to break it), and the attestation it records.
 function logHead(runId) {
   const run = D.runs[runId]; const att = parse(run.eventsText).find((e) => e.type === 'evidence' && e.kind === 'attestation');
@@ -77,9 +99,9 @@ function logHead(runId) {
     const r = checkRun(st.tampered ? tamper(run.eventsText) : run.eventsText, run.summaryText);
     box.replaceChildren(
       el('div', { class: 'checks' },
-        check(r.rows[0].verdict, st.tampered ? 'one recorded check was flipped, and the hash chain no longer matches' : 'this run\'s log is an unbroken hash chain, so every step below is what the run recorded', `run ${runId}, ${r.events} events`),
-        att ? check('reported-not-verified', 'the machine attested the pinned room image before anyone used it', `compose hash ${short(att.composeHash, 8)}`) : null),
-      el('button', { type: 'button', class: 'act warn', onclick: () => { st.tampered = !st.tampered; draw(); } }, st.tampered ? 'Restore the log' : 'Change one event'));
+        check(r.rows[0].verdict, st.tampered ? 'One recorded check was flipped, so the hash chain no longer matches.' : 'The run\'s log is an unbroken hash chain, so nothing in it has changed since it was written.', `run ${runId}, ${r.events} events`),
+        att ? check('reported-not-verified', 'The hardware attested which software the room runs before anyone used it. The page doesn\'t check that attestation.', `compose hash ${short(att.composeHash, 8)}`) : null),
+      el('button', { type: 'button', class: 'act warn', onclick: () => { st.tampered = !st.tampered; draw(); } }, st.tampered ? 'Restore the log' : 'Change one event in the log'));
   };
   draw();
   return box;
@@ -141,8 +163,18 @@ function renderGeneric(u) {
 }
 
 // ---- the pay run ----
+function payrunCastOf(u) {
+  const T = parse(D.runs[u.runId].eventsText).find((e) => e.type === 'evidence' && e.kind === 'paper-trail');
+  return castPanel([
+    { role: 'er', name: 'Employer', id: T.employerAddress, does: 'Prepares and signs the run, and is charged the gross pay.' },
+    { role: 'ap', name: 'Approver', id: T.approval.approver, does: 'A different account from the employer. Signs an approval of this exact run.' },
+    { role: 'tx', name: 'Tax account', id: T.taxAddress, does: 'Receives all the tax in one transfer.' },
+    { role: 'bf', name: 'Benefits account', id: T.benefitsAddress, does: 'Receives all the benefits in one transfer.' },
+    ...T.people.map((p, i) => ({ role: `p${i + 1}`, name: p.name, id: p.payee, does: 'Is paid net pay at a fresh address that only the room can link to this person.' })),
+  ], 'The test created these accounts for this run and deleted them when it ended.');
+}
 const PAYRUN_STEPS = [
-  { title: 'The employer seals the pay run', beat: 0 },
+  { title: 'The employer seals the run', beat: 0 },
   { title: 'The AI review catches a mistake', beat: 1 },
   { title: 'A second person approves', beat: 1 },
   { title: 'Settlement on the chain', beat: 2 },
@@ -163,8 +195,8 @@ function renderPayrun(u) {
   // 1. private inputs
   const s1 = () => {
     setVerdict('s-1', 'reported-not-verified');
-    return section(0, 'The employer writes one line per person: gross pay, tax, benefits, and a fresh one-time address to pay. It seals the run to the room and signs it with the employer account\'s own key. Nobody outside the room sees who is paid what.',
-      el('div', { class: 'people' }, T.people.map((p) => el('div', { class: 'person' }, el('b', {}, p.name), el('span', { class: 'k' }, `paid at ${short(p.payee.split('.')[0], 6)}…`), el('span', { class: 'k' }, 'a one-time address')))),
+    return section(0, `The employer, ${T.employerAddress}, writes one line for each of ${T.people.map((p) => p.name).join(', ').replace(/, ([^,]*)$/, ' and $1')}, with gross pay, tax, benefits and a fresh address to pay that person at. The run is sealed so that only the room can read it, and it's signed with the employer account's own key. Nobody outside the room can see who is paid what.`,
+      el('div', { class: 'people' }, T.people.map((p) => el('div', { class: 'person' }, el('b', {}, p.name), el('span', { class: 'k' }, 'paid at'), el('a', { class: 'k mono', href: `${NB}/address/${p.payee}`, target: '_blank', rel: 'noopener' }, p.payee)))),
       recordedList(recorded(events, ['set up'], 'deposit')));
   };
 
@@ -184,22 +216,22 @@ function renderPayrun(u) {
     const recv = R.receipt.signature ? verifyModelReceipt(R.receipt) : { ok: false };
     setVerdict('s-2', worst([leaks.length ? 'failed' : 'recomputed', ok ? 'recomputed' : 'failed', recv.ok ? 'recomputed' : 'failed']));
     const cyName = Object.entries(R.labels).find(([, l]) => l === R.cyLabel)?.[0];
-    return section(1, 'Cy\'s line was planted with no tax withheld. Before anyone approves, the employer sends a stripped copy of the run to an attested model on NEAR AI Cloud. The model sees rates and ratios, never a name, an address or an amount, and code checks every finding against the numbers.',
+    return section(1, 'Before anyone approves the run, the employer sends a copy to an AI model on NEAR AI Cloud, with every name, address and amount removed. The model sees only rates and ratios, and ordinary code then checks each of its findings against the numbers. In this test Cy\'s line was planted with no tax withheld, and the model saw it as line A.',
       el('div', { class: 'stage' },
         el('div', { class: 'two' },
           el('div', { class: 'panel' }, el('h4', {}, 'What the model saw'), el('p', { class: 'rules' }, sent.rules),
             el('div', { class: 'tw' }, el('table', {}, el('thead', {}, el('tr', {}, ['Line', 'Gross vs median', 'Tax', 'Benefits'].map((h, i) => el('th', { class: i ? 'n' : '' }, h)))),
               el('tbody', {}, sent.lines.map((l) => el('tr', { class: l.line === R.cyLabel ? 'hit' : '' }, el('td', {}, l.line), el('td', { class: 'n' }, `${l.grossPctOfMedian}%`), el('td', { class: 'n' }, `${l.taxRatePct}%`), el('td', { class: 'n' }, `${l.benefitsRatePct}%`))))))),
           el('div', { class: 'panel' }, el('h4', {}, 'What it found'),
-            R.findings.map((f) => el('div', { class: 'finding' }, el('span', { class: 'code' }, `line ${f.line} · ${f.code}`), el('span', {}, f.note), findOK(f) === null ? null : chip(findOK(f) ? 'recomputed' : 'failed'))),
+            R.findings.map((f) => el('div', { class: 'finding' }, el('span', { class: 'code' }, `line ${f.line}, ${f.code}`), el('span', {}, f.note), findOK(f) === null ? null : chip(findOK(f) ? 'recomputed' : 'failed'))),
             el('p', { class: 'say' }, R.summary),
-            el('p', { class: 'say' }, `Line ${R.cyLabel} is ${cyName}'s. The page knows that; the model did not.`))),
+            el('p', { class: 'say' }, `Line ${R.cyLabel} is ${cyName}'s. The page knows that, and the model didn't.`))),
         el('div', { class: 'checks' },
-          check(leaks.length ? 'failed' : 'recomputed', 'no name, one-time address, reference or exact amount appears in what was sent', leaks.length ? `found: ${leaks.join(', ')}` : `${(R.secrets || []).length} values checked`),
-          check(ok ? 'recomputed' : 'failed', `the finding on line ${R.cyLabel} is true when recomputed from the numbers`, 'tax 0 percent against a stated 15 percent'),
-          check(recv.ok ? 'recomputed' : 'failed', 'the model\'s signature on its reply verifies here, over the model, the request hash and the response hash', `${R.receipt.model}, request ${short(R.receipt.requestSha256, 8)}`),
-          check('reported-not-verified', 'that signing key belongs to a model whose hardware was attested', `hardware status ${R.receipt.tcbStatus}, recorded by the run`)),
-        el('p', { class: 'say' }, 'In tests the same brief caught 59 of 59 planted mistakes across 46 runs it was never tuned on, with no false claims. ', el('a', { href: D.briefUrl, target: '_blank', rel: 'noopener' }, 'Read the reviewer\'s brief'), '. The employer then set Cy\'s tax to 15 percent and sent the run again.')));
+          check(leaks.length ? 'failed' : 'recomputed', 'No name, address, reference or exact amount appears in what the model was sent.', leaks.length ? `found: ${leaks.join(', ')}` : `${(R.secrets || []).length} values checked`),
+          check(ok ? 'recomputed' : 'failed', `The finding on line ${R.cyLabel} is true when recomputed from the numbers.`, 'tax of 0 percent against a stated 15 percent'),
+          check(recv.ok ? 'recomputed' : 'failed', 'The model\'s signature on its reply verifies here, over the model name, the request hash and the response hash.', `${R.receipt.model}, request ${short(R.receipt.requestSha256, 8)}`),
+          check('reported-not-verified', 'The signing key belongs to a model running on attested hardware. The page doesn\'t check that attestation.', `hardware status ${R.receipt.tcbStatus}, recorded by the run`)),
+        el('p', { class: 'say' }, 'In separate tests, the same instructions caught 59 of 59 planted mistakes across 46 runs they were never tuned on, with no false claims. ', el('a', { href: D.briefUrl, target: '_blank', rel: 'noopener' }, 'Read the instructions the model was given'), '. The employer then set Cy\'s tax to 15 percent and sent the run again.')));
   };
 
   // 3. maker-checker
@@ -210,7 +242,7 @@ function renderPayrun(u) {
     const bound = A.message.endsWith(`:${T.runId}:${T.orderHash}`);
     setVerdict('s-3', worst([same ? 'recomputed' : 'failed', bound ? 'recomputed' : 'failed']));
     const row = (l, v) => el('div', { class: 'lead-row' }, el('span', { class: 'l' }, l), el('span', { class: 'fill' }), el('span', {}, v));
-    return section(2, 'The run names an approver, a different account from the employer who prepared it. The room seals a summary to the approver and will not sign anything until the approver signs this exact run.',
+    return section(2, `The run names ${A.approver} as its approver, which is a different account from the employer. The room seals a summary of the run to the approver, and it won't sign the settlement until the approver signs an approval that names this run and its order hash.`,
       el('div', { class: 'stage' },
         el('div', { class: 'two' },
           el('div', { class: 'slip ok sum' }, el('div', { class: 'hd' }, el('span', {}, 'Approval summary'), el('span', {}, 'sealed to the approver')),
@@ -218,18 +250,18 @@ function renderPayrun(u) {
             el('div', { class: 'meta2' }, el('span', {}, `Order hash ${short(summary.orderHash, 8)}`))),
           el('div', { class: 'panel' }, el('h4', {}, 'What the approver signs'), el('p', { class: 'mono sig' }, A.message))),
         el('div', { class: 'checks' },
-          check(same ? 'recomputed' : 'failed', 'the summary carries the same order hash and the same transfers that settled', 'opened here with the approver\'s throwaway key, saved in the run'),
-          check(bound ? 'recomputed' : 'failed', 'the signed approval names this run and this order hash, so it cannot approve a changed run'),
-          check(asserted(/refuses to sign before the approval/) ? 'reported-not-verified' : 'failed', 'the room refused to sign before the approval'),
-          check(A.strangerRefused && asserted(/not the approver's is refused/) ? 'reported-not-verified' : 'failed', 'an approval signed with a stranger\'s key was refused', short(A.strangerRefused, 40)))));
+          check(same ? 'recomputed' : 'failed', 'The summary has the same order hash and the same transfers that settled.', 'opened here with the approver\'s one-use key, which the run saved'),
+          check(bound ? 'recomputed' : 'failed', 'The signed approval names this run and this order hash, so it can\'t approve a changed run.'),
+          check(asserted(/refuses to sign before the approval/) ? 'reported-not-verified' : 'failed', 'The room refused to sign before the approval arrived.'),
+          check(A.strangerRefused && asserted(/not the approver's is refused/) ? 'reported-not-verified' : 'failed', 'An approval signed with an unrelated key was refused.', short(A.strangerRefused, 40)))));
   };
 
   // 4. settlement
   const s4 = () => {
     const same = payrunOrderHash(employerDoc.runId, employerDoc.receiptsRoot) === T.orderHash;
     setVerdict('s-4', same ? 'unavailable' : 'failed');
-    return section(3, 'The room signed the settlement, and the contract checked the signature, the round, the recipients and the amounts before paying. The order hash it recorded is the root of every payslip below.',
-      el('div', { class: 'checks paper' }, check(same ? 'recomputed' : 'failed', 'the payslips\' root and the run id reproduce the order hash', short(T.orderHash, 12))),
+    return section(3, 'The room signed the settlement, and the contract checked the signature, the round, the recipients and the amounts before it paid. The order hash that the contract recorded is built from every payslip below.',
+      el('div', { class: 'checks paper' }, check(same ? 'recomputed' : 'failed', 'The payslips and the run id reproduce the order hash.', short(T.orderHash, 12))),
       liveTx({ hash: T.settleTx }, T.orderHash, (v) => setVerdict('s-4', worst([same ? 'recomputed' : 'failed', v]))));
   };
 
@@ -256,9 +288,9 @@ function renderPayrun(u) {
           el('div', { class: 'equals' }, el('span', {}, '='), el('span', {}, `${nearOf(c.sum)}, ${c.sum === c.val ? 'the same as the transfer on chain' : 'NOT the transfer on chain'}`), chip(c.sum === c.val ? 'recomputed' : 'failed'))));
     };
     draw();
-    return section(4, 'The chain shows one transfer to the tax account, one to the benefits account, and one to each one-time address. The employer\'s private statement holds every line behind them. Pick a transfer to see its lines.',
+    return section(4, `On chain there is one transfer to the tax account ${T.taxAddress}, one to the benefits account ${T.benefitsAddress}, and one to each employee's address. The employer's private statement lists the lines behind each transfer. Choose a transfer to see its lines.`,
       el('div', { class: 'stage' }, wrap,
-        el('div', { class: 'checks' }, check(all ? 'recomputed' : 'failed', 'every transfer is the sum of its lines, and each person\'s net is the transfer to their one-time address', 'decrypted here with the employer\'s throwaway key, saved in the run'))));
+        el('div', { class: 'checks' }, check(all ? 'recomputed' : 'failed', 'Each transfer is the sum of its lines, and each person\'s net pay is the transfer to their address.', 'opened here with the employer\'s one-use key, which the run saved'))));
   };
 
   // 6. payslips
@@ -299,7 +331,7 @@ function renderPayrun(u) {
     draw();
     const all = T.people.every((p) => verifyStatement({ cipherHex: p.cipherHex, secretX25519: hexToBytes(p.secretHex), hostSettlePublicKey: T.settlePublicKey, onChainOrderHash: T.orderHash }).ok);
     setVerdict('s-6', all ? 'recomputed' : 'failed');
-    return section(5, 'Each person gets a payslip sealed to their own key. It must open with that key, carry the room\'s signature, and prove into the order hash on chain. Then try to cheat.',
+    return section(5, 'Each employee gets a payslip sealed to their own key. A payslip has to open with that key, carry the room\'s signature, and match the order hash on chain. You can then try to cheat, using the buttons below the payslip.',
       el('div', { class: 'stage' }, host));
   };
 
@@ -311,7 +343,7 @@ function renderPayrun(u) {
     const others = T.people.map((x) => x.name).filter((n) => !opened.includes(n) && JSON.stringify(pack).includes(n));
     setVerdict('s-7', worst([ver.ok ? 'recomputed' : 'failed', others.length ? 'failed' : 'recomputed']));
     const n = Number(pack.lines) || 0; const byIdx = Object.fromEntries(pack.opened.map((o) => [o.index, o]));
-    return section(6, `The employer signed a request to open one line, ${T.auditor.openedName}'s, for an auditor. The pack holds that line and a proof. The auditor learns the run has ${n} lines and nothing else about the others.`,
+    return section(6, `The employer signed a request to open one line, ${T.auditor.openedName}'s, for an auditor. The auditor's pack contains that line and a proof that it belongs to the run, and it tells the auditor that the run has ${n} lines. The auditor learns nothing else about the other lines.`,
       el('div', { class: 'stage' },
         el('div', { class: 'rows7' }, Array.from({ length: n }, (_, i) => {
           const o = byIdx[i];
@@ -319,9 +351,9 @@ function renderPayrun(u) {
             : el('div', { class: 'r7' }, el('span', { class: 'ix' }, `[${pad(i + 1)}]`), el('span', { class: 'bar', 'aria-label': 'not opened' }), el('span', { class: 'why' }, 'not opened'));
         })),
         el('div', { class: 'checks' },
-          check(ver.ok ? 'recomputed' : 'failed', 'the opened line proves into the order hash on chain', ver.ok ? '' : ver.reason),
-          check(others.length ? 'failed' : 'recomputed', 'the pack names no one else', others.length ? others.join(', ') : ''),
-          check(T.auditor.refused ? 'reported-not-verified' : 'failed', 'a request signed by anyone other than the employer was refused'))));
+          check(ver.ok ? 'recomputed' : 'failed', 'The opened line matches the order hash on chain.', ver.ok ? '' : ver.reason),
+          check(others.length ? 'failed' : 'recomputed', 'The pack names no one else.', others.length ? others.join(', ') : ''),
+          check(T.auditor.refused ? 'reported-not-verified' : 'failed', 'A request signed by anyone other than the employer was refused.'))));
   };
   return [s1(), s2(), s3(), s4(), s5(), s6(), s7()];
 }
@@ -365,33 +397,33 @@ function renderRail() {
 
 // ---- the page ----
 const LIMITS = [
-  'A log that checks out was not changed after it was written. It does not show the events were honestly produced, so each settlement is fetched live from the chain.',
-  'Each run records the hardware\'s attestation. Checking the Intel certificate chain needs the verifier behind npm run verify:tee, which this page does not repeat, so every row about attestation stays "reported, not verified".',
-  'One operator ran every account in these tests, on testnet. No independent operators have been shown.',
+  'A log that passes the hash check hasn\'t been changed since it was written, but that doesn\'t show the events were produced honestly. For that reason each settlement is fetched live from the chain.',
+  'Each run records the hardware\'s attestation. Checking Intel\'s certificate chain needs the verifier behind npm run verify:tee, which this page doesn\'t run, so every row about attestation says "reported, not verified".',
+  'One operator ran every account in these tests, on NEAR testnet, where the coins have no value. No independent operators have been shown.',
 ];
 const CASE_LIMITS = {
-  payrun: ['Amounts and addresses are public on NEAR. The paper trail hides who each address belongs to, but a person paid the same unusual amount every month can still be matched.', 'Cy\'s missing tax was planted. It shows the reviewer catching a kind of mistake its brief names, not every real one.', 'A different account must approve, but the operator names that account for each run. The group\'s public rules do not fix it yet, and the contract does not see the approval; the room checks it.'],
-  quotes: ['The winning price and the transfers are public. The losing quotes are not published.', 'The room names the maker whose quote expired, so it is known that this maker quoted. Expiry uses the room machine\'s own clock, which the run compares with the recorder\'s: they differed by 1 second.'],
-  decision: ['The room signs the decision and the chain does not record it, because the contract only records payments. Anyone can check the signature, but nothing on chain shows that the vote happened.', 'The room sees every vote. Votes are hidden from the other members and the public, not from the room.'],
-  ballot: ['The payout shows which option won. The count behind it is not published.'],
-  block: ['Charges and payouts are public, so anyone can work out the filled units from the cash and the public reference price.', 'The room says that one order was cancelled for its minimum fill, so it is known that such an order existed.'],
-  pools: ['Each member\'s charge is public, so their scaled share can be read from the chain.'],
+  payrun: ['Amounts and addresses are public on NEAR. The paper trail hides who each address belongs to, but a person who is paid the same unusual amount every month could still be matched.', 'Cy\'s missing tax was planted. It shows the reviewer catching one kind of mistake that its instructions name, and it doesn\'t show that the reviewer catches every real mistake.', 'The operator chooses the approver for each run. The group\'s public rules don\'t fix the approver yet, and the contract doesn\'t see the approval, so only the room checks it.'],
+  quotes: ['The winning price and the transfers are public. The losing quotes are not.', 'The room\'s reply names m1 as expired, so anyone who reads it knows that m1 quoted. Expiry uses the room machine\'s own clock. The test compared that clock with the recorder\'s, and they differed by 1 second.'],
+  decision: ['The room signs the decision, and the chain doesn\'t record it, because the contract only records payments. Anyone can check the signature, but nothing on chain shows that the vote happened.', 'The room sees every vote. Votes are hidden from the other members and the public, and they are not hidden from the room.'],
+  ballot: ['The payment shows which option won. The room doesn\'t publish the count behind it.'],
+  block: ['Charges and payments are public, so anyone can work out the filled units from the cash and the public reference price.', 'The room reports that one order was cancelled for its minimum fill, so anyone who reads it knows that such an order existed.'],
+  pools: ['Each member\'s charge is public, so anyone can read each scaled pledge on chain.'],
 };
 function render() {
   view = route();
   let u = null; let body;
   if (view.run) {
     const label = D.other.find((r) => r.id === view.run)?.label || view.run;
-    $('title').textContent = label; $('lede').textContent = 'A recorded run, checked on its own. Open a step to see what it recorded.';
+    $('title').textContent = label; $('lede').textContent = 'A recorded run, checked on its own. Open a step to see what the run recorded. Every check on this page runs in your browser.';
     body = renderRun(view.run);
   } else {
     u = caseOf(view.case);
-    $('title').textContent = `Check a ${u.title.toLowerCase().replace(/^sealed quotes$/, 'sealed-quote round')} yourself`;
-    $('lede').textContent = `${u.line} Every check runs in your browser.`;
+    $('title').textContent = `Check a ${u.title.toLowerCase().replace(/^sealed quotes$/, 'sealed quote round')} yourself`;
+    $('lede').textContent = `${u.line} Every check on this page runs in your browser.`;
     body = u.key === 'payrun' ? renderPayrun(u) : renderGeneric(u);
   }
   const runId = view.run || u.runId;
-  $('case').replaceChildren(...[logHead(runId), u ? beatsStrip() : null, ...body,
+  $('case').replaceChildren(...[logHead(runId), u ? (u.key === 'payrun' ? payrunCastOf(u) : castOf(u)) : null, u ? beatsStrip() : null, ...body,
     u?.also?.length ? el('p', { class: 'also' }, 'Also recorded: ', u.also.flatMap((a, i) => [i ? ', ' : null, el('a', { href: `#run-${a.id}` }, a.label)])) : null].filter(Boolean));
   $('limits').replaceChildren(...[...(u ? CASE_LIMITS[u.key] || [] : []), ...LIMITS].map((t) => el('li', {}, t)));
   renderRail();

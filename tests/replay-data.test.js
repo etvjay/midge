@@ -73,6 +73,14 @@ test('the vote with no payout records a decision the browser verifier accepts, a
   assert.equal(verifyDecision({ message: d.message.replace(':A:', ':B:'), signatureHex: d.signature, settlePublicKeyHex: d.settlePublicKey }).ok, false);
 });
 
+test('every named account in a replay is an account id in that run\'s own log', () => {
+  for (const u of D.useCases.filter((x) => x.cast)) {
+    const text = D.runs[u.runId].eventsText;
+    const locals = [...text.matchAll(/\b([a-z0-9]{5,14})\.fly-\d+\.testnet\b/g)].map((m) => m[1]);
+    for (const c of u.cast) assert.ok(locals.some((l) => l.slice(7) === c.role), `${u.key}: ${c.role} has no account id in the log`);
+  }
+});
+
 test('the built script has no Node built-ins', () => {
   const bundle = fs.readFileSync('site/replay/replay.bundle.js', 'utf8');
   assert.equal(/node:/.test(bundle), false);
