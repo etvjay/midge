@@ -1,0 +1,15 @@
+{
+  "runId": "20261113T124032Z-1296",
+  "startedAt": "2026-11-13T12:40:32.328Z",
+  "rootHash": "1da21159b896fffff687f0966b5cfc6bcde3f7b331a0cee59f2353829861f82e",
+  "verdicts": {
+    "E-HOSTED-CROSS-LIVE-02": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 61,
+  "commit": "76c886977e994c71c0904d30cbca082b6186025c"
+}
