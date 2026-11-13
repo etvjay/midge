@@ -24,6 +24,11 @@ import { auditorPack, auditOpenMessage } from './auditor.js';
  */
 
 export const REPORT_DATA_DOMAIN = 'midge-roost-v1';
+/** What a pay run's approver signs: the round, the run id and the run's order hash, so an approval cannot be reused for another run or round. */
+export const PAYRUN_APPROVAL_DOMAIN = 'midge-payrun-approval-v1';
+export function payrunApprovalMessage({ contractId, syndicateId, epoch, roundNonce, runId, orderHash }) {
+  return `${PAYRUN_APPROVAL_DOMAIN}:${contractId}:${syndicateId}:${epoch}:${roundNonce}:${runId}:${orderHash}`;
+}
 const MIN_CIPHERTEXT_BYTES = 32 + 24 + 16;
 const MAX_CIPHERTEXT_BYTES = 4096;
 const AMOUNT_RE = /^\d{1,12}(\.\d{1,6})?$/;
@@ -601,12 +606,19 @@ export class HostedRoost {
    * proof, the employer every line, the auditor totals only. Every payment's address and amount is public once settled; this
    * hides who a payee is (a one-time address only the room can map to a person), and adds a private paper trail.
    */
-  runPayrun({ employer, taxAddress, benefitsAddress, employerKeyHex, auditorKeyHex, runId = 'run', requireInvoices = false } = {}) {
+  runPayrun({ employer, taxAddress, benefitsAddress, employerKeyHex, auditorKeyHex, runId = 'run', requireInvoices = false, approver = null, approverKeyHex = null } = {}) {
     this.#assertNoSignedAggregate();
     if (!this.requireSignedInputs) throw new RoostAggregationError('a pay run is only run on a host that requires signed inputs');
     if (!isAccountId(employer)) throw new RoostAggregationError('employer must be a plain account id');
     for (const [k, v] of Object.entries({ employerKeyHex, auditorKeyHex })) if (!/^[0-9a-f]{64}$/i.test(String(v))) throw new RoostAggregationError(`${k} must be a 32-byte hex public key`);
     if (!/^[A-Za-z0-9._-]{1,64}$/.test(String(runId))) throw new RoostAggregationError('runId must be 1 to 64 plain characters');
+    // Maker-checker: a run that names an approver is signed only after that account, a different one from the employer who prepared it, approves it.
+    if (approver !== null && approver !== undefined) {
+      if (!isAccountId(approver)) throw new RoostAggregationError('approver must be a plain account id');
+      if (approver === employer) throw new RoostAggregationError('the approver must differ from the employer who prepared the run');
+      if (!/^[0-9a-f]{64}$/i.test(String(approverKeyHex))) throw new RoostAggregationError('approverKeyHex must be a 32-byte hex public key');
+      if (typeof this.accountKeyCheck !== 'function') throw new RoostAggregationError('this room cannot check account keys, so it cannot check an approval');
+    }
     const mine = this.sealedIntents.find((i) => i.flyerId === employer);
     if (!mine) throw new RoostAggregationError('no pay run was sealed by the employer');
     const ignored = this.sealedIntents.filter((i) => i.flyerId !== employer).map((i) => i.flyerId);
@@ -640,12 +652,35 @@ export class HostedRoost {
     statements.auditor = { cipherHex: sealToModel(JSON.stringify({ runId, receiptsRoot: root, ...built.totals }), auditorKeyHex) };
     this.sealedIntents = [];
     const orderHash = payrunOrderHash(runId, root);
+    const charged = String(built.grossMicro * YOCTO_PER_MICRO);
+    if (approver) statements.approver = { cipherHex: sealToModel(JSON.stringify({ runId, orderHash, receiptsRoot: root, totals: built.totals, allocations: built.allocations, charged, employer }), approverKeyHex) };
     this.lastRun = { runId, receipts: built.receipts, root, orderHash, employer };
     const charges = [{ member: employer, amount: String(built.grossMicro * YOCTO_PER_MICRO) }];
     const bound = { [employer]: built.grossMicro * YOCTO_PER_MICRO };
-    this.aggregate = { orderHash, totalMicro: built.grossMicro, signed: false, program: { allocations: built.allocations, charges, bound } };
-    const outcome = { ...(this.escrowReader ? { escrowBlock: aff.block } : {}), shape: 'payrun', runId, receiptsRoot: root, ...(requireInvoices ? { invoicesMatched: built.totals.headcount } : {}), lines: built.totals.headcount, recipients: built.allocations.length, gross: fmtMicro(built.grossMicro), ignored, executionModel: 'HOSTED_SEALED_PAYRUN', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
+    this.aggregate = { orderHash, totalMicro: built.grossMicro, signed: false, program: { allocations: built.allocations, charges, bound }, ...(approver ? { approval: { approver, runId, given: null } } : {}) };
+    const outcome = { ...(this.escrowReader ? { escrowBlock: aff.block } : {}), shape: 'payrun', runId, receiptsRoot: root, ...(requireInvoices ? { invoicesMatched: built.totals.headcount } : {}), ...(approver ? { approval: { required: true, approver } } : {}), lines: built.totals.headcount, recipients: built.allocations.length, gross: fmtMicro(built.grossMicro), ignored, executionModel: 'HOSTED_SEALED_PAYRUN', confidentiality: this.provider.simulated ? 'simulated' : 'tee-hosted' };
     return { outcome, orderHash, allocations: built.allocations, charges, statements, receiptsRoot: root, settlePublicKey: this.settlePublicKey };
+  }
+
+  /**
+   * The approver's sign-off on a pay run that named one. The signature covers the round, the run id and the run's order hash
+   * (payrunApprovalMessage), and the key must be one the chain says belongs to the approver's account. One approval per run.
+   */
+  async approvePayrun({ runId, orderHash, approver, publicKey, signature } = {}) {
+    const agg = this.aggregate;
+    if (!agg || !agg.approval) throw new RoostAggregationError('there is no pay run waiting for an approval in this room');
+    if (agg.signed) throw new RoostAggregationError('this pay run has already been signed');
+    if (agg.approval.given) throw new RoostAggregationError('this pay run has already been approved');
+    if (runId !== agg.approval.runId) throw new RoostAggregationError('no such pay run is waiting for approval (the run id does not match)');
+    if (orderHash !== agg.orderHash) throw new RoostAggregationError('the order hash does not match the pay run waiting for approval');
+    if (approver !== agg.approval.approver) throw new RoostAggregationError('only the approver this run names can approve it');
+    if (!this.round) throw new RoostAggregationError('no round is open');
+    if (!verifyNearSignature(publicKey, payrunApprovalMessage({ ...this.round, runId, orderHash }), signature)) throw new RoostAggregationError('the approval signature does not verify (it covers the round, the run id and the order hash)');
+    let belongs = false;
+    try { belongs = await this.accountKeyCheck(approver, publicKey); } catch { throw new RoostAggregationError('could not check the approver key against the chain'); }
+    if (!belongs) throw new RoostAggregationError(`${publicKey} is not a key of ${approver}`);
+    agg.approval.given = { publicKey, signature };
+    return { approved: true, runId, orderHash, approver };
   }
 
   /**
@@ -736,6 +771,7 @@ export class HostedRoost {
     if (this.round && (contractId !== this.round.contractId || syndicateId !== this.round.syndicateId || epoch !== this.round.epoch || roundNonce !== this.round.roundNonce)) throw new RoostAggregationError('this is not the open round: contract, syndicate, epoch and nonce must match the round the inputs were signed for');
     if (orderHash !== agg.orderHash) throw new RoostAggregationError('orderHash does not match the current aggregate');
     if (agg.signed) throw new RoostAggregationError('this aggregate has already been signed once');
+    if (agg.approval && !agg.approval.given) throw new RoostAggregationError(`this pay run needs its approver's sign-off (${agg.approval.approver}) before it can be signed`);
     if (agg.program && charges === undefined) throw new RoostAggregationError('this aggregate is an auction outcome; it can only be settled with its charges');
     if (charges !== undefined) {
       if (!agg.program) throw new RoostAggregationError('charges can only be signed for an auction outcome this Roost computed');

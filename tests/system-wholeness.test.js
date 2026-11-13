@@ -108,6 +108,7 @@ const SURFACES = {
 // Needs the coordinator key or the employer's signature on the room itself; a public gateway must not hold that key, so these are the room's own.
 const ROOM_ONLY = {
   '/invoices': 'a payee seals their invoice straight to the room',
+  '/payrun/approve': 'authorised by the approver\'s signature checked against the chain, answered only by the room',
   '/signed-intents': 'a member seals and signs for their own account straight to the room',
   '/audit/open': 'authorised by the employer\'s signature checked against the chain, answered only by the room',
   '/payrun': 'coordinator key', '/rfq': 'coordinator key', '/quote': 'coordinator key', '/pool': 'coordinator key', '/ballot': 'coordinator key', '/auction': 'coordinator key',

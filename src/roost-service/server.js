@@ -140,10 +140,11 @@ export function createRoostServer({ roost, adminKey }) {
       if (req.method === 'POST' && url.pathname === '/payrun') {
         if (!isAdmin(req)) return send(res, 401, { error: 'coordinator key required' });
         const body = await readJson(req);
-        await bind([body.employer], body); return send(res, 200, roost.runPayrun({ employer: body.employer, taxAddress: body.taxAddress, benefitsAddress: body.benefitsAddress, employerKeyHex: body.employerKeyHex, auditorKeyHex: body.auditorKeyHex, runId: body.runId, requireInvoices: body.requireInvoices === true }));
+        await bind([body.employer], body); return send(res, 200, roost.runPayrun({ employer: body.employer, taxAddress: body.taxAddress, benefitsAddress: body.benefitsAddress, employerKeyHex: body.employerKeyHex, auditorKeyHex: body.auditorKeyHex, approver: body.approver, approverKeyHex: body.approverKeyHex, runId: body.runId, requireInvoices: body.requireInvoices === true }));
       }
       // Payroll routes that need no coordinator key: a payee submits a sealed invoice; the employer opens lines for an auditor with a signed request;
       // and three pure checks that read only what they are given, move no money and sign nothing.
+      if (req.method === 'POST' && url.pathname === '/payrun/approve') return send(res, 200, await roost.approvePayrun(await readJson(req)));
       if (req.method === 'POST' && url.pathname === '/invoices') return send(res, 200, roost.submitInvoice(await readJson(req)));
       if (req.method === 'POST' && url.pathname === '/audit/open') return send(res, 200, await roost.openAuditLines(await readJson(req)));
       if (req.method === 'POST' && url.pathname === '/preflight') {

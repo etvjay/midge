@@ -806,3 +806,5 @@ The predictions for `E-PAYRUN-ANALYST-REPRO-01` and `E-HOSTED-PAYRUN-LIVE-02` ab
 8. **Everything a page needs is saved as evidence,** including the approver's summary and the approval.
 9. **Teardown leaves nothing:** eight accounts deleted, group pruned, VM deleted, under $0.10.
 **Weaknesses I expect to remain:** one operator holds every account; the contract does not see the approval, so a room that ignored it would not be caught on chain (the attestation shows which code runs); two accounts can belong to one person.
+
+**A slip in the accuracy test's record (found 2026-11-13).** The predictions for the accuracy test were committed (commit `c9d4201`) before its experiment file, but they described it in words and never wrote its id, `E-PAYRUN-ANALYST-ACCURACY-01`. The predictions-first check matches by id, so it flagged the experiment. The fix is a link, `lab/predictions-links.json`, from the id to that commit; the checker accepts a link only if the commit changed this plan and is earlier than the experiment file. It is not an exemption.
