@@ -109,3 +109,32 @@ Same method as sections 7 to 11: reading the code, plus what the live runs showe
 | **OutLayer caller contract** | `outlayer/caller` (storage `last`, `runs`, `results`) | idle -> **requested** (`runs` + 1, a yielded promise) -> **resumed** (`results` + 1, `last` = the program's JSON) or **failed** (`results` + 1, `last` records the failure) | A request whose OutLayer worker never answers leaves `runs` above `results` with no timeout of its own (NEAR's yield/resume gives up after about 200 blocks and the callback records the failure). The experiment reads `results` to know a run finished; a human reader must do the same. |
 | **Wholeness checks** | `tests/system-wholeness.test.js` | a promoted run, a claim and an experiment are linked by id and by file; a route is on a surface or on the room-only list | A new experiment, claim or room route cannot be added without the link, but the **content** of a claim is still the author's word; the test only proves its evidence exists and passed. |
 
+
+---
+
+# Update, 2026-11-13: a fresh scan, and what it adds
+
+Same method: reading the code and grepping it, then comparing with sections 1 to 12. Not complete. "Hole" means a transition nothing guards, recovers or tests.
+
+## 13. Corrections to earlier sections
+- **The group is named now.** Section 1 says the group's composite state has no name. Since the `get_group_phase` view, five phases are named in the contract (`Open`, `PayoutInFlight`, `Settled`, `Refunded`, `Unfunded`) and `docs/STATE_MACHINE.md` documents them, with a test that fails if a public function has no row. The member's **drained** state (listed, balance 0) is still unnamed.
+- **Section 8 calls the pod a record, not a machine.** It still is.
+
+## 14. Machines the earlier surveys missed or that are new
+| Machine | Where | State is really | Hole? |
+|---|---|---|---|
+| **Escrow snapshot freshness** | `HostedRoost.#escrow`, `src/roost-service/escrow-reader.js` | none → **bound** (providers agree on one block) → **aging** → refused once older than the age limit (60 s at the reader, `maxSnapshotAgeMs` in the room); `raceFree` says whether an exit could open before the payout lands | Fails closed: a stale snapshot stops the run. `raceFree` is an estimate from the read's age and the exit timing, and the code says so. Section 8 names the binding but not its age. |
+| **Ballot rule and pool mode** | `ballot-program.js`, `pool-program.js` | not machines: `rule`, `weights`, `thresholdBps` and `mode` choose between pure functions. A round is still the Roost round machine of section 2. | The order hash includes the new options only when they are used, so an earlier run's hash still means what it meant. |
+| **Pay run AI review** | `src/advisor/payrun-analyst.js` | off → **refused before sending** (the leak guard) → asked → **reply rejected** (shape or leak) \| **parsed** → each finding **verified** or **not-verified** by code | Fails closed to `used: false`. It never touches the run (a test compares the run's bytes with the review on, off, failing and returning nonsense). A gateway failure is reported, not retried; only the live experiment retries once. |
+| **Image pin and compose hash** | `deploy/roost/*.yml`, `roost.expected.json`, `.github/workflows/roost-image.yml` | source merged → CI builds an image digest → a compose file is edited to pin it → a VM attests the new compose hash → that hash is put first in `roost.expected.json` | **Two sources of truth between a merge and a pin.** After PR #22, CI built an image for the merge commit while the compose files still pin the image from PR #20's merge. A test requires the newest pinned hash to be one a promoted run attested, but nothing warns that master's built image is newer than the pin. It is intended today and is written down here. |
+| **Lab runner and recorder** | `lab/core/runner.js`, `lab/core/recorder.js` | an experiment goes start → steps (a failed critical step aborts the later steps, and `always` steps still run) → end with PASS, FAIL or SKIP; the recorder appends events with a sequence number and the previous hash, so the log is an append-only chain; then a run folder, then a promoted copy | A failed run can be promoted (they are kept on purpose). The wholeness test passes an experiment if **any** promoted run of it passed, so a later failing run does not turn it red. The verdict belongs to a run, and no field says "latest". |
+| **Site live panels** | `site/main.js`, `site/data/proof.json` | each panel: "not read" → "read live from NEAR" with a block number, or back to "not read" on failure; the menu is open or closed; reveal-on-scroll goes one way (a class is added once); animated loops pause and resume with visibility; 3D models load or fall back | The static data (`proof.json`, built by `scripts/build-site-data.mjs`) is a frozen copy, so the deployed site can be older than the chain and than `master`. It is today: the site does not show the latest hardware runs. Not a code bug. It is a state to name: the site's deployed commit against `master`. |
+| **Chain client mode** | `src/chain/client.js` | no account (read only) → account built when an account id and a key are given | The refusal of a write without credentials is explicit (unlike H4). Found no silent switch. |
+| **Client identity** | `src/roost-service/client-id.js` | a stateless function: the peer address, or the right hop of `X-Forwarded-For` when the peer is a trusted proxy | Not a machine. It is imported by `src/mcp/http.js` and `src/roost-service/room-http.js`, and **no test or experiment names it**. |
+| **Pull request flow** | GitHub | branch → push (human gate) → PR → CI → merge (human gate) → CI builds the room image | The image build runs after the merge, so every merge produces an image and only the pinned one is attested. |
+
+## 15. Fix order, if you want it
+1. Add a test for `client-id.js`: the peer is used when there is no trusted proxy, the header is ignored from an untrusted peer, and the last untrusted hop is chosen from a trusted one.
+2. Add a drift check that says when the latest image CI built is newer than the pinned one, so the gap is shown and not found.
+3. Show the site's deployed commit on the site, or regenerate `proof.json` when the site is next promoted.
+4. Name the member's **drained** state in the contract (a view or an enum), as was done for the group.

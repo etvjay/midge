@@ -179,7 +179,6 @@ node lab/run.js  # the offline lab experiments
 | What exists today, real or simulated | [`docs/canonical/CURRENT_STATE.md`](docs/canonical/CURRENT_STATE.md) |
 | The design and the trust model | [`docs/WHITEPAPER.md`](docs/WHITEPAPER.md) |
 | Contract states and invariants | [`docs/STATE_MACHINE.md`](docs/STATE_MACHINE.md) |
-| The demo script | [`docs/canonical/DEMO_SCRIPT.md`](docs/canonical/DEMO_SCRIPT.md) |
 | The submission text | [`docs/hackathon-submission.md`](docs/hackathon-submission.md) |
 | What is planned and not built | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
 | The full earlier README, with the problem figures, the measured baseline and the file index | [`docs/README_FULL.md`](docs/README_FULL.md) |
