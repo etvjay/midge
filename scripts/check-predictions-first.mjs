@@ -25,13 +25,23 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(process.argv[1]), '..');
   const git = (...a) => spawnSync('git', ['-C', root, ...a], { encoding: 'utf8' }).stdout.trim();
   const exempt = new Set(JSON.parse(fs.readFileSync(path.join(root, 'lab/predictions-exempt.json'), 'utf8')).ids);
+  const linksPath = path.join(root, 'lab/predictions-links.json');
+  const links = fs.existsSync(linksPath) ? JSON.parse(fs.readFileSync(linksPath, 'utf8')).links : {};
   const dir = path.join(root, 'lab/experiments');
   const exps = [];
   for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.js'))) {
     const m = fs.readFileSync(path.join(dir, f), 'utf8').match(/^\s*id: '(E-[A-Z0-9-]+)'/m);
     if (!m) continue;
     const added = git('log', '--diff-filter=A', '--format=%H %ct', '--', `lab/experiments/${f}`).split('\n').filter(Boolean).pop();
-    const mention = git('log', '--format=%H %ct', `-S${m[1]}`, '--', 'docs/lab/PROGRAMME_PLAN.md').split('\n').filter(Boolean).pop();
+    let mention = git('log', '--format=%H %ct', `-S${m[1]}`, '--', 'docs/lab/PROGRAMME_PLAN.md').split('\n').filter(Boolean).pop();
+    // An experiment whose predictions were committed without naming its id may be linked to that commit in lab/predictions-links.json.
+    // The link counts only if that commit really changed the plan; the time comparison below then applies as usual.
+    if (links[m[1]]) {
+      const c = links[m[1]].commit;
+      const touched = git('show', '--format=', '--name-only', c).split('\n').includes('docs/lab/PROGRAMME_PLAN.md');
+      const when = git('show', '-s', '--format=%H %ct', c);
+      if (touched && when) mention = when;
+    }
     const [fileCommit, fileTime] = added ? added.split(' ') : [null, 0];
     const [planCommit, planTime] = mention ? mention.split(' ') : [null, 0];
     if (!fileCommit) continue; // not committed yet: nothing to compare

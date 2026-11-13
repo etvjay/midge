@@ -1,0 +1,9 @@
+{
+  "_comment": "Experiments whose predictions were committed to docs/lab/PROGRAMME_PLAN.md before the experiment file, but without writing the experiment's id. Each link names that commit; the checker accepts it only if the commit changed the plan and is earlier than the experiment file. This is not an exemption: a link to a later commit still fails.",
+  "links": {
+    "E-PAYRUN-ANALYST-ACCURACY-01": {
+      "commit": "c9d4201",
+      "why": "The predictions section 'Does the pay run reviewer make mistakes that break accuracy?' was committed before lab/experiments/128-payrun-analyst-accuracy.js existed, but named the test in words, not by its id. The slip was found by this check on 2026-11-13."
+    }
+  }
+}

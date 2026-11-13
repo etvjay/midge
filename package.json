@@ -45,6 +45,7 @@
     "review:argon": "node scripts/argon-review.js",
     "lab:env": "node scripts/lab-env.mjs",
     "build:site": "node scripts/build-site-data.mjs && node scripts/build-site-cards.mjs && node scripts/build-site-3d.mjs",
+    "build:replay": "node scripts/build-replay.mjs",
     "build:wasm:testsigner": "cd contracts/fly-coordinator && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release --features test-signer-override --target-dir target-testsigner",
     "build:wasm:multisig": "cd contracts/public-multisig && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",
     "build:wasm:market": "cd contracts/public-market && RUSTFLAGS=\"-C link-arg=-s\" cargo build --target wasm32-unknown-unknown --release",

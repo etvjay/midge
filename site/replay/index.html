@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Midge replay, check a pay run yourself</title>
+<meta name="description" content="A pay run on real secure hardware, re-checked in your browser: signed invoices, an AI review, the sub-transaction view, receipts and an auditor pack.">
+<meta name="theme-color" content="#0f1416">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400&family=Newsreader:wght@300;400&display=swap">
+<link rel="stylesheet" href="replay.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="rail" id="rail" aria-label="Replay and playground">
+    <a class="mark" href="../">Midge</a>
+    <nav class="modes" aria-label="Mode">
+      <a class="mode" href="./" aria-current="page">Replay<span>Check recorded runs</span></a>
+      <span class="mode off" aria-disabled="true">Playground<span>Opens when the live room is running</span></span>
+    </nav>
+    <details class="railnav" id="railnav" open>
+      <summary>Steps and runs</summary>
+      <p class="raillabel">The pay run, step by step</p>
+      <ol class="stepnav" id="stepnav"></ol>
+      <p class="raillabel">Every other recorded run</p>
+      <div class="runnav" id="runnav"></div>
+    </details>
+  </aside>
+
+  <main id="main">
+    <section class="intro">
+      <p class="kicker">Replay</p>
+      <h1>Check a pay run yourself</h1>
+      <p class="lede">Midge runs sealed quotes, ballots, pools and pay runs. Here is one pay run on real secure hardware, from signed invoices to the auditor. NEAR shows the payments, the room holds who they were for, and one hash ties the two together. Every check below runs in your browser.</p>
+      <dl class="legend" aria-label="What the four verdicts mean">
+        <div><dt class="chip v-recomputed">recomputed</dt><dd>It ran in your browser and agrees.</dd></div>
+        <div><dt class="chip v-failed">failed</dt><dd>It ran and disagrees.</dd></div>
+        <div><dt class="chip v-unavailable">unavailable</dt><dd>It could not run here.</dd></div>
+        <div><dt class="chip v-reported-not-verified">reported, not verified</dt><dd>The run's log says it, and this page did not repeat it.</dd></div>
+      </dl>
+    </section>
+
+    <noscript><p class="nojs">This page re-checks the recorded logs in your browser, so it needs JavaScript. The same logs are in <code>docs/lab-runs</code> in the repository, and <code>node lab/verify-run.js &lt;folder&gt;</code> checks them from a terminal.</p></noscript>
+
+    <section id="source" class="source" aria-label="The run these steps come from"></section>
+    <div id="steps"></div>
+
+    <section id="runs" class="runs-sec" aria-labelledby="runs-h">
+      <h2 id="runs-h">Check every other recorded run the same way</h2>
+      <p class="lead">Pick a run. Your browser rebuilds its log event by event and re-derives its verdicts.</p>
+      <div id="groups" class="groups"></div>
+      <div id="panel" aria-live="polite"></div>
+    </section>
+
+    <section class="limits" aria-labelledby="limits-h">
+      <h2 id="limits-h">What this page does not prove</h2>
+      <ul>
+        <li>A log that checks out was not changed after it was written. It does not show the events were honestly produced, so the transactions are linked for you to open on the explorer, and the settlement is fetched live from the chain.</li>
+        <li>The hardware's attestation is in each run as a recorded event. Checking the Intel certificate chain needs the verifier behind <code>npm run verify:tee</code>, which this page does not repeat.</li>
+        <li>Amounts and addresses are public on NEAR. The paper trail hides who each address belongs to, and a person with a unique and unchanged amount can still be matched across months.</li>
+        <li>Cy's missing tax was planted to show the review. It shows the reviewer catching a kind of mistake its brief names, not every real one.</li>
+        <li>One operator ran every account in these tests. No independent operators have been shown, and nothing here runs on mainnet.</li>
+      </ul>
+    </section>
+    <footer class="foot"><a href="../">Back to Midge</a><a href="https://github.com/etvjay/midge">Source on GitHub</a></footer>
+  </main>
+</div>
+<script src="replay.data.js"></script>
+<script src="replay.bundle.js"></script>
+</body>
+</html>

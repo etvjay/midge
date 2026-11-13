@@ -1,0 +1,15 @@
+{
+  "runId": "20261113T041735Z-1296",
+  "startedAt": "2026-11-13T04:17:35.417Z",
+  "rootHash": "e09be7f8f871afefc6d06d7c1c25327de8cbcfe9c8cd261d67c6e6889429e79d",
+  "verdicts": {
+    "E-PAYRUN-ANALYST-REPRO-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 37,
+  "commit": "acaa451e138af84f9912c54de310304d10ec39f9"
+}

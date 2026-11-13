@@ -1,0 +1,15 @@
+{
+  "runId": "20261113T034712Z-5244",
+  "startedAt": "2026-11-13T03:47:12.162Z",
+  "rootHash": "5712342c72f1e0d7adb079d08f574cd3c0fb6079113170c895b2a92e4a6fe147",
+  "verdicts": {
+    "E-HOSTED-PAYRUN-LIVE-02": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 107,
+  "commit": "ccf4ec5999aa5f91ec66690e1625ceeb502fe03e"
+}
