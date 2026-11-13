@@ -141,6 +141,17 @@ test('the contract check: a different hash is failed, disagreeing providers are 
   assert.equal((await V.checkContractCodeHash({ rpcUrls: [URLS[0], URLS[0]], contractId: 'c.near', expectedCodeHash: HASH, fetchImpl: reply(HASH) })).verdict, 'unavailable');
 });
 
+test('the settlement check reads the order hash from two providers and compares it', async () => {
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64');
+  const txReply = (hash, ok = true) => async () => ({ ok: true, json: async () => ({ result: { status: ok ? { SuccessValue: '' } : { Failure: {} }, transaction: { actions: [{ FunctionCall: { method_name: 'settle_batch_charged', args: b64({ aggregate_order_hash: hash }) } }] } } }) });
+  const f = (map) => V.checkSettlementOrderHash({ rpcUrls: URLS, txHash: 'T', senderId: 'c.near', expectedOrderHash: 'ab'.repeat(32), fetchImpl: routed(map) });
+  assert.equal((await f({ 'a.example': txReply('ab'.repeat(32)), 'b.example': txReply('ab'.repeat(32)) })).verdict, 'recomputed');
+  assert.equal((await f({ 'a.example': txReply('cd'.repeat(32)), 'b.example': txReply('cd'.repeat(32)) })).verdict, 'failed');
+  assert.equal((await f({ 'a.example': txReply('ab'.repeat(32)), 'b.example': txReply('cd'.repeat(32)) })).verdict, 'failed');
+  assert.equal((await f({ 'a.example': txReply('ab'.repeat(32), false), 'b.example': txReply('ab'.repeat(32), false) })).verdict, 'failed');
+  assert.equal((await f({ 'a.example': txReply('ab'.repeat(32)), 'b.example': async () => { throw new Error('offline'); } })).verdict, 'unavailable');
+});
+
 test('the verifier bundles for the browser with no Node built-ins', async () => {
   const res = await build({ entryPoints: ['src/browser/midge-verify.js'], bundle: true, write: false, platform: 'browser', format: 'esm', target: 'es2022', logLevel: 'silent', metafile: true });
   assert.equal(/node:|require\(["']crypto["']\)|from ["']crypto["']/.test(res.outputFiles[0].text), false);

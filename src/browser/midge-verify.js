@@ -173,3 +173,32 @@ export async function checkContractCodeHash({ rpcUrls, contractId, expectedCodeH
   const [hash] = hashes;
   return hash === expectedCodeHash ? { claim, verdict: 'recomputed', detail: `${hash} at block ${Math.max(...answers.map((a) => a.block || 0))}, from ${answers.length} providers` } : { claim, verdict: 'failed', detail: `the chain says ${hash}; this repository records ${expectedCodeHash}` };
 }
+
+/**
+ * Fetch a settlement transaction from two or more RPC providers and check the order hash recorded in it. All providers must answer and agree.
+ * `senderId` is the account that sent the settlement. Returns one row.
+ */
+export async function checkSettlementOrderHash({ rpcUrls, txHash, senderId, expectedOrderHash, fetchImpl = globalThis.fetch }) {
+  const claim = 'the settlement on chain records the same order hash the receipts prove into';
+  const urls = [...new Set((rpcUrls || []).map((u) => String(u).trim().replace(/\/+$/, '')).filter(Boolean))];
+  if (urls.length < 2) return { claim, verdict: 'unavailable', detail: 'two or more different RPC providers are needed so that they can agree' };
+  const decode = (b64) => { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i += 1) u[i] = bin.charCodeAt(i); return new TextDecoder().decode(u); };
+  const answers = await Promise.all(urls.map(async (url) => {
+    try {
+      const res = await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tx', params: { tx_hash: txHash, sender_account_id: senderId } }) });
+      if (res.ok === false) return { url, error: `HTTP ${res.status}` };
+      const body = await res.json();
+      const call = body?.result?.transaction?.actions?.find((a) => a.FunctionCall)?.FunctionCall;
+      if (!call) return { url, error: String(body?.error?.message || 'no function call in the reply').slice(0, 80) };
+      const ok = body.result.status && Object.prototype.hasOwnProperty.call(body.result.status, 'SuccessValue');
+      return { url, hash: JSON.parse(decode(call.args)).aggregate_order_hash, ok };
+    } catch (e) { return { url, error: String(e?.message ?? e).slice(0, 80) }; }
+  }));
+  const failed = answers.filter((a) => a.error);
+  if (failed.length) return { claim, verdict: 'unavailable', detail: `${answers.length - failed.length} of ${answers.length} providers answered: ${failed.map((f) => `${new URL(f.url).host} ${f.error}`).join('; ')}` };
+  const hashes = new Set(answers.map((a) => a.hash));
+  if (hashes.size > 1) return { claim, verdict: 'failed', detail: `the providers disagree: ${[...hashes].join(', ')}` };
+  const [hash] = hashes;
+  if (!answers.every((a) => a.ok)) return { claim, verdict: 'failed', detail: 'the transaction did not succeed' };
+  return hash === expectedOrderHash ? { claim, verdict: 'recomputed', detail: `read from ${answers.length} providers: ${hash}` } : { claim, verdict: 'failed', detail: `the chain records ${hash}; the receipts prove into ${expectedOrderHash}` };
+}
