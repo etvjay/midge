@@ -5,7 +5,7 @@ import fs from 'node:fs';
 
 const root = new URL('..', import.meta.url);
 const expected = JSON.parse(fs.readFileSync(new URL('roost.expected.json', root), 'utf8'));
-const RUN = '20261113T084451Z-1582';
+const RUN = '20261113T125015Z-8922';
 const attestedHash = () => {
   for (const l of fs.readFileSync(new URL(`docs/lab-runs/${RUN}/events.jsonl`, root), 'utf8').split('\n').filter(Boolean)) {
     const e = JSON.parse(l); if (e.type === 'evidence' && e.kind === 'attestation' && e.composeHash) return e.composeHash;

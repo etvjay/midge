@@ -1,0 +1,15 @@
+{
+  "runId": "20261113T124816Z-9185",
+  "startedAt": "2026-11-13T12:48:16.777Z",
+  "rootHash": "a1d2a90e61030236e0ec73e1eac44710e33dfae767fe49dfc586c3828d27d354",
+  "verdicts": {
+    "E-HOSTED-BALLOT-DECIDE-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 60,
+  "commit": "e7e03e75d84431312c3ae40937b41048ca1f7f75"
+}
