@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { checkRun, verifyStatement, verifyAuditorPack, payrunOrderHash } from '../src/browser/midge-verify.js';
+import { checkRun, verifyStatement, verifyAuditorPack, verifyDecision, verifyModelReceipt, payrunOrderHash } from '../src/browser/midge-verify.js';
 import { openFromModel } from '../src/browser/midge-client.js';
 import { hexToBytes } from '@noble/hashes/utils.js';
 
@@ -46,6 +46,8 @@ test('the pay run the page features is a passing hardware run whose own evidence
   const sum = JSON.parse(openFromModel(T.approval.summaryCipherHex, hexToBytes(T.approval.summarySecretHex)));
   assert.equal(sum.orderHash, T.orderHash, 'the approver signed off the run that settled');
   assert.ok(T.approval.message.endsWith(`:${T.runId}:${T.orderHash}`));
+  assert.equal(verifyModelReceipt(R.receipt).ok, true, 'the saved AI receipt verifies on its own');
+  assert.equal(verifyModelReceipt({ ...R.receipt, requestSha256: '00'.repeat(32) }).ok, false);
 });
 
 test('every use case replays a passing hardware run, and every stage it says is modelled shows something the run recorded', () => {
@@ -61,6 +63,14 @@ test('every use case replays a passing hardware run, and every stage it says is 
       if (s.tx) assert.ok(evs.some((e) => e.kind === 'tx' && e.ok && s.steps.some((p) => e.step.toLowerCase().includes(p.toLowerCase()))), `${u.key}: ${s.title} has a transaction`);
     }
   }
+});
+
+test('the vote with no payout records a decision the browser verifier accepts, and rejects when the winner is changed', () => {
+  const u = D.useCases.find((x) => x.key === 'decision');
+  const evs = D.runs[u.runId].eventsText.split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const d = evs.find((e) => e.kind === 'decision');
+  assert.equal(verifyDecision({ message: d.message, signatureHex: d.signature, settlePublicKeyHex: d.settlePublicKey }).ok, true);
+  assert.equal(verifyDecision({ message: d.message.replace(':A:', ':B:'), signatureHex: d.signature, settlePublicKeyHex: d.settlePublicKey }).ok, false);
 });
 
 test('the built script has no Node built-ins', () => {

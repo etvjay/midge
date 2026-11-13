@@ -1,7 +1,7 @@
 // The replay page: one replay per use case, each read out of one recorded hardware run's log, whose hash chain the page checks first.
 // The pay run also opens its paper trail (statements, payslips, the auditor pack) from evidence saved in that log.
 // Bundled into site/replay/replay.bundle.js by npm run build:replay.
-import { checkRun, checkSettlementOrderHash, verifyStatement, verifyAuditorPack, payrunOrderHash, leafHash } from '../../src/browser/midge-verify.js';
+import { checkRun, checkSettlementOrderHash, verifyStatement, verifyAuditorPack, verifyDecision, verifyModelReceipt, payrunOrderHash, leafHash } from '../../src/browser/midge-verify.js';
 import { openFromModel, sealToModel } from '../../src/browser/midge-client.js';
 import { hexToBytes } from '@noble/hashes/utils.js';
 
@@ -101,6 +101,28 @@ function beatsStrip() {
   }));
 }
 
+// A decision the room signed for a vote that moved no money: the signature is checked here, and can be broken by changing the winner.
+function decisionBlock(evs, stepId, base) {
+  const d = evs.find((e) => e.type === 'evidence' && e.kind === 'decision');
+  if (!d) return null;
+  const st = { bad: false }; const box = el('div', { class: 'stage' });
+  const first = verifyDecision({ message: d.message, signatureHex: d.signature, settlePublicKeyHex: d.settlePublicKey });
+  setVerdict(stepId, worst([base, first.ok ? 'recomputed' : 'failed']));
+  const draw = () => {
+    const other = first.fields?.winner === 'A' ? 'B' : 'A';
+    const msg = st.bad ? d.message.replace(`:${first.fields?.winner}:`, `:${other}:`) : d.message;
+    const v = verifyDecision({ message: msg, signatureHex: d.signature, settlePublicKeyHex: d.settlePublicKey });
+    box.replaceChildren(
+      el('h3', {}, 'The signed decision'), el('p', { class: 'mono sig' }, msg),
+      el('div', { class: 'checks' },
+        check(v.ok ? 'recomputed' : 'failed', st.bad ? 'the winner was changed, so the room\'s signature no longer matches' : 'the room\'s signature on this decision verifies', `winner ${v.fields?.winner}, round ${short(v.fields?.roundNonce || '', 6)}`),
+        check('reported-not-verified', 'the signing key is the one the hardware attested', 'recorded by the run: the settlement key equals the attested one')),
+      el('div', { class: 'actions' }, el('button', { type: 'button', class: 'act warn', onclick: () => { st.bad = !st.bad; draw(); } }, st.bad ? 'Restore the winner' : 'Change the winner')));
+  };
+  draw();
+  return box;
+}
+
 // ---- a use case other than the pay run: its stages, from the research, mapped to its run ----
 function renderGeneric(u) {
   const evs = parse(D.runs[u.runId].eventsText);
@@ -114,7 +136,7 @@ function renderGeneric(u) {
     if (s.tx) txs = evs.filter((e) => e.type === 'evidence' && e.kind === 'tx' && e.hash && e.ok && (s.steps || []).some((p) => (e.step || '').toLowerCase().includes(p.toLowerCase())));
     const live = {};
     const done = (h) => (v) => { live[h] = v; setVerdict(steps[i].id, worst([base, ...Object.values(live)])); };
-    return section(i, s.line, recordedList(asserts), txs.map((t) => liveTx(t, null, done(t.hash))));
+    return section(i, s.line, recordedList(asserts), s.decision ? decisionBlock(evs, steps[i].id, base) : null, txs.map((t) => liveTx(t, null, done(t.hash))));
   });
 }
 
@@ -159,7 +181,8 @@ function renderPayrun(u) {
     const rule = R.findings.filter((f) => findOK(f) !== null);
     const caught = R.findings.some((f) => f.line === R.cyLabel && ['zero-deduction', 'rate-below-schedule'].includes(f.code) && findOK(f));
     const ok = rule.every((f) => findOK(f)) && caught;
-    setVerdict('s-2', worst([leaks.length ? 'failed' : 'recomputed', ok ? 'recomputed' : 'failed']));
+    const recv = R.receipt.signature ? verifyModelReceipt(R.receipt) : { ok: false };
+    setVerdict('s-2', worst([leaks.length ? 'failed' : 'recomputed', ok ? 'recomputed' : 'failed', recv.ok ? 'recomputed' : 'failed']));
     const cyName = Object.entries(R.labels).find(([, l]) => l === R.cyLabel)?.[0];
     return section(1, 'Cy\'s line was planted with no tax withheld. Before anyone approves, the employer sends a stripped copy of the run to an attested model on NEAR AI Cloud. The model sees rates and ratios, never a name, an address or an amount, and code checks every finding against the numbers.',
       el('div', { class: 'stage' },
@@ -174,7 +197,8 @@ function renderPayrun(u) {
         el('div', { class: 'checks' },
           check(leaks.length ? 'failed' : 'recomputed', 'no name, one-time address, reference or exact amount appears in what was sent', leaks.length ? `found: ${leaks.join(', ')}` : `${(R.secrets || []).length} values checked`),
           check(ok ? 'recomputed' : 'failed', `the finding on line ${R.cyLabel} is true when recomputed from the numbers`, 'tax 0 percent against a stated 15 percent'),
-          check('reported-not-verified', 'the reply came from the attested model, and its signed receipt verified', `${R.receipt.model}, request ${short(R.receipt.requestSha256, 8)}`)),
+          check(recv.ok ? 'recomputed' : 'failed', 'the model\'s signature on its reply verifies here, over the model, the request hash and the response hash', `${R.receipt.model}, request ${short(R.receipt.requestSha256, 8)}`),
+          check('reported-not-verified', 'that signing key belongs to a model whose hardware was attested', `hardware status ${R.receipt.tcbStatus}, recorded by the run`)),
         el('p', { class: 'say' }, 'In tests the same brief caught 59 of 59 planted mistakes across 46 runs it was never tuned on, with no false claims. ', el('a', { href: D.briefUrl, target: '_blank', rel: 'noopener' }, 'Read the reviewer\'s brief'), '. The employer then set Cy\'s tax to 15 percent and sent the run again.')));
   };
 
@@ -342,14 +366,15 @@ function renderRail() {
 // ---- the page ----
 const LIMITS = [
   'A log that checks out was not changed after it was written. It does not show the events were honestly produced, so each settlement is fetched live from the chain.',
-  'Each run records the hardware\'s attestation. Checking the Intel certificate chain needs the verifier behind npm run verify:tee, which this page does not repeat.',
+  'Each run records the hardware\'s attestation. Checking the Intel certificate chain needs the verifier behind npm run verify:tee, which this page does not repeat, so every row about attestation stays "reported, not verified".',
   'One operator ran every account in these tests, on testnet. No independent operators have been shown.',
 ];
 const CASE_LIMITS = {
   payrun: ['Amounts and addresses are public on NEAR. The paper trail hides who each address belongs to, but a person paid the same unusual amount every month can still be matched.', 'Cy\'s missing tax was planted. It shows the reviewer catching a kind of mistake its brief names, not every real one.', 'A different account must approve, but the operator names that account for each run. The group\'s public rules do not fix it yet, and the contract does not see the approval; the room checks it.'],
-  quotes: ['The winning price and the transfers are public. The losing bids are not published.'],
+  quotes: ['The winning price and the transfers are public. The losing quotes are not published.', 'The room names the maker whose quote expired, so it is known that this maker quoted. Expiry uses the room machine\'s own clock, which the run compares with the recorder\'s: they differed by 1 second.'],
+  decision: ['The room signs the decision and the chain does not record it, because the contract only records payments. Anyone can check the signature, but nothing on chain shows that the vote happened.', 'The room sees every vote. Votes are hidden from the other members and the public, not from the room.'],
   ballot: ['The payout shows which option won. The count behind it is not published.'],
-  block: ['Charges and payouts are public, so anyone can work out the filled units from the cash and the public reference price.'],
+  block: ['Charges and payouts are public, so anyone can work out the filled units from the cash and the public reference price.', 'The room says that one order was cancelled for its minimum fill, so it is known that such an order existed.'],
   pools: ['Each member\'s charge is public, so their scaled share can be read from the chain.'],
 };
 function render() {
