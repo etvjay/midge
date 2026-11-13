@@ -18,6 +18,11 @@ function base58(buf) {
   for (let i = 0; i < buf.length && buf[i] === 0; i += 1) digits.push(0);
   return digits.reverse().map((d) => ALPHABET[d]).join('');
 }
+/** The hash depositors consent to. Same rule as the contract's (and lab/lib/near.js): recipients, cap, deadline and the exit timer. */
+export const computePolicyHash = (policy, timeoutBlocks) => {
+  const sorted = [...new Set(policy.allowed_recipients)].sort();
+  return crypto.createHash('sha256').update(`release_policy:v2:${sorted.join(',')}:${policy.max_release_bps_per_epoch}:${policy.settle_deadline_block}:${timeoutBlocks}`, 'utf8').digest('hex');
+};
 const toYocto = (near) => BigInt(parseNearAmount(String(near)));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

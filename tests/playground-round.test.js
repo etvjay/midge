@@ -3,67 +3,15 @@ import assert from 'node:assert/strict';
 import { createRound } from '../src/playground/round.js';
 import { defaultLines } from '../src/playground/defaults.js';
 import { generateClientKey } from '../src/enclave/e2ee.js';
-import { nearKeyPair } from '../src/roost-service/signed-input.js';
 
-const FUNDER = 'play.f.testnet';
-const NEAR = 10n ** 24n;
+import { fakeChain, fakeRoom, FUNDER, NEAR } from '../src/playground/fakes.js';
+import { nearKeyPair, signInputWithNearKey } from '../src/roost-service/signed-input.js';
 
-// A fake chain with just the contract behaviour the round depends on: hatch, deposit, settle, exit, prune, and accounts that can be created and deleted.
-function fakeChain({ failOn = null } = {}) {
-  const accounts = new Map(); const groups = new Map(); const sent = [];
-  const chain = {
-    contractId: 'c.f.testnet', funderId: FUNDER, funder: { accountId: FUNDER }, accounts, groups, sent,
-    accountIdFor: (p) => `${p}.${FUNDER}`,
-    keys: new Map(),
-    derive: (id) => { if (!chain.keys.has(id)) { const k = nearKeyPair(); chain.keys.set(id, { keyPair: { toString: () => k.secretKey, getPublicKey: () => ({ toString: () => k.publicKey }) }, publicKey: k.publicKey }); } return chain.keys.get(id); },
-    handleFor: (id) => ({ id, account: { accountId: id }, keyPair: chain.derive(id).keyPair }),
-    async createAccount({ prefix, publicKey }) { const id = `${prefix}.${FUNDER}`; accounts.set(id, { publicKey }); return { id, account: publicKey ? null : { accountId: id } }; },
-    async deleteAccount(h) { accounts.delete(h.id); return true; },
-    async exists(id) { return accounts.has(id); },
-    async view(method, args) {
-      if (method !== 'get_syndicate') throw new Error(`fake chain has no ${method}`);
-      const g = groups.get(args.syndicate_id); if (!g) return null;
-      return { epoch: g.epoch, round_nonce: g.nonce, total_escrow: String(g.escrow), is_settling: false, status: g.status };
-    },
-    async waitFor(fn) { for (let i = 0; i < 5; i += 1) { const v = await fn(); if (v) return v; } throw new Error('timed out'); },
-    async send(account, method, args, { deposit = 0n } = {}) {
-      sent.push({ from: account.accountId, method, args });
-      if (failOn === method) return { ok: false, hash: null, error: `${method} failed` };
-      if (method === 'hatch') { groups.set(args.syndicate_id, { epoch: 0, nonce: 'n0', escrow: 0n, status: 'Active', employer: null }); return { ok: true, hash: 'H-hatch' }; }
-      if (method === 'deposit') { const g = groups.get(args.syndicate_id); g.escrow += deposit; g.employer = account.accountId; return { ok: true, hash: 'H-dep' }; }
-      if (method === 'settle_batch_charged') { const g = groups.get(args.syndicate_id); g.escrow -= args.allocations.reduce((a, x) => a + BigInt(x.amount), 0n); if (g.escrow === 0n) g.status = 'Settled'; return { ok: true, hash: 'H-settle' }; }
-      if (method === 'hatch_out') { const g = groups.get(args.syndicate_id); g.escrow = 0n; g.status = 'AbortedRefunded'; return { ok: true, hash: 'H-out' }; }
-      if (method === 'prune_syndicate') { const g = groups.get(args.syndicate_id); if (!['Settled', 'AbortedRefunded'].includes(g.status)) return { ok: false, error: 'not finished' }; groups.delete(args.syndicate_id); return { ok: true, hash: 'H-prune' }; }
-      return { ok: true, hash: 'H-other' };
-    },
-  };
-  return chain;
-}
-
-function fakeRoom({ refuseApproval = false } = {}) {
-  const intent = generateClientKey(); const calls = [];
-  let approved = false; let current = null;
-  return {
-    calls,
-    async getSession() { return { intentPublicKey: intent.publicKeyHex, settlePublicKey: 'ee'.repeat(32) }; },
-    async openRound(r) { calls.push(['openRound', r]); return r; },
-    async submitSignedIntent(p) { calls.push(['submit', p.flyerId]); return { accepted: true }; },
-    async runPayrun(p) {
-      calls.push(['runPayrun', p]); approved = false;
-      // The pay run releases exactly the gross total (0.18), which is what the employer deposited, so the group ends Settled.
-      const allocations = [{ recipient: p.taxAddress, amount: String(13n * NEAR / 100n) }, { recipient: p.approver, amount: String(5n * NEAR / 100n) }];
-      current = { orderHash: 'ab'.repeat(32), allocations, charges: [{ member: p.employer, amount: String(18n * NEAR / 100n) }] };
-      return { outcome: { approval: { required: true, approver: p.approver } }, ...current, statements: { payees: Object.fromEntries(p.__payees.map((a) => [a, { cipherHex: `slip-${a}` }])), approver: { cipherHex: 'summary-cipher' } } };
-    },
-    async approvePayrun(p) { calls.push(['approve', p]); if (refuseApproval || p.orderHash !== current.orderHash) throw new Error('roost /payrun/approve answered 400: the approval does not match the pay run waiting for approval'); approved = true; return { approved: true }; },
-    async signSettlement() { calls.push(['sign']); if (!approved) throw new Error('this pay run needs its approver\'s sign-off'); return { signature: 'sig' }; },
-  };
-}
-
-const VISITOR_KEY = 'ed25519:6E8bkzXvEhS1gYBdeA8tqXbcmW6a9xQe3d4TqVkVdMAv';
+const V = nearKeyPair(); const VISITOR_KEY = V.publicKey;
+const sign = (message) => signInputWithNearKey(V.secretKey, message);
 const visitor = { visitorPublicKey: VISITOR_KEY, payeeKeyHex: generateClientKey().publicKeyHex, youIndex: 3 };
 const mkRound = (over = {}) => {
-  const chain = over.chain || fakeChain(); const room = over.room || fakeRoom();
+  const chain = over.chain || fakeChain(); const room = over.room || fakeRoom({ accountKeyCheck: async (id, pk) => chain.accounts.get(id)?.publicKey === pk });
   const states = []; const ledger = { rows: new Map(), add(r) { this.rows.set(r.id, r); }, remove(id) { this.rows.delete(id); }, all() { return [...this.rows.values()]; } };
   // Delegates on every call, so a test can replace a method on `room` after the round exists. The fake needs the payee addresses to key the payslips.
   const wrapped = { getSession: (...a) => room.getSession(...a), openRound: (...a) => room.openRound(...a), submitSignedIntent: (...a) => room.submitSignedIntent(...a), approvePayrun: (...a) => room.approvePayrun(...a), signSettlement: (...a) => room.signSettlement(...a),
@@ -84,7 +32,7 @@ test('a whole round: accounts, group, deposit, sealed run, approval by the visit
   assert.equal(wait.summaryCipherHex, 'summary-cipher');
   assert.ok(wait.orderHash);
   assert.equal(chain.groups.get(wait.round.syndicateId).escrow, 18n * NEAR / 100n, 'the employer deposited exactly the gross total');
-  await round.approve({ ticket, publicKey: VISITOR_KEY, signature: 'aa'.repeat(64) });
+  await round.approve({ ticket, publicKey: VISITOR_KEY, signature: sign(wait.approvalMessage) });
   const result = await done;
   assert.equal(result.settleTx, 'H-settle'); assert.equal(result.orderHash, wait.orderHash);
   assert.match(result.visitorAccount, new RegExp(`\\.${FUNDER.replace(/\./g, '\\.')}$`));
@@ -99,17 +47,18 @@ test('a whole round: accounts, group, deposit, sealed run, approval by the visit
   assert.equal(room.calls.filter((c) => c[0] === 'runPayrun')[0][1].approver, result.visitorAccount);
 });
 
-test('an approval the room refuses is reported, nothing settles, and the visitor can try again', async () => {
-  const { chain, room, round } = mkRound();
+test('an approval signed for a different run is refused by the room, nothing settles, and the visitor can sign the right one', async () => {
+  const { chain, round } = mkRound();
   await round.sweepStartup();
   const ticket = 'b'.repeat(32);
   const done = round.start({ ticket, ...visitor, lines: defaultLines() });
-  await round.waitFor(ticket, 'awaiting-approval');
-  const original = room.approvePayrun.bind(room);
-  let calls = 0; room.approvePayrun = async (p) => { calls += 1; if (calls === 1) throw new Error('roost /payrun/approve answered 400: the approval does not match the pay run waiting for approval'); return original(p); };
-  await assert.rejects(round.approve({ ticket, publicKey: VISITOR_KEY, signature: 'bad' }), /does not match/);
+  const wait = await round.waitFor(ticket, 'awaiting-approval');
+  const wrongRun = wait.approvalMessage.replace(wait.orderHash, 'cd'.repeat(32));
+  await assert.rejects(round.approve({ ticket, publicKey: VISITOR_KEY, signature: sign(wrongRun) }), /does not verify/);
   assert.ok(!chain.sent.some((s) => s.method === 'settle_batch_charged'), 'nothing was settled');
-  await round.approve({ ticket, publicKey: VISITOR_KEY, signature: 'good' });
+  const stranger = nearKeyPair();
+  await assert.rejects(round.approve({ ticket, publicKey: stranger.publicKey, signature: signInputWithNearKey(stranger.secretKey, wait.approvalMessage) }), /is not a key of/);
+  await round.approve({ ticket, publicKey: VISITOR_KEY, signature: sign(wait.approvalMessage) });
   assert.equal((await done).settleTx, 'H-settle');
 });
 
