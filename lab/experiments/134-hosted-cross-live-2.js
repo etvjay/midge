@@ -41,7 +41,7 @@ export default {
       const existing = await listCvms(ctx.rootDir);
       s.assert('no CVM is already running on the account', existing.length === 0, { actual: existing.map((x) => x.cvmName) });
       s.assert('the compose file is pinned to a CI-built image digest and requires signed inputs', /ghcr\.io\/etvjay\/midge-roost@sha256:[0-9a-f]{64}/.test(ourCompose) && ourCompose.includes('ROOST_REQUIRE_SIGNED_INPUTS=1') && ourCompose.includes('ROOST_CONTRACT_ID=c.fly-1793636729.testnet'));
-      s.assert('the pinned digest is the one CI built from the merge that added maker-checker (98531165)', ourCompose.includes('sha256:985311650c46cb39fc785f75c874898fcd218e7da8909943ca510e4ae58cfa52'));
+      s.assert('the pinned digest is the one CI built from the merge that added the room gaps (0e1fbad0)', ourCompose.includes('sha256:0e1fbad07e8c688097404ea9b5229432b4e92525f49768b85d97934e8ee9d267'));
       s.assert('a production OS image hash is pinned', (expected.osImageHashes || []).length > 0);
       s.observe('instance type and rate', { type: 'tdx.small', usdPerHour: HOURLY_USD });
     }, { critical: true });
