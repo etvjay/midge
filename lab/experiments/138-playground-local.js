@@ -133,8 +133,11 @@ export default {
 
       await ctx.step('prediction 6: every service-held account and the group are gone, the ledger is empty, and the contract holds the groups it started with', async (s) => {
         await app.round.idle();
-        const gone = await Promise.all(done.cast.filter((c) => c.role !== 'you').map(async (c) => ({ id: c.id, there: await chain.provider.query({ request_type: 'view_account', finality: 'final', account_id: c.id }).then(() => true, () => false) })));
-        s.assert('the employer, the three other employees, the tax and the benefits accounts are deleted', gone.every((g) => !g.there), { actual: gone });
+        // A deletion is sent before it is final, so poll for up to 60 seconds instead of reading once.
+        const stillThere = async () => (await Promise.all(done.cast.filter((c) => c.role !== 'you').map(async (c) => ({ id: c.id, there: await chain.provider.query({ request_type: 'view_account', finality: 'final', account_id: c.id }).then(() => true, () => false) })))).filter((g) => g.there);
+        let gone = await stillThere();
+        for (let i = 0; i < 30 && gone.length; i += 1) { await sleep(2000); gone = await stillThere(); }
+        s.assert('the employer, the three other employees, the tax and the benefits accounts are deleted', gone.length === 0, { actual: gone });
         s.assert('the visitor\'s account is still there', await chain.provider.query({ request_type: 'view_account', finality: 'final', account_id: visitorAccount }).then(() => true, () => false));
         s.assert('the ledger is empty', app.ledger.all().length === 0, { actual: app.ledger.all() });
         s.assert('the contract holds the groups it started with', Number(await chain.view('get_syndicate_count', {})) === countBefore, { expected: countBefore });
