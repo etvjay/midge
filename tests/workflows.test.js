@@ -68,3 +68,14 @@ test('CI reads the Node version from .nvmrc, and .nvmrc says 24', () => {
   assert.equal(fs.readFileSync(new URL('../.nvmrc', import.meta.url), 'utf8').trim(), '24');
   assert.doesNotMatch(read('ci.yml'), /node-version: \d/);
 });
+
+test('every label that the release notes config and the issue templates use is defined in .github/labels.yml', () => {
+  const read2 = (p) => fs.readFileSync(path.resolve(new URL('..', import.meta.url).pathname, p), 'utf8');
+  const defined = new Set([...read2('.github/labels.yml').matchAll(/name: ([a-z-]+)/g)].map((m) => m[1]));
+  const used = new Set();
+  for (const m of read2('.github/release.yml').matchAll(/labels: \[([^\]]+)\]/g)) for (const l of m[1].split(',')) used.add(l.trim().replace(/"/g, ''));
+  for (const f of ['bug_report.yml', 'feature_request.yml']) for (const m of read2(`.github/ISSUE_TEMPLATE/${f}`).matchAll(/labels: \[([^\]]+)\]/g)) for (const l of m[1].split(',')) used.add(l.trim());
+  used.delete('*');
+  assert.deepEqual([...used].filter((l) => !defined.has(l)), []);
+  assert.ok(used.size >= 6);
+});
