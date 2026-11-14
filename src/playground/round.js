@@ -39,7 +39,9 @@ export function createRound({ chain, room, keyCheck, ledger, prepare = null, onS
   // The room reads the chain through public RPC providers, which rate-limit (HTTP 429), and answers 503 when it could not read. Such a refusal is temporary and the
   // room keeps its queue, so the same call is made again after a short wait. Only a refusal the room itself says is a 429 or a 5xx is retried: a 400 (a real
   // refusal) and a dropped connection (where the room may already have taken the input) are not.
-  const TEMPORARY = /roost \S+ answered (429|50[234]):/;
+  // The room also answers 400 when a chain provider could not answer a key check or an escrow read ("could not check that ... could not answer", "could not read escrow"),
+  // so its words count as well as its status. A real mismatch says "is not a key of" and is not temporary.
+  const TEMPORARY = /roost \S+ answered (429|50[234]):|could not (check that|read escrow|answer)/i;
   async function viaRoom(label, fn, { tries = 6, baseMs = 3000 } = {}) {
     for (let i = 0; ; i += 1) {
       try { return await fn(); } catch (e) {

@@ -204,3 +204,22 @@ test('while the room starts the round reports that it is waking the room', async
   assert.equal(round.status(t).state, 'waking-room');
   round.abandon(t); release(); await done.catch(() => {}); await round.idle();
 });
+
+test('a key check the room could not finish because a chain provider was rate limited is retried, and a real key mismatch is not', async () => {
+  // The room answers 400 for both, so the status cannot tell them apart. Its words can: "could not check that ... (provider could not answer)" against "... is not a key of ...".
+  const { room, round } = mkRound();
+  await round.sweepStartup();
+  const real = room.submitSignedIntent.bind(room); let tries = 0;
+  room.submitSignedIntent = async (p) => { tries += 1; if (tries <= 2) throw new Error('roost /signed-intents answered 400: [ROOST REJECT] could not check that ed25519:K is a key of er.play.t (test.rpc.fastnear.com could not answer (HTTP 429))'); return real(p); };
+  const ticket = '5'.repeat(32);
+  const done = round.start({ ticket, ...visitor, lines: defaultLines() });
+  const wait = await round.waitFor(ticket, 'awaiting-approval');
+  assert.equal(tries, 3);
+  round.abandon(ticket); await done.catch(() => {}); await round.idle();
+
+  const second = mkRound(); await second.round.sweepStartup();
+  let n = 0; second.room.submitSignedIntent = async () => { n += 1; throw new Error('roost /signed-intents answered 400: [ROOST REJECT] ed25519:K is not a key of er.play.t'); };
+  await assert.rejects(second.round.start({ ticket: '4'.repeat(32), ...visitor, lines: defaultLines() }), /is not a key of/);
+  assert.equal(n, 1, 'a genuine mismatch is refused once and not retried');
+  await second.round.idle();
+});
