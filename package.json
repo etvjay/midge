@@ -91,7 +91,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@nearai/inference-sdk": "^0.1.0",
     "@noble/ciphers": "^2.4.0",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",

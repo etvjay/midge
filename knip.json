@@ -18,13 +18,5 @@
     "verifications/**/*.js",
     "bin/**/*.js",
     "site/src/**/*.js"
-  ],
-  "ignoreDependencies": [
-    "@biomejs/biome",
-    "dependency-cruiser",
-    "jscpd"
-  ],
-  "rules": {
-    "dependencies": "warn"
-  }
+  ]
 }
