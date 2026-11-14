@@ -74,7 +74,8 @@
     "test:room-signer": "cd outlayer/room-signer && cargo test",
     "test:fly-coordinator": "cd contracts/fly-coordinator && cargo test",
     "qa:site": "node scripts/check-site.mjs",
-    "qa:roost": "node verifications/10-hosted-roost.js"
+    "qa:roost": "node verifications/10-hosted-roost.js",
+    "qa:room-signer": "bash scripts/qa-room-signer.sh"
   },
   "keywords": [
     "near",
