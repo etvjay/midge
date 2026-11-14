@@ -2,6 +2,10 @@
 
 Everything on this page is planned, and none of it is built. The steps are ordered by how much each one reduces what an outside observer can learn, set against what it costs to build.
 
+## Where this is going
+
+Today Midge has private rooms with public rules: the decision is private, and the rules, the deposits and the payments are public on NEAR. The aim is rules that are visible only to the members of a group and still checkable by anyone. An outsider would see that a group exists, that its payments fit rules its members agreed to, and that every member can still leave with their own money, without seeing the rules, the members, the amounts or the decisions. The steps below get there in order: hide who may be paid (step 1), hide what is paid (step 3), hide the rules themselves while keeping them checkable (step 2), and then let groups work together under the same guarantees (step 4).
+
 ## What an outside observer can learn today
 
 An observer reading NEAR can see who may be paid, because the contract stores the list of allowed recipient accounts in clear. The observer can also see the limit on how much may leave in each period, the deadline, every deposit with its account and amount, and every payment with its recipient and amount. What the observer cannot see is what members bid, vote or decide, because those inputs are sealed to the room. The room itself can read them, and the hardware proves which code is running, so the privacy of the inputs depends on that hardware and on whoever operates it. Payroll therefore offers private payees (through one-time addresses) and private receipts, and its amounts are public.
@@ -43,9 +47,32 @@ The 1Click API needs an authenticated partner token for the confidential option,
 
 The facts in this step come from NEAR's published documentation as summarized by a research run on 2026-11-11, and they should be checked against the pages before anyone relies on them. The pages are the [announcement of general availability](https://www.near.org/blog/announcing-general-availability-of-confidential-intents), [how Confidential Intents works](https://www.near.org/blog/how-confidential-intents-works), the [1Click authentication guide](https://docs.near-intents.org/integration/distribution-channels/1click-api/authentication) and the [1Click quickstart](https://docs.near-intents.org/integration/distribution-channels/1click-api/quickstart/introduction.md).
 
+## Step 4. Confidential coordination between groups
+
+The goal of the fourth step is that several groups (collectives, syndicates, DAOs, teams of agents) can decide together, for example pool funds, run one auction across groups or pay a shared supplier, without any group seeing another group's members, inputs or rules.
+
+Here is how it would work, in order.
+
+1. Each group keeps its own room, its own contract escrow and its own exit, so a member never depends on another group to leave.
+2. The rooms of the groups taking part attest to each other before they exchange anything, each checking the other's pinned program, the same check members make today.
+3. Each room sends only its group's sealed contribution to a joint round, and the joint result comes back as one proposal per group, which each group's contract checks against that group's own rules.
+4. With step 2 in place, each group's contract would also hold a proof that the joint result fits that group's hidden rules, so an outsider could check every group without seeing any of them.
+
+The cost is a protocol between rooms, a joint round in the contract, and a test with independent operators on separate machines, which the project has not run yet (see "Two hosts on two machines" below). The project has not estimated it.
+
+## Stronger privacy for what is already private
+
+These close the known leaks in what Midge hides today. Each one is recorded as an open gap.
+
+- **Payees across runs (GAP-054).** One-time payee addresses are listed in the group's public rules before a run, and an address used twice links a payee across runs. Step 1 removes the list; a fresh address per run removes the link.
+- **The approver (GAP-055).** A pay run's second approver is named by the coordinator, not fixed in the group's rules. The approver would move into the rules the members consent to.
+- **The model gate (GAP-057).** The rule that a model must review a pay run before it is approved is enforced by the playground service. It would move into the room, and later into the contract.
+- **The coordinator (GAP-056).** The playground's service is a trusted coordinator on a machine that is not attested hardware. It would run in attested hardware too, or be replaced by members sending their inputs straight to the room.
+- **The deployer key (GAP-044).** The contract account still has a full-access key, so the rules can be upgraded. The key would be deleted, or upgrades put behind a timelock members can exit before.
+
 ## How the steps fit together
 
-Steps 1 and 3 combine well. With step 1 the contract enforces rules whose recipient list is hidden, and with step 3 the payout leg is hidden, so an outsider would learn neither who was allowed nor what was paid on that leg. Step 2 would replace step 1 later, if the caps and the deadline must be hidden as well. The recommended order is step 1, then step 3, then step 2.
+Steps 1 and 3 combine well. With step 1 the contract enforces rules whose recipient list is hidden, and with step 3 the payout leg is hidden, so an outsider would learn neither who was allowed nor what was paid on that leg. Step 2 would replace step 1 later, if the caps and the deadline must be hidden as well. The recommended order is step 1, then step 3, then step 2, then step 4, which builds on the other three.
 
 ## Other open items
 
