@@ -295,7 +295,7 @@ function drawRun() {
   const host = hosts['s-2'];
   runInputs = [];
   const rows = state.lines.map((l, i) => {
-    const cell = (field) => {
+    const cell = (field, label) => {
       const input = el('input', {
         value: l[field],
         inputmode: field === 'person' ? 'text' : 'decimal',
@@ -308,19 +308,19 @@ function drawRun() {
         dispatch2({ type: 'edit', index: i, field, value: input.value });
       });
       runInputs.push({ i, field, input });
-      return el('td', {}, input);
+      return el('td', { 'data-label': label }, input);
     };
     return el(
       'tr',
       { class: i === 3 ? 'you' : '', id: `row-${i}` },
       el('td', {}, i === 3 ? 'You' : `Line ${i + 1}`),
-      cell('person'),
-      cell('gross'),
-      cell('tax'),
-      cell('benefits'),
-      el('td', { class: 'n', id: `tr-${i}` }),
-      el('td', { class: 'n', id: `br-${i}` }),
-      el('td', { class: 'n', id: `lb-${i}` }),
+      cell('person', 'Name'),
+      cell('gross', 'Gross'),
+      cell('tax', 'Tax'),
+      cell('benefits', 'Benefits'),
+      el('td', { class: 'n', id: `tr-${i}`, 'data-label': 'Tax rate' }),
+      el('td', { class: 'n', id: `br-${i}`, 'data-label': 'Benefits rate' }),
+      el('td', { class: 'n', id: `lb-${i}`, 'data-label': 'Model sees' }),
     );
   });
   rc(
@@ -1084,6 +1084,8 @@ function drawAll() {
 // ---- start ----
 skeleton();
 drawRail();
+// On a phone the step list starts folded under the page's name, as on Replay, so it does not take a quarter of every screen.
+if (window.matchMedia?.('(max-width: 920px)').matches) document.querySelector('.railnav')?.removeAttribute('open');
 drawAll();
 refreshStatus();
 if (API) {
