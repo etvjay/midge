@@ -42,7 +42,7 @@ jobs:
           workspaces: contracts/fly-coordinator
 
       - name: Cache dcap-qvl binary
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: cache-dcap
         with:
           path: ~/.cargo/bin/dcap-qvl
@@ -125,7 +125,7 @@ jobs:
       # The suite includes a test that runs verify-all.js, which needs dcap-qvl (same cache key as the verify job, so it is installed once).
       - uses: dtolnay/rust-toolchain@stable
       - name: Cache dcap-qvl binary
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: cache-dcap
         with:
           path: ~/.cargo/bin/dcap-qvl
