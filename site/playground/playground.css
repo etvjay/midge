@@ -342,3 +342,20 @@ details.secret summary {
     min-width: 0;
   }
 }
+
+/* On the dark page the main action is the off-white button with dark text, so it reads first (2026-11-14). Lead-ins in the limits
+   list are 500, not 700, as everywhere else. */
+.paper-act.primary {
+  background: var(--d-1);
+  border-color: var(--d-1);
+  color: #15181a;
+}
+.paper-act.primary:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+.limits strong,
+main li > strong {
+  font-weight: 500;
+  color: var(--d-1);
+}

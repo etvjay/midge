@@ -318,8 +318,8 @@ function drawRun() {
       cell('gross', 'Gross'),
       cell('tax', 'Tax'),
       cell('benefits', 'Benefits'),
-      el('td', { class: 'n', id: `tr-${i}`, 'data-label': 'Tax rate' }),
-      el('td', { class: 'n', id: `br-${i}`, 'data-label': 'Benefits rate' }),
+      el('td', { class: 'n', id: `tr-${i}`, 'data-label': 'Tax %' }),
+      el('td', { class: 'n', id: `br-${i}`, 'data-label': 'Benefits %' }),
       el('td', { class: 'n', id: `lb-${i}`, 'data-label': 'Model sees' }),
     );
   });
@@ -343,7 +343,7 @@ function drawRun() {
           el(
             'tr',
             {},
-            ['Who', 'Name', 'Gross', 'Tax', 'Benefits', 'Tax rate', 'Benefits rate', 'Model sees'].map((h) => el('th', {}, h)),
+            ['Who', 'Name', 'Gross', 'Tax', 'Benefits', 'Tax %', 'Benefits %', 'Model sees'].map((h) => el('th', {}, h)),
           ),
         ),
         el('tbody', {}, rows),
