@@ -7,7 +7,7 @@ services:
     image: ghcr.io/etvjay/midge-playground@sha256:PLAYGROUND_IMAGE_DIGEST
     restart: unless-stopped
     environment:
-      - PORT=8090
+      - PORT=8080
       - PLAYGROUND_ORIGIN=${PLAYGROUND_ORIGIN}
       - PLAYGROUND_TRUST_PROXY=1
       # How many proxies of ours sit in front of the service. The caller's address is that many entries from the right of X-Forwarded-For, because the left is whatever the caller sent.
@@ -28,7 +28,7 @@ services:
     volumes:
       - playground-data:/data
     ports:
-      - "8090:8090"
+      - "8080:8080"
     cap_drop:
       - ALL
     security_opt:

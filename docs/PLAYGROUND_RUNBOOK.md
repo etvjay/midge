@@ -59,9 +59,11 @@ sed -i 's/PLAYGROUND_IMAGE_DIGEST/<the 64 hex characters>/' ~/.midge-phala/playg
 set -a; . ~/.midge-phala/playground.env; set +a
 npx --yes phala@1.2.0 deploy -n midge-playground -c ~/.midge-phala/playground-compose.yml -t tdx.small \
   --image dstack-0.6.1 --disk-size 20G --no-dev-os --no-public-logs --wait -j -e ~/.midge-phala/playground.env
-npx --yes phala@1.2.0 cvms get <its app_id> -j | grep -o 'https://[A-Za-z0-9.-]*-8090[A-Za-z0-9.-]*' | head -1
+npx --yes phala@1.2.0 cvms get <its app_id> -j | grep -o 'https://[A-Za-z0-9.-]*-8080[A-Za-z0-9.-]*' | head -1
 curl -s <that address>/api/health      # expect {"ok":true,...}
 ```
+
+The service listens on port 8080 on its own machine, because Phala reserves host port 8090. The image carries the `dcap-qvl` tool and a CA store, which the service needs to verify the model's hardware attestation: the first deployment lacked both and refused every review.
 
 The service machine is not attested hardware. It holds the funding key, which the room must never hold, and this is stated on the page.
 
