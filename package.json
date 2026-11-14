@@ -62,7 +62,7 @@
     "lint": "biome lint",
     "format:check": "biome format",
     "typecheck": "tsc -p tsconfig.json",
-    "knip": "knip --no-progress",
+    "knip": "knip --no-progress --include files,dependencies,unlisted",
     "dup": "jscpd --config .jscpd.json",
     "cycles": "depcruise src --config .dependency-cruiser.cjs",
     "check:large-files": "node scripts/check-large-files.mjs",
