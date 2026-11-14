@@ -88,9 +88,19 @@ details.secret summary {
   font: 400 14px / 1.2 var(--mono);
   padding: 8px 10px;
   border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--slip);
+  border-radius: 8px;
+  background: var(--stage, #0b0f10);
   color: var(--ink);
+  caret-color: var(--lake);
+  transition: border-color 160ms var(--ease);
+}
+.rtable input:hover:not([disabled]) {
+  border-color: rgba(233, 236, 232, 0.24);
+}
+.rtable input:focus-visible {
+  outline: 2px solid var(--lake);
+  outline-offset: 1px;
+  border-color: var(--lake);
 }
 .rtable input.name {
   font-family: var(--sans);
