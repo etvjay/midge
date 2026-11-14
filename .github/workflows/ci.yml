@@ -125,13 +125,14 @@ jobs:
       - run: npm ci
       # Thresholds are the values measured on 2026-11-14 (81.80 lines, 78.72 branches, 78.67 functions) minus 2 points. Raise them as coverage grows.
       - name: Tests with coverage gates
-        run: >
-          node --test --experimental-test-coverage
-          --test-coverage-include='src/**' --test-coverage-exclude='tests/**'
-          --test-coverage-lines=79 --test-coverage-branches=76 --test-coverage-functions=76
-          --test-reporter=spec --test-reporter-destination=stdout
-          --test-reporter=junit --test-reporter-destination=test-results/unit.xml
-          tests/*.test.js
+        run: |
+          mkdir -p test-results
+          node --test --experimental-test-coverage \
+            --test-coverage-include='src/**' --test-coverage-exclude='tests/**' \
+            --test-coverage-lines=79 --test-coverage-branches=76 --test-coverage-functions=76 \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=junit --test-reporter-destination=test-results/unit.xml \
+            tests/*.test.js
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

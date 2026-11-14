@@ -13,8 +13,8 @@ const docs = ['AGENTS.md', 'CLAUDE.md'].map((f) => ({ f, text: fs.readFileSync(p
 
 // Local-only folders the repository deliberately does not publish: AGENTS.md may name them, a fresh clone will not have them.
 const LOCAL_ONLY = [
-  /^docs\/superpowers\//,
-  /^docs\/research\//,
+  /^docs\/superpowers(\/|$)/,
+  /^docs\/research(\/|$)/,
   /^docs\/WRITING_RULES\.md$/,
   /^docs\/(srs|rtm|architecture|implementation-plan|use-cases|roost-tee-plan)\.md$/,
   /^HANDOFF/,
