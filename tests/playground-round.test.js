@@ -172,3 +172,35 @@ test('a temporary refusal that never clears fails the round with the room\'s rea
   assert.equal(tries, 6, 'six tries and no more');
   await round.idle(); assert.equal(chain.groups.size, 0, 'the deposit was taken back and the group pruned');
 });
+
+test('the room is made ready before anything is created, and a room that cannot be started fails the round plainly with nothing created', async () => {
+  const order = [];
+  const chain = fakeChain(); const room = fakeRoom({ accountKeyCheck: async (id, pk) => chain.accounts.get(id)?.publicKey === pk });
+  const ledger = { rows: new Map(), add(r) { this.rows.set(r.id, r); }, remove(id) { this.rows.delete(id); }, all() { return [...this.rows.values()]; } };
+  const mk = (prepare) => createRound({ chain, room: { getSession: (...a) => { order.push('room'); return room.getSession(...a); }, openRound: (...a) => room.openRound(...a), submitSignedIntent: (...a) => room.submitSignedIntent(...a), approvePayrun: (...a) => room.approvePayrun(...a), signSettlement: (...a) => room.signSettlement(...a), runPayrun: (p) => room.runPayrun({ ...p, __payees: [...chain.accounts.keys()].filter((k) => /a[123]\.|v\./.test(k)) }) }, keyCheck: async () => true, ledger, prepare, approvalTimeoutMs: 5000, sleep: async () => {} });
+  const ok = mk(async () => { order.push('prepare'); });
+  await ok.sweepStartup();
+  const t1 = 'a'.repeat(32); const done = ok.start({ ticket: t1, ...visitor, lines: defaultLines() });
+  const states = []; await ok.waitFor(t1, 'awaiting-approval');
+  assert.deepEqual(order.slice(0, 2), ['prepare', 'room'], 'the room was made ready before it was first asked anything');
+  ok.abandon(t1); await done.catch(() => {}); await ok.idle();
+
+  const bad = mk(async () => { throw new Error('The room could not be started (no capacity on this node).'); });
+  await bad.sweepStartup(); chain.accounts.clear();
+  await assert.rejects(bad.start({ ticket: 'b'.repeat(32), ...visitor, lines: defaultLines() }), /The room could not be started/);
+  assert.equal(chain.accounts.size, 0, 'no account was created for a round that could not start');
+  assert.equal(bad.status('b'.repeat(32)).state, 'failed'); assert.match(bad.status('b'.repeat(32)).detail.reason, /could not be started/);
+});
+
+test('while the room starts the round reports that it is waking the room', async () => {
+  const chain = fakeChain(); const room = fakeRoom({ accountKeyCheck: async () => true });
+  const ledger = { rows: new Map(), add(r) { this.rows.set(r.id, r); }, remove(id) { this.rows.delete(id); }, all() { return [...this.rows.values()]; } };
+  let release; const gate = new Promise((r) => { release = r; });
+  const seen = [];
+  const round = createRound({ chain, room, keyCheck: async () => true, ledger, prepare: () => gate, onState: (t, s) => seen.push(s), approvalTimeoutMs: 5000, sleep: async () => {} });
+  await round.sweepStartup();
+  const t = 'c'.repeat(32); const done = round.start({ ticket: t, ...visitor, lines: defaultLines() }); done.catch(() => {});
+  await round.waitFor(t, 'waking-room');
+  assert.equal(round.status(t).state, 'waking-room');
+  round.abandon(t); release(); await done.catch(() => {}); await round.idle();
+});
