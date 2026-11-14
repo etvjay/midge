@@ -31,9 +31,7 @@
     "indentWidth": 2,
     "lineWidth": 160,
     "includes": [
-      "site/main.js",
       "site/src/**",
-      "site/styles.css",
       "site/playground/playground.css",
       "site/replay/replay.css",
       "scripts/check-large-files.mjs",

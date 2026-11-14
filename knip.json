@@ -11,12 +11,5 @@
     "site/src/*.js",
     "tests/helpers/*.mjs"
   ],
-  "project": [
-    "src/**/*.js",
-    "scripts/**/*.{js,mjs}",
-    "tests/**/*.{js,mjs}",
-    "verifications/**/*.js",
-    "bin/**/*.js",
-    "site/src/**/*.js"
-  ]
+  "project": ["src/**/*.js", "scripts/**/*.{js,mjs}", "tests/**/*.{js,mjs}", "verifications/**/*.js", "bin/**/*.js", "site/src/**/*.js"]
 }

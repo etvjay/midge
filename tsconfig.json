@@ -8,13 +8,7 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "skipLibCheck": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "src/index.js",
-    "src/mcp/rooms-tools.js",
-    "scripts/check-large-files.mjs"
-  ]
+  "include": ["src/index.js", "src/mcp/rooms-tools.js", "scripts/check-large-files.mjs"]
 }
