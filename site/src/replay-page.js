@@ -389,11 +389,11 @@ function payrunCastOf(u) {
 }
 const PAYRUN_STEPS = [
   { title: 'The employer seals the run', beat: 0 },
-  { title: 'The AI review catches a mistake', beat: 1 },
+  { title: 'The AI review catches a mistake', nav: 'The AI review', beat: 1 },
   { title: 'A second person approves', beat: 1 },
   { title: 'Settlement on the chain', beat: 2 },
   { title: 'The sub-transaction view', beat: 3 },
-  { title: 'Each person checks their payslip', beat: 3 },
+  { title: 'Each person checks their payslip', nav: 'Each payslip', beat: 3 },
   { title: 'The auditor sees one line', beat: 3 },
 ];
 function renderPayrun(u) {
@@ -1045,7 +1045,7 @@ function renderRail() {
                       },
                     },
                     el('span', { class: 'num' }, s.off ? '–' : pad(numOf(i))),
-                    el('span', {}, s.title),
+                    el('span', { title: s.nav ? s.title : undefined }, s.nav || s.title),
                     el('span', { class: `dot ${s.off ? 'hollow' : `v-${s.verdict || 'unavailable'}`}`, title: s.off ? 'not modelled' : s.verdict || '' }),
                   ),
                 ),

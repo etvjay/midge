@@ -62,6 +62,7 @@
       <p class="bs-lede">A group can bid in public, trust an organizer, or trust a black box. Each one breaks something.</p>
     </div>
     <div class="bento">
+      <div class="scen" role="region" aria-label="Three ways a group decides today" tabindex="0">
       <article class="bc s3 r2">
         <div class="bc-row"><p class="bc-label">A · Do it in public</p><p class="bc-label">example amounts</p></div>
         <div class="panel-ink">
@@ -110,9 +111,10 @@
         <h3 class="bc-title">Private, but if it can pay anything, one bug empties the pot</h3>
         <p class="bc-text">Secure hardware has had real attacks. Midge assumes it can fail, and limits what a failure can pay.</p>
       </article>
+      </div>
       <article class="bc bc-ink s4 flush">
         <div class="panel-head"><span>Measured on testnet, same chain, fresh accounts</span><span>docs/lab/COMPARISON_*.md</span></div>
-        <div class="tbl-wrap mo-rise"><div class="tbl tbl-4" role="table" aria-label="Measured on testnet, same chain, fresh accounts"><span class="th"></span><span class="th">Public</span><span class="th">Organizer</span><span class="th t-lake">Midge</span><span class="td k">Bids or amounts an observer read</span><span class="td t-deny">3 of 5</span><span class="td t-deny">4 of 4</span><span class="td t-lake">0 of 5</span><span class="td k">Who can move the pot</span><span class="td t-mute">no pot: each pays directly</span><span class="td t-deny">the organizer, alone</span><span class="td t-lake">no one outside the rules</span><span class="td k">If the operator disappears</span><span class="td t-mute">not applicable</span><span class="td t-deny">members recover 0%</span><span class="td t-lake">each member leaves alone</span></div></div>
+        <div class="tbl-wrap mo-rise"><div class="tbl tbl-4" role="table" aria-label="Measured on testnet, same chain, fresh accounts"><span class="th"></span><span class="th">Public</span><span class="th">Organizer</span><span class="th t-lake">Midge</span><span class="td k">Bids or amounts an observer read</span><span class="td t-deny" data-h="Public">3 of 5</span><span class="td t-deny" data-h="Organizer">4 of 4</span><span class="td t-lake" data-h="Midge">0 of 5</span><span class="td k">Who can move the pot</span><span class="td t-mute" data-h="Public">no pot: each pays directly</span><span class="td t-deny" data-h="Organizer">the organizer, alone</span><span class="td t-lake" data-h="Midge">no one outside the rules</span><span class="td k">If the operator disappears</span><span class="td t-mute" data-h="Public">not applicable</span><span class="td t-deny" data-h="Organizer">members recover 0%</span><span class="td t-lake" data-h="Midge">each member leaves alone</span></div></div>
       </article>
       <article class="bc bc-raised s2">
         <p class="bc-label">What Midge keeps</p>
@@ -275,8 +277,8 @@
         <div class="panel-head"><span>payout call · group lab-mw30klm2-2</span><span>run 20261105T035644Z-7c1d</span></div>
         <div class="tbl-wrap mo-rise"><div class="tbl tbl-3" role="table" aria-label="A payout to an account that was not on the list">
           <span class="th">Check</span><span class="th">The payout asked</span><span class="th">The rules allow</span>
-          <span class="td k">Recipient</span><span class="td t-deny"><span class="strike">thief-mw30klm2.testnet<i aria-hidden="true"></i></span></span><span class="td dim">listed accounts only</span>
-          <span class="td k">Money moved</span><span class="td t-deny">0 NEAR</span><span class="td dim">nothing outside the rules</span>
+          <span class="td k">Recipient</span><span class="td t-deny" data-h="The payout asked"><span class="strike">thief-mw30klm2.testnet<i aria-hidden="true"></i></span></span><span class="td dim" data-h="The rules allow">listed accounts only</span>
+          <span class="td k">Money moved</span><span class="td t-deny" data-h="The payout asked">0 NEAR</span><span class="td dim" data-h="The rules allow">nothing outside the rules</span>
         </div></div>
         <p class="refusal-bar mo-slide"><span class="t-deny">Refused · the recipient is not on the group’s list</span><a href="https://testnet.nearblocks.io/txns/3gW41Caz1wK4cCDFpixTJ3KweM6qpF7ZGxm6ARB1CmPk" target="_blank" rel="noopener">3gW41Caz…RB1CmPk on NearBlocks</a></p>
       </article>
