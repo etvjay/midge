@@ -36,7 +36,7 @@ strong { font-weight: 500; color: var(--ink); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- type ---------- */
-.display { font-family: var(--serif); font-weight: 300; font-size: clamp(40px, 6.6vw, 84px); line-height: 1.02; letter-spacing: -0.03em; }
+.display { font-family: var(--serif); font-weight: 300; font-size: clamp(40px, 5.6vw, 72px); line-height: 1.02; letter-spacing: -0.03em; }
 .title { font-family: var(--serif); font-weight: 300; font-size: clamp(32px, 4.4vw, 52px); line-height: 1.08; letter-spacing: -0.02em; max-width: 22ch; text-wrap: balance; }
 h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-height: 1.2; letter-spacing: -0.01em; }
 .h3-lg { font-size: clamp(28px, 3vw, 36px); font-weight: 300; }
