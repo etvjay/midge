@@ -138,3 +138,37 @@ test('a cleanup that did not finish is retried later, and a round that is still 
   assert.ok([...chain.groups.keys()].length === 1, 'the running round\'s group was not touched');
   round.abandon(ticket); await done.catch(() => {}); await round.idle();
 });
+
+test('a temporary refusal from the room (a rate-limited chain read, a 503) is retried, and the visitor\'s round goes on', async () => {
+  const { chain, room, round } = mkRound();
+  await round.sweepStartup();
+  const real = room.runPayrun.bind(room); let tries = 0;
+  room.runPayrun = async (p) => { tries += 1; if (tries <= 2) throw new Error('roost /payrun answered 503: [ROOST REJECT] could not read escrow: https://test.rpc.fastnear.com answered 429'); return real(p); };
+  const ticket = '8'.repeat(32);
+  const done = round.start({ ticket, ...visitor, lines: defaultLines() });
+  const wait = await round.waitFor(ticket, 'awaiting-approval');
+  assert.equal(tries, 3, 'the room was asked three times: two refusals, then the run');
+  await round.approve({ ticket, publicKey: VISITOR_KEY, signature: sign(wait.approvalMessage) });
+  assert.equal((await done).settleTx, 'H-settle');
+  await round.idle(); assert.equal(chain.groups.size, 0);
+});
+
+test('a refusal that is not temporary is not retried', async () => {
+  const { room, round } = mkRound();
+  await round.sweepStartup();
+  let tries = 0;
+  room.runPayrun = async () => { tries += 1; throw new Error('roost /payrun answered 400: [ROOST REJECT] pf.er cannot cover the gross pay of this run; the queue is kept'); };
+  await assert.rejects(round.start({ ticket: '7'.repeat(32), ...visitor, lines: defaultLines() }), /cannot cover/);
+  assert.equal(tries, 1);
+  await round.idle();
+});
+
+test('a temporary refusal that never clears fails the round with the room\'s reason after a bounded number of tries, and cleans up', async () => {
+  const { chain, room, round } = mkRound();
+  await round.sweepStartup();
+  let tries = 0;
+  room.runPayrun = async () => { tries += 1; throw new Error('roost /payrun answered 503: [ROOST REJECT] could not read escrow: https://x answered 429'); };
+  await assert.rejects(round.start({ ticket: '6'.repeat(32), ...visitor, lines: defaultLines() }), /could not read escrow/);
+  assert.equal(tries, 6, 'six tries and no more');
+  await round.idle(); assert.equal(chain.groups.size, 0, 'the deposit was taken back and the group pruned');
+});
