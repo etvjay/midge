@@ -19,7 +19,7 @@ jobs:
       # state.json, claims.jsonl and gaps.jsonl exists (git cat-file -e), which a
       # shallow clone cannot do.
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -84,7 +84,7 @@ jobs:
     name: Lint, types, dead code, duplicates, cycles
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -117,7 +117,7 @@ jobs:
     name: Coverage over src
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -164,7 +164,7 @@ jobs:
           # room-signer's src/main.rs predates rustfmt, and reformatting could move panic locations that are embedded in the release WASM, so its formatting is not checked yet.
           - { crate: outlayer/room-signer, fmt: false }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
@@ -190,7 +190,7 @@ jobs:
     name: Secrets and dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v4

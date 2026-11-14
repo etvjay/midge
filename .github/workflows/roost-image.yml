@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Stage the minimal build context
         run: deploy/roost/build.sh --stage "$RUNNER_TEMP/roost-ctx"
