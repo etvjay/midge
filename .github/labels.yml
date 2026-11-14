@@ -1,0 +1,14 @@
+# The repository's labels. .github/workflows/labels.yml applies this file to the repository when it changes or when it is started by hand.
+- { name: bug, color: d73a4a, description: Something does not behave as documented }
+- { name: enhancement, color: a2eeef, description: A new capability or an improvement }
+- { name: contracts, color: 0e8a16, description: The NEAR contracts and the OutLayer programs }
+- { name: room, color: 5319e7, description: The hosted room (Roost) and its image }
+- { name: playground, color: 1d76db, description: The playground service and page }
+- { name: site, color: fbca04, description: The static site and the Replay page }
+- { name: docs, color: 0075ca, description: Documentation }
+- { name: evidence, color: c5def5, description: Claims, gaps, lab runs and the ledgers }
+- { name: class-a, color: bfdadc, description: "No effect on any image or WASM" }
+- { name: class-b, color: f9d0c4, description: "Changes staged JavaScript or the root manifest, so a merge publishes an image" }
+- { name: class-c, color: e99695, description: "Changes Rust, so the WASM hash may change" }
+- { name: dependencies, color: 0366d6, description: Dependency updates }
+- { name: skip-changelog, color: ededed, description: Leave out of generated release notes }

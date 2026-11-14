@@ -2,6 +2,7 @@
 name = "midge-outlayer-caller"
 version = "0.1.0"
 edition = "2021"
+publish = false
 description = "Proof of concept: a NEAR contract that triggers an OutLayer program (request_execution, NEAR yield/resume) and stores the result its callback receives."
 
 [lib]
@@ -20,3 +21,9 @@ opt-level = "z"
 lto = true
 debug = false
 overflow-checks = true
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+cognitive_complexity = "warn"

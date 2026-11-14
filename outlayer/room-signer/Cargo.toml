@@ -2,6 +2,7 @@
 name = "midge-room-signer"
 version = "0.1.0"
 edition = "2021"
+publish = false
 description = "Proof of concept: a Midge room's settlement-signing step as an OutLayer WASM program. Holds no key of its own: the Ed25519 seed is a protected OutLayer secret that only this code, running in the TEE, can read."
 
 [[bin]]
@@ -18,3 +19,9 @@ sha2 = "0.10"
 [profile.release]
 opt-level = "s"
 lto = true
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+cognitive_complexity = "warn"

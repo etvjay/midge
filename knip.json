@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "tests/*.test.js",
+    "scripts/*.{js,mjs}",
+    "src/playground/main.js",
+    "src/roost-service/server.js",
+    "verifications/*.js",
+    "lab/**/*.js",
+    "site/main.js",
+    "site/src/*.js",
+    "tests/helpers/*.mjs"
+  ],
+  "project": ["src/**/*.js", "scripts/**/*.{js,mjs}", "tests/**/*.{js,mjs}", "verifications/**/*.js", "bin/**/*.js", "site/src/**/*.js"]
+}

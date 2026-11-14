@@ -1,0 +1,20 @@
+name: Release notes
+
+# Creates a GitHub release with generated notes when a version tag is pushed. No tag exists yet, so this has not run: the first v*.*.* tag is its first test.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the release from the tag, with generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes

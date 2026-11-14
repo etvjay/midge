@@ -1,0 +1,28 @@
+# Weekly dependency updates, held back 7 days after a release so a bad release can be pulled before it reaches us.
+#
+# There is deliberately NO docker or docker-compose ecosystem here. deploy/roost/docker-compose.yml pins the room image by digest, and that file is
+# measured by the hardware attestation: an automatic digest bump would change the room's identity (its compose hash) without a redeploy and a new
+# recorded run. Base images are updated by hand for the same reason, because every merged change to them publishes an image.
+#
+# A merged npm update of / or /deploy/roost changes what an image is built from (change class B in CONTRIBUTING.md). A merged cargo update can change
+# the WASM bytes of a deployed contract (class C), so it needs the WASM hash compared before it is merged.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories: ["/", "/deploy/roost"]
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+  - package-ecosystem: cargo
+    directories:
+      - /contracts/fly-coordinator
+      - /contracts/public-auction
+      - /contracts/public-market
+      - /contracts/public-multisig
+      - /outlayer/caller
+      - /outlayer/room-signer
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }

@@ -38,3 +38,20 @@ contracts/**/target-*/
 # Understand Anything knowledge graph (generated locally, never published)
 /.ua/
 /.understand-anything/
+
+# Editors, operating systems, logs and test output
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+*.log
+coverage/
+test-results/
+playwright-report/
+
+# Environment files: only the examples are tracked
+.env.*
+!.env.example
+*.pem
+/.claude/settings.local.json

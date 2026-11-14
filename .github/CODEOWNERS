@@ -1,0 +1,6 @@
+# Who reviews what. A path owner is asked on every pull request that touches it.
+*              @etvjay
+/contracts/    @etvjay
+/outlayer/     @etvjay
+/deploy/       @etvjay
+/.github/      @etvjay

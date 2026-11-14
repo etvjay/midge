@@ -1,0 +1,27 @@
+name: Bug report
+description: Something does not behave as the README, the docs or a claim says it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: The command or steps that show it
+      description: For example `npm run verify:fast`, or a page and the clicks. Paste the output that matters.
+    validations: { required: true }
+  - type: input
+    id: where
+    attributes:
+      label: Commit, and the machine (Node version, OS)
+    validations: { required: false }
+  - type: checkboxes
+    id: secrets
+    attributes:
+      label: Nothing secret is in this report
+      options:
+        - label: I removed keys, tokens and private addresses from what I pasted
+          required: true

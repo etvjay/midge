@@ -2,6 +2,7 @@
 name = "fly-coordinator"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [features]
 # A build for the TEST copy of the contract only (never production): lets the contract's own account point the MPC signer at another account so a signer failure can be shown live.
@@ -17,3 +18,9 @@ hex = "0.4"
 [dev-dependencies]
 ed25519-dalek = { version = "2.1", default-features = false, features = ["fast"] }
 proptest = "1.5"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+cognitive_complexity = "warn"

@@ -1,0 +1,14 @@
+name: Feature request
+description: Something Midge should do that it does not
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you are trying to do, and what stops you today
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like to see
+    validations: { required: false }

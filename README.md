@@ -209,7 +209,7 @@ Each defensive claim has a paired experiment that tries to break it, and failure
 | [`106-hosted-failclosed-live.js`](lab/experiments/106-hosted-failclosed-live.js) | Both escrow providers unreachable, on hardware: the room must refuse and not guess |
 | [`118-hosted-acctcheck-fail-live.js`](lab/experiments/118-hosted-acctcheck-fail-live.js) | One account-check provider down, on hardware |
 | [`119-foreign-signer-fail-live.js`](lab/experiments/119-foreign-signer-fail-live.js) | NEAR's signer failing in the middle of a request |
-| [`invariants.rs`](contracts/fly-coordinator/tests/invariants.rs) and [`state_machine_tests.rs`](contracts/fly-coordinator/tests/state_machine_tests.rs) | The contract's invariants and state machine, with generated inputs |
+| [`invariants_tests.rs`](contracts/fly-coordinator/tests/invariants_tests.rs) and [`state_machine_tests.rs`](contracts/fly-coordinator/tests/state_machine_tests.rs) | The contract's invariants and state machine, with generated inputs |
 
 ## What is not shown
 

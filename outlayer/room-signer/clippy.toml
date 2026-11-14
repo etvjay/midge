@@ -1,0 +1,2 @@
+# Clippy default, kept explicit: no function in this crate is above it.
+cognitive-complexity-threshold = 25

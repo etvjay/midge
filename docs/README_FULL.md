@@ -378,7 +378,7 @@ Much of this code, documentation and the verification scripts were written with 
 │       ├── tests/
 │       │   ├── unit_tests.rs     # unit tests
 │       │   ├── integration_tests.rs # multi-agent lifecycle & safety tests
-│       │   ├── invariants.rs     # property-based invariant suites
+│       │   ├── invariants_tests.rs # property-based invariant suites
 │       │   └── state_machine_tests.rs # the state-machine table's tests
 │       └── target/wasm32-unknown-unknown/release/fly_coordinator.wasm
 ├── src/
