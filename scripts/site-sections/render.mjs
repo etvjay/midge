@@ -9,7 +9,7 @@ import { esc, plainTx, BANNED } from '../site-scenes/kit.mjs';
 const NB = 'https://testnet.nearblocks.io';
 const CODE_NAMES = /\b(Roost|Nest|flyers?|hatch|settle_batch|hatch_out)\b/;
 const tone = (t) => (t ? ` t-${t}` : '');
-const ext = (href) => (href.startsWith('#') ? '' : ' target="_blank" rel="noopener"');
+const ext = (href) => (href.startsWith('#') || !href.startsWith('http') ? '' : ' target="_blank" rel="noopener"');
 
 /** Fill {figureKey} tokens with their recorded values, then escape. */
 const filler = (F) => (s) => esc(String(s).replace(/\{([a-zA-Z]+)\}/g, (_, k) => { if (!F[k]) throw new Error(`unknown figure {${k}}`); return F[k].value; }));
@@ -177,6 +177,7 @@ function uses(f) {
         <div class="bento">
           ${u.tiles.map((t, i) => `<div class="frost s${t.span} mo-rise" style="--i: ${i}"><svg width="22" height="22" viewBox="0 0 24 24" class="dg-icon" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="${t.icon}"/></svg><p class="frost-t">${f(t.t)}</p><p class="frost-s">${f(t.s)}</p></div>`).join('\n          ')}
         </div>
+        ${u.note ? `<p class="fine center band-note">${f(u.note)} <a href="${u.cta.href}">${f(u.cta.t)}</a></p>` : ''}
       </div>
     </div>
   </div>
@@ -208,25 +209,6 @@ function rules(f) {
 }
 
 // ------------------------------------------------------------------ 05 uses, as a numbered list
-function list(f) {
-  const l = HOME.list;
-  return `
-<section class="section bs" id="uses" aria-labelledby="uses-title">
-  <div class="wrap">
-    <div class="bento">
-      <article class="bc s2">
-        <p class="bc-label">${f(l.kicker)}</p>
-        <h2 id="uses-title" class="title title-card">${f(l.title)}</h2>
-        <a class="btn btn-light btn-sm bc-cta" href="${l.cta.href}">${f(l.cta.t)}</a>
-      </article>
-      <article class="bc s4">
-        <p class="bc-text">${f(l.intro)}</p>
-        <ol class="steps"><span class="steps-line mo-line" aria-hidden="true"></span>${l.items.map((t, i) => `<li><i class="mo-bullet" style="--i: ${i}" aria-hidden="true"></i><span class="mono dim">${String(i + 1).padStart(2, '0')}</span><span>${f(t)}</span></li>`).join('')}</ol>
-      </article>
-    </div>
-  </div>
-</section>`;
-}
 
 // ------------------------------------------------------------------ 06 AI agents
 function agents(F, f, proof) {
@@ -235,7 +217,7 @@ function agents(F, f, proof) {
     const rec = recorded[x.i] || {}; const by = rec.refusedBy === 'contract' ? 'Refused by the contract' : 'Refused by the key';
     const err = String(rec.error || '');
     const clean = err && !CODE_NAMES.test(err) && !BANNED.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(err));
-    return `<article class="bc s3 mo-rise" style="--i: ${i}"><p class="bc-label">Attempt ${x.i + 1} of ${esc(F.attempts.value)}</p><h3 class="bc-title">${f(x.t)}</h3><p class="bc-text">${f(x.b)}</p><p class="bc-end refused"><i class="dot t-deny"></i>${by}${clean ? `<span class="mono dim"> · the chain said: ${esc(err)}</span>` : ''}</p></article>`;
+    return `<article class="bc s3 mo-rise" style="--i: ${i}"><p class="bc-label">Attempt ${x.i + 1} of ${esc(F.attempts.value)}</p><h3 class="bc-title">${f(x.t)}</h3>${x.b ? `<p class="bc-text">${f(x.b)}</p>` : ''}<p class="bc-end refused"><i class="dot t-deny"></i>${by}${clean ? `<span class="mono dim"> · the chain said: ${esc(err)}</span>` : ''}</p></article>`;
   }).join('\n      ');
   return `
 <section class="section bs" id="agents" aria-labelledby="agents-title">
@@ -250,24 +232,6 @@ function agents(F, f, proof) {
 }
 
 // ------------------------------------------------------------------ 07 under the hood
-function parts(f) {
-  const p = HOME.parts; const span = { lg: 's3 r2', md: 's3', sm: 's2' };
-  const hostHead = ['', ...p.hosts.cols].map((c) => `<span class="th">${esc(c)}</span>`).join('');
-  const hostRows = p.hosts.rows.map((r) => `<span class="td k mono">${f(r.k)}</span>${r.cells.map((c) => `<span class="td${tone(c.tone)}">${f(c.t)}</span>`).join('')}`).join('');
-  return `
-<section class="section bs" id="parts" aria-labelledby="parts-title">
-  <div class="wrap">${head('parts', p, f)}
-    <div class="bento">
-      ${p.cards.map((c, i) => `<article class="bc ${span[c.size]}${c.size === 'sm' ? ' bc-raised' : ''} mo-rise" style="--i: ${i}"><div class="bc-row"><h3 class="bc-title${c.size === 'lg' ? ' bc-title-lg' : ''}">${f(c.t)}</h3><span class="code-chip">code: ${f(c.code)}</span></div><p class="bc-text">${f(c.d)}</p><p class="bc-end mono dim">${f(c.s)}</p></article>`).join('\n      ')}
-      <article class="bc bc-ink s6 flush">
-        <div class="hosts-head"><h3 class="bc-title bc-title-lg">${f(p.hosts.title)}</h3><p class="bc-text">${f(p.hosts.lede)}</p></div>
-        <div class="tbl-wrap mo-rise"><div class="tbl tbl-4 tbl-wide" role="table" aria-label="${f(p.hosts.title)}">${hostHead}${hostRows}</div></div>
-        <p class="panel-foot mono">${f(p.hosts.source)}</p>
-      </article>
-    </div>
-  </div>
-</section>`;
-}
 
 // ------------------------------------------------------------------ 08 proof
 function proofSection(F, f, proofParts) {
@@ -388,7 +352,7 @@ function tryIt(f) {
 /** Sections 01 to 10 after the hero. proofParts: the static dots, legend, skip link and note from build-site-cards. */
 export function renderHome(proof, F, proofParts) {
   const f = filler(F);
-  return [problem(F, f), engine(f), uses(f), rules(f), list(f), agents(F, f, proof), parts(f), proofSection(F, f, proofParts), trust(f), tryIt(f)].join('\n');
+  return [problem(F, f), engine(f), uses(f), rules(f), agents(F, f, proof), proofSection(F, f, proofParts), trust(f), tryIt(f)].join('\n');
 }
 
 /** The FAQ: four headed groups of native details (all visible without JavaScript; main.js turns them into tabs). */

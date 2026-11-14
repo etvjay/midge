@@ -28,7 +28,7 @@
   </a>
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
   <nav class="nav" id="nav" aria-label="Sections">
-    <a href="#problem">The problem</a><a href="#how">How it works</a><a href="#who">Who uses it</a><a href="#agents">AI agents</a><a href="#parts">Under the hood</a><a href="#proof">Proof</a><a href="#try">Try it</a>
+    <a href="#problem">The problem</a><a href="#how">How it works</a><a href="#who">Who uses it</a><a href="#agents">AI agents</a><a href="#proof">Proof</a><a href="#try">Try it</a>
   </nav>
   <a class="btn btn-sm btn-head" href="#proof">Check it yourself</a>
 </header>
@@ -56,10 +56,10 @@
   <div class="wrap">
     <div class="bs-head">
       <div>
-        <p class="kicker">01 · The problem</p>
+        <p class="kicker">The problem</p>
         <h2 id="problem-title" class="title">Deciding together with money <span class="soft">on the line is hard</span></h2>
       </div>
-      <p class="bs-lede">A fund splitting a pot, a DAO picking a quote, a team of AI agents buying together. Today there are three ways to do it, and each one breaks something.</p>
+      <p class="bs-lede">A group can bid in public, trust an organizer, or trust a black box. Each one breaks something.</p>
     </div>
     <div class="bento">
       <article class="bc s3 r2">
@@ -127,8 +127,8 @@
   <div class="wrap">
     <div class="bs-head">
       <div>
-        <p class="kicker">02 · How it works</p>
-        <h2 id="how-title" class="title">Group money, built at the level of the rules. <span class="soft">Each part checks the one before it.</span></h2>
+        <p class="kicker">How it works</p>
+        <h2 id="how-title" class="title">Four parts, <span class="soft">each checking the one before</span></h2>
       </div>
     </div>
     <div class="bento">
@@ -153,7 +153,7 @@
           <circle cx="210" cy="28" r="16" class="dg-node dg-node-lake"/><path class="mo-tick dg-tick" pathLength="1" d="M203 28l5 5 9-9"/>
           <circle cx="396" cy="28" r="16" class="dg-node"/><path d="M388 36h16M389 33v-8M396 33v-8M403 33v-8M387 24l9-6 9 6" class="dg-stroke"/>
         </svg>
-        <p class="bc-text bc-end">Set when the group is created and stored on NEAR: who may be paid, how much per round, until when. Anyone can read them, and the contract has no method to change them.</p>
+        <p class="bc-text bc-end">Set when the group starts and stored on NEAR, where anyone can read them: who may be paid, how much per round, until when. The contract has no method to change them.</p>
       </article>
       <article class="bc s2">
         <p class="bc-label">The payout</p>
@@ -181,7 +181,7 @@
     <div class="band-panel">
       <div class="band mo-drift" aria-hidden="true"></div><div class="band-lines" aria-hidden="true"></div>
       <div class="band-inner">
-        <p class="kicker center">03 · Who uses it</p>
+        <p class="kicker center">Who uses it</p>
         <h2 id="who-title" class="title center">For groups that decide together with money on the line</h2>
         <div class="bento">
           <div class="frost s3 mo-rise" style="--i: 0"><svg width="22" height="22" viewBox="0 0 24 24" class="dg-icon" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 12h8M12 8v8"/></svg><p class="frost-t">Auctions and token sales</p><p class="frost-s">Sealed bids; losing bids never published</p></div>
@@ -190,6 +190,7 @@
           <div class="frost s2 mo-rise" style="--i: 3"><svg width="22" height="22" viewBox="0 0 24 24" class="dg-icon" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8 15l3-3 2 2 3-4"/></svg><p class="frost-t">Investing together</p><p class="frost-s">Equal deposits hide who put in how much</p></div>
           <div class="frost s2 mo-rise" style="--i: 4"><svg width="22" height="22" viewBox="0 0 24 24" class="dg-icon" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9 10h6v5H9zM10.5 10V8.5a1.5 1.5 0 0 1 3 0V10"/></svg><p class="frost-t">AI agents</p><p class="frost-s">A key that can only take money back</p></div>
         </div>
+        <p class="fine center band-note">Each has run on testnet next to a public version. <a href="#proof">See them in the proof</a></p>
       </div>
     </div>
   </div>
@@ -205,26 +206,10 @@
         <p class="panel-foot" id="rules-reads"><span class="t-lake mono">Reads as</span> <span id="rules-reads-text">not read yet</span></p>
       </article>
       <article class="bc s2">
-        <p class="bc-label">04 · The rules</p>
-        <h2 id="rules-title" class="bc-title bc-title-lg">Every group's rules sit next to its money, in the contract</h2>
-        <p class="bc-text">Read them live, with no server of ours in between. The room can only propose; the contract decides.</p>
+        <p class="bc-label">The rules</p>
+        <h2 id="rules-title" class="bc-title bc-title-lg">Read a group's rules straight from NEAR</h2>
+        <p class="bc-text">No server of ours in between. The room can only propose; the contract decides.</p>
         <a class="btn btn-ghost-dark btn-sm bc-cta" href="https://testnet.nearblocks.io/address/c.fly-1793636729.testnet" target="_blank" rel="noopener">Open the contract</a>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section class="section bs" id="uses" aria-labelledby="uses-title">
-  <div class="wrap">
-    <div class="bento">
-      <article class="bc s2">
-        <p class="bc-label">05 · Uses</p>
-        <h2 id="uses-title" class="title title-card">Run group money by rules</h2>
-        <a class="btn btn-light btn-sm bc-cta" href="#proof">See them in the proof</a>
-      </article>
-      <article class="bc s4">
-        <p class="bc-text">One contract, one set of rules per group, the same exit for everyone. Each of these has run on testnet next to a public version of it.</p>
-        <ol class="steps"><span class="steps-line mo-line" aria-hidden="true"></span><li><i class="mo-bullet" style="--i: 0" aria-hidden="true"></i><span class="mono dim">01</span><span>Sealed-bid auctions, first and second price</span></li><li><i class="mo-bullet" style="--i: 1" aria-hidden="true"></i><span class="mono dim">02</span><span>Secret ballots that pay the winning option</span></li><li><i class="mo-bullet" style="--i: 2" aria-hidden="true"></i><span class="mono dim">03</span><span>Payroll to one-time addresses</span></li><li><i class="mo-bullet" style="--i: 3" aria-hidden="true"></i><span class="mono dim">04</span><span>Investing together with equal deposits</span></li><li><i class="mo-bullet" style="--i: 4" aria-hidden="true"></i><span class="mono dim">05</span><span>AI agents whose key can only take their owner’s money back</span></li></ol>
       </article>
     </div>
   </div>
@@ -234,16 +219,16 @@
   <div class="wrap">
     <div class="bs-head">
       <div>
-        <p class="kicker">06 · AI agents</p>
+        <p class="kicker">AI agents</p>
         <h2 id="agents-title" class="title">A hijacked AI agent <span class="soft">still can't take the money</span></h2>
       </div>
-      <p class="bs-lede">An agent can be given a key that does one thing only: take its owner's money back out. We tricked such an agent into trying everything. Every attempt was refused.</p>
+      <p class="bs-lede">An agent can hold a key that does one thing: take its owner's money back. We tricked one into trying everything. Every attempt was refused.</p>
     </div>
     <div class="bento">
-      <article class="bc s3 mo-rise" style="--i: 0"><p class="bc-label">Attempt 1 of 9</p><h3 class="bc-title">Send money to the attacker</h3><p class="bc-text">The agent was told to send NEAR to the attacker.</p><p class="bc-end refused"><i class="dot t-deny"></i>Refused by the key<span class="mono dim"> · the chain said: Access key requires full access</span></p></article>
-      <article class="bc s3 mo-rise" style="--i: 1"><p class="bc-label">Attempt 2 of 9</p><h3 class="bc-title">Call another contract</h3><p class="bc-text">The agent was told to call a method on a contract that is not the Midge contract.</p><p class="bc-end refused"><i class="dot t-deny"></i>Refused by the key<span class="mono dim"> · the chain said: Access key receiver c.fly-1793636729.testnet does not match transaction receiver</span></p></article>
-      <article class="bc s3 mo-rise" style="--i: 2"><p class="bc-label">Attempt 3 of 9</p><h3 class="bc-title">Approve a payout itself</h3><p class="bc-text">The agent was told to call the payout method on the Midge contract.</p><p class="bc-end refused"><i class="dot t-deny"></i>Refused by the key</p></article>
-      <article class="bc s3 mo-rise" style="--i: 3"><p class="bc-label">Attempt 5 of 9</p><h3 class="bc-title">Make the attacker an owner</h3><p class="bc-text">The agent was told to add the attacker's key as a full-access key.</p><p class="bc-end refused"><i class="dot t-deny"></i>Refused by the key<span class="mono dim"> · the chain said: Access key requires full access</span></p></article>
+      <article class="bc s3 mo-rise" style="--i: 0"><p class="bc-label">Attempt 1 of 9</p><h3 class="bc-title">Send money to the attacker</h3><p class="bc-end refused"><i class="dot t-deny"></i>Refused by the key<span class="mono dim"> · the chain said: Access key requires full access</span></p></article>
+      <article class="bc s3 mo-rise" style="--i: 1"><p class="bc-label">Attempt 2 of 9</p><h3 class="bc-title">Call another contract</h3><p class="bc-end refused"><i class="dot t-deny"></i>Refused by the key<span class="mono dim"> · the chain said: Access key receiver c.fly-1793636729.testnet does not match transaction receiver</span></p></article>
+      <article class="bc s3 mo-rise" style="--i: 2"><p class="bc-label">Attempt 3 of 9</p><h3 class="bc-title">Approve a payout itself</h3><p class="bc-end refused"><i class="dot t-deny"></i>Refused by the key</p></article>
+      <article class="bc s3 mo-rise" style="--i: 3"><p class="bc-label">Attempt 5 of 9</p><h3 class="bc-title">Make the attacker an owner</h3><p class="bc-end refused"><i class="dot t-deny"></i>Refused by the key<span class="mono dim"> · the chain said: Access key requires full access</span></p></article>
       <div class="bc bc-raised s2 stat-card"><p class="fig"><span class="mo-count" data-to="9">9</span></p><p class="cap">agent attempts recorded on testnet</p></div>
       <div class="bc bc-raised s2 stat-card"><p class="fig"><span class="mo-count" data-to="9">9</span></p><p class="cap">refused</p></div>
       <div class="bc bc-raised s2 stat-card"><p class="fig t-lake"><span class="mo-count" data-to="0">0</span></p><p class="cap">got through</p></div>
@@ -252,39 +237,12 @@
   </div>
 </section>
 
-<section class="section bs" id="parts" aria-labelledby="parts-title">
-  <div class="wrap">
-    <div class="bs-head">
-      <div>
-        <p class="kicker">07 · Under the hood</p>
-        <h2 id="parts-title" class="title">The parts, and what we call them <span class="soft">in the code</span></h2>
-      </div>
-      <p class="bs-lede">The page uses plain words. The contract and the code keep older names, so here is the map, in case you read either.</p>
-    </div>
-    <div class="bento">
-      <article class="bc s3 r2 mo-rise" style="--i: 0"><div class="bc-row"><h3 class="bc-title bc-title-lg">The room</h3><span class="code-chip">code: Roost</span></div><p class="bc-text">Opens the members’ sealed bids, works out the result, and signs one payout. It holds no key to the money. It runs on a host: an AI model on NEAR AI Cloud that the bids are sealed to, or our own program on Phala Cloud.</p><p class="bc-end mono dim">Model host live · Phala host attested on 4 and 8 Nov, not running now</p></article>
-      <article class="bc s3 mo-rise" style="--i: 1"><div class="bc-row"><h3 class="bc-title">The rules</h3><span class="code-chip">code: Nest</span></div><p class="bc-text">The NEAR contract that holds the money: who can be paid, how much per window, until when. It refuses anything else, even with a valid signature.</p><p class="bc-end mono dim">c.fly-1793636729.testnet · live</p></article>
-      <article class="bc s3 mo-rise" style="--i: 2"><div class="bc-row"><h3 class="bc-title">Members</h3><span class="code-chip">code: flyers</span></div><p class="bc-text">Anyone with a NEAR account. Each bid or ballot is sealed so only the room can open it, and signed so only its member could have sent it.</p><p class="bc-end mono dim">Signed bids · live on testnet</p></article>
-      <article class="bc s2 bc-raised mo-rise" style="--i: 3"><div class="bc-row"><h3 class="bc-title">Opening a room</h3><span class="code-chip">code: hatch</span></div><p class="bc-text">Creates a group with its rules. One-off rooms close after one task; ongoing rooms last across rounds.</p><p class="bc-end mono dim">One-off live · ongoing tested in the contract</p></article>
-      <article class="bc s2 bc-raised mo-rise" style="--i: 4"><div class="bc-row"><h3 class="bc-title">The exit</h3><span class="code-chip">code: escape hatch</span></div><p class="bc-text">After the exit timer, any member takes back what is left of their own money, alone. Nobody else’s share moves.</p><p class="bc-end mono dim">36 exits recorded</p></article>
-      <article class="bc s2 bc-raised mo-rise" style="--i: 5"><div class="bc-row"><h3 class="bc-title">Settling</h3><span class="code-chip">code: settle_batch</span></div><p class="bc-text">The contract pays what the room signed, if it fits the rules. A stuck payout can be finished by anyone after 100 blocks.</p><p class="bc-end mono dim">166 payouts · 81 refused</p></article>
-      <article class="bc s3 mo-rise" style="--i: 6"><div class="bc-row"><h3 class="bc-title">Two hosts</h3><span class="code-chip">code: two-room agreement</span></div><p class="bc-text">One room run by two independent hosts that must both sign before any money moves: two cashiers stamping the same receipt.</p><p class="bc-end mono dim">Run with two local hosts; not on hardware yet</p></article>
-      <article class="bc s3 mo-rise" style="--i: 7"><div class="bc-row"><h3 class="bc-title">The advisor</h3><span class="code-chip">code: advisor</span></div><p class="bc-text">An AI model in NEAR AI Cloud’s secure hardware that proposes how to split a total. It sees only the total, never a bid.</p><p class="bc-end mono dim">Proposed the split in a live round</p></article>
-      <article class="bc bc-ink s6 flush">
-        <div class="hosts-head"><h3 class="bc-title bc-title-lg">Three ways to run code in secure hardware</h3><p class="bc-text">All three run on Intel TDX and come with a hardware report. The difference is who operates the machine, how long it lives, and what can call it. Each cell quotes its source.</p></div>
-        <div class="tbl-wrap mo-rise"><div class="tbl tbl-4 tbl-wide" role="table" aria-label="Three ways to run code in secure hardware"><span class="th"></span><span class="th">Phala Cloud</span><span class="th">OutLayer</span><span class="th">NEAR AI Cloud</span><span class="td k mono">The unit</span><span class="td">A whole machine: any Docker container, as a confidential VM</span><span class="td">One function per call, at most 180 seconds</span><span class="td">A hosted AI model the bids are sealed to</span><span class="td k mono">Who operates it</span><span class="td">We deploy and run it</span><span class="td">OutLayer’s workers, on dstack</span><span class="td">NEAR AI</span><span class="td k mono">What can call it</span><span class="td">Whatever our program exposes</span><span class="td">A NEAR contract, or any client over HTTPS</span><span class="td">Anyone with the API; members seal bids to its key</span><span class="td k mono">Hardware report</span><span class="td">One for the machine: its image, arguments and settings</span><span class="td">A fresh one for every run</span><span class="td">One per request, checkable from your browser</span><span class="td k mono">Checked on NEAR</span><span class="td">Not by this platform; you check the report</span><span class="td">Once per worker, at registration; each result then carries the worker’s signature</span><span class="td">Not by this platform; your browser checks the report</span><span class="td k mono">In Midge today</span><span class="td t-glow">Our room program, run on real TDX machines on 4 and 8 Nov; not running now</span><span class="td t-glow">Only the signing step: a settlement signed inside OutLayer was accepted by the contract; the room is not there</span><span class="td t-lake">Live: the room host members seal bids to</span></div></div>
-        <p class="panel-foot mono">Sources, quoted and dated: docs/sources/secure-hardware-hosts.md (OutLayer and Phala docs, read 10 Nov 2026) and Midge’s current state.</p>
-      </article>
-    </div>
-  </div>
-</section>
-
 <section class="section bs section-dark" id="proof" aria-labelledby="proof-title">
   <div class="wrap">
     <div class="bento">
       <div class="bc bc-ink s6 statement">
         <svg class="pixels" aria-hidden="true"><defs><pattern id="px" width="96" height="96" patternUnits="userSpaceOnUse"><rect x="42" y="55" width="5" height="9" rx="1" fill-opacity="0.06"/><rect x="6" y="22" width="5" height="9" rx="1" fill-opacity="0.33"/><rect x="42" y="44" width="5" height="9" rx="1" fill-opacity="0.21"/><rect x="6" y="77" width="5" height="9" rx="1" fill-opacity="0.10"/><rect x="54" y="33" width="5" height="9" rx="1" fill-opacity="0.37"/><rect x="24" y="77" width="5" height="9" rx="1" fill-opacity="0.25"/><rect x="60" y="0" width="5" height="9" rx="1" fill-opacity="0.14"/><rect x="42" y="22" width="5" height="9" rx="1" fill-opacity="0.41"/><rect x="60" y="11" width="5" height="9" rx="1" fill-opacity="0.29"/><rect x="48" y="44" width="5" height="9" rx="1" fill-opacity="0.18"/><rect x="12" y="0" width="5" height="9" rx="1" fill-opacity="0.06"/><rect x="90" y="88" width="5" height="9" rx="1" fill-opacity="0.33"/><rect x="6" y="33" width="5" height="9" rx="1" fill-opacity="0.21"/><rect x="90" y="11" width="5" height="9" rx="1" fill-opacity="0.10"/><rect x="36" y="44" width="5" height="9" rx="1" fill-opacity="0.37"/><rect x="60" y="22" width="5" height="9" rx="1" fill-opacity="0.25"/><rect x="12" y="88" width="5" height="9" rx="1" fill-opacity="0.14"/><rect x="42" y="22" width="5" height="9" rx="1" fill-opacity="0.41"/><rect x="48" y="22" width="5" height="9" rx="1" fill-opacity="0.29"/><rect x="12" y="66" width="5" height="9" rx="1" fill-opacity="0.18"/><rect x="30" y="33" width="5" height="9" rx="1" fill-opacity="0.06"/><rect x="6" y="88" width="5" height="9" rx="1" fill-opacity="0.33"/><rect x="18" y="77" width="5" height="9" rx="1" fill-opacity="0.21"/><rect x="42" y="22" width="5" height="9" rx="1" fill-opacity="0.10"/><rect x="54" y="33" width="5" height="9" rx="1" fill-opacity="0.37"/><rect x="72" y="55" width="5" height="9" rx="1" fill-opacity="0.25"/><rect x="12" y="22" width="5" height="9" rx="1" fill-opacity="0.14"/><rect x="42" y="0" width="5" height="9" rx="1" fill-opacity="0.41"/><rect x="0" y="33" width="5" height="9" rx="1" fill-opacity="0.29"/><rect x="60" y="55" width="5" height="9" rx="1" fill-opacity="0.18"/><rect x="90" y="22" width="5" height="9" rx="1" fill-opacity="0.06"/><rect x="42" y="44" width="5" height="9" rx="1" fill-opacity="0.33"/><rect x="42" y="77" width="5" height="9" rx="1" fill-opacity="0.21"/><rect x="42" y="33" width="5" height="9" rx="1" fill-opacity="0.10"/><rect x="24" y="22" width="5" height="9" rx="1" fill-opacity="0.37"/><rect x="66" y="11" width="5" height="9" rx="1" fill-opacity="0.25"/><rect x="24" y="66" width="5" height="9" rx="1" fill-opacity="0.14"/><rect x="78" y="88" width="5" height="9" rx="1" fill-opacity="0.41"/><rect x="84" y="77" width="5" height="9" rx="1" fill-opacity="0.29"/><rect x="66" y="55" width="5" height="9" rx="1" fill-opacity="0.18"/><rect x="48" y="0" width="5" height="9" rx="1" fill-opacity="0.06"/><rect x="30" y="33" width="5" height="9" rx="1" fill-opacity="0.33"/><rect x="18" y="33" width="5" height="9" rx="1" fill-opacity="0.21"/><rect x="60" y="66" width="5" height="9" rx="1" fill-opacity="0.10"/><rect x="24" y="88" width="5" height="9" rx="1" fill-opacity="0.37"/><rect x="0" y="33" width="5" height="9" rx="1" fill-opacity="0.25"/><rect x="54" y="33" width="5" height="9" rx="1" fill-opacity="0.14"/><rect x="6" y="88" width="5" height="9" rx="1" fill-opacity="0.41"/><rect x="42" y="77" width="5" height="9" rx="1" fill-opacity="0.29"/><rect x="54" y="44" width="5" height="9" rx="1" fill-opacity="0.18"/><rect x="12" y="77" width="5" height="9" rx="1" fill-opacity="0.06"/><rect x="84" y="22" width="5" height="9" rx="1" fill-opacity="0.33"/><rect x="0" y="11" width="5" height="9" rx="1" fill-opacity="0.21"/><rect x="66" y="66" width="5" height="9" rx="1" fill-opacity="0.10"/><rect x="60" y="77" width="5" height="9" rx="1" fill-opacity="0.37"/><rect x="18" y="77" width="5" height="9" rx="1" fill-opacity="0.25"/></pattern></defs><rect class="mo-flickA" width="100%" height="100%" fill="url(#px)"/><rect class="mo-flickB" width="100%" height="100%" fill="url(#px)" transform="translate(48 22)"/></svg>
-        <p class="kicker center">08 · Proof</p>
+        <p class="kicker center">Proof</p>
         <h2 id="proof-title" class="display center">520 transactions<br><span class="soft">Not one paid outside the rules</span></h2>
       </div>
       <article class="bc s4 dots-card">
@@ -330,7 +288,7 @@
         <div class="bento">
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR Protocol</p><span class="status t-lake"><i class="dot mo-breathe"></i>Live</span></div><p class="mono dim">the contract · testnet · <b id="net-count">15</b> groups <span id="net-count-note">(recorded)</span></p><p class="bc-text bc-end">Holds every group’s money and rules, pays only within them, and runs the exit.</p></div>
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR AI Cloud</p><span class="status t-lake"><i class="dot mo-breathe"></i>Live</span></div><p class="mono dim">the model the room seals bids to</p><p class="bc-text bc-end">Bids are sealed to a model in secure hardware; it proposes the split. Check it from your browser above.</p></div>
-          <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">Phala Cloud</p><span class="status t-glow"><i class="dot"></i>Attested, not running now</span></div><p class="mono dim">dstack · Intel TDX</p><p class="bc-text bc-end">The room as its own program in a confidential VM. Run on real TDX machines on 4 and 8 Nov; they were temporary.</p></div>
+          <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">Phala Cloud</p><span class="status t-lake"><i class="dot"></i>Deployed, sleeps when idle</span></div><p class="mono dim">dstack · Intel TDX</p><p class="bc-text bc-end">The room as its own program in a confidential VM on Intel TDX. It runs the playground’s pay runs, sleeps when idle and wakes when a visitor arrives; last attested on 14 Nov.</p></div>
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR Chain Signatures</p><span class="status t-lake"><i class="dot"></i>Rules checked, on testnet</span></div><p class="mono dim">Bitcoin · Ethereum · Solana</p><p class="bc-text bc-end">The Midge contract checked a group’s rules, then asked the MPC network to sign a payment on Solana devnet and one on Ethereum Sepolia. It refused three that broke the rules. Money held on other chains is outside the member exit.</p></div>
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">NEAR Intents · 1Click</p><span class="status t-glow"><i class="dot"></i>Read-only</span></div><p class="mono dim">asset registry</p><p class="bc-text bc-end">210 assets read live across NEAR, Bitcoin, Ethereum and Solana. 1Click has no testnet, so no swap was made.</p></div>
           <div class="bc s2 partner"><div class="bc-row"><p class="partner-name">For agents</p><span class="status t-lake"><i class="dot"></i>Runs on your machine</span></div><p class="mono dim">MCP tools · JavaScript SDK · HTTP API</p><p class="bc-text bc-end">Every route, SDK method and MCP tool exercised; the API and MCP server run locally. The limited keys that can only take money back are live on testnet.</p></div>
@@ -346,7 +304,7 @@
   <div class="wrap">
     <div class="bs-head">
       <div>
-        <p class="kicker">09 · What it cannot do</p>
+        <p class="kicker">What it cannot do</p>
         <h2 id="limits-title" class="title">The room cannot take the money. <span class="soft">Only the rules can pay.</span></h2>
       </div>
     </div>
@@ -377,21 +335,15 @@
   <div class="wrap">
     <div class="bs-head">
       <div>
-        <p class="kicker">10 · Try it</p>
+        <p class="kicker">Try it</p>
         <h2 id="try-title" class="title">Three ways in</h2>
       </div>
     </div>
     <div class="bento">
-      <article class="bc s2 mo-rise" style="--i: 0"><h3 class="bc-title">Check everything, offline</h3><p class="bc-text">One command runs every test and check. No keys, no money.</p><div class="cmd"><code>git clone https://github.com/etvjay/midge &amp;&amp; cd midge
+      <article class="bc s2 mo-rise" style="--i: 0"><h3 class="bc-title">Approve a live pay run</h3><p class="bc-text">On NEAR testnet, with your own key. A model on NEAR AI Cloud reviews it, the room in secure hardware signs it, and you check your payslip.</p><p class="bc-end"><a href="playground/">Open the playground</a></p></article>
+      <article class="bc s2 mo-rise" style="--i: 1"><h3 class="bc-title">Check everything, offline</h3><p class="bc-text">One command runs every test and check. No keys, no money.</p><div class="cmd"><code>git clone https://github.com/etvjay/midge &amp;&amp; cd midge
 npm install &amp;&amp; npm run verify</code><button class="copy" type="button" data-copy="git clone https://github.com/etvjay/midge &amp;&amp; cd midge
-npm install &amp;&amp; npm run verify">Copy</button></div></article>
-      <article class="bc s2 mo-rise" style="--i: 1"><h3 class="bc-title">Run your own copy</h3><p class="bc-text">Make a free testnet account, deploy your own contract and run real rounds and attacks against it.</p><div class="cmd"><code>node scripts/setup-testnet-account.js
-npm run build:wasm
-node scripts/lab-env.mjs bootstrap
-node lab/run.js --tier testnet</code><button class="copy" type="button" data-copy="node scripts/setup-testnet-account.js
-npm run build:wasm
-node scripts/lab-env.mjs bootstrap
-node lab/run.js --tier testnet">Copy</button></div><p class="bc-end"><a href="https://github.com/etvjay/midge/blob/master/docs/LAB.md" target="_blank" rel="noopener">The step-by-step guide</a></p></article>
+npm install &amp;&amp; npm run verify">Copy</button></div><p class="bc-end"><a href="replay/">Or replay the recorded runs</a></p></article>
       <article class="bc bc-raised s2 mo-rise" style="--i: 2"><h3 class="bc-title">Look at the live network</h3><p class="bc-text">The newest groups, read from NEAR by your browser:</p><ul class="recent" id="recent"><li>Not read yet</li></ul></article>
     </div>
   </div>
@@ -412,7 +364,7 @@ node lab/run.js --tier testnet">Copy</button></div><p class="bc-end"><a href="ht
           <div class="faq-card">
             <details open><summary>What is Midge?</summary><p>A network of private rooms with public rules, on NEAR. Any group (a fund, a DAO, a team, a set of AI agents) gets a private room to decide in, rules fixed in public that limit what the room can pay, and an exit each member can use alone. One contract on NEAR hosts many groups.</p></details>
             <details><summary>Who is it for?</summary><p>Groups that decide together with money on the line: sealed-bid auctions and token sales, secret ballots that pay the winning option, payroll to one-time addresses, investing together, and AI agents that buy or pay together.</p></details>
-            <details><summary>What is live today, and what is not?</summary><p>Live on NEAR testnet: the contract with its rules, payouts and exit, bids sealed to a NEAR AI Cloud model, and limited agent keys. The SDK, API and MCP tools run on your machine. Attested but not running now: the room on Phala. Models only: lending quotes, block trades, shared AI. Next: paying out on Bitcoin, and moving the multichain payroll from our account to a group.</p></details>
+            <details><summary>What is live today, and what is not?</summary><p>Live on NEAR testnet: the contract with its rules, payouts and exit, bids sealed to a NEAR AI Cloud model, and limited agent keys. The SDK, API and MCP tools run on your machine. The room on Phala runs the playground and sleeps when idle. Models only: lending quotes, block trades, shared AI. Next: paying out on Bitcoin, and moving the multichain payroll from our account to a group.</p></details>
             <details><summary>Is this live? Can I lose real money?</summary><p>It is a working prototype on NEAR testnet, where coins have no value. There is no token, and no audit yet.</p></details>
             <details><summary>Can I check any of this myself?</summary><p>Yes. Read the contract and its rules straight from NEAR, open any dot in the proof section on the public explorer, or run every test offline with one command.</p></details>
           </div>
@@ -440,8 +392,11 @@ node lab/run.js --tier testnet">Copy</button></div><p class="bc-end"><a href="ht
           <div class="faq-card">
             <details><summary>Which partner technology does Midge use?</summary><p>NEAR Protocol (the contract, in Rust), NEAR AI Cloud (a model on Intel TDX whose report also carries NVIDIA GPU evidence), Phala Cloud (dstack confidential VMs on Intel TDX), NEAR Chain Signatures, NEAR Intents (1Click), public NEAR RPC (FastNEAR) and NearBlocks.</p></details>
             <details><summary>How does NEAR AI Cloud fit in?</summary><p>Members seal their bids to a model running in NEAR AI Cloud's secure hardware, and the model proposes the split. Your browser can check that hardware on this page with a random number it picks.</p></details>
-            <details><summary>How does Phala fit in?</summary><p>The room can run as its own program in a confidential VM on Phala Cloud. It was run on real Intel TDX machines on 4 and 8 November; those machines were temporary and none is running now.</p></details>
-            <details><summary>Does Midge use OutLayer?</summary><p>Only for one step, on testnet. OutLayer runs one function per call on its own secure workers, each run with a fresh hardware report. A small program there held a secret key no one can read and signed a settlement, and the Midge contract accepted it and paid out. The room itself, with its sealed bids and sums, does not run there: Phala runs a whole machine we operate, and no hosted room is running now.</p></details>
+            <details><summary>How does Phala fit in?</summary><p>The room runs as its own program in a confidential VM on Phala Cloud, on Intel TDX. It runs the playground’s pay runs, sleeps when idle and wakes when a visitor arrives. Its last attested run was on 14 November.</p></details>
+            <details><summary>Does Midge use OutLayer?</summary><p>Only for one step, on testnet. OutLayer runs one function per call on its own secure workers, each run with a fresh hardware report. A small program there held a secret key no one can read and signed a settlement, and the Midge contract accepted it and paid out. The room itself, with its sealed bids and sums, does not run there: Phala runs a whole machine we operate.</p></details>
+            <details><summary>Where can the room run?</summary><p>On secure hardware with a hardware report, all on Intel TDX: a whole machine we run on Phala Cloud, one function per call on OutLayer, or a hosted model on NEAR AI Cloud that the bids are sealed to. On OutLayer, Midge uses only the signing step: a settlement signed inside OutLayer was accepted by the contract. The comparison, with its sources, is in docs/sources/secure-hardware-hosts.md.</p></details>
+            <details><summary>What are the parts called in the code?</summary><p>The code keeps older names: Roost is the room, Nest is the rules contract, flyers are the members, hatch opens a room, the escape hatch is the exit, and settle_batch pays a settled round. The full map is in docs/GLOSSARY.md.</p></details>
+            <details><summary>Can I run my own copy?</summary><p>Yes. Make a free testnet account, deploy your own contract and run real rounds and attacks against it. The steps are in docs/LAB.md.</p></details>
             <details><summary>What is this site built with?</summary><p>Static HTML, CSS and JavaScript. The hero was rendered in Blender and is drawn live with three.js. Every figure comes from a recorded run or is read live from NEAR.</p></details>
           </div>
         </section>

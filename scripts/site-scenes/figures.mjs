@@ -32,7 +32,7 @@ export function figures(proof, root) {
     organizerTheft: { value: 'nothing stopped it', label: 'the organizer moved the pot where it chose', source: 'docs/lab/COMPARISON_RESULTS.md', quote: 'The organizer moved a 0.04 pot to an account of its choosing and nothing stopped it' },
     outsideRules: { value: 'none', label: 'payouts outside the rules', source: 'docs/lab/COMPARISON_RESULTS.md', quote: 'no operator can take the pot or pay outside the fixed policy' },
     modelHost: { value: 'Live', label: 'bids sealed to a NEAR AI Cloud model', source: 'docs/canonical/CURRENT_STATE.md', quote: 'LIVE DEMONSTRATED** | `npm run verify:roost-model`' },
-    phalaHosted: { value: 'Attested, not running now', label: 'our room program on Phala', source: 'docs/canonical/CURRENT_STATE.md', quote: 'no hosted Roost is running now' },
+    phalaHosted: { value: 'Deployed, sleeps when idle', label: 'our room program on Phala', source: 'docs/canonical/CURRENT_STATE.md', quote: 'stopped when idle and woken on demand by the playground service' },
     chainSignatures: { value: 'Rules checked, on testnet', label: 'contract-requested payments on Solana and Ethereum', source: 'docs/canonical/CURRENT_STATE.md', quote: "the Midge contract checked the group's foreign-payment rules and asked the signer for both payments" },
     intentsAssets: { value: '210', label: 'assets read live through 1Click', source: 'docs/canonical/CURRENT_STATE.md', quote: '210 assets audited live across NEAR, BTC, ETH, SOL' },
     outlayerModel: { value: 'Signing step only', label: 'a settlement signed inside OutLayer, accepted by the contract', source: 'docs/canonical/CURRENT_STATE.md', quote: 'a settlement signed by an OutLayer program was accepted by the production contract' },
