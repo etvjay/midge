@@ -1,0 +1,15 @@
+{
+  "runId": "20261114T114100Z-5e1d",
+  "startedAt": "2026-11-14T11:41:00.084Z",
+  "rootHash": "d1bca483bf9883b76ff28e060a83fa53a924cf49fe6221fa22a187ee8fdb8928",
+  "verdicts": {
+    "E-PLAYGROUND-LIVE-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 77,
+  "commit": "e5b114ae80057a14afe9bd55dff1232971f94325"
+}
