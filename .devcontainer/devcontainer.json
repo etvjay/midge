@@ -1,0 +1,10 @@
+{
+  "name": "Midge",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
+    "ghcr.io/devcontainers/features/rust:1": { "profile": "minimal", "targets": "wasm32-unknown-unknown,wasm32-wasip2" }
+  },
+  "postCreateCommand": "npm ci && npm ci --prefix deploy/roost",
+  "customizations": { "vscode": { "extensions": ["rust-lang.rust-analyzer"] } }
+}

@@ -1,0 +1,14 @@
+changelog:
+  exclude:
+    labels: [skip-changelog]
+  categories:
+    - title: Contracts and programs
+      labels: [contracts]
+    - title: Room and playground
+      labels: [room, playground]
+    - title: Site
+      labels: [site]
+    - title: Evidence and docs
+      labels: [docs, evidence]
+    - title: Other changes
+      labels: ["*"]
