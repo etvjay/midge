@@ -20,3 +20,9 @@ opt-level = "z"
 lto = true
 debug = false
 overflow-checks = true
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+cognitive_complexity = "warn"

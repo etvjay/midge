@@ -1,0 +1,2 @@
+# The highest cognitive complexity measured in this crate on 2026-11-14 (one function). Lower it as that function is simplified.
+cognitive-complexity-threshold = 37

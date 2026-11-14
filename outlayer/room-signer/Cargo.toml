@@ -18,3 +18,9 @@ sha2 = "0.10"
 [profile.release]
 opt-level = "s"
 lto = true
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+cognitive_complexity = "warn"
