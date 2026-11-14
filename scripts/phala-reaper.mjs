@@ -4,7 +4,8 @@
  * the VM keeps billing. This is the second line: run it on a schedule (cron, every 30 minutes is enough) and it deletes any midge-* VM older
  * than the limit. Dry run by default; pass --yes to delete. It never touches a VM whose name does not start with "midge-", and it leaves alone
  * (and reports) any VM whose age it cannot read.
- *   node scripts/phala-reaper.mjs [--max-age-hours 2] [--prefix midge-] [--name <exact VM name>] [--yes]
+ *   node scripts/phala-reaper.mjs [--max-age-hours 2] [--prefix midge-] [--name <exact VM name>] [--keep <name,name>] [--yes]
+ * --keep lists exact VM names that are meant to stay up (the playground's service and room) and are never deleted, however old.
  * --name limits the run to that one VM by its exact name, which makes a deletion test bounded.
  * Needs PHALA_CLOUD_API_KEY in .env or the environment. Never prints it.
  */
@@ -32,12 +33,14 @@ export function uptimeHours(uptime) {
   return parts.reduce((t, m) => t + Number(m[1]) * secs[m[2]], 0) / 3600;
 }
 
-/** Pure: split a CVM listing into those to delete, those to keep, those not ours and those whose age is unknown. */
-export function selectToReap(cvms, { now = Date.now(), maxAgeHours = 2, prefix = 'midge-', onlyName = null } = {}) {
-  const out = { reap: [], keep: [], foreign: [], unknownAge: [] };
+/** Pure: split a CVM listing into those to delete, those young enough to keep, those kept by name, those not ours and those whose age is unknown. */
+export function selectToReap(cvms, { now = Date.now(), maxAgeHours = 2, prefix = 'midge-', onlyName = null, keepNames = [] } = {}) {
+  const out = { reap: [], keep: [], kept: [], foreign: [], unknownAge: [] };
+  const keepSet = new Set(keepNames);
   for (const c of cvms) {
     const name = String(c.cvmName ?? c.name ?? '');
     if (!name.startsWith(prefix) || (onlyName !== null && name !== onlyName)) { out.foreign.push(c); continue; }
+    if (keepSet.has(name)) { out.kept.push(c); continue; }
     let hours = uptimeHours(c.uptime);
     if (hours === null) { const created = findCreated(c); if (created !== null) hours = (now - created) / 3600000; }
     if (hours === null) { out.unknownAge.push(c); continue; }
@@ -66,8 +69,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const d = phala(['cvms', 'get', String(id), '-j']);
     try { c.detail = JSON.parse((d.stdout || '').slice((d.stdout || '').indexOf('{'))); } catch { /* left with unknown age, and left alone */ }
   }
-  const sel = selectToReap(items, { maxAgeHours: Number(arg('max-age-hours', 2)), prefix: arg('prefix', 'midge-'), onlyName: arg('name', null) });
-  console.log(`${items.length} VM(s): ${sel.reap.length} to delete, ${sel.keep.length} young, ${sel.foreign.length} not ours, ${sel.unknownAge.length} of unknown age`);
+  const sel = selectToReap(items, { maxAgeHours: Number(arg('max-age-hours', 2)), prefix: arg('prefix', 'midge-'), onlyName: arg('name', null), keepNames: String(arg('keep', '')).split(',').map((n) => n.trim()).filter(Boolean) });
+  console.log(`${new Date().toISOString()} ${items.length} VM(s): ${sel.reap.length} to delete, ${sel.keep.length} young, ${sel.kept.length} kept by name, ${sel.foreign.length} not ours, ${sel.unknownAge.length} of unknown age`);
   for (const c of sel.unknownAge) console.log(`  unknown age, left alone: ${c.cvmName ?? c.name}`);
   for (const c of sel.reap) {
     const id = c.appId ?? c.app_id ?? c.id ?? c.cvmId;
