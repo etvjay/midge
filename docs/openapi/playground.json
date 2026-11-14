@@ -1,0 +1,325 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Midge playground service",
+    "version": "1",
+    "description": "The HTTP surface of src/playground/service.js, called by site/playground. Answers are JSON, errors are plain sentences in `error`, and cross-site calls are allowed from the site's origin only. Kept in step with the source by tests/openapi-coverage.test.js."
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Whether the service is up, whether a round is active, and the room's state.",
+        "responses": {
+          "200": {
+            "description": "{ok, active, room}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/warm": {
+      "get": {
+        "summary": "Wake the room if it is stopped. Returns at once with the room's state.",
+        "responses": {
+          "200": {
+            "description": "{room}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/room": {
+      "get": {
+        "summary": "The room's attestation and public keys, proxied so the page needs no cross-site access to the room.",
+        "responses": {
+          "200": {
+            "description": "The room's session and attestation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The room did not answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review": {
+      "post": {
+        "summary": "Ask the model on NEAR AI Cloud to review the visitor's lines. Returns the stripped message that was sent, the findings and the signed receipt.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "{lines:[{name,gross,taxRate,benefitsRate}], session}"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The lines are not valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Review limit reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rounds": {
+      "post": {
+        "summary": "Join the line for a round with the visitor's public keys and the reviewed lines. Refused with a reason when the funder is low, a limit is reached or the line is full.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "{nearPublicKey, payslipPublicKey, lines, session}"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ticket, position}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused, with a plain reason.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "A limit was reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rounds/{ticket}": {
+      "get": {
+        "summary": "The round's state: waiting, working, awaiting approval, settling, done or failed.",
+        "parameters": [
+          {
+            "name": "ticket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-playground-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The random secret the visitor's browser made. A ticket answers only to the session that joined it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not this session's ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rounds/{ticket}/approve": {
+      "post": {
+        "summary": "Send the visitor's signature over the approval message built in the browser.",
+        "parameters": [
+          {
+            "name": "ticket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-playground-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The random secret the visitor's browser made. A ticket answers only to the session that joined it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The settlement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The room refused the signature.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not this session's ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rounds/{ticket}/abandon": {
+      "post": {
+        "summary": "Cancel the round and clean up.",
+        "parameters": [
+          {
+            "name": "ticket",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-playground-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The random secret the visitor's browser made. A ticket answers only to the session that joined it."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not this session's ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
