@@ -55,7 +55,7 @@ function problem(F, f) {
           <rect x="170" y="196" width="120" height="32" rx="8" class="dg-box-deny"/><text x="186" y="217" class="dg-mono t-deny">a thief</text></svg>`;
   const pins = Array.from({ length: 5 }, (_, i) => `<rect class="mo-blink dg-pin" x="${186 + i * 22}" y="26" width="6" height="2"/><rect class="mo-blink dg-pin" x="${186 + i * 22}" y="104" width="6" height="2"/>`).join('');
   const cmpHead = ['', ...p.compare.cols].map((c, i) => `<span class="th${i === 3 ? ' t-lake' : ''}">${esc(c)}</span>`).join('');
-  const cmpRows = p.compare.rows.map((r) => `<span class="td k">${f(r.k)}</span>${r.cells.map((c) => `<span class="td${tone(c.tone)}">${f(c.t)}</span>`).join('')}`).join('');
+  const cmpRows = p.compare.rows.map((r) => `<span class="td k">${f(r.k)}</span>${r.cells.map((c, j) => `<span class="td${tone(c.tone)}" data-h="${esc(p.compare.cols[j])}">${f(c.t)}</span>`).join('')}`).join('');
   return `
 <section class="section bs" id="problem" aria-labelledby="problem-title">
   <div class="wrap">${head('problem', p, f)}
@@ -275,8 +275,8 @@ function proofSection(F, f, proofParts) {
         <div class="panel-head"><span>${f(r.head)}</span><span>${f(r.run)}</span></div>
         <div class="tbl-wrap mo-rise"><div class="tbl tbl-3" role="table" aria-label="${f(r.title)}">
           <span class="th">Check</span><span class="th">The payout asked</span><span class="th">The rules allow</span>
-          <span class="td k">Recipient</span><span class="td t-deny"><span class="strike">${f(r.recipient)}<i aria-hidden="true"></i></span></span><span class="td dim">listed accounts only</span>
-          <span class="td k">Money moved</span><span class="td t-deny">0 NEAR</span><span class="td dim">nothing outside the rules</span>
+          <span class="td k">Recipient</span><span class="td t-deny" data-h="The payout asked"><span class="strike">${f(r.recipient)}<i aria-hidden="true"></i></span></span><span class="td dim" data-h="The rules allow">listed accounts only</span>
+          <span class="td k">Money moved</span><span class="td t-deny" data-h="The payout asked">0 NEAR</span><span class="td dim" data-h="The rules allow">nothing outside the rules</span>
         </div></div>
         <p class="refusal-bar mo-slide"><span class="t-deny">${f(r.reason)}</span><a href="${NB}/txns/${r.hash}" target="_blank" rel="noopener">${esc(`${r.hash.slice(0, 8)}…${r.hash.slice(-7)}`)} on NearBlocks</a></p>
       </article>
