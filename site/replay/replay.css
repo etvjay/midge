@@ -1533,3 +1533,17 @@ button[aria-busy="true"]::before {
     transform: none;
   }
 }
+
+/* Target size (WCAG 2.5.8): disclosure rows and footer links reach 24 px. */
+main summary,
+.foot a {
+  padding-block: 1px;
+}
+main summary {
+  min-height: 24px;
+}
+.foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
