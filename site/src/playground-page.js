@@ -539,7 +539,13 @@ function drawReview() {
       { class: 'presets' },
       el(
         'button',
-        { type: 'button', class: 'paper-act primary', disabled: !ready || reviewing || !API || state.step !== 'run', onclick: askReview },
+        {
+          type: 'button',
+          class: 'paper-act primary',
+          'aria-busy': reviewing ? 'true' : 'false',
+          disabled: !ready || reviewing || !API || state.step !== 'run',
+          onclick: askReview,
+        },
         reviewing ? 'The model is reviewing…' : state.review ? 'Review this run again' : 'Ask the model to review this run',
       ),
     ),
@@ -577,6 +583,12 @@ function drawStartControls() {
 }
 async function startRound() {
   if (!canStart(state)) return;
+  const btn = $('start-btn');
+  if (btn) {
+    btn.setAttribute('aria-busy', 'true');
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+  }
   const r = await api('POST', '/api/rounds', {
     session: keys.session,
     visitorPublicKey: keys.near.publicKey,
@@ -756,13 +768,25 @@ function approvePanel(d) {
       { class: 'actions' },
       el(
         'button',
-        { type: 'button', class: 'act', disabled: approveBusy || !signable, onclick: () => approve(d, false) },
-        approveBusy ? 'Sending…' : 'Approve with my key',
+        {
+          type: 'button',
+          class: 'act',
+          'aria-busy': approveBusy === 'own' ? 'true' : 'false',
+          disabled: approveBusy || !signable,
+          onclick: () => approve(d, false),
+        },
+        approveBusy === 'own' ? 'Sending…' : 'Approve with my key',
       ),
       el(
         'button',
-        { type: 'button', class: 'act warn', disabled: approveBusy || !signable, onclick: () => approve(d, true) },
-        'Try to approve with a different key',
+        {
+          type: 'button',
+          class: 'act warn',
+          'aria-busy': approveBusy === 'cheat' ? 'true' : 'false',
+          disabled: approveBusy || !signable,
+          onclick: () => approve(d, true),
+        },
+        approveBusy === 'cheat' ? 'Trying the other key…' : 'Try to approve with a different key',
       ),
     ),
     approveMsg ? el('div', { class: 'refusal' }, approveMsg) : null,
@@ -776,7 +800,7 @@ async function approve(d, cheat) {
     drawRound();
     return;
   }
-  approveBusy = true;
+  approveBusy = cheat ? 'cheat' : 'own';
   drawRound();
   const who = cheat ? nearKeyPair() : keys.near;
   const r = await api('POST', `/api/rounds/${state.ticket}/approve`, {

@@ -251,3 +251,32 @@ details.secret summary {
   white-space: nowrap;
   padding-right: 12px;
 }
+
+/* Dark, like the landing page (2026-11-14): the status bar sits on the header's light band, frosted like the "Who uses it" tiles. */
+.intro .statusbar {
+  position: relative;
+  background: rgba(15, 20, 22, 0.55);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-color: rgba(233, 236, 232, 0.14);
+}
+/* The playground's header is shorter than Replay's, so its light band sits lower: behind the status bar, never behind the lede. */
+.intro {
+  padding-bottom: 40px;
+}
+.intro::before {
+  background:
+    linear-gradient(180deg, var(--paper) 0%, rgba(15, 20, 22, 0) 30%, rgba(15, 20, 22, 0) 88%, var(--paper) 100%),
+    linear-gradient(
+      180deg,
+      transparent 66%,
+      rgba(31, 95, 91, 0.6) 72%,
+      rgba(12, 40, 38, 0.5) 76%,
+      rgba(217, 130, 74, 0.42) 81%,
+      rgba(160, 80, 44, 0.3) 84%,
+      rgba(10, 28, 28, 0.65) 88%,
+      rgba(124, 196, 184, 0.3) 92%,
+      rgba(20, 72, 66, 0.6) 96%,
+      transparent 100%
+    );
+}

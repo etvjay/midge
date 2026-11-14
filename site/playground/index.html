@@ -15,15 +15,15 @@
 </head>
 <body>
 <div class="shell">
-  <aside class="rail" aria-label="Replay and playground">
-    <a class="mark" href="../">Midge</a>
+  <aside class="rail" id="rail" aria-label="Replay and playground">
+    <div class="rail-head"><a class="mark" href="../"><span class="lbl">Midge</span><span class="m1" aria-hidden="true">M</span></a><button class="rail-toggle" type="button" aria-expanded="true" aria-controls="rail" aria-label="Collapse the sidebar"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M10 5v14"/></svg></button></div>
     <nav class="modes" aria-label="Mode">
-      <a class="mode" href="../replay/">Replay<span>Check recorded runs</span></a>
+      <a class="mode" href="../replay/" title="Replay"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9 9.5l-2 2.5 2 2.5M12 8.5v7M15 9.5l2 2.5-2 2.5"/></svg><span class="lbl">Replay<span>Check recorded runs</span></span></a>
       <details class="railnav" open>
         <summary>Steps</summary>
         <ol class="stepnav" id="stepnav"></ol>
       </details>
-      <a class="mode" href="./" aria-current="page">Playground<span>Take part in a live round</span></a>
+      <a class="mode" href="./" aria-current="page" title="Playground"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg><span class="lbl">Playground<span>Take part in a live round</span></span></a>
     </nav>
   </aside>
 
@@ -39,6 +39,14 @@
 
     <div id="steps"></div>
 
+    <section class="limits next-up" aria-labelledby="next-h">
+      <h2 id="next-h">What a pay run does not show</h2>
+      <ul>
+        <li><strong>A member leaving alone with their own money.</strong> If the room stops, any member calls the exit and the contract pays back what is left of their share, with no operator or room signature. In a recorded run on real hardware the room stalled and a member did exactly that: <a href="https://testnet.nearblocks.io/txns/BCcko2KYW6KkXg4UrNPRgGHyT8UyeJUoeVy4o6KR7Avz" target="_blank" rel="noopener">the exit on NearBlocks</a> · <a href="https://github.com/etvjay/midge/blob/master/docs/lab-runs/20261112T033236Z-3fb0/report.md" target="_blank" rel="noopener">the recorded run</a>.</li>
+        <li><strong>Several members deciding together, in private.</strong> A buyer asks three invited makers for a price, each maker seals a quote, and a public rule picks the winner: <a href="../replay/#quotes">replay the sealed quotes</a>. A vote, a block trade and a pledge pool are on the <a href="../replay/">Replay page</a> too.</li>
+      </ul>
+    </section>
+
     <section class="limits" aria-labelledby="limits-h">
       <h2 id="limits-h">What this does not prove</h2>
       <ul>
@@ -53,5 +61,7 @@
 </div>
 <script src="config.js"></script>
 <script src="playground.bundle.js"></script>
+<script src="../replay/motion.js"></script>
+<script src="../replay/rail.js"></script>
 </body>
 </html>

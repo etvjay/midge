@@ -14,10 +14,10 @@
 </head>
 <body>
 <div class="shell">
-  <aside class="rail" aria-label="Replay and playground">
-    <a class="mark" href="../">Midge</a>
+  <aside class="rail" id="rail" aria-label="Replay and playground">
+    <div class="rail-head"><a class="mark" href="../"><span class="lbl">Midge</span><span class="m1" aria-hidden="true">M</span></a><button class="rail-toggle" type="button" aria-expanded="true" aria-controls="rail" aria-label="Collapse the sidebar"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M10 5v14"/></svg></button></div>
     <nav class="modes" aria-label="Mode">
-      <a class="mode" href="./" aria-current="page">Replay<span>Check recorded runs</span></a>
+      <a class="mode" href="./" aria-current="page" title="Replay"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9 9.5l-2 2.5 2 2.5M12 8.5v7M15 9.5l2 2.5-2 2.5"/></svg><span class="lbl">Replay<span>Check recorded runs</span></span></a>
       <details class="railnav" open>
         <summary>Use cases and steps</summary>
         <ul class="cases" id="cases"></ul>
@@ -26,7 +26,7 @@
           <div class="runnav" id="othernav"></div>
         </details>
       </details>
-      <a class="mode" href="../playground/">Playground<span>Take part in a live round</span></a>
+      <a class="mode" href="../playground/" title="Playground"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg><span class="lbl">Playground<span>Take part in a live round</span></span></a>
     </nav>
   </aside>
 
@@ -35,6 +35,7 @@
       <p class="kicker">Replay</p>
       <h1 id="title">Check a pay run yourself</h1>
       <p class="lede" id="lede"></p>
+      <nav class="tiles" id="tiles" aria-label="Use cases"></nav>
       <details class="legendbox">
         <summary>What the labels mean</summary>
         <dl class="legend">
@@ -73,5 +74,7 @@
 </div>
 <script src="replay.data.js"></script>
 <script src="replay.bundle.js"></script>
+<script src="motion.js"></script>
+<script src="rail.js"></script>
 </body>
 </html>
