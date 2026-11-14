@@ -14,3 +14,12 @@ for (const c of crates) {
     assert.match(read(`${c}/clippy.toml`), /^cognitive-complexity-threshold = \d+$/m);
   });
 }
+
+for (const c of crates) {
+  test(`${c} is not published and has a cargo-deny policy that ignores only advisories with a written reason`, () => {
+    assert.match(read(`${c}/Cargo.toml`), /^publish = false$/m);
+    const deny = read(`${c}/deny.toml`);
+    assert.match(deny, /\[advisories\]/);
+    for (const m of deny.matchAll(/\{ id = "(RUSTSEC-[0-9-]+)"([^}]*)\}/g)) assert.match(m[2], /reason = "[^"]{20,}"/, m[1]);
+  });
+}
