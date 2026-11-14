@@ -3,7 +3,8 @@
  * Drives the real playground page in headless Chromium against the DEPLOYED service and room, on real testnet, with the real model: one whole round, as a visitor
  * would do it. It serves site/ from this machine and points the page at the service named in site/playground/config.js.
  *
- *   node scripts/playground-live-check.mjs
+ *   node scripts/playground-live-check.mjs                                  the page from this machine, web security off
+ *   SITE_ORIGIN=https://midge.vercel.app node scripts/playground-live-check.mjs   the PUBLISHED page, with the browser's real cross-site rules on
  *
  * The browser runs with web security off, because the service allows cross-site calls only from the site's own origin and this page is served from
  * http://127.0.0.1. That means this checks the page and the service together, and NOT the cross-site rules: those are checked with a preflight request from the
@@ -28,10 +29,11 @@ const site = http.createServer((req, res) => {
   res.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f));
 });
 await new Promise((r) => site.listen(0, '127.0.0.1', r));
-const origin = `http://127.0.0.1:${site.address().port}`;
+const remote = process.env.SITE_ORIGIN || null; // a published site: no local server is used and web security stays on
+const origin = remote || `http://127.0.0.1:${site.address().port}`;
 
 const userData = fs.mkdtempSync(path.join(os.homedir(), 'pglive-')); const debugPort = 9400 + Math.floor(Math.random() * 400);
-const proc = spawn(process.env.CHROMIUM || 'chromium', ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-web-security', `--remote-debugging-port=${debugPort}`, `--user-data-dir=${userData}`, 'about:blank'], { stdio: 'ignore' });
+const proc = spawn(process.env.CHROMIUM || 'chromium', ['--headless=new', '--no-sandbox', '--disable-gpu', ...(remote ? [] : ['--disable-web-security']), `--remote-debugging-port=${debugPort}`, `--user-data-dir=${userData}`, 'about:blank'], { stdio: 'ignore' });
 let target = null;
 for (let i = 0; i < 40 && !target; i += 1) { try { target = (await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json()).find((t) => t.type === 'page'); } catch { /* not up yet */ } if (!target) await sleep(500); }
 if (!target) { console.error('could not start Chromium'); process.exit(2); }
