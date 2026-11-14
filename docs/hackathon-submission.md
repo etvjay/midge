@@ -17,17 +17,19 @@
 ## 2. Official Form Description (Formatted for 20–2,000 Char Limit)
 
 ```text
-Midge is a network of private rooms with public rules on NEAR. A group (AI agents, a syndicate, a treasury) deposits into a public contract escrow whose rules every depositor accepts: who can be paid, how much can leave per window, a deadline. The thinking happens in a private room that members seal their bids to. The room can only propose a payout inside those rules, and if it stops, any member leaves alone with their own money.
+Midge is a network of private rooms with public rules on NEAR. A group (agents, a syndicate, a treasury) deposits into a public contract escrow whose rules every depositor accepts: who can be paid, how much can leave per window, a deadline. The thinking happens in a private room that members seal their bids to. The room can only propose a payout inside those rules, and if it stops, any member leaves alone with their own money.
 
-What is built and checked:
-1. A NEAR L1 contract in Rust (near-sdk 5.1), live on testnet: one-use signed settlements, per-member charges, a release cap and a permissionless exit (hatch_out). 174 Rust tests, a state-machine document kept true by a check, and a source-only security audit whose fixes are deployed.
-2. NEAR AI Cloud TEEs: bids are sealed to a NEAR AI Cloud model's attested Intel TDX key, so the coordinator holds only ciphertext. A hosted room runs in a Phala dstack TDX VM and its attestation passes the official dstack-verifier. On real hardware it left out an unfunded bidder, settled on testnet, and refused to run when it could not read the chain. Without a key the room is a local simulation that can read bids, and says so.
-3. Chain Signatures: the Midge contract checked a group's rules and asked v1.signer-prod.testnet for payments that landed on Solana devnet and Ethereum Sepolia, and refused three out-of-rules requests (`npm run verify:contract-payroll`); funds on other chains are outside the member exit, and nothing was sent on Bitcoin.
+Built and checked:
+1. A NEAR L1 contract in Rust (near-sdk 5.1), live on testnet: one-use signed settlements, per-member charges, a release cap and a permissionless exit (hatch_out). 174 Rust tests and a source-only security audit whose fixes are deployed.
+2. NEAR AI Cloud TEEs: bids are sealed to a NEAR AI Cloud model's attested Intel TDX key, the coordinator holds only ciphertext. A hosted room runs in a Phala dstack TDX VM; its attestation passes the dstack-verifier. On hardware it left out an unfunded bidder, settled on testnet, and refused to run when it could not read the chain. Without a key the room is a local simulation that can read bids, and says so.
+3. Chain Signatures: the Midge contract checked a group's rules and asked v1.signer-prod.testnet for payments that landed on Solana devnet and Ethereum Sepolia, and refused three out-of-rules requests; funds on other chains are outside the member exit, and nothing was sent on Bitcoin.
 4. Confidential Intents: the 1Click asset registry is read live. The FAR private shard is an in-memory simulation; no claim of private on-chain settlement is made.
 
-Also: an MCP server with 18 tools, an SDK, x402 agent payments, sealed auctions, pools, ballots, requests for quote and payroll (signed invoices, auditor pack, private who and receipts; amounts are public). Every claim has a command anyone can re-run (make verify, no keys), and its limits are written beside it.
+Also: an MCP server (18 tools), auctions, ballots, quotes and payroll (private who and receipts; amounts are public). Every claim has a command to re-run (make verify, no keys), with its limits beside it.
+
+Try it (testnet): midge.vercel.app/playground runs a real pay run. A NEAR AI Cloud model reviews it, a TDX-VM room signs it, you approve with your own key. The first run wakes the room (~1 min). Recorded runs: midge.vercel.app/replay.
 ```
-*(Character count: 1,980 / 2,000, checked by `tests/public-docs-true.test.js`)*
+*(Character count: 1,993 / 2,000, checked by `tests/public-docs-true.test.js`)*
 
 ---
 

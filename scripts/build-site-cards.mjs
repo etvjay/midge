@@ -37,7 +37,7 @@ export function proofParts(proof) {
 const GH = 'https://github.com/etvjay/midge/blob/master/';
 const COLS = [
   ['Explore', [['How it works', '#how'], ['Who uses it', '#who'], ['Proof', '#proof'], ['Try it', '#try']]],
-  ['Check it yourself', [['The contract on NearBlocks', 'https://testnet.nearblocks.io/address/c.fly-1793636729.testnet'], ['The code on GitHub', 'https://github.com/etvjay/midge'], ['Whitepaper', `${GH}docs/WHITEPAPER.md`], ['Threat model', `${GH}docs/security/threat-model.md`], ['What Midge is', `${GH}docs/canonical/WHAT_IS_MIDGE.md`]]],
+  ['Check it yourself', [['Try a live pay run', 'playground/'], ['Replay recorded runs', 'replay/'], ['The contract on NearBlocks', 'https://testnet.nearblocks.io/address/c.fly-1793636729.testnet'], ['The code on GitHub', 'https://github.com/etvjay/midge'], ['Whitepaper', `${GH}docs/WHITEPAPER.md`], ['Threat model', `${GH}docs/security/threat-model.md`], ['What Midge is', `${GH}docs/canonical/WHAT_IS_MIDGE.md`]]],
   ['Build with it', [['MCP tools for agents', `${GH}src/mcp/server.js`], ['JavaScript SDK', `${GH}src/sdk/client.js`], ['Rooms API', `${GH}docs/openapi/rooms.json`], ['State machine', `${GH}docs/STATE_MACHINE.md`]]],
 ];
 
@@ -45,7 +45,7 @@ const COLS = [
 function footerBlock(root, F) {
   const deployments = JSON.parse(fs.readFileSync(path.join(root, 'docs/canonical/deployments.json'), 'utf8')).deployments;
   const hash = deployments[deployments.length - 1].codeHash;
-  const ext = (href) => (href.startsWith('#') ? '' : ' target="_blank" rel="noopener"');
+  const ext = (href) => (href.startsWith('#') || !href.startsWith('http') ? '' : ' target="_blank" rel="noopener"');
   return `<footer class="site-footer site-end" id="faq" aria-labelledby="faq-title">
   <canvas class="end-field" aria-hidden="true"></canvas>
   <div class="wrap end-inner">
