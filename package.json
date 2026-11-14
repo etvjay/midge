@@ -56,7 +56,9 @@
     "verify:preflight-advice": "node scripts/verify-preflight-advice.mjs",
     "verify:intents-quote": "node scripts/verify-intents-quote.mjs",
     "verify:contract-payroll": "node scripts/testnet-contract-payroll.js",
-    "verify:payroll": "node scripts/testnet-multichain-payroll.js"
+    "verify:payroll": "node scripts/testnet-multichain-payroll.js",
+    "build:playground": "node scripts/build-playground.mjs",
+    "smoke:playground": "node scripts/playground-smoke.mjs"
   },
   "keywords": [
     "near",

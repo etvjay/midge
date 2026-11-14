@@ -1,0 +1,90 @@
+name: Playground image
+
+# Builds the playground service image from the minimal staged context and pushes it to the GitHub Container
+# Registry with the built-in token (no personal access token). The package is linked to this repository,
+# so it inherits the repository's visibility: private while the repo is private, public when it goes public.
+# The pushed digest is what deploy/playground/docker-compose.yml pins. This machine is not attested hardware: it holds the funding key, which the room must not.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'deploy/playground/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/playground/**'
+      - 'src/roost-service/**'
+      - 'src/advisor/**'
+      - 'src/enclave/**'
+      - 'src/multichain/**'
+      - '.github/workflows/playground-image.yml'
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: playground-image
+  cancel-in-progress: false
+
+jobs:
+  image:
+    name: Build and push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stage the minimal build context
+        run: deploy/playground/build.sh --stage "$RUNNER_TEMP/playground-ctx"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Name the image
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/midge-playground" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/playground-ctx
+          push: true
+          tags: ${{ steps.name.outputs.image }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=midge-playground
+
+      # Build provenance links the image to this commit. It needs a public repository on a free plan,
+      # so it must not fail the build while the repository is private.
+      - name: Attest build provenance
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ steps.name.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Record the digest to pin
+        run: |
+          {
+            echo "### Playground image"
+            echo
+            echo "Pin this in deploy/playground/docker-compose.yml:"
+            echo
+            echo '```'
+            echo "${{ steps.name.outputs.image }}@${{ steps.push.outputs.digest }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,15 @@
+{
+  "runId": "20261114T041814Z-ce81",
+  "startedAt": "2026-11-14T04:18:14.201Z",
+  "rootHash": "980447e73bd4ed8dc4240c2568d45f289713466d971aba60b861ff4a14ef958c",
+  "verdicts": {
+    "E-PLAYGROUND-LOCAL-01": {
+      "attempts": [
+        "PASS"
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "events": 59,
+  "commit": "139611f92809ea3712d73ff9be97089987a73b7a"
+}

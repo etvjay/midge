@@ -1,0 +1,37 @@
+# Compose file for the playground service on its own Phala dstack machine (not the room's machine).
+# The image reference must be a digest of a PUSHED image: CI builds it from deploy/playground/ (see .github/workflows/playground-image.yml) and the
+# deploy step in docs/PLAYGROUND_RUNBOOK.md replaces PLAYGROUND_IMAGE_DIGEST with it. Values in ${...} are encrypted environment variables that only
+# the machine can read. Everything else here is not secret.
+services:
+  playground:
+    image: ghcr.io/etvjay/midge-playground@sha256:PLAYGROUND_IMAGE_DIGEST
+    restart: unless-stopped
+    environment:
+      - PORT=8090
+      - PLAYGROUND_ORIGIN=${PLAYGROUND_ORIGIN}
+      - PLAYGROUND_TRUST_PROXY=1
+      # How many proxies of ours sit in front of the service. The caller's address is that many entries from the right of X-Forwarded-For, because the left is whatever the caller sent.
+      - PLAYGROUND_PROXY_HOPS=1
+      - PLAYGROUND_LEDGER=/data/ledger.json
+      - PLAYGROUND_PER_DAY=60
+      # Visitors behind one network address (an office, a conference) share this, so it is not set tighter than a few rounds an hour each.
+      - PLAYGROUND_PER_ADDRESS=6
+      - PLAYGROUND_FUNDER_FLOOR_NEAR=2
+      - NEAR_CONTRACT_ID=c.fly-1793636729.testnet
+      - FUNDER_ID=play.fly-1793636729.testnet
+      - FUNDER_KEY=${FUNDER_KEY}
+      - NEARAI_API_KEY=${NEARAI_API_KEY}
+      - ROOM_URL=${ROOM_URL}
+      - ROOM_ADMIN_KEY=${ROOM_ADMIN_KEY}
+      - ROOM_CVM_ID=${ROOM_CVM_ID}
+      - PHALA_CLOUD_API_KEY=${PHALA_CLOUD_API_KEY}
+    volumes:
+      - playground-data:/data
+    ports:
+      - "8090:8090"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  playground-data:
