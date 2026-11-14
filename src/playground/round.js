@@ -36,6 +36,20 @@ export function createRound({ chain, room, keyCheck, ledger, onState = () => {},
     if (state === 'failed') for (const w of rec.waiters) { rec.waiters.delete(w); w.reject(new RoundError(detail.reason)); }
   };
 
+  // The room reads the chain through public RPC providers, which rate-limit (HTTP 429), and answers 503 when it could not read. Such a refusal is temporary and the
+  // room keeps its queue, so the same call is made again after a short wait. Only a refusal the room itself says is a 429 or a 5xx is retried: a 400 (a real
+  // refusal) and a dropped connection (where the room may already have taken the input) are not.
+  const TEMPORARY = /roost \S+ answered (429|50[234]):/;
+  async function viaRoom(label, fn, { tries = 6, baseMs = 3000 } = {}) {
+    for (let i = 0; ; i += 1) {
+      try { return await fn(); } catch (e) {
+        if (i >= tries - 1 || !TEMPORARY.test(String(e?.message))) throw e;
+        log(`${label}: ${String(e.message).slice(0, 140)}; trying again`);
+        await sleep(baseMs * (i + 1));
+      }
+    }
+  }
+
   async function cleanup({ groupId = null, employer = null, handles = [] }) {
     let employerSafe = true;
     if (groupId) {
@@ -133,8 +147,8 @@ export function createRound({ chain, room, keyCheck, ledger, onState = () => {},
       const slots = [...bots.map((b) => b.id)]; slots.splice(youIndex, 0, you.id);
       const full = lines.map((l, i) => ({ payee: slots[i], person: l.person.trim(), invoiceId: `PAY-${i + 1}`, period: PERIOD, gross: l.gross, tax: l.tax, benefits: l.benefits, payeeKey: i === youIndex ? payeeKeyHex : generateClientKey().publicKeyHex }));
       const cipherTextHex = sealToModel(JSON.stringify({ lines: full }), session.intentPublicKey);
-      await room.submitSignedIntent({ flyerId: employer.id, cipherTextHex, publicKey: employerKey.getPublicKey().toString(), signature: signInputWithNearKey(employerKey.toString(), inputMessage({ ...round, flyerId: employer.id, seq: 1, cipherTextHex })), seq: 1 });
-      const out = await room.runPayrun({ employer: employer.id, taxAddress: tx.id, benefitsAddress: bf.id, employerKeyHex: generateClientKey().publicKeyHex, auditorKeyHex: generateClientKey().publicKeyHex, runId, requireInvoices: false, approver: you.id, approverKeyHex: payeeKeyHex });
+      await viaRoom('submit the run', () => room.submitSignedIntent({ flyerId: employer.id, cipherTextHex, publicKey: employerKey.getPublicKey().toString(), signature: signInputWithNearKey(employerKey.toString(), inputMessage({ ...round, flyerId: employer.id, seq: 1, cipherTextHex })), seq: 1 }));
+      const out = await viaRoom('run the pay run', () => room.runPayrun({ employer: employer.id, taxAddress: tx.id, benefitsAddress: bf.id, employerKeyHex: generateClientKey().publicKeyHex, auditorKeyHex: generateClientKey().publicKeyHex, runId, requireInvoices: false, approver: you.id, approverKeyHex: payeeKeyHex }));
 
       const cast = [
         { role: 'you', name: lines[youIndex].person.trim(), id: you.id },
@@ -181,7 +195,7 @@ export function createRound({ chain, room, keyCheck, ledger, onState = () => {},
       const rec = live.get(ticket);
       if (!rec || rec.state !== 'awaiting-approval' || !rec.approval) throw new RoundError('This round is not waiting for an approval.');
       const { runId, orderHash, approver } = rec.approval.ctx;
-      await room.approvePayrun({ runId, orderHash, approver, publicKey, signature });
+      await viaRoom('approve', () => room.approvePayrun({ runId, orderHash, approver, publicKey, signature }));
       rec.approval.resolve();
       return { approved: true };
     },
