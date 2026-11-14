@@ -70,7 +70,7 @@ try {
   if (reachedApproval) {
     await shot('live-2-approval');
     ok('the approval step shows who is in the run, with real account ids', t1.includes('Who is in this run') && /\.play\.fly-1793636729\.testnet/.test(t1));
-    ok('the message to sign was built in the browser and matches the service\'s', await ev(`[...document.querySelectorAll('.checks .check')].some((c) => c.textContent.includes('the message you sign is built here') && c.querySelector('.chip').textContent === 'recomputed')`));
+    ok('the message to sign was built in the browser and matches the service\'s', await ev(`[...document.querySelectorAll('.checks .check')].some((c) => c.textContent.toLowerCase().includes('the message you sign is built here') && c.querySelector('.chip').textContent === 'recomputed')`));
     await clickText('Try to approve with a different key');
     await waitFor(`document.body.innerText.includes('The room refused it')`, 'the refusal', 60000);
     ok('the room refused an approval from a different key', (await text()).includes('is not a key of'));
