@@ -32,8 +32,8 @@ export function buildPlayground({ env, overrides = {} }) {
   const ledger = overrides.ledger || createFileLedger(env.PLAYGROUND_LEDGER || null);
   const queue = createQueue({ perDay: Number(env.PLAYGROUND_PER_DAY || 60), perAddressPerHour: Number(env.PLAYGROUND_PER_ADDRESS || 3), funderFloor: String(BigInt(Math.round(Number(env.PLAYGROUND_FUNDER_FLOOR_NEAR || 2) * 1000)) * 10n ** 21n) });
   const gate = createReviewGate();
-  const round = createRound({ chain, room, keyCheck, ledger, log: (m) => console.error(`[playground] ${m}`) });
   const waker = overrides.waker !== undefined ? overrides.waker : (env.PHALA_CLOUD_API_KEY && env.ROOM_CVM_ID ? createRoomWaker({ phalaFetch: phalaFetchFor(env.PHALA_CLOUD_API_KEY), cvmId: env.ROOM_CVM_ID, roomUrl: need(env, 'ROOM_URL'), isBusy: () => queue.activeTicket() !== null }) : null);
+  const round = createRound({ chain, room, keyCheck, ledger, prepare: waker ? () => waker.warm() : null, log: (m) => console.error(`[playground] ${m}`) });
   const handler = createPlaygroundService({ queue, gate, round, room, review: makeReviewer({ advisor }), chain, waker, config: { origins: list(env.PLAYGROUND_ORIGIN), trustProxy: env.PLAYGROUND_TRUST_PROXY === '1', trustedProxyHops: Number(env.PLAYGROUND_PROXY_HOPS || 1), maxBodyBytes: 16 * 1024 } });
   const server = http.createServer(handler);
   const timers = [];
