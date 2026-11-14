@@ -10,7 +10,7 @@ test('the fixture differs from the real compose file in the two provider URLs on
   const real = read('docker-compose.yml'); const fix = read('docker-compose.failclosed.yml');
   const body = fix.replace(/^# TEST FIXTURE[\s\S]*?\n# A test checks[^\n]*\n/, '');
   assert.notEqual(body, real);
-  assert.equal(body.replace('https://provider-a.invalid,https://provider-b.invalid', 'https://test.rpc.fastnear.com,https://near-testnet.drpc.org'), real);
+  assert.equal(body.replace('https://provider-a.invalid,https://provider-b.invalid', 'https://near-testnet.drpc.org,${ROOST_PRIVATE_RPC_URL}'), real);
 });
 test('its providers are on the reserved .invalid domain, so they can never resolve', () => {
   const line = read('docker-compose.failclosed.yml').match(/ROOST_RPC_URLS=(.*)/)[1];
@@ -25,7 +25,7 @@ test('the fixture breaks only the escrow providers: its key-check providers are 
   const fix = read('docker-compose.failclosed.yml'); const real = read('docker-compose.yml');
   const kc = (t) => t.match(/ROOST_ACCOUNT_CHECK_RPC_URLS=(.*)/)[1];
   assert.equal(kc(fix), kc(real));
-  for (const u of kc(real).split(',')) assert.doesNotMatch(new URL(u).hostname, /\.invalid$/);
+  for (const u of kc(real).split(',').filter((x) => /^https:/.test(x))) assert.doesNotMatch(new URL(u).hostname, /\.invalid$/); // the private slot is a variable, not an address
   assert.equal(new Set(kc(real).split(',')).size, 2, 'two different key-check providers');
 });
 
@@ -33,7 +33,7 @@ test('the account-check fixture differs from the real compose in its account-che
   const real = read('docker-compose.yml'); const fix = read('docker-compose.acctfail.yml');
   const body = fix.replace(/^# TEST FIXTURE[\s\S]*?\n# A test checks[^\n]*\n/, '');
   assert.notEqual(body, real);
-  assert.equal(body.replace('ROOST_ACCOUNT_CHECK_RPC_URLS=https://test.rpc.fastnear.com,https://provider-b.invalid', real.match(/ROOST_ACCOUNT_CHECK_RPC_URLS=.*/)[0]), real);
+  assert.equal(body.replace('ROOST_ACCOUNT_CHECK_RPC_URLS=https://near-testnet.drpc.org,https://provider-b.invalid', real.match(/ROOST_ACCOUNT_CHECK_RPC_URLS=.*/)[0]), real);
   const urls = fix.match(/ROOST_ACCOUNT_CHECK_RPC_URLS=(.*)/)[1].split(',');
   assert.equal(urls.length, 2); assert.equal(urls.filter((u) => /\.invalid$/.test(new URL(u).hostname)).length, 1);
   assert.equal(fix.match(/ROOST_RPC_URLS=(.*)/)[1], real.match(/ROOST_RPC_URLS=(.*)/)[1], 'the escrow providers are the real ones');

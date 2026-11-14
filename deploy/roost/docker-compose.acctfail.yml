@@ -13,16 +13,20 @@ services:
       - ROOST_ADMIN_KEY=${ROOST_ADMIN_KEY}
       - PORT=8080
       # The escrow check, ON, and written here on purpose: this file is measured by the attestation, so a member who verifies the
-      # Roost also verifies WHICH providers it asks and which contract it reads, and the coordinator cannot switch it off or point it
-      # elsewhere without changing the Roost's identity. Plain text is fine: nothing here is secret. Changing either line is a redeploy.
-      - ROOST_RPC_URLS=https://test.rpc.fastnear.com,https://near-testnet.drpc.org
+      # Roost also verifies the provider it must ask (drpc, in plain text) and which contract it reads, and the coordinator cannot switch the check off
+      # or point it only elsewhere without changing the Roost's identity. Changing either line is a redeploy.
+      # The second provider is a PRIVATE endpoint that carries an API key in its address, so its address is an encrypted environment variable, like the
+      # admin key, and is not written here. Every provider must agree before a read counts, so an endpoint that the operator controls can make the room
+      # refuse a read but cannot make it accept a false one: the pinned provider would disagree. The free public endpoints this replaced (fastnear) rate
+      # limited the room for minutes at a time, on 2026-11-14, and failed visitors' rounds.
+      - ROOST_RPC_URLS=https://near-testnet.drpc.org,${ROOST_PRIVATE_RPC_URL}
       - ROOST_CONTRACT_ID=c.fly-1793636729.testnet
       # Signed inputs REQUIRED: the room accepts only inputs signed with a key the member's NEAR account really has (checked against the first
       # provider above). Ballots, RFQs and pay runs need this and are refused without it (GAP-046). Measured by the attestation like the lines above.
       - ROOST_REQUIRE_SIGNED_INPUTS=1
       # The providers that must ALL confirm a member's account key before a signed bid is accepted. Separate from the escrow providers above so an outage of one
       # does not silently change the other, and measured by the attestation like them (GAP-050).
-      - ROOST_ACCOUNT_CHECK_RPC_URLS=https://test.rpc.fastnear.com,https://provider-b.invalid
+      - ROOST_ACCOUNT_CHECK_RPC_URLS=https://near-testnet.drpc.org,https://provider-b.invalid
     volumes:
       - /var/run/dstack.sock:/var/run/dstack.sock
     ports:

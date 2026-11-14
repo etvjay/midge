@@ -52,3 +52,8 @@ test('the compose file does not publish host port 8090, which Phala reserves', (
   assert.ok(!/8090/.test(c), 'Phala answers "Host port 8090 is reserved for internal use and cannot be published"');
   assert.match(c, /- PORT=8080/); assert.match(c, /"8080:8080"/);
 });
+
+test('the service\'s chain endpoints are encrypted variables, because the private one carries a key', () => {
+  const c = fs.readFileSync('deploy/playground/docker-compose.yml', 'utf8');
+  assert.match(c, /NEAR_RPC_URL=\$\{NEAR_RPC_URL\}/); assert.match(c, /NEAR_RPC_URLS=\$\{NEAR_RPC_URLS\}/);
+});

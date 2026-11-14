@@ -18,6 +18,9 @@ services:
       - PLAYGROUND_PER_ADDRESS=6
       - PLAYGROUND_FUNDER_FLOOR_NEAR=2
       - NEAR_CONTRACT_ID=c.fly-1793636729.testnet
+      # The service's own chain reads. The private endpoint carries a key, so both are encrypted environment variables.
+      - NEAR_RPC_URL=${NEAR_RPC_URL}
+      - NEAR_RPC_URLS=${NEAR_RPC_URLS}
       - FUNDER_ID=play.fly-1793636729.testnet
       - FUNDER_KEY=${FUNDER_KEY}
       - NEARAI_API_KEY=${NEARAI_API_KEY}
