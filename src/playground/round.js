@@ -42,12 +42,15 @@ export function createRound({ chain, room, keyCheck, ledger, prepare = null, onS
   // The room also answers 400 when a chain provider could not answer a key check or an escrow read ("could not check that ... could not answer", "could not read escrow"),
   // so its words count as well as its status. A real mismatch says "is not a key of" and is not temporary.
   const TEMPORARY = /roost \S+ answered (429|50[234]):|could not (check that|read escrow|answer)/i;
-  async function viaRoom(label, fn, { tries = 6, baseMs = 3000 } = {}) {
+  // The public RPC providers can rate limit the room for a minute or more, as they did on 2026-11-14, so the wait grows by three seconds a try and stops growing at
+  // fifteen: ten tries wait out about two minutes. A visitor sees "Sealing the run" for that long and still gets a round, instead of a failure.
+  async function viaRoom(label, fn, { tries = 10, baseMs = 3000, capMs = 15000 } = {}) {
     for (let i = 0; ; i += 1) {
       try { return await fn(); } catch (e) {
-        if (i >= tries - 1 || !TEMPORARY.test(String(e?.message))) throw e;
+        if (!TEMPORARY.test(String(e?.message))) throw e;
+        if (i >= tries - 1) throw new RoundError('The public NEAR network is busy and the room could not read from it after ten tries. Nothing was paid. Please try again in a minute.');
         log(`${label}: ${String(e.message).slice(0, 140)}; trying again`);
-        await sleep(baseMs * (i + 1));
+        await sleep(Math.min(capMs, baseMs * (i + 1)));
       }
     }
   }

@@ -163,13 +163,15 @@ test('a refusal that is not temporary is not retried', async () => {
   await round.idle();
 });
 
-test('a temporary refusal that never clears fails the round with the room\'s reason after a bounded number of tries, and cleans up', async () => {
+test('a temporary refusal that never clears fails the round after a bounded number of tries, in plain words, and cleans up', async () => {
   const { chain, room, round } = mkRound();
   await round.sweepStartup();
   let tries = 0;
   room.runPayrun = async () => { tries += 1; throw new Error('roost /payrun answered 503: [ROOST REJECT] could not read escrow: https://x answered 429'); };
-  await assert.rejects(round.start({ ticket: '6'.repeat(32), ...visitor, lines: defaultLines() }), /could not read escrow/);
-  assert.equal(tries, 6, 'six tries and no more');
+  await assert.rejects(round.start({ ticket: '6'.repeat(32), ...visitor, lines: defaultLines() }), /public NEAR network is busy/);
+  assert.match(round.status('6'.repeat(32)).detail.reason, /try again in a minute/i, 'the visitor is told what to do');
+  assert.ok(!/ROOST|answered 429|rpc\./.test(round.status('6'.repeat(32)).detail.reason), 'and is not shown the room\'s internals');
+  assert.equal(tries, 10, 'ten tries and no more');
   await round.idle(); assert.equal(chain.groups.size, 0, 'the deposit was taken back and the group pruned');
 });
 
@@ -222,4 +224,17 @@ test('a key check the room could not finish because a chain provider was rate li
   await assert.rejects(second.round.start({ ticket: '4'.repeat(32), ...visitor, lines: defaultLines() }), /is not a key of/);
   assert.equal(n, 1, 'a genuine mismatch is refused once and not retried');
   await second.round.idle();
+});
+
+test('the waits between tries grow and stop growing, so a long rate limit is waited out for about two minutes and not longer', async () => {
+  const waits = [];
+  const chain = fakeChain(); const room = fakeRoom({ accountKeyCheck: async () => true });
+  const ledger = { rows: new Map(), add(r) { this.rows.set(r.id, r); }, remove(id) { this.rows.delete(id); }, all() { return [...this.rows.values()]; } };
+  const round = createRound({ chain, room: { ...room, getSession: () => room.getSession(), openRound: (r) => room.openRound(r), submitSignedIntent: (p) => room.submitSignedIntent(p), runPayrun: async () => { throw new Error('roost /payrun answered 503: [ROOST REJECT] could not read escrow: 1 of 2 providers answered, 2 needed: https://test.rpc.fastnear.com answered 429.'); } }, keyCheck: async () => true, ledger, approvalTimeoutMs: 5000, sleep: async (ms) => { waits.push(ms); } });
+  await round.sweepStartup(); waits.length = 0;
+  await assert.rejects(round.start({ ticket: '3'.repeat(32), ...visitor, lines: defaultLines() }), /busy/);
+  const retryWaits = waits.filter((w) => w >= 3000 && w <= 15000);
+  assert.deepEqual(retryWaits.slice(0, 9), [3000, 6000, 9000, 12000, 15000, 15000, 15000, 15000, 15000], 'grows by three seconds, then stays at fifteen');
+  assert.ok(retryWaits.slice(0, 9).reduce((a, b) => a + b, 0) <= 120000);
+  await round.idle();
 });
