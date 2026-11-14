@@ -988,6 +988,13 @@ function tileIcon(d) {
   svg.append(c, path);
   return svg;
 }
+function caseIcon(key) {
+  const svg = tileIcon((TILE[key] || { icon: 'M8 12h8' }).icon);
+  svg.setAttribute('class', 'ico');
+  svg.setAttribute('width', '18');
+  svg.setAttribute('height', '18');
+  return svg;
+}
 function renderTiles() {
   const host = $('tiles');
   if (!host) return;
@@ -1013,7 +1020,12 @@ function renderRail() {
       return el(
         'li',
         {},
-        el('a', { class: 'case', href: `#${u.key}`, 'aria-current': on ? 'true' : 'false' }, u.title),
+        el(
+          'a',
+          { class: 'case', href: `#${u.key}`, title: u.title, 'aria-current': on ? 'true' : 'false' },
+          caseIcon(u.key),
+          el('span', { class: 'lbl' }, u.title),
+        ),
         on
           ? el(
               'ol',
