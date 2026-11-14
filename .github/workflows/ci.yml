@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: 'npm'
 
       - name: Setup Rust Toolchain
@@ -77,3 +77,109 @@ jobs:
         env:
           NEARAI_API_KEY: ${{ secrets.NEARAI_API_KEY }}
         run: ./scripts/verify
+
+  # The jobs below run in parallel with the full suite above and do not repeat it. The job named "Complete Canonical Verification Suite" stays the one
+  # required check that runs ./scripts/verify and is the only job that gets NEARAI_API_KEY.
+  quality:
+    name: Lint, types, dead code, duplicates, cycles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Format check (the files named in biome.json)
+        run: npm run format:check
+      - name: Type check (files that opt in with // @ts-check)
+        run: npm run typecheck
+      - name: Dead files, unused and unlisted dependencies
+        run: npm run knip
+      - name: Duplicate code
+        run: npm run dup
+      - name: Import cycles and module boundaries
+        run: npm run cycles
+      - name: No tracked file over 1 MiB
+        run: npm run check:large-files
+      - name: Quality report
+        run: node scripts/quality-report.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: quality
+          path: test-results/quality.json
+
+  coverage:
+    name: Coverage over src
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+      - run: npm ci
+      # Thresholds are the values measured on 2026-11-14 (81.80 lines, 78.72 branches, 78.67 functions) minus 2 points. Raise them as coverage grows.
+      - name: Tests with coverage gates
+        run: >
+          node --test --experimental-test-coverage
+          --test-coverage-include='src/**' --test-coverage-exclude='tests/**'
+          --test-coverage-lines=79 --test-coverage-branches=76 --test-coverage-functions=76
+          --test-reporter=spec --test-reporter-destination=stdout
+          --test-reporter=junit --test-reporter-destination=test-results/unit.xml
+          tests/*.test.js
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: unit-junit
+          path: test-results/unit.xml
+
+  rust:
+    name: Rust ${{ matrix.crate }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { crate: contracts/fly-coordinator, fmt: true }
+          - { crate: outlayer/caller, fmt: true }
+          # room-signer's src/main.rs predates rustfmt, and reformatting could move panic locations that are embedded in the release WASM, so its formatting is not checked yet.
+          - { crate: outlayer/room-signer, fmt: false }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown,wasm32-wasip2
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ matrix.crate }}
+      - name: Format check
+        if: matrix.fmt
+        run: cd ${{ matrix.crate }} && cargo fmt --check
+      - name: Clippy, all targets, warnings are errors
+        run: cd ${{ matrix.crate }} && cargo clippy --all-targets -- -D warnings
+      - name: Tests
+        run: cd ${{ matrix.crate }} && cargo test
+
+  security:
+    name: Secrets and dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+      - run: npm ci
+      - name: npm audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=low
+      - name: gitleaks (whole history, rules and allowlist in .gitleaks.toml)
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

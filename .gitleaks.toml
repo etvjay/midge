@@ -1,0 +1,26 @@
+# Secret scanning rules. The defaults stay on; the allowlist below names the places where this repository deliberately holds values that look like keys
+# but are not secrets. Each entry says why. A real credential in any OTHER file still fails the scan.
+title = "Midge gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Recorded lab runs: transaction hashes, order hashes, public keys and sealed ciphertext. The evidence is kept byte for byte, so it is never edited."
+paths = ['''^docs/lab-runs/''']
+
+[[allowlists]]
+description = "The Replay page's recorded demo: it publishes the testnet demo keys of its recorded cast on purpose, so a visitor can open the recorded payslips in the browser."
+paths = ['''^site/replay/replay\.data\.js$''']
+
+[[allowlists]]
+description = "Test fixtures and a recorded hardware attestation report: public keys, TDX quotes and a fixed test admin key that guards nothing."
+paths = ['''^verifications/fixtures/''', '''^lab/lib/room-fixtures\.js$''']
+
+[[allowlists]]
+description = "The evidence ledger quotes public signer addresses of the model gateway."
+paths = ['''^docs/canonical/EVIDENCE_LEDGER\.md$''']
+
+[[allowlists]]
+description = "A private field assigned from another variable in code, not a literal value."
+paths = ['''^src/roost-service/hosted-roost\.js$''']

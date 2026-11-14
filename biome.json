@@ -42,7 +42,8 @@
       "tests/openapi-coverage.test.js",
       "biome.json",
       "knip.json",
-      "tsconfig.json"
+      "tsconfig.json",
+      "scripts/quality-report.mjs"
     ]
   },
   "javascript": {
