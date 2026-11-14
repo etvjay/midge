@@ -7,9 +7,19 @@ A group decides in private and pays out under rules that everyone can read. Memb
 > Decide in private. Settle in public. Leave on your own if the room disappears.
 
 **Chain:** NEAR testnet
-**Site:** https://midge.vercel.app (not yet updated for the latest hardware runs)
-**Demo video:** link added at submission
+**Site:** https://midge.vercel.app
 **Playground:** https://midge.vercel.app/playground/ runs a real testnet pay run: a model on NEAR AI Cloud reviews it, a room in a hardware enclave signs it, and you approve with your own key and check your own payslip in the browser. The room sleeps when idle, so the first run waits up to a minute. **Replay:** https://midge.vercel.app/replay/ re-checks six recorded runs in the browser.
+
+## Roadmap: rules only members can read, checkable by anyone
+
+Today the decision is private and the rules, deposits and payments are public. The plan, in order, all of it planned and none of it built (details in [`docs/ROADMAP.md`](docs/ROADMAP.md)):
+
+1. **Hide who may be paid.** The contract keeps only a commitment to the list of allowed payees and checks a proof for each one paid.
+2. **Confidential transfers.** The payout leg goes through NEAR Confidential Intents, so recipients and amounts of that leg are not on the public chain.
+3. **Hidden rules, still checkable.** A zero-knowledge proof shows each payment fits the rules members agreed to, without showing the rules.
+4. **Groups working together in confidence.** Rooms of several groups check each other's program and run one joint round; each group keeps its own rules and its own exit.
+
+Known leaks in what is private today are closed along the way: payee addresses reused across runs, the approver and the model review moving into the group's rules, an attested coordinator, and removing the deployer's key.
 
 ### [Start here](docs/START_HERE.md)
 
