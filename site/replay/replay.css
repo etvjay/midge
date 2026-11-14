@@ -1101,3 +1101,221 @@ button.act:disabled {
     grid-column: 2;
   }
 }
+
+/* ---- Dark, like the landing page (2026-11-14) ----------------------------------------------------------------------------------
+   The light tokens take the design system's dark values (docs/DESIGN_SYSTEM.md §3), so both pages sit in the landing page's dark room
+   with the same measured contrast. The payslip receipt stays a light paper slip on purpose: it restores the light tokens inside itself.
+   The header is the "Who uses it" band panel; steps are bento cards; the rail is narrower. Motion lives in motion.js and is off
+   without JavaScript and under reduced motion, where every final frame shows. */
+:root {
+  color-scheme: dark;
+  --paper: #0f1416;
+  --card: #151b1e;
+  --ink: #e9ece8;
+  --ink-2: #a6aeab;
+  --ink-3: #8c9491;
+  --line: rgba(233, 236, 232, 0.12);
+  --lake: #7cc4b8;
+  --deny-ink: #e0675a;
+  --glow-ink: #d9824a;
+  --stage: #0b0f10;
+  --rail: 216px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.shell {
+  max-width: 1320px;
+}
+.rail {
+  padding-right: 12px;
+}
+.mode {
+  background: rgba(21, 27, 30, 0.6);
+}
+.mode[aria-current="page"] {
+  background: rgba(124, 196, 184, 0.08);
+  border-color: rgba(124, 196, 184, 0.36);
+  color: var(--ink);
+}
+.railnav > summary,
+.others > summary {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+}
+.slip {
+  --ink: #15181a;
+  --ink-2: #4a5250;
+  --ink-3: #5f6764;
+  --line: rgba(21, 24, 26, 0.12);
+  --lake: #1f5f5b;
+  --deny-ink: #a63b2f;
+  --glow-ink: #8a5222;
+  color: var(--ink);
+}
+.cast {
+  background: var(--card);
+}
+.stage {
+  background: var(--stage);
+  border: 1px solid var(--line);
+}
+.pill {
+  background: rgba(124, 196, 184, 0.1);
+  border: 1px solid rgba(124, 196, 184, 0.24);
+  color: var(--lake);
+}
+
+/* the header: the landing page's "Who uses it" band panel */
+.intro {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  margin-top: 24px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: clamp(48px, 7vw, 88px) clamp(20px, 4vw, 40px) 32px;
+}
+.intro::before {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  z-index: -2;
+  filter: blur(16px);
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, var(--paper) 0%, rgba(15, 20, 22, 0) 30%, rgba(15, 20, 22, 0) 86%, var(--paper) 100%),
+    linear-gradient(180deg, transparent 40%, rgba(31, 95, 91, 0.6) 50%, rgba(12, 40, 38, 0.5) 56%, rgba(217, 130, 74, 0.42) 63%, rgba(160, 80, 44, 0.3) 67%, rgba(10, 28, 28, 0.65) 72%, rgba(124, 196, 184, 0.3) 78%, rgba(20, 72, 66, 0.6) 84%, transparent 94%);
+}
+.intro::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(233, 236, 232, 0.035) 0 1px, transparent 1px 5px);
+}
+@keyframes band-drift {
+  from {
+    transform: translateX(-3%);
+  }
+  to {
+    transform: translateX(3%);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .intro::before {
+    animation: band-drift 40s var(--ease) infinite alternate;
+  }
+}
+.intro .legendbox {
+  position: relative;
+}
+
+/* the use cases as frosted tiles, the same tiles as "Who uses it" */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 32px;
+}
+.tile {
+  background: rgba(15, 20, 22, 0.55);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(233, 236, 232, 0.14);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 132px;
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    border-color 160ms var(--ease),
+    background-color 160ms var(--ease),
+    transform 160ms var(--ease),
+    opacity 320ms var(--ease);
+}
+.tile svg {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+.tile .t {
+  margin: auto 0 0;
+  font-size: 17px;
+  font-weight: 500;
+}
+.tile .s {
+  margin: 0;
+  font: 400 12px / 1.4 var(--mono);
+  color: var(--ink-2);
+}
+.tile[aria-current="true"] {
+  border-color: rgba(124, 196, 184, 0.6);
+  background: rgba(15, 20, 22, 0.72);
+}
+.tile[aria-current="true"] .s {
+  color: var(--lake);
+}
+@media (hover: hover) {
+  .tile:hover {
+    border-color: rgba(124, 196, 184, 0.4);
+    transform: translateY(-1px);
+  }
+}
+@media (max-width: 900px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .tiles {
+    gap: 8px;
+  }
+  .tile {
+    padding: 16px;
+    min-height: 112px;
+    gap: 8px;
+  }
+  .tile .t {
+    font-size: 15px;
+  }
+}
+
+/* steps as bento cards */
+.step,
+.beats + .step {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 28px clamp(20px, 3vw, 32px);
+  margin-top: 16px;
+}
+.step.off {
+  opacity: 1;
+  background: transparent;
+  border-style: dashed;
+}
+.limits {
+  border-top-color: var(--line);
+}
+
+/* entrances, once, when a card comes into view (motion.js adds .motion and .in) */
+@media (prefers-reduced-motion: no-preference) {
+  .motion .step,
+  .motion .tile {
+    transition:
+      opacity 320ms var(--ease),
+      transform 320ms var(--ease),
+      border-color 160ms var(--ease),
+      background-color 160ms var(--ease);
+    transition-delay: calc(var(--i, 0) * 40ms);
+  }
+  .motion .step:not(.in),
+  .motion .tile:not(.in) {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}

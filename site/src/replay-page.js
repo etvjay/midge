@@ -968,7 +968,45 @@ function renderRun(id) {
 }
 
 // ---- the rail ----
+// The use cases as frosted tiles in the header, the same tiles as the landing page's "Who uses it" (icons from that section).
+const TILE = {
+  payrun: { s: 'Pay four people; who got what stays private', icon: 'M7 12h10M13 8l4 4-4 4' },
+  quotes: { s: 'Three makers seal quotes; a rule picks one', icon: 'M8 12h8M12 8v8' },
+  decision: { s: 'Sealed ballots decide; nothing is paid', icon: 'M8 12l3 3 5-6' },
+  ballot: { s: 'Sealed ballots; only the result is paid', icon: 'M8 12l3 3 5-6' },
+  block: { s: 'Two desks cross a block at a sealed price', icon: 'M8 15l3-3 2 2 3-4' },
+  pools: { s: 'Pledges fund the pool or go back', icon: 'M9 10h6v5H9zM10.5 10V8.5a1.5 1.5 0 0 1 3 0V10' },
+};
+const SVGNS = 'http://www.w3.org/2000/svg';
+function tileIcon(d) {
+  const svg = document.createElementNS(SVGNS, 'svg');
+  for (const [k, v] of Object.entries({ width: '22', height: '22', viewBox: '0 0 24 24', 'aria-hidden': 'true' })) svg.setAttribute(k, v);
+  const c = document.createElementNS(SVGNS, 'circle');
+  for (const [k, v] of Object.entries({ cx: '12', cy: '12', r: '9.5' })) c.setAttribute(k, v);
+  const path = document.createElementNS(SVGNS, 'path');
+  path.setAttribute('d', d);
+  svg.append(c, path);
+  return svg;
+}
+function renderTiles() {
+  const host = $('tiles');
+  if (!host) return;
+  host.replaceChildren(
+    ...D.useCases.map((u) => {
+      const t = TILE[u.key] || { s: '', icon: 'M8 12h8' };
+      return el(
+        'a',
+        { class: 'tile', href: `#${u.key}`, 'aria-current': view.case === u.key ? 'true' : 'false' },
+        tileIcon(t.icon),
+        el('p', { class: 't' }, u.title),
+        el('p', { class: 's' }, t.s),
+      );
+    }),
+  );
+}
+
 function renderRail() {
+  renderTiles();
   $('cases').replaceChildren(
     ...D.useCases.map((u) => {
       const on = view.case === u.key;
