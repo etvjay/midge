@@ -1,3 +1,3 @@
 // Where the playground service runs, and the NEAR contract the page builds approval messages for (its own copy, never the service's). It is null whenever the service is not deployed, and then the page says plainly that the playground is not running.
 // At the deploy gate this is set to the service's public address, for example window.PLAYGROUND_CONFIG = { apiBase: 'https://<id>-8080.dstack-pha1-prod5.phala.network', contractId: 'c.fly-1793636729.testnet' };
-window.PLAYGROUND_CONFIG = { apiBase: 'https://ec3e327e8c2f44d7db1f26672ca416114ccfa9b7-8080.dstack-pha1-prod5.phala.network', contractId: 'c.fly-1793636729.testnet' };
+window.PLAYGROUND_CONFIG = { apiBase: 'https://c116e30f4f91276aebf2a23b4fcd1f168c291730-8080.dstack-pha1-prod9.phala.network', contractId: 'c.fly-1793636729.testnet' };
