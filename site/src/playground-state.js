@@ -50,3 +50,30 @@ export function reduce(s, a) {
     default: return s;
   }
 }
+
+// ---- the approval message ----
+// The visitor's NEAR key signs the approval, and the same key is a full-access key on their account. A signature over raw bytes is a signature over whatever
+// bytes were given, and a NEAR transaction is signed over exactly 32 bytes (its hash). So the page never signs a string the service hands it. It builds the
+// message itself, in the room's format (the same string as payrunApprovalMessage in src/roost-service/hosted-roost.js), from a contract id that the page
+// was configured with and fields it checks the shape of. The message is always long and starts with a fixed prefix, so it can never be a transaction hash.
+export const APPROVAL_DOMAIN = 'midge-payrun-approval-v1';
+const CONTRACT_ID = /^[a-z0-9][a-z0-9._-]{1,62}$/;
+const GROUP_ID = /^pg-[0-9a-f]{10}$/;
+const RUN_ID = /^run-[0-9a-f]{10}$/;
+const NONCE = /^[A-Za-z0-9_-]{1,128}$/;
+const HASH = /^[0-9a-f]{64}$/;
+
+/**
+ * Returns { message, agrees }. `message` is what the page may sign, or null if any field is not in its expected shape. `agrees` says whether the service sent
+ * the same message, which the page shows to the visitor; it signs `message` either way, and refuses when `message` is null.
+ */
+export function approvalToSign({ contractId, detail }) {
+  const r = detail?.round;
+  const ok = typeof contractId === 'string' && CONTRACT_ID.test(contractId) && r && typeof r === 'object'
+    && typeof r.syndicateId === 'string' && GROUP_ID.test(r.syndicateId) && Number.isSafeInteger(r.epoch) && r.epoch >= 0
+    && typeof r.roundNonce === 'string' && NONCE.test(r.roundNonce) && typeof detail.runId === 'string' && RUN_ID.test(detail.runId)
+    && typeof detail.orderHash === 'string' && HASH.test(detail.orderHash);
+  if (!ok) return { message: null, agrees: false };
+  const message = `${APPROVAL_DOMAIN}:${contractId}:${r.syndicateId}:${r.epoch}:${r.roundNonce}:${detail.runId}:${detail.orderHash}`;
+  return { message, agrees: message === detail.approvalMessage };
+}

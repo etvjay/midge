@@ -13,6 +13,9 @@ import { validateLines } from './defaults.js';
  *   POST /api/rounds/:ticket/approve      { publicKey, signature } over the approval message
  *   POST /api/rounds/:ticket/abandon      gives the turn up
  *
+ * A ticket is a capability that is only half of the credential: the three routes above also need the session that joined it, in the X-Playground-Session
+ * header. A different session gets the same answer as an unknown ticket, so a ticket that leaks (in a log, over a shoulder) reads, approves and cancels nothing.
+ *
  * Nothing here touches the room's admin key: the room client holds it and this file only calls its methods.
  */
 const SESSION = /^[A-Za-z0-9_-]{8,64}$/;
@@ -33,8 +36,15 @@ export function createPlaygroundService({ queue, gate, round, room, review, chai
   }
   function sweep() { for (const t of queue.sweep()) { pending.delete(t); round.abandon(t); } pump(); }
 
+  // Behind a proxy that APPENDS the address it saw to X-Forwarded-For, the leftmost entries are whatever the caller sent, so only an entry the proxy added can be
+  // trusted. `trustedProxyHops` is how many proxies of ours sit in front (one, the platform's gateway): the address is that many entries from the right.
+  // The address is used only for the limits. It is never a way to find a visitor's ticket.
+  const hops = Math.max(1, Number(config.trustedProxyHops) || 1);
   const clientAddress = (req) => {
-    if (config.trustProxy) { const f = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim(); if (f) return f; }
+    if (config.trustProxy) {
+      const entries = String(req.headers['x-forwarded-for'] || '').split(',').map((x) => x.trim()).filter(Boolean);
+      if (entries.length >= hops) return entries[entries.length - hops];
+    }
     return req.socket.remoteAddress || 'unknown';
   };
   const readBody = (req) => new Promise((resolve) => {
@@ -46,7 +56,7 @@ export function createPlaygroundService({ queue, gate, round, room, review, chai
 
   const handler = async (req, res) => {
     const origin = req.headers.origin;
-    const cors = origin && origins.has(origin) ? { 'access-control-allow-origin': origin, vary: 'Origin', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '600' } : { vary: 'Origin' };
+    const cors = origin && origins.has(origin) ? { 'access-control-allow-origin': origin, vary: 'Origin', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, x-playground-session', 'access-control-max-age': '600' } : { vary: 'Origin' };
     const send = (code, obj) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store', ...cors }); res.end(JSON.stringify(obj)); };
     const fail = (code, error, extra = {}) => send(code, { error, ...extra });
     try {
@@ -87,7 +97,7 @@ export function createPlaygroundService({ queue, gate, round, room, review, chai
         let balance;
         try { balance = String(await chain.balance(chain.funderId)); } catch { return fail(503, 'The funding account could not be read. Please try again shortly.'); }
         let joined;
-        try { joined = queue.join({ address: clientAddress(req), funderBalanceYocto: balance }); } catch (e) { if (e instanceof QueueRefusal) return fail(REASON_STATUS[e.reason] ?? 429, e.message, { reason: e.reason }); throw e; }
+        try { joined = queue.join({ address: clientAddress(req), session: body.session, funderBalanceYocto: balance }); } catch (e) { if (e instanceof QueueRefusal) return fail(REASON_STATUS[e.reason] ?? 429, e.message, { reason: e.reason }); throw e; }
         if (!pending.has(joined.ticket) && queue.state(joined.ticket)?.status === 'waiting') pending.set(joined.ticket, { visitorPublicKey: body.visitorPublicKey, payeeKeyHex: body.payeeKeyHex, lines: body.lines, youIndex: Number.isInteger(body.youIndex) ? body.youIndex : 3 });
         pump();
         return send(200, { ticket: joined.ticket, ...queue.state(joined.ticket) });
@@ -96,6 +106,9 @@ export function createPlaygroundService({ queue, gate, round, room, review, chai
       const m = path.match(/^\/api\/rounds\/([0-9a-f]{32})(?:\/(approve|abandon))?$/);
       if (m) {
         const ticket = m[1];
+        // Only the session that joined may read, approve or cancel. Anyone else is told what an unknown ticket is told.
+        const session = req.headers['x-playground-session'];
+        if (!SESSION.test(String(session)) || !queue.owns(ticket, session)) return fail(404, 'That round is not known. It may have expired.');
         if (req.method === 'GET' && !m[2]) {
           const q = queue.state(ticket); if (!q) return fail(404, 'That round is not known. It may have expired.');
           queue.touch(ticket);

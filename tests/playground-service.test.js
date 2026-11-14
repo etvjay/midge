@@ -10,6 +10,7 @@ const ORIGIN = 'https://midge.example';
 const ADMIN = 'ADMIN-KEY-THAT-MUST-NEVER-LEAK';
 const VKEY = 'ed25519:6E8bkzXvEhS1gYBdeA8tqXbcmW6a9xQe3d4TqVkVdMAv';
 const PKEY = 'ab'.repeat(32);
+const SH = { 'x-playground-session': 'session-1' };
 
 function setup(over = {}) {
   const calls = { review: 0, start: [], approve: [], abandon: [], warm: 0 };
@@ -21,10 +22,10 @@ function setup(over = {}) {
   };
   const room = { getSession: async () => ({ intentPublicKey: 'ii'.repeat(32), settlePublicKey: 'ss'.repeat(32), simulated: false }), getAttestationBundle: async (n) => ({ nonce: n, quote: 'q' }), adminKey: ADMIN };
   const review = over.review || (async (lines) => { calls.review += 1; return { used: true, findings: [], summary: 'ok', questions: [], sent: { lines: [] }, receipt: { model: 'm' }, codeFlags: [], labels: lines.map((_, i) => 'ABCD'[i]) }; });
-  const queue = createQueue({ perAddressPerHour: 1000 }); const gate = createReviewGate();
+  const queue = createQueue({ perAddressPerHour: over.perAddress ?? 1000 }); const gate = createReviewGate();
   const chain = { balance: async () => 10n * 10n ** 24n, funderId: 'play.t' };
   const waker = { warm: async () => { calls.warm += 1; }, touch() {}, status: () => ({ state: 'up' }) };
-  const handler = createPlaygroundService({ queue, gate, round, room, review, chain, waker, config: { origins: [ORIGIN], trustProxy: false, maxBodyBytes: 16 * 1024 } });
+  const handler = createPlaygroundService({ queue, gate, round, room, review, chain, waker, config: { origins: [ORIGIN], trustProxy: over.trustProxy ?? false, trustedProxyHops: 1, maxBodyBytes: 16 * 1024 } });
   const server = http.createServer(handler);
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, calls, queue, gate, base: `http://127.0.0.1:${server.address().port}`, state })));
 }
@@ -55,9 +56,9 @@ test('a started round is reported with its state, and the approval summary reach
     await open(ctx);
     const { json } = await call(ctx.base, 'POST', '/api/rounds', joinBody());
     await new Promise((r) => setTimeout(r, 30));
-    const s = await call(ctx.base, 'GET', `/api/rounds/${json.ticket}`);
+    const s = await call(ctx.base, 'GET', `/api/rounds/${json.ticket}`, undefined, SH);
     assert.equal(s.status, 200); assert.equal(s.json.step, 'awaiting-approval'); assert.match(s.json.detail.approvalMessage, /^midge-payrun-approval-v1:/);
-    const a = await call(ctx.base, 'POST', `/api/rounds/${json.ticket}/approve`, { publicKey: VKEY, signature: 'cd'.repeat(64) });
+    const a = await call(ctx.base, 'POST', `/api/rounds/${json.ticket}/approve`, { publicKey: VKEY, signature: 'cd'.repeat(64) }, SH);
     assert.equal(a.status, 200); assert.equal(ctx.calls.approve[0].ticket, json.ticket);
   } finally { ctx.server.close(); }
 });
@@ -68,7 +69,7 @@ test('an approval the room refuses comes back as a plain sentence, and the room\
     await open(ctx);
     const { json } = await call(ctx.base, 'POST', '/api/rounds', joinBody());
     await new Promise((r) => setTimeout(r, 30));
-    const a = await call(ctx.base, 'POST', `/api/rounds/${json.ticket}/approve`, { publicKey: VKEY, signature: 'cd'.repeat(64) });
+    const a = await call(ctx.base, 'POST', `/api/rounds/${json.ticket}/approve`, { publicKey: VKEY, signature: 'cd'.repeat(64) }, SH);
     assert.equal(a.status, 400); assert.equal(a.json.error, 'the approval does not match the pay run waiting for approval');
   } finally { ctx.server.close(); }
 });
@@ -104,7 +105,7 @@ test('the room\'s admin key appears in no response', async () => {
     seen.push((await call(ctx.base, 'GET', '/api/warm')).text);
     seen.push((await open(ctx)).text);
     const { json } = await call(ctx.base, 'POST', '/api/rounds', joinBody()); seen.push(JSON.stringify(json));
-    seen.push((await call(ctx.base, 'GET', `/api/rounds/${json.ticket}`)).text);
+    seen.push((await call(ctx.base, 'GET', `/api/rounds/${json.ticket}`, undefined, SH)).text);
     seen.push((await call(ctx.base, 'GET', '/api/nothing')).text);
     for (const t of seen) assert.ok(!t.includes(ADMIN), t.slice(0, 80));
   } finally { ctx.server.close(); }
@@ -152,5 +153,60 @@ test('the queue\'s refusals come back with their reasons and a status the page c
     for (let i = 1; i <= 8; i += 1) ctx.queue.join({ address: `9.9.9.${i}`, funderBalanceYocto: String(10n ** 25n) });
     const r = await call(ctx.base, 'POST', '/api/rounds', joinBody());
     assert.equal(r.status, 429); assert.equal(r.json.reason, 'queue-full'); assert.match(r.json.error, /line is full/);
+  } finally { ctx.server.close(); }
+});
+
+test('another session cannot read, approve or cancel a round, even with its ticket', async () => {
+  const ctx = await setup();
+  try {
+    await open(ctx);
+    const { json } = await call(ctx.base, 'POST', '/api/rounds', joinBody());
+    await new Promise((r) => setTimeout(r, 30));
+    const other = { 'x-playground-session': 'session-other-1' };
+    for (const [method, path, body] of [['GET', `/api/rounds/${json.ticket}`], ['POST', `/api/rounds/${json.ticket}/approve`, { publicKey: VKEY, signature: 'cd'.repeat(64) }], ['POST', `/api/rounds/${json.ticket}/abandon`, {}]]) {
+      const r = await call(ctx.base, method, path, body, other);
+      assert.equal(r.status, 404, `${method} ${path} from another session`);
+      assert.match(r.json.error, /not known/);
+    }
+    const none = await call(ctx.base, 'GET', `/api/rounds/${json.ticket}`);
+    assert.equal(none.status, 404, 'no session at all is refused too');
+    assert.equal(ctx.calls.abandon.length, 0, 'the round was never abandoned');
+    assert.equal(ctx.calls.approve.length, 0, 'and never approved');
+    assert.equal((await call(ctx.base, 'GET', `/api/rounds/${json.ticket}`, undefined, SH)).status, 200, 'the owner still can');
+  } finally { ctx.server.close(); }
+});
+
+test('two sessions from the same address each get their own ticket, so one visitor is never handed another\'s round', async () => {
+  const ctx = await setup();
+  try {
+    await open(ctx, 'session-1'); await open(ctx, 'session-2');
+    const a = await call(ctx.base, 'POST', '/api/rounds', joinBody({ session: 'session-1' }));
+    const b = await call(ctx.base, 'POST', '/api/rounds', joinBody({ session: 'session-2' }));
+    assert.notEqual(a.json.ticket, b.json.ticket);
+    const again = await call(ctx.base, 'POST', '/api/rounds', joinBody({ session: 'session-1' }));
+    assert.equal(again.json.ticket, a.json.ticket, 'a reload of the same session resumes its own ticket');
+  } finally { ctx.server.close(); }
+});
+
+test('behind a proxy the address is the entry the proxy added, so a caller cannot claim another address with X-Forwarded-For', async () => {
+  const ctx = await setup({ trustProxy: true, perAddress: 1 });
+  try {
+    await open(ctx, 'session-1'); await open(ctx, 'session-2'); await open(ctx, 'session-3');
+    const first = await call(ctx.base, 'POST', '/api/rounds', joinBody({ session: 'session-1' }), { 'x-forwarded-for': '1.1.1.1, 9.9.9.9' });
+    assert.equal(first.status, 200);
+    const spoof = await call(ctx.base, 'POST', '/api/rounds', joinBody({ session: 'session-2' }), { 'x-forwarded-for': '2.2.2.2, 9.9.9.9' });
+    assert.equal(spoof.status, 429, 'a different leftmost entry does not make a different caller: the proxy saw the same address');
+    assert.equal(spoof.json.reason, 'address-limit');
+    const other = await call(ctx.base, 'POST', '/api/rounds', joinBody({ session: 'session-3' }), { 'x-forwarded-for': '1.1.1.1, 8.8.8.8' });
+    assert.equal(other.status, 200, 'a different address added by the proxy is a different caller');
+    assert.notEqual(other.json.ticket, first.json.ticket, 'and claiming the first caller\'s leftmost entry does not hand over the first caller\'s ticket');
+  } finally { ctx.server.close(); }
+});
+
+test('a preflight allows the session header and nothing else beyond content-type', async () => {
+  const ctx = await setup();
+  try {
+    const pre = await call(ctx.base, 'OPTIONS', '/api/rounds/' + 'a'.repeat(32), undefined, { origin: ORIGIN, 'access-control-request-method': 'GET' });
+    assert.match(pre.headers.get('access-control-allow-headers'), /x-playground-session/);
   } finally { ctx.server.close(); }
 });

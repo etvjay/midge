@@ -17,13 +17,25 @@ test('tickets are served in order, one at a time', () => {
   assert.equal(q.next(), b.ticket);
 });
 
-test('a second tab from the same address gets the same ticket, not its own turn', () => {
+test('the same session gets the same ticket back, and a different session from the same address gets its own turn', () => {
   const { q } = mk();
-  const a = q.join({ address: '1.1.1.1', funderBalanceYocto: BAL });
-  const again = q.join({ address: '1.1.1.1', funderBalanceYocto: BAL });
-  assert.equal(again.ticket, a.ticket);
-  const other = q.join({ address: '2.2.2.2', funderBalanceYocto: BAL });
-  assert.equal(other.position, 2, 'the second tab did not take a place in the line');
+  const a = q.join({ address: '1.1.1.1', session: 'session-aaaaaaaa', funderBalanceYocto: BAL });
+  const again = q.join({ address: '1.1.1.1', session: 'session-aaaaaaaa', funderBalanceYocto: BAL });
+  assert.equal(again.ticket, a.ticket, 'a reload of the same browser session resumes its ticket');
+  const sameAddress = q.join({ address: '1.1.1.1', session: 'session-bbbbbbbb', funderBalanceYocto: BAL });
+  assert.notEqual(sameAddress.ticket, a.ticket, 'someone else behind the same address is never handed this ticket');
+  assert.equal(sameAddress.position, 2);
+});
+
+test('a ticket is owned by the session that joined, and nobody else can read, approve or cancel it', () => {
+  const { q } = mk();
+  const a = q.join({ address: '1.1.1.1', session: 'session-aaaaaaaa', funderBalanceYocto: BAL });
+  assert.equal(q.owns(a.ticket, 'session-aaaaaaaa'), true);
+  assert.equal(q.owns(a.ticket, 'session-bbbbbbbb'), false);
+  assert.equal(q.owns(a.ticket, undefined), false);
+  assert.equal(q.owns('f'.repeat(32), 'session-aaaaaaaa'), false);
+  const nameless = q.join({ address: '2.2.2.2', funderBalanceYocto: BAL });
+  assert.equal(q.owns(nameless.ticket, undefined), false, 'a ticket with no session is owned by no one');
 });
 
 test('the fourth round from one address in an hour is refused, and it is allowed again an hour later', () => {

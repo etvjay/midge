@@ -44,7 +44,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 let svcPort = null;
 const site = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x'); let p = url.pathname; if (p.endsWith('/')) p += 'index.html';
-  if (p === '/playground/config.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); return res.end(`window.PLAYGROUND_CONFIG = { apiBase: 'http://127.0.0.1:${svcPort}', rpcUrls: ['http://127.0.0.1:${rpcPort}/a', 'http://127.0.0.1:${rpcPort}/b'] };`); }
+  if (p === '/playground/config.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); return res.end(`window.PLAYGROUND_CONFIG = { apiBase: 'http://127.0.0.1:${svcPort}', contractId: 'c.f.testnet', rpcUrls: ['http://127.0.0.1:${rpcPort}/a', 'http://127.0.0.1:${rpcPort}/b'] };`); }
   const f = path.join(root, 'site', p);
   if (!f.startsWith(path.join(root, 'site')) || !fs.existsSync(f)) { res.writeHead(404); return res.end(); }
   res.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f));

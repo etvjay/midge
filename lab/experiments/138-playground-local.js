@@ -8,6 +8,7 @@ import { buildPlayground } from '../../src/playground/app.js';
 import { defaultLines } from '../../src/playground/defaults.js';
 import { nearKeyPair, signInputWithNearKey, generateClientKey, openFromModel, sealToModel } from '../../src/browser/midge-client.js';
 import { verifyStatement, verifyModelReceipt, checkSettlementOrderHash } from '../../src/browser/midge-verify.js';
+import { approvalToSign } from '../../site/src/playground-state.js';
 
 const ADMIN = 'local-admin-key-for-this-experiment-only';
 const RPCS = 'https://test.rpc.fastnear.com,https://near-testnet.drpc.org';
@@ -33,7 +34,7 @@ export default {
     let roomServer = null; let app = null; let base = null; let countBefore = null;
     const V = nearKeyPair(); const payee = generateClientKey(); const stranger = nearKeyPair();
     let visitorAccount = null;
-    const api = async (method, p, body) => { const r = await fetch(`${base}${p}`, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: r.status, json: await r.json().catch(() => ({})) }; };
+    const api = async (method, p, body) => { const r = await fetch(`${base}${p}`, { method, headers: { 'content-type': 'application/json', ...(p.startsWith('/api/rounds/') ? { 'x-playground-session': session } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: r.status, json: await r.json().catch(() => ({})) }; };
     const until = async (fn, { timeoutMs = 360000, everyMs = 2000, what = 'condition' } = {}) => { const t0 = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t0 > timeoutMs) throw new Error(`timed out waiting for ${what}`); await sleep(everyMs); } };
     const session = `local-${Date.now().toString(36)}`;
     const lines = defaultLines(); lines[2].tax = '0'; // Cy: no tax withheld
@@ -96,9 +97,14 @@ export default {
         s.assert('the approval message names the contract, the group and the order hash', wait.approvalMessage.startsWith(`midge-payrun-approval-v1:${chain.coordinatorId}:`) && wait.approvalMessage.endsWith(`:${wait.orderHash}`), { actual: wait.approvalMessage });
         const summary = JSON.parse(openFromModel(wait.summaryCipherHex, payee.secretX25519));
         s.assert('the summary sealed to the visitor opens with the visitor\'s payslip key and matches the order hash', summary.orderHash === wait.orderHash && summary.totals.headcount === 4 && summary.totals.gross === '0.18', { actual: summary.totals });
-        const bad = await api('POST', `/api/rounds/${ticket}/approve`, { publicKey: stranger.publicKey, signature: signInputWithNearKey(stranger.secretKey, wait.approvalMessage) });
+        // The scripted visitor does what the page does: it builds the approval message itself from the contract it expects, and signs only that.
+        const toSign = approvalToSign({ contractId: chain.coordinatorId, detail: wait });
+        s.assert('the message built from the contract id and the round\'s fields is the one the service sent', toSign.message !== null && toSign.agrees === true, { actual: { built: toSign.message, sent: wait.approvalMessage } });
+        const foreignRead = await fetch(`${base}/api/rounds/${ticket}`, { headers: { 'x-playground-session': 'another-session-id' } });
+        s.assert('another session with the ticket cannot read the round', foreignRead.status === 404, { actual: foreignRead.status });
+        const bad = await api('POST', `/api/rounds/${ticket}/approve`, { publicKey: stranger.publicKey, signature: signInputWithNearKey(stranger.secretKey, toSign.message) });
         s.assert('an approval signed with a key that is not the approver\'s is refused by the room', bad.status === 400 && /not a key of/.test(bad.json.error), { actual: bad });
-        const ok = await api('POST', `/api/rounds/${ticket}/approve`, { publicKey: V.publicKey, signature: signInputWithNearKey(V.secretKey, wait.approvalMessage) });
+        const ok = await api('POST', `/api/rounds/${ticket}/approve`, { publicKey: V.publicKey, signature: signInputWithNearKey(V.secretKey, toSign.message) });
         s.assert('the visitor\'s own approval is accepted', ok.status === 200 && ok.json.approved === true, { actual: ok });
       });
 

@@ -34,7 +34,7 @@ export function buildPlayground({ env, overrides = {} }) {
   const gate = createReviewGate();
   const round = createRound({ chain, room, keyCheck, ledger, log: (m) => console.error(`[playground] ${m}`) });
   const waker = overrides.waker !== undefined ? overrides.waker : (env.PHALA_CLOUD_API_KEY && env.ROOM_CVM_ID ? createRoomWaker({ phalaFetch: phalaFetchFor(env.PHALA_CLOUD_API_KEY), cvmId: env.ROOM_CVM_ID, roomUrl: need(env, 'ROOM_URL'), isBusy: () => queue.activeTicket() !== null }) : null);
-  const handler = createPlaygroundService({ queue, gate, round, room, review: makeReviewer({ advisor }), chain, waker, config: { origins: list(env.PLAYGROUND_ORIGIN), trustProxy: env.PLAYGROUND_TRUST_PROXY === '1', maxBodyBytes: 16 * 1024 } });
+  const handler = createPlaygroundService({ queue, gate, round, room, review: makeReviewer({ advisor }), chain, waker, config: { origins: list(env.PLAYGROUND_ORIGIN), trustProxy: env.PLAYGROUND_TRUST_PROXY === '1', trustedProxyHops: Number(env.PLAYGROUND_PROXY_HOPS || 1), maxBodyBytes: 16 * 1024 } });
   const server = http.createServer(handler);
   const timers = [];
   return {

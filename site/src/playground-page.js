@@ -1,6 +1,6 @@
 // The playground page: a visitor takes part in a live pay run. The visitor's keys are made here and never leave the browser. Everything the service
 // returns is checked here with the same code as the Replay page (the model's receipt, the settlement, the payslip). Bundled by npm run build:playground.
-import { initialState, reduce, canReview, canStart, lineProblems } from './playground-state.js';
+import { initialState, reduce, canReview, canStart, lineProblems, approvalToSign } from './playground-state.js';
 import { nearKeyPair, generateClientKey, signInputWithNearKey, openFromModel, sealToModel } from '../../src/browser/midge-client.js';
 import { verifyModelReceipt, verifyStatement, checkSettlementOrderHash, leafHash } from '../../src/browser/midge-verify.js';
 import { RULES } from '../../src/playground/defaults.js';
@@ -8,6 +8,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 const CFG = window.PLAYGROUND_CONFIG || {};
 const API = CFG.apiBase ? String(CFG.apiBase).replace(/\/$/, '') : null;
+const CONTRACT_ID = typeof CFG.contractId === 'string' ? CFG.contractId : null; // the page's own copy, so the approval message is never taken from the service
 const NB = 'https://testnet.nearblocks.io';
 const RPCS = Array.isArray(CFG.rpcUrls) && CFG.rpcUrls.length >= 2 ? CFG.rpcUrls : ['https://test.rpc.fastnear.com', 'https://near-testnet.drpc.org']; // the list can be replaced only by a test page's config
 const $ = (id) => document.getElementById(id);
@@ -44,7 +45,9 @@ const dispatch = (a) => { state = reduce(state, a); drawAll(); };
 async function api(method, path, body) {
   if (!API) return { status: 0, json: { error: 'The playground service is not running right now.' } };
   try {
-    const r = await fetch(API + path, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(60000) });
+    // A round is read, approved and cancelled by the session that joined it, so every request about a round carries this tab's session.
+    const headers = { ...(body ? { 'content-type': 'application/json' } : {}), ...(path.startsWith('/api/rounds/') ? { 'x-playground-session': keys.session } : {}) };
+    const r = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(60000) });
     return { status: r.status, json: await r.json().catch(() => ({})) };
   } catch { return { status: 0, json: { error: 'The playground service could not be reached. Please try again in a moment.' } }; }
 }
@@ -252,7 +255,8 @@ function approvePanel(d) {
   let summary = null;
   try { if (!summaryCache || summaryCache.hash !== d.orderHash) summaryCache = { hash: d.orderHash, doc: JSON.parse(openFromModel(d.summaryCipherHex, keys.payslip.secretX25519)) }; summary = summaryCache.doc; } catch { summary = null; }
   const sameHash = summary && summary.orderHash === d.orderHash;
-  const bound = d.approvalMessage.endsWith(`:${d.runId}:${d.orderHash}`);
+  const toSign = approvalToSign({ contractId: CONTRACT_ID, detail: d });
+  const signable = toSign.message !== null && toSign.agrees;
   const names = Object.fromEntries((d.cast || []).map((c) => [c.id, c.name]));
   return el('div', {},
     castPanel(d.cast || []),
@@ -261,17 +265,19 @@ function approvePanel(d) {
       el('div', { class: 'move' }, el('span', { class: 'who' }, 'The employer is charged'), el('span', {}, `${nearOf(summary.charged)} NEAR`))) : el('p', { class: 'sub' }, 'The summary could not be opened with your payslip key.'),
     el('div', { class: 'checks' },
       check(sameHash ? 'recomputed' : 'failed', 'the summary has the same order hash that you are about to sign', short(d.orderHash, 12)),
-      check(bound ? 'recomputed' : 'failed', 'the message you sign names this run and its order hash, so it can\'t approve a changed run')),
-    el('p', { class: 'sub' }, 'The message you sign:'), el('p', { class: 'mono sig' }, d.approvalMessage),
+      check(signable ? 'recomputed' : 'failed', 'the message you sign is built here from the contract, the group, the round, the run and the order hash, and it is the same one the service sent', signable ? '' : 'Nothing will be signed, because the service\'s message is not the one built here.')),
+    el('p', { class: 'sub' }, 'The message you sign, built in your browser:'), el('p', { class: 'mono sig' }, toSign.message || 'Nothing can be signed for this round.'),
     el('div', { class: 'actions' },
-      el('button', { type: 'button', class: 'act', disabled: approveBusy, onclick: () => approve(d, false) }, approveBusy ? 'Sending…' : 'Approve with my key'),
-      el('button', { type: 'button', class: 'act warn', disabled: approveBusy, onclick: () => approve(d, true) }, 'Try to approve with a different key')),
+      el('button', { type: 'button', class: 'act', disabled: approveBusy || !signable, onclick: () => approve(d, false) }, approveBusy ? 'Sending…' : 'Approve with my key'),
+      el('button', { type: 'button', class: 'act warn', disabled: approveBusy || !signable, onclick: () => approve(d, true) }, 'Try to approve with a different key')),
     approveMsg ? el('div', { class: 'refusal' }, approveMsg) : null, cheatMsg ? el('div', { class: 'refusal' }, cheatMsg) : null);
 }
 async function approve(d, cheat) {
+  const toSign = approvalToSign({ contractId: CONTRACT_ID, detail: d });
+  if (toSign.message === null || !toSign.agrees) { approveMsg = 'Nothing was signed, because the approval message the service sent is not the one this page builds.'; drawRound(); return; }
   approveBusy = true; drawRound();
   const who = cheat ? nearKeyPair() : keys.near;
-  const r = await api('POST', `/api/rounds/${state.ticket}/approve`, { publicKey: who.publicKey, signature: signInputWithNearKey(who.secretKey, d.approvalMessage) });
+  const r = await api('POST', `/api/rounds/${state.ticket}/approve`, { publicKey: who.publicKey, signature: signInputWithNearKey(who.secretKey, toSign.message) });
   approveBusy = false;
   if (cheat) cheatMsg = r.status === 200 ? 'The room accepted the other key. That should not happen.' : `The room refused it: ${sentence(r.json.error || 'no reason given')}`;
   else { approveMsg = r.status === 200 ? null : sentence(r.json.error || 'The approval was not accepted.'); if (r.status === 200) cheatMsg = null; }

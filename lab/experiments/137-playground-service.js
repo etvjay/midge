@@ -22,10 +22,11 @@ export default {
   hypothesis: 'Predictions are in docs/lab/PROGRAMME_PLAN.md, committed before this file existed. A second tab from one address gets the same ticket; the hourly, daily, line-length and funder limits refuse with their reasons; a round starts only for lines a model has just reviewed; the round settles with exact books and leaves only the visitor\'s account; an abandoned, failed or unsigned round gives the deposit back and cleans up; and the service sends cross-site headers only to the site\'s origin and never reveals the room\'s admin key.',
   limits: ['Offline: the chain and the room are stand-ins that copy the contract\'s hatch, deposit, settle, exit and prune rules and the room\'s refusal to sign before approval. Nothing here shows the real contract or a real room behaving that way; E-PLAYGROUND-LOCAL-01 and E-PLAYGROUND-LIVE-01 do.'],
   async run(ctx) {
-    await ctx.step('prediction 1: the queue gives one turn to an address and refuses with a reason when a limit is reached', async (s) => {
+    await ctx.step('prediction 1: the queue gives each session its own ticket and refuses with a reason when a limit is reached', async (s) => {
       let c = clock(); let q = createQueue({ now: c.now });
-      const a = q.join({ address: '1.1.1.1', funderBalanceYocto: BAL }); const again = q.join({ address: '1.1.1.1', funderBalanceYocto: BAL }); const other = q.join({ address: '2.2.2.2', funderBalanceYocto: BAL });
-      s.assert('a second tab from one address gets the same ticket and no extra place in the line', again.ticket === a.ticket && other.position === 2, { actual: { a, again, other } });
+      const a = q.join({ address: '1.1.1.1', session: 'session-aaaaaaaa', funderBalanceYocto: BAL }); const again = q.join({ address: '1.1.1.1', session: 'session-aaaaaaaa', funderBalanceYocto: BAL }); const sameAddress = q.join({ address: '1.1.1.1', session: 'session-bbbbbbbb', funderBalanceYocto: BAL });
+      s.assert('a reload of the same session resumes its own ticket, and a different session from the same address gets a ticket of its own', again.ticket === a.ticket && sameAddress.ticket !== a.ticket && sameAddress.position === 2, { actual: { a, again, sameAddress } });
+      s.assert('a ticket is owned only by the session that joined it', q.owns(a.ticket, 'session-aaaaaaaa') && !q.owns(a.ticket, 'session-bbbbbbbb') && !q.owns(a.ticket, undefined));
       c = clock(); q = createQueue({ now: c.now });
       for (let i = 0; i < 3; i += 1) { const t = q.join({ address: '1.1.1.1', funderBalanceYocto: BAL }); q.next(); q.finish(t.ticket, { ok: true }); }
       s.assert('the fourth round from one address in an hour is refused as address-limit', refusal(() => q.join({ address: '1.1.1.1', funderBalanceYocto: BAL })) === 'address-limit');
@@ -132,10 +133,26 @@ export default {
         const texts = [(await get('/api/health')).text, (await get('/api/room')).text, (await get('/api/warm')).text, (await get('/api/nothing')).text];
         const rev = await get('/api/review', {}, 'POST', JSON.stringify({ session: 'session-1', lines: defaultLines() })); texts.push(rev.text);
         const joined = await get('/api/rounds', {}, 'POST', JSON.stringify({ session: 'session-1', visitorPublicKey: VKEY, payeeKeyHex: 'ab'.repeat(32), lines: defaultLines(), youIndex: 3 })); texts.push(joined.text);
-        texts.push((await get(`/api/rounds/${JSON.parse(joined.text).ticket}`)).text);
+        texts.push((await get(`/api/rounds/${JSON.parse(joined.text).ticket}`, { 'x-playground-session': 'session-1' })).text);
         s.assert('the room\'s admin key appears in no response', texts.every((t) => !t.includes(ADMIN)), { actual: texts.map((t) => t.slice(0, 60)) });
+        const ticketOf = JSON.parse(joined.text).ticket;
+        const foreign = [await get(`/api/rounds/${ticketOf}`, { 'x-playground-session': 'session-other-1' }), await get(`/api/rounds/${ticketOf}/approve`, { 'x-playground-session': 'session-other-1' }, 'POST', JSON.stringify({ publicKey: VKEY, signature: 'cd'.repeat(64) })), await get(`/api/rounds/${ticketOf}/abandon`, { 'x-playground-session': 'session-other-1' }, 'POST', '{}'), await get(`/api/rounds/${ticketOf}`)];
+        s.assert('another session, or none, cannot read, approve or cancel a round even with its ticket: each gets the answer for an unknown ticket', foreign.every((r) => r.status === 404), { actual: foreign.map((r) => r.status) });
         s.assert('without a review of the same lines, a round is refused with 403', (await get('/api/rounds', {}, 'POST', JSON.stringify({ session: 'session-2', visitorPublicKey: VKEY, payeeKeyHex: 'ab'.repeat(32), lines: defaultLines(), youIndex: 3 }))).status === 403);
       } finally { server.close(); }
+
+      // Behind a proxy that appends the address it saw, the leftmost X-Forwarded-For entries belong to the caller. Only the entry the proxy added counts.
+      const proxied = createPlaygroundService({ queue: createQueue({ perAddressPerHour: 1 }), gate: createReviewGate(), round, room, review: async (l) => ({ used: true, findings: [], receipt: {}, labels: l.map((_, i) => 'ABCD'[i]) }), chain: { balance: async () => 10n ** 25n, funderId: 'play.t' }, waker: null, config: { origins: [ORIGIN], trustProxy: true, trustedProxyHops: 1, maxBodyBytes: 16 * 1024 } });
+      const server2 = http.createServer(proxied); await new Promise((r) => server2.listen(0, '127.0.0.1', r));
+      const b2 = `http://127.0.0.1:${server2.address().port}`;
+      const post = async (p, body, headers = {}) => { const r = await fetch(b2 + p, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }); return { status: r.status, json: await r.json() }; };
+      try {
+        for (const sess of ['session-1', 'session-2', 'session-3']) await post('/api/review', { session: sess, lines: defaultLines() });
+        const join = (sess, xff) => post('/api/rounds', { session: sess, visitorPublicKey: VKEY, payeeKeyHex: 'ab'.repeat(32), lines: defaultLines(), youIndex: 3 }, { 'x-forwarded-for': xff });
+        const first = await join('session-1', '1.1.1.1, 9.9.9.9'); const spoof = await join('session-2', '2.2.2.2, 9.9.9.9'); const other = await join('session-3', '1.1.1.1, 8.8.8.8');
+        s.assert('a caller cannot become another address by writing it into X-Forwarded-For: the entry the proxy added decides', first.status === 200 && spoof.status === 429 && spoof.json.reason === 'address-limit' && other.status === 200, { actual: [first.status, spoof.status, other.status] });
+        s.assert('and claiming the first caller\'s leftmost entry does not hand over the first caller\'s ticket', other.json.ticket !== first.json.ticket);
+      } finally { server2.close(); }
     });
   },
 };

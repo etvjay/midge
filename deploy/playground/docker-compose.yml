@@ -10,9 +10,12 @@ services:
       - PORT=8090
       - PLAYGROUND_ORIGIN=${PLAYGROUND_ORIGIN}
       - PLAYGROUND_TRUST_PROXY=1
+      # How many proxies of ours sit in front of the service. The caller's address is that many entries from the right of X-Forwarded-For, because the left is whatever the caller sent.
+      - PLAYGROUND_PROXY_HOPS=1
       - PLAYGROUND_LEDGER=/data/ledger.json
       - PLAYGROUND_PER_DAY=60
-      - PLAYGROUND_PER_ADDRESS=3
+      # Visitors behind one network address (an office, a conference) share this, so it is not set tighter than a few rounds an hour each.
+      - PLAYGROUND_PER_ADDRESS=6
       - PLAYGROUND_FUNDER_FLOOR_NEAR=2
       - NEAR_CONTRACT_ID=c.fly-1793636729.testnet
       - FUNDER_ID=play.fly-1793636729.testnet

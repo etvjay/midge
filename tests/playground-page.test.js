@@ -67,3 +67,53 @@ test('the run key changes with every value the model judged and with nothing els
   assert.equal(runKey(a), runKey(b));
   b[2].tax = '0'; assert.notEqual(runKey(a), runKey(b));
 });
+
+// ---- the approval message is built by the page, never taken from the service ----
+import { approvalToSign, APPROVAL_DOMAIN } from '../site/src/playground-state.js';
+import { payrunApprovalMessage } from '../src/roost-service/hosted-roost.js';
+
+const GOOD = { round: { syndicateId: 'pg-0123456789', epoch: 3, roundNonce: 'ab'.repeat(32) }, runId: 'run-0123456789', orderHash: 'cd'.repeat(32) };
+const withService = (over = {}) => ({ ...GOOD, approvalMessage: payrunApprovalMessage({ contractId: 'c.fly-1.testnet', ...GOOD.round, runId: GOOD.runId, orderHash: GOOD.orderHash }), ...over });
+
+test('the message the page signs is the room\'s own format, built from the page\'s contract id and the round\'s fields', () => {
+  const d = withService();
+  const r = approvalToSign({ contractId: 'c.fly-1.testnet', detail: d });
+  assert.equal(r.message, d.approvalMessage);
+  assert.equal(r.message, payrunApprovalMessage({ contractId: 'c.fly-1.testnet', syndicateId: 'pg-0123456789', epoch: 3, roundNonce: 'ab'.repeat(32), runId: 'run-0123456789', orderHash: 'cd'.repeat(32) }));
+  assert.equal(r.agrees, true);
+  assert.ok(r.message.startsWith(`${APPROVAL_DOMAIN}:c.fly-1.testnet:`));
+});
+
+test('a string that the service sends instead is never what gets signed, so a transaction hash cannot be slipped in', () => {
+  // A NEAR transaction signature is ed25519 over exactly 32 bytes (the transaction's hash). A service that returns a 32 character string as the "message" would,
+  // if the page signed it as given, obtain a signature that is valid for a transaction. The page signs only its own long, prefixed message.
+  const hashLike = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+  const r = approvalToSign({ contractId: 'c.fly-1.testnet', detail: withService({ approvalMessage: hashLike }) });
+  assert.equal(r.agrees, false, 'the page tells the visitor the service\'s message does not match');
+  assert.notEqual(r.message, hashLike);
+  assert.ok(r.message.length > 100 && r.message.startsWith(`${APPROVAL_DOMAIN}:`), 'what would be signed is always long and prefixed');
+});
+
+test('a field that is not in its expected shape means nothing is signed', () => {
+  const bad = [
+    { contractId: null }, { contractId: 'C.Bad Id' }, { contractId: 'c.fly:1.testnet' },
+    { detail: withService({ runId: 'run-1:evil' }) }, { detail: withService({ runId: 'x' }) },
+    { detail: withService({ orderHash: 'cd'.repeat(31) }) }, { detail: withService({ orderHash: 'CD'.repeat(32) }) },
+    { detail: { ...withService(), round: { ...GOOD.round, syndicateId: 'pg-1:2' } } }, { detail: { ...withService(), round: { ...GOOD.round, epoch: -1 } } },
+    { detail: { ...withService(), round: { ...GOOD.round, epoch: '3' } } }, { detail: { ...withService(), round: { ...GOOD.round, roundNonce: 'a:b' } } },
+    { detail: { ...withService(), round: null } }, { detail: null },
+  ];
+  for (const over of bad) {
+    const r = approvalToSign({ contractId: 'c.fly-1.testnet', detail: withService(), ...over });
+    assert.equal(r.message, null, JSON.stringify(over).slice(0, 80)); assert.equal(r.agrees, false);
+  }
+});
+
+test('the page never hands a string from the service to the signing function: every signature is over the message the page built', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync('site/src/playground-page.js', 'utf8');
+  const calls = [...src.matchAll(/signInputWithNearKey\(([^)]*\))/g)].map((m) => m[1]);
+  assert.ok(calls.length >= 1, 'the page signs the approval');
+  for (const c of calls) { assert.match(c, /toSign\.message/, `signed argument: ${c}`); assert.ok(!/approvalMessage/.test(c), `signed argument: ${c}`); }
+  assert.ok(/approvalToSign\(/.test(src) && /toSign\.message === null/.test(src), 'and it refuses to sign when the message cannot be built');
+});
