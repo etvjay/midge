@@ -60,6 +60,7 @@ function problem(F, f) {
 <section class="section bs" id="problem" aria-labelledby="problem-title">
   <div class="wrap">${head('problem', p, f)}
     <div class="bento">
+      <div class="scen" role="region" aria-label="Three ways a group decides today" tabindex="0">
       <article class="bc s3 r2">
         <div class="bc-row"><p class="bc-label">${f(p.public.label)}</p><p class="bc-label">example amounts</p></div>
         <div class="panel-ink">
@@ -97,6 +98,7 @@ function problem(F, f) {
         <h3 class="bc-title">${f(p.blackbox.title)}</h3>
         <p class="bc-text">${f(p.blackbox.body)}</p>
       </article>
+      </div>
       <article class="bc bc-ink s4 flush">
         <div class="panel-head"><span>${f(p.compare.caption)}</span><span>${esc(p.compare.source)}</span></div>
         <div class="tbl-wrap mo-rise"><div class="tbl tbl-4" role="table" aria-label="${f(p.compare.caption)}">${cmpHead}${cmpRows}</div></div>

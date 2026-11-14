@@ -556,3 +556,43 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
   .tbl .td[data-h]::before { content: attr(data-h); font: 400 12px var(--mono); color: var(--d-3); }
   .tbl .td[data-h]:last-child { padding-bottom: 16px; }
 }
+
+/* Phones: closer to the desktop layout (2026-11-14). The bento keeps 6 columns, so small cards sit two or three to a row as on
+   desktop; the three problem scenarios become one row that swipes, each card snapping into place with the next one peeking in; cards
+   and sections are a little tighter. Above 719 px the scenario wrapper does not exist for layout (display: contents). */
+.scen { display: contents; }
+@media (max-width: 719px) {
+  .bs { padding: 48px 0; }
+  .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .s1, .s2, .s3, .s4, .s6 { grid-column: span 6; }
+  .bc { padding: 20px; gap: 12px; } .bc-panel { padding: 20px; }
+  .bs-head { margin-bottom: 0; }
+  .scen { display: flex; grid-column: 1 / -1; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: -16px; padding: 0 16px 4px; scrollbar-width: none; }
+  .scen::-webkit-scrollbar { display: none; }
+  .scen > .bc { flex: 0 0 86%; scroll-snap-align: center; }
+  .scen:focus-visible { outline: 2px solid var(--d-lake); outline-offset: 2px; }
+  #how .bento > .s2, #how .bento > .s1 { grid-column: span 3; }
+  #agents .bento > .bc-raised.s2 { grid-column: span 2; padding: 16px; }
+  #who .bento > .frost { grid-column: span 3; min-height: 0; padding: 16px; }
+  #who .band-inner { padding-top: 48px; }
+  #who .band-inner .title { margin-bottom: 32px; }
+  .end-inner { gap: 32px; padding-top: 56px; }
+}
+@media (max-width: 520px) {
+  .foot { grid-template-columns: 1fr 1fr; padding: 20px; gap: 24px; }
+  .foot-brand { grid-column: 1 / -1; }
+}
+@media (max-width: 719px) {
+  /* "Read the contract yourself" and "Check the AI's secure hardware": two halves that swipe, side by side as on desktop */
+  .live-card .halves { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -20px; padding-inline: 20px; }
+  .live-card .halves::-webkit-scrollbar { display: none; }
+  .live-card .halves > div { flex: 0 0 88%; scroll-snap-align: center; }
+  .live-card .halves > div + div { border-top: 0; padding-top: 0; border-left: 1px solid var(--d-line); padding-left: 16px; }
+  /* the limits: icon beside the text, as on desktop */
+  #limits .side { flex-direction: row; align-items: flex-start; gap: 16px; }
+  #limits .side > svg { flex: none; width: 64px; height: 64px; }
+}
+@media (max-width: 719px) {
+  .scen .tile .fig { font-size: 32px; white-space: nowrap; }
+  #who .bento > .frost:last-child:nth-child(odd) { grid-column: span 6; }
+}
