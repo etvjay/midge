@@ -28,6 +28,28 @@ test('reaper: the age is found under any key that mentions created', () => {
 });
 
 const T = (n) => 1000 + n;
+test('reaper: a VM on the keep-list is never selected, however old, and is reported as kept', () => {
+  const now = Date.parse('2026-11-14T12:00:00Z'); const old = '2026-11-13T00:00:00Z';
+  const cvms = [{ name: 'midge-playground', created_at: old }, { name: 'midge-playground-room', created_at: old }, { name: 'midge-roost-lab', created_at: old }];
+  const r = selectToReap(cvms, { now, keepNames: ['midge-playground', 'midge-playground-room'] });
+  assert.deepEqual(r.reap.map((c) => c.name), ['midge-roost-lab'], 'only the lab VM is deleted');
+  assert.deepEqual(r.kept.map((c) => c.name), ['midge-playground', 'midge-playground-room']);
+});
+
+test('reaper: the keep-list matches whole names only, so a similarly named lab VM is still deleted', () => {
+  const now = Date.parse('2026-11-14T12:00:00Z');
+  const r = selectToReap([{ name: 'midge-playground-old', created_at: '2026-11-13T00:00:00Z' }], { now, keepNames: ['midge-playground'] });
+  assert.equal(r.reap.length, 1);
+  assert.equal(r.kept.length, 0);
+});
+
+test('reaper: with no keep-list nothing changes', () => {
+  const now = Date.parse('2026-11-14T12:00:00Z');
+  const r = selectToReap([{ name: 'midge-playground', created_at: '2026-11-13T00:00:00Z' }], { now });
+  assert.equal(r.reap.length, 1);
+  assert.deepEqual(r.kept, []);
+});
+
 test('predictions: a new experiment whose id is in the plan in an EARLIER commit passes', () => {
   assert.deepEqual(findViolations([{ id: 'E-NEW-01', fileCommit: 'b', fileTime: T(2), planCommit: 'a', planTime: T(1) }], new Set()), []);
 });
