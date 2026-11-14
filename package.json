@@ -107,7 +107,7 @@
     "jscpd": "5.4.2",
     "knip": "6.44.1",
     "playwright-core": "1.65.0",
-    "three": "0.186.1",
+    "three": "0.187.0",
     "typescript": "7.0.2"
   }
 }
