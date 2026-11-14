@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-08T20:31:10.707Z",
+ "generatedAt": "2026-11-14T10:31:51.548Z",
  "contract": "c.fly-1793636729.testnet",
  "counts": {
-  "hatch": 42,
-  "deposit": 78,
-  "settled": 83,
-  "exit": 25,
-  "other": 60,
-  "rejected": 36
+  "hatch": 54,
+  "deposit": 99,
+  "settled": 166,
+  "exit": 36,
+  "other": 84,
+  "rejected": 81
  },
  "security": {
   "run": "20261105T035644Z-7c1d",
@@ -2887,6 +2887,1770 @@
    "kind": "settled",
    "exp": "E-NONCE-CALLBACK-LIVE-01",
    "run": "20261108T153206Z-a0f0",
+   "error": null
+  },
+  {
+   "hash": "E9EvQG98N68njUrPErZX4gBTfmrN3SYETCjr92v6Crcr",
+   "label": "settle_batch_charged round 1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-01",
+   "run": "20261111T043528Z-3f73",
+   "error": null
+  },
+  {
+   "hash": "DFGDcTsH9DsWB6jSsYA2KM25ZDyWiFtBw1bHrSJQBuko",
+   "label": "settle_batch_charged round 3",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-01",
+   "run": "20261111T043528Z-3f73",
+   "error": null
+  },
+  {
+   "hash": "FSBfK3AvFHQi21qDA1ekUcXJdRadyFJPGAGvBZqs2vG6",
+   "label": "settle_batch_charged round 1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T044235Z-5845",
+   "error": null
+  },
+  {
+   "hash": "He76aGa559pF2ZbZPsnerMftBmN818Pgq1dYdyqGMqav",
+   "label": "settle_batch_charged round 2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T044235Z-5845",
+   "error": null
+  },
+  {
+   "hash": "3AeG8hGLSoDHQv7GEYYeKUJyZXA521e5Ym7ziU4W8m5U",
+   "label": "settle_batch_charged round 3",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T044235Z-5845",
+   "error": null
+  },
+  {
+   "hash": "16R5wcUVaUHj7iZmgB2exjbfPLqjpqxtiNZoKijpgjS",
+   "label": "settle_batch_charged ballot",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-SIGNED-LIVE-01",
+   "run": "20261111T050533Z-d6d9",
+   "error": null
+  },
+  {
+   "hash": "3Mwgyz9hK2GqYQMHTWYV63BzFrGZUjgAY31yoPk5xXte",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-01",
+   "run": "20261111T092424Z-5756",
+   "error": null
+  },
+  {
+   "hash": "XboPv6SFEE4w4Wvt9PocM6GgoK83qTs84ANYAEaPGAy",
+   "label": "settle with different allocations",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-OUTLAYER-SETTLE-01",
+   "run": "20261111T093125Z-3442",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1156:17: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "3a7W95SMF9hecQUjVZpc66pTVWZQF1SNgWXS1epB5yEs",
+   "label": "settle_batch signed by OutLayer",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-OUTLAYER-SETTLE-01",
+   "run": "20261111T093125Z-3442",
+   "error": null
+  },
+  {
+   "hash": "9Kaafj3wiNGXrhWAR8h1CCCvCLATPJY8HtAehan43zmG",
+   "label": "replay",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-OUTLAYER-SETTLE-01",
+   "run": "20261111T093125Z-3442",
+   "error": "Smart contract panicked: panicked at src/lib.rs:991:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "GpNBjuqB39KUPph4wh7KoQedfXGgMkiYEpNWERV2SAv8",
+   "label": "replay",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-OUTLAYER-SETTLE-01",
+   "run": "20261111T093310Z-5c32",
+   "error": "Smart contract panicked: Failed to deserialize input from JSON. Error: `invalid type: null, expected a string at line 1 column 284`"
+  },
+  {
+   "hash": "E9gqpSxACdLvuzUALJ3irefJDp75pf9oPgsdukVaBASf",
+   "label": "settle with different allocations",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-OUTLAYER-SETTLE-01",
+   "run": "20261111T093643Z-7985",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1156:17: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "pgiTZU1EWs49eacgjckg3K8SBTzCnTcHkj93gQ6pnZY",
+   "label": "settle_batch signed by OutLayer",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-OUTLAYER-SETTLE-01",
+   "run": "20261111T093643Z-7985",
+   "error": null
+  },
+  {
+   "hash": "B8hWoZnQqqPYb6yd1M9z3CjFete1X9hY86afzCnnQNyc",
+   "label": "replay",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-OUTLAYER-SETTLE-01",
+   "run": "20261111T093643Z-7985",
+   "error": "Smart contract panicked: panicked at src/lib.rs:991:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "5h8PhjVEXqbg7otusx58eb2hiZY2AJw3b13GTKYDQe4H",
+   "label": "settle_batch_charged RFQ",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-01",
+   "run": "20261111T095919Z-b620",
+   "error": null
+  },
+  {
+   "hash": "GV1iz5JesSKiCivK4HdXYKYgUpJrLzdzuyQDM2VmeweS",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-01",
+   "run": "20261111T101447Z-93d8",
+   "error": null
+  },
+  {
+   "hash": "6zY3nNrnrjMNRfGnGrtBkYSFjJg5BYCW5MU6ThabiGf9",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-01",
+   "run": "20261111T102349Z-a216",
+   "error": null
+  },
+  {
+   "hash": "GspNCvK12Z6M92CAyXT6nTHQt4GfSGdAbH1zdW8rbTW",
+   "label": "settle_batch_charged round A",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-02",
+   "run": "20261111T111840Z-68db",
+   "error": null
+  },
+  {
+   "hash": "C2BGUuAJQq5P5FFS8dppm6igtpoawoe34ewH6JssEvyP",
+   "label": "settle_batch_charged round B",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-02",
+   "run": "20261111T111840Z-68db",
+   "error": null
+  },
+  {
+   "hash": "7bA5vyuoViTcM5TWjpdnjxgHKWfiyZJNQ9TALp3urJvw",
+   "label": "set_test_signer from the main account",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-FOREIGN-SIGNER-FAIL-LIVE-01",
+   "run": "20261111T113046Z-6c27",
+   "error": "Smart contract panicked: panicked at src/lib.rs:2349:9: assertion `left == right` failed: [Test REJECT] only the contract's own account may "
+  },
+  {
+   "hash": "2AZWXnyDzGWjAhSJQonwBSikfMe2u2Gga1qQNJCm5XrE",
+   "label": "request from the main account",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-OUTLAYER-CONTRACT-01",
+   "run": "20261111T114956Z-9ee3",
+   "error": "Smart contract panicked: only the owner may trigger a run"
+  },
+  {
+   "hash": "5Dp8YTwudBoiu9d56823QYQWbGkLXsMX5MHAkMJrW7R6",
+   "label": "settle with different allocations",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-OUTLAYER-CONTRACT-01",
+   "run": "20261111T114956Z-9ee3",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1156:17: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "8F1cuTJPMVGSkNziey63QYdJLGn46zKgZXnHq9Y8eZ7A",
+   "label": "settle_batch signed by OutLayer",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-OUTLAYER-CONTRACT-01",
+   "run": "20261111T114956Z-9ee3",
+   "error": null
+  },
+  {
+   "hash": "HEr8NbJPL835LSrmiYtjV4UM9f7j3HUZtUYhMKrAJgcq",
+   "label": "replay",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-OUTLAYER-CONTRACT-01",
+   "run": "20261111T114956Z-9ee3",
+   "error": "Smart contract panicked: panicked at src/lib.rs:991:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "3jMjFESXM2w6k3agaAwWMjjssBmYmVeXqXFiJtndtA7i",
+   "label": "settle_batch_charged round 1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T122520Z-e900",
+   "error": null
+  },
+  {
+   "hash": "CsRdUJzrX1zgv1DJk7zBwZ8gKCaQLhAQiTT2XD1WMhtT",
+   "label": "settle_batch_charged round 2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T122520Z-e900",
+   "error": null
+  },
+  {
+   "hash": "2iTi9WmAoKkfKgrFqufr5YvwJfFn865vBiN49ye34gBY",
+   "label": "settle_batch_charged round 3",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T122520Z-e900",
+   "error": null
+  },
+  {
+   "hash": "BUDVR58stVCL43kkQADBDPqmgJstNsEP3vvJTsxBcZxz",
+   "label": "settle_batch_charged RFQ",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-01",
+   "run": "20261111T123128Z-34a0",
+   "error": null
+  },
+  {
+   "hash": "AfT3SYBn1qhJBWQZPewkg7CqHiYRbbBeMbWtobZbhUee",
+   "label": "settle_batch_charged ballot",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-SIGNED-LIVE-01",
+   "run": "20261111T123523Z-0974",
+   "error": null
+  },
+  {
+   "hash": "pqPCEjZkybthRiyGy8bwQM543YgrxbrEnyQKWDiXHvc",
+   "label": "OUTSIDE-POLICY settle cmp-mwc9d8k7-c",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T151252Z-adf6",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1023:13: [Settle REJECT] Recipient mtd8k7.fly-1793636729.testnet is not in allowed_recipient"
+  },
+  {
+   "hash": "9H3DyrFuByDgrVNR1aydj4yw3ATmKFCxFUNv453RgsD6",
+   "label": "exit cmp-mwc9d8k7-c as a",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "EED98hugZJCbKndenBi4YDivBADCbLRF2MnJda5XWaoa",
+   "label": "exit cmp-mwc9d8k7-c as b",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "3w97whA9vMdqBgUwcx9EYMsgjkgv5VnUjbtk3TdrdrEj",
+   "label": "exit cmp-mwc9d8k7-c as c",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "HAwng4LGJ2aJGX8gPWPniHWY9oaCkX7fx2DVh2XGGqhP",
+   "label": "exit cmp-mwc9d8k7-c as d",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "BdkAZNHchys6Jgw64vT8jdkYitEZfKUtEyXwQwGoX4mH",
+   "label": "settle_batch_charged auc-mwc9fx9k-fp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "GBFnAE93RZaq6vDj59ou9Y25XFFpzvXqwDLPoa4US1Rm",
+   "label": "settle_batch_charged auc-mwc9fx9k-sp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "9BwagAXejHUJs1fw4unkoiRsKz1M8zz9Cx7UtQUEXCiC",
+   "label": "settle_batch_charged auc-mwc9fx9k-uni",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "9MSZje7tYK8aYnWLXVjtw9ezANMwQtqEXXkgHEgi9FBZ",
+   "label": "OVERCHARGE settle_batch_charged: a charged 0.06 against a 0.05 deposit",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261111T151252Z-adf6",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1090:17: [Settle REJECT] Charge for u9fx9ka.fly-1793636729.testnet exceeds that member's esc"
+  },
+  {
+   "hash": "zsqUk3KCxSFdpR6qaz6SbDMbFFfVi6cuM2L435qfvRC",
+   "label": "MISMATCH settle_batch_charged: charges 0.04 for a 0.05 payout",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261111T151252Z-adf6",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1099:13: assertion `left == right` failed: [Settle REJECT] Charges must sum to exactly the p"
+  },
+  {
+   "hash": "28VEmc2WeDL9BRC1zs2S9h88eZdpYXvNgk8vroauk9yw",
+   "label": "OLD-FORMAT settle_batch_charged: an ordinary settlement signature on the charged entry point",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261111T151252Z-adf6",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1156:17: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "GKKqPrxC2HLofjhLDozPovMzCvyGmnQyVr4PevJo5wAS",
+   "label": "RESIDUAL-RISK settle_batch_charged: b charged their whole 0.05 for a payout b never bid on",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-AUCTION-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "3DfkucM8imdr9H2DruQYgPFyhxyaowuXWKzaUWBwSNkg",
+   "label": "settle_batch_charged inv2-mwc9sxfi-charged",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-INVEST-02",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "Chgo5eeS9DwYc5xT1aQysJp4o9qcc5ZpyjZhardBq57B",
+   "label": "settle_batch inv2-mwc9sxfi-equal",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-INVEST-02",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "67Y7bu8aeWKYaUxNt4ZZuhC488V61tNTJr1K39soUJpe",
+   "label": "close poll",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-VOTE-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "9yAEmbmqPRy8Wvj9Wptp4c3KUFv9uQtzH2iMrQuN1aep",
+   "label": "settle_batch_charged vote-mwc9xb8a-sealed",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-VOTE-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "FduZo8VUV5svz3taufVatCyBqZ7mmUWMmqTacAbM1roj",
+   "label": "execute m4",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-VOTE-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "NzPCGVWSSpoVkZ8yuZSBE6XLVE3H6s1utAP6Xd7ed7q",
+   "label": "thief payment, validly signed",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-VOTE-01",
+   "run": "20261111T151252Z-adf6",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1023:13: [Settle REJECT] Recipient v9xb8at.fly-1793636729.testnet is not in allowed_recipien"
+  },
+  {
+   "hash": "3v29sWx5DfjUbpKKNpiPFLZyEif95aG675QcGyaTsYhf",
+   "label": "public pay month 1 -> ya6ke7p1.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "7CAVJtLsVpvcb1ZhqypKVBFoJYPQN7Rhtd9jvxZSAxjF",
+   "label": "public pay month 1 -> ya6ke7p2.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "32y2GyDj85YGLkQm43w1kBBbJd5PFdTV1gWZGpaTNmYq",
+   "label": "public pay month 1 -> ya6ke7p3.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "3sedAHuq9x3BdTgvAPaPp4Km13ChzGjqXwaRqHah71by",
+   "label": "public pay month 1 -> ya6ke7p4.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "FiFVvm8s1aeLw6ur4vT4PzwLXzeuq2WbScJd2V8K7H5b",
+   "label": "public pay month 1 -> ya6ke7tx.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "4uKJviuK7CMzU9ZHdR5Xor1FEPXrJzEHXursF7rQw7Jh",
+   "label": "public pay month 1 -> ya6ke7bn.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "2eSP8VZJpEZpjSayJ8UGwQPPeKtnht4NMjwkZGdrdzJ5",
+   "label": "public pay month 2 -> ya6ke7p1.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "2LiRur3Es9FaMwCb67VQhgLedQduxUpAmkhutbAvCG8i",
+   "label": "public pay month 2 -> ya6ke7p2.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "FvZ3jpNmzTnAijWB5fMPb6kK6H4hjbyC1vALhifix3Jo",
+   "label": "public pay month 2 -> ya6ke7p3.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "6M3GEnxmhgiqUSPC81MYFpAz8VJmYGRWYtQgDpNAFcrJ",
+   "label": "public pay month 2 -> ya6ke7p4.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "3zRym3dn7UWpVQhxfoMM3oYTE1WaNqG8FN69HPJXmqh5",
+   "label": "public pay month 2 -> ya6ke7tx.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "9ZTFxKghNeX4zVeJZr9VSt3HkmoKhoqH8Zw9jvQ58BnM",
+   "label": "public pay month 2 -> ya6ke7bn.fly-1793636729.testnet",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "wGA5roPs3xxjoWaqbrh3gpYjS2f1kwcxvcB2Ui2q1sc",
+   "label": "settle_batch_charged pay-mwca6ke7-m1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "CW5Bgf9nULbxpXwyqCXDWvSKhNWiEQEmJChvSGqUu1xS",
+   "label": "settle_batch_charged pay-mwca6ke7-m2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-PAYROLL-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "9oGbp2FT1YoAi34ed4MkY6umn6Esz9oJRnhTJePQNosP",
+   "label": "close buy rfq",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-RFQ-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "J36kRTVLAphiWWtgUEfn3gAWUogF5sNB4fxc1sbhmibn",
+   "label": "close sell rfq",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-RFQ-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "Djh6XBi4D5e3gpDpcenuHiVcLj2mbVCBAaMKUqGMr43i",
+   "label": "settle_batch_charged rfq-mwcaat9s-sealed buy",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-RFQ-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "8hTwVLEGbcUuijTujrMRYv5Rir3PpN99WaEzSQhTZTUu",
+   "label": "settle_batch_charged rfq-mwcaat9s-sealed sell",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-RFQ-01",
+   "run": "20261111T151252Z-adf6",
+   "error": null
+  },
+  {
+   "hash": "5LPwsC4F5jmzJHLdpXFUFbT1ovcewa3nuZcZJ3P3GXco",
+   "label": "OUTSIDE-POLICY settle cmp-mwcaj2wx-c",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1023:13: [Settle REJECT] Recipient mtj2wx.fly-1793636729.testnet is not in allowed_recipient"
+  },
+  {
+   "hash": "52voqR9KiQb5hguSYDWNP1QRg79BE7cfhVkk9XxwibfS",
+   "label": "exit cmp-mwcaj2wx-c as a",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": null
+  },
+  {
+   "hash": "6D6rFB85UMitmPaUyrsHJ8BWgvx6NdwSkabvnM96BvK4",
+   "label": "exit cmp-mwcaj2wx-c as b",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": null
+  },
+  {
+   "hash": "Gtrjmp9NcxPqQ5ygqUgoq3Q44ArXXAq5F8rHT2TEkMzU",
+   "label": "exit cmp-mwcaj2wx-c as c",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": null
+  },
+  {
+   "hash": "Ad9d7Hvp2PB49Vjh3BebbP1HjcV6JC5waS8R8QKuQitv",
+   "label": "exit cmp-mwcaj2wx-c as d",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CMP-INVEST-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": null
+  },
+  {
+   "hash": "CsNV9Xyq8wF2i3xqwD6CnGukJBgMjPvXpCfpNuzmtLoG",
+   "label": "settle_batch_charged qt-mwcals4w-fp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-QUOTE-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": null
+  },
+  {
+   "hash": "p94V5f3RsQNHj5spSNXVTWWGPg5gB8rQbNhWr1sRzvr",
+   "label": "settle_batch_charged qt-mwcals4w-sp",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-QUOTE-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": null
+  },
+  {
+   "hash": "BtSKucHXwkpX1eipB3eECgPrW8XUanbRkw79KgsC9hBH",
+   "label": "cross book",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-CMP-CROSS-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": null
+  },
+  {
+   "hash": "HiZ8vgWV4bhjaBLqoqwqcrhHqder99uwfNG4BaYwkcDD",
+   "label": "settle_batch_charged cross-mwcautge-sealed",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CMP-CROSS-01",
+   "run": "20261111T154524Z-e1cb",
+   "error": null
+  },
+  {
+   "hash": "9vrX9mzR6mKDmZdffuVEev8BeUJwtzHRJy4yae9dVkJm",
+   "label": "room A alone",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: [HAQ REJECT] This is a two-room syndicate: settle with settle_batch_two_room or settle_batch_charged_two_room, carr"
+  },
+  {
+   "hash": "6uniNNrHo5wt5ejqHMAUHLwZu2751EUsNbX4JCdN51Qm",
+   "label": "room B greedy",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1186:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "2vsYUzThHhiS4MNTfuxN2gzEWitWE7CZQd3sSgqwBv8k",
+   "label": "room A twice",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1186:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "CH4cpmyfJPAbJGzrSCTLL8bWXhdmiDyfhtPmBHArEY5B",
+   "label": "honest pair (room B key we hold)",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "j6e4cDErxLz1KVdfBZQ99HtPSA9BurGzBirKdT6BDJ8",
+   "label": "two real Roosts",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "ELv6oWV1ra8a45pyyjg2ZHJXxYJqwVztLCau2N6su7Rm",
+   "label": "rooms disagree",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1186:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "BBMxsLYCnsYbpVWtrzGZfWCHDEEFzUVJoinWDS12HmCc",
+   "label": "A alone, B gone",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: [HAQ REJECT] This is a two-room syndicate: settle with settle_batch_two_room or settle_batch_charged_two_room, carr"
+  },
+  {
+   "hash": "kBYMVi2MNQ6jrRDFq6KDF89kwsZJEQTkgucNqhHBUeJ",
+   "label": "settle_batch gas4-mwcb6jlp (4 members)",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CALLBACK-GAS-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "5Wzcsai2VYkGHUiQRsrfZ9rCDPU51HFozKeHmAsbYa77",
+   "label": "settle_batch gas20-mwcb6jlp (20 members)",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CALLBACK-GAS-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "GG15E9ZGWvjeqJaMPdfRTV4beFgXCFc63G3Jp8wVcki",
+   "label": "settle_batch_charged round 1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "DmiFBdHDgzvJHTEFZDKbuQxcTzfG66i76nPBk7tbsBad",
+   "label": "settle_batch_charged round 2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "4sukHPmhXBSp6gaiWdHy1yP9p9W9MNuVhzyvYYt83bQd",
+   "label": "replay of round 1",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: panicked at src/lib.rs:991:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "3sFxj9eR5UHMzUTNXKGGGPP2AycbWd5hXuhyBtAauHhf",
+   "label": "settle_batch_charged round 3",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "H6niiC2RyEs8kUebKCbPXTCZ5uCLjkLwnZBCKLAJhiNb",
+   "label": "early exit as u1",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: [Hatch-Out LOCKED] Deliberation window still active."
+  },
+  {
+   "hash": "4p5busVMWG4AgHXK3pfdfcpU98Fx1XneAY3Da4Lq64dK",
+   "label": "settle_batch_charged round 4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "GtTZRAdgXRdJVJfFWuhzcZuT5BbWCSJbiqwPf43Qc5rP",
+   "label": "payout above the cap: 0.11 of 0.4, charged 0.055 to each of two members so only the cap can refuse it",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1058:9: [Settle REJECT] Allocation sum exceeds max_release_bps_per_epoch cap. (cumulative re"
+  },
+  {
+   "hash": "Edhm1nNDCwm6g52touhXBaL91A5uxiLT36s7N2igy1NZ",
+   "label": "payout at exactly 25% of the escrow: 0.1",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "D69K5KeJPnKqRwBvoaX7F25A5d5jRXrcTrXWYCDHRGvE",
+   "label": "the drain that worked before the fix: 0.075, 25% of the remaining 0.3, straight after",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1058:9: [Settle REJECT] Allocation sum exceeds max_release_bps_per_epoch cap. (cumulative re"
+  },
+  {
+   "hash": "6eTz9gg2n2dPS2GvHKXcHdN1R2sAQM6sqbKXKLcehAFU",
+   "label": "even a milliNEAR more is refused inside the window",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1058:9: [Settle REJECT] Allocation sum exceeds max_release_bps_per_epoch cap. (cumulative re"
+  },
+  {
+   "hash": "Hwakcv9AuKqvcr947nAwj6vpz6LJaVCAJ4p9axBTVyEd",
+   "label": "after the window ends: 0.075, 25% of the then-current 0.3",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-ONGOING-01",
+   "run": "20261111T155952Z-36ff",
+   "error": null
+  },
+  {
+   "hash": "31oTsLBJGrEkMdd4z22Ev1SvdBCQwoNBpUgr2KtPfKKA",
+   "label": "set_test_signer from the main account",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-FOREIGN-SIGNER-FAIL-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": "Smart contract panicked: panicked at src/lib.rs:2349:9: assertion `left == right` failed: [Test REJECT] only the contract's own account may "
+  },
+  {
+   "hash": "8dgV2F6Qsjkfs89ASt71e5TdnuqLdNvRv3LGqdW8V6v1",
+   "label": "room A alone",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": "Smart contract panicked: [HAQ REJECT] This is a two-room syndicate: settle with settle_batch_two_room or settle_batch_charged_two_room, carr"
+  },
+  {
+   "hash": "4ZektiWedghwgfYL98DjyMdPV951pAFDumKt4jDy5NxU",
+   "label": "room B greedy",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1186:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "39moaAzbiatRndKF38u7E9CjSADVLJ9BuFwjpvZfPsyT",
+   "label": "room A twice",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1186:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "EezDmdYWWryjkcnbjWuyT3kVAUurmxL6EvG4Z2hkqrsm",
+   "label": "honest pair (room B key we hold)",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": null
+  },
+  {
+   "hash": "LDtf34tqnsKJkNnwNJMTgyqxASB9GEtRGWAqtvhdiXh",
+   "label": "two real Roosts",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": null
+  },
+  {
+   "hash": "DNk6oP5iJSsGXsiWwE9oDBmLhpW2JPx9WRTcpydVk7QQ",
+   "label": "rooms disagree",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1186:17: [HAQ REJECT] Invalid signature from the second room over the deliberation batch!"
+  },
+  {
+   "hash": "HSHA55e41axMXiAYtk2MzMt93Ri9KRAqdCmVBLjSthpX",
+   "label": "rooms agree after excluding d",
+   "ok": true,
+   "kind": "other",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": null
+  },
+  {
+   "hash": "FwZZWdJjHSFzsFSsmxG3bD4iqnw7AL1CZq8qJmBfnzd3",
+   "label": "A alone, B gone",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-TWO-ROOM-LIVE-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": "Smart contract panicked: [HAQ REJECT] This is a two-room syndicate: settle with settle_batch_two_room or settle_batch_charged_two_room, carr"
+  },
+  {
+   "hash": "6CWJViLD7KPU1D1FCR8BMLUq9DiJLnXcuoCEwbPE5aYH",
+   "label": "settle_batch gas4-mwcbr9b4 (4 members)",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CALLBACK-GAS-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": null
+  },
+  {
+   "hash": "7qukifhKndPJhrHikqZCmmSPpo6jC66XvDEc7pjiWxse",
+   "label": "settle_batch gas20-mwcbr9b4 (20 members)",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CALLBACK-GAS-01",
+   "run": "20261111T161635Z-d4d4",
+   "error": null
+  },
+  {
+   "hash": "B1zLuS3XM9Fgi4kWQ1pgc3H2gZerjDPHjMW43mByyBuC",
+   "label": "set_test_signer from the main account",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-FOREIGN-SIGNER-FAIL-LIVE-01",
+   "run": "20261111T162605Z-def8",
+   "error": "Smart contract panicked: panicked at src/lib.rs:2349:9: assertion `left == right` failed: [Test REJECT] only the contract's own account may "
+  },
+  {
+   "hash": "AyNFb22AKfGYCUarq4fMrw8xujPMckJX2EWXmSKgt3FV",
+   "label": "set_test_signer from the main account",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-FOREIGN-SIGNER-FAIL-LIVE-01",
+   "run": "20261111T164639Z-e8c8",
+   "error": "Smart contract panicked: panicked at src/lib.rs:2356:9: assertion `left == right` failed: [Test REJECT] only the contract's own account may "
+  },
+  {
+   "hash": "B7hP2SRWNq1VXq5D5nV9pFVaFtJfN5cKjqGH3Q3osfuL",
+   "label": "hatch lab-mwccqq4r-1",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "Gn8HQBJ5j1A1sK62wmHFVnWFwf27ywHyfUrp7H6FcEBN",
+   "label": "deposit lcqq4ra.fly-1793636729.testnet -> lab-mwccqq4r-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "ALit7v5WVHBRJ5B6aqbf3HQT7hg7UfWTCYT2dfNn9Er8",
+   "label": "deposit lcqq4rb.fly-1793636729.testnet -> lab-mwccqq4r-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "6UEH1ibnhzM6yy9NuQwZ7qXCzDmAqAXvArgCRSnUq4iL",
+   "label": "deposit lcqq4rc.fly-1793636729.testnet -> lab-mwccqq4r-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "ArWEe1QpkMzaNXwZ5eFJJ1U7HMPUTCEEVLz2n3Ym2BTP",
+   "label": "settle_batch lab-mwccqq4r-1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "G5i7dwo11DkGi3NGJYDTMMA4KSSBrYwwQbw24fPbZv3M",
+   "label": "REPLAY settle_batch lab-mwccqq4r-1",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": "Smart contract panicked: panicked at src/lib.rs:964:9: assertion `left == right` failed: [HAQ REJECT] Syndicate is not active. left: Settled"
+  },
+  {
+   "hash": "EDQPbfiLdxbMhgrEohS8m45sLcYd2RrwgzdHEkhwy7Zs",
+   "label": "hatch lab-mwccqq4r-2",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "3mL6ob1NWG9NnydsYXfKRrbUkujdjsoKAVvGYjmU13G2",
+   "label": "deposit lcqq4ra.fly-1793636729.testnet -> lab-mwccqq4r-2",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "137tUsnoaMwgHKt8y8yBeGEgUZs1L2ngBiQeLEqghBdh",
+   "label": "deposit lcqq4rb.fly-1793636729.testnet -> lab-mwccqq4r-2",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "2fQinaDakUaDsaoaSnxWxx2LkpM1AcuT4RoKktFs6TLr",
+   "label": "settle_batch lab-mwccqq4r-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1023:13: [Settle REJECT] Recipient thief-mwccqq4r.testnet is not in allowed_recipients white"
+  },
+  {
+   "hash": "85daDxA3p4j224kskvkenfgA5LRznijnghBPhq97DWVE",
+   "label": "settle_batch lab-mwccqq4r-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1156:17: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "4CNQLKEESW8nSKUmuz8HgfpCPv3nayQnojta6xWXcMWy",
+   "label": "settle_batch lab-mwccqq4r-2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "FVGiYhPTByBT9a3bHsmPgsXn8C6LfMHkbSrjuT1uRq1s",
+   "label": "hatch lab-mwccqq4r-4",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "5EnF961Mnk6y1vs9ZpejvhDx2t6nsbD811qGs6jWXw6y",
+   "label": "deposit lcqq4ra.fly-1793636729.testnet -> lab-mwccqq4r-4",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "E8sJNMH8n72zW3dBMGZjUBVWuGknAJTvcu9wpWj2KTca",
+   "label": "settle_batch lab-mwccqq4r-4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "FGptAqCRbNMhi1vNRrU9yDUwkoekSarrBjQaNnkijRnf",
+   "label": "REPLAY settle_batch lab-mwccqq4r-4 (partial)",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": "Smart contract panicked: panicked at src/lib.rs:991:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "4zTRkWCVwDeTt3HEPE2aWdhuRb86R3gipujuwHtbsz2M",
+   "label": "settle_batch lab-mwccqq4r-4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "6QkK3zynEKaBLE1Z1E1hnFrb1P5xowmfQXGbKPynqFsY",
+   "label": "hatch lab-mwccqq4r-3",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "8epBRVkw9f6m4dg6fuCS31S6A554wYkrYEoLzV6bG5A",
+   "label": "deposit lcqq4rb.fly-1793636729.testnet -> lab-mwccqq4r-3",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "CJhU13cLjR6PUX6KqbX75W6jSjYRNVz3kpSMLvbATHbv",
+   "label": "hatch_out lab-mwccqq4r-3",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-CHAIN-ROUND-LOCAL",
+   "run": "20261111T164639Z-e8c8",
+   "error": null
+  },
+  {
+   "hash": "FoBdczyu1h2uLY5qRv7Rabm1t3DEAzroRCpzNXCjF4Cf",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-01",
+   "run": "20261111T220404Z-581c",
+   "error": null
+  },
+  {
+   "hash": "74FVkPLYs7t6U6cdDjkyoRM32f8tC8fvSi7cwSCPDZbi",
+   "label": "settle_batch_charged round 1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T220705Z-da36",
+   "error": null
+  },
+  {
+   "hash": "JDzNb8oueqKyo3UZfwcuvNtTd7SvcJQTuGDjH9PcCYqZ",
+   "label": "settle_batch_charged round 2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T220705Z-da36",
+   "error": null
+  },
+  {
+   "hash": "7xqgrDkScTtFYLuLWDB3BvLn1hkenDFEytWrjYaYKTWd",
+   "label": "settle_batch_charged round 3",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261111T220705Z-da36",
+   "error": null
+  },
+  {
+   "hash": "HXpz86oa2maYMmP5fe8xoRSor4HXieWo44a6grED5xCx",
+   "label": "settle_batch_charged RFQ",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-01",
+   "run": "20261111T221202Z-d522",
+   "error": null
+  },
+  {
+   "hash": "4yRrjsd27jJhiHSeDB8UyjxkhenahgKHoQ1dqq7M86b3",
+   "label": "settle_batch_charged round A",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-02",
+   "run": "20261111T221430Z-fdef",
+   "error": null
+  },
+  {
+   "hash": "DgauW6rPqKF5wTU6BAW5krYUrjxX4bEHw5u1aaUpGGri",
+   "label": "settle_batch_charged round B",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-02",
+   "run": "20261111T221430Z-fdef",
+   "error": null
+  },
+  {
+   "hash": "6jbNZHC1VsVJe7cxTziMKUdh3W3c2Bbk7NMv67nnksAy",
+   "label": "settle_batch_charged ballot",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-SIGNED-LIVE-01",
+   "run": "20261111T221718Z-ace0",
+   "error": null
+  },
+  {
+   "hash": "HRmooabEecdEzpuPAK6n2G9qAQD8ihv2TCjHtC4Mhr8o",
+   "label": "hatch lab-hwmwcoqtvo-1",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "J1kPFybFaX4SiAW8mdg51Q2beF2qeGMSksdWrvEd4zfb",
+   "label": "deposit hoqtvoa.fly-1793636729.testnet -> lab-hwmwcoqtvo-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "AkTb43p9xRfhVkpBRio6KSAzPEVG5fRywex879YxcbKp",
+   "label": "deposit hoqtvob.fly-1793636729.testnet -> lab-hwmwcoqtvo-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "6F5mh7BoQnxwtjXLjQYodUf92ka4FZBDLsdM8ReqGLcG",
+   "label": "deposit hoqtvoc.fly-1793636729.testnet -> lab-hwmwcoqtvo-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "FYhQVSiiw8T9eGMBW1vkC78XrieNdN6N8rnauki9ZVQo",
+   "label": "settle_batch lab-hwmwcoqtvo-1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "BX4FuYmEPU6cLqznFkMhnanjBxkfcZPL77izHTDzKvhy",
+   "label": "REPLAY settle_batch lab-hwmwcoqtvo-1",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": "Smart contract panicked: panicked at src/lib.rs:964:9: assertion `left == right` failed: [HAQ REJECT] Syndicate is not active. left: Settled"
+  },
+  {
+   "hash": "AMXtFxZXXcHQFJaFxF7EKqtvSThmB8JDERjoq9QJJzGZ",
+   "label": "hatch lab-hwmwcoqtvo-2",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "BcEuV6GwQVJeETqauAjeh54M5owmSHJfdKjHbCAxQffv",
+   "label": "deposit hoqtvoa.fly-1793636729.testnet -> lab-hwmwcoqtvo-2",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "E24wX5Y5KNdqg7jyXnKYDgWWauRusLeSJ24FxCsWLYNc",
+   "label": "deposit hoqtvob.fly-1793636729.testnet -> lab-hwmwcoqtvo-2",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "9wnwnoUn2jsTWG7TJmz1i3ZKmf5pF27wZSMrzdQdM1cg",
+   "label": "settle_batch lab-hwmwcoqtvo-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1023:13: [Settle REJECT] Recipient thief-hwmwcoqtvo.testnet is not in allowed_recipients whi"
+  },
+  {
+   "hash": "DJiujfczh1tmDmhnTrj5yzha5cWv1h9bM5QQ9K9WfjyF",
+   "label": "settle_batch lab-hwmwcoqtvo-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1156:17: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "DehcbyGXiczjGbJHcQyXTfn5JibaVNwLwEYED9qiJem7",
+   "label": "settle_batch lab-hwmwcoqtvo-2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "GPRcvi43KM2hdrE7nChbKBvZiyFbAq6yxnjzjmSJTmcp",
+   "label": "hatch lab-hwmwcoqtvo-4",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "4P9VMYfQWxo3WzfkLSMdDcKzoEHP8cm6SR9s9ptE7AQ2",
+   "label": "deposit hoqtvoa.fly-1793636729.testnet -> lab-hwmwcoqtvo-4",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "G2cz87C2AMDkqKdPADXmBGmSvuWbqJiGkhxQeFy99Xos",
+   "label": "settle_batch lab-hwmwcoqtvo-4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "EmvTctN25Zd2qba4bWChvpiNnPuQ8yJbNiEpxYuca7ew",
+   "label": "REPLAY settle_batch lab-hwmwcoqtvo-4 (partial)",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": "Smart contract panicked: panicked at src/lib.rs:991:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "2kEKtP29HSRn3t4eDJG7ECJd47YxZUsTvimEcWoUV21p",
+   "label": "settle_batch lab-hwmwcoqtvo-4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "2avApHoTk9wssdGyfFQP8ExCC9KDnXge99BdbZtYA8K8",
+   "label": "hatch lab-hwmwcoqtvo-3",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "9mxJVXwjBnFwfagDVX25Na9NVQudRRxmn6w2rnuNXhnb",
+   "label": "deposit hoqtvob.fly-1793636729.testnet -> lab-hwmwcoqtvo-3",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "3Y45ZA6oSXbF4eFSwvbvtWKEHzBo4k8cHSvcp5VBrq6y",
+   "label": "hatch_out lab-hwmwcoqtvo-3",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261111T222226Z-03a5",
+   "error": null
+  },
+  {
+   "hash": "J7xyrFufPi9Lv2FWQn56cxWwqzfHyzC53gJYU7wNkQGV",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-01",
+   "run": "20261112T031407Z-8c64",
+   "error": null
+  },
+  {
+   "hash": "66upqeEG1E7rJs7qW6jjn2ck7Prd41aPG4bSjHw8Bpn7",
+   "label": "settle_batch_charged round 1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261112T031652Z-b62e",
+   "error": null
+  },
+  {
+   "hash": "6K4F4fsUXVG2nzC33mSsuXQHnwWdnZH8hRUyT44bstE6",
+   "label": "settle_batch_charged round 2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261112T031652Z-b62e",
+   "error": null
+  },
+  {
+   "hash": "GgFQBkcanWxbaz8YAMw2AUnZGKS3ogZbkPpukqNp7Fu1",
+   "label": "settle_batch_charged round 3",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-DARKVAULT-LIVE-02",
+   "run": "20261112T031652Z-b62e",
+   "error": null
+  },
+  {
+   "hash": "KJzrhjufWK79Zt1PQ6N7KdbYpETgnQ7qoN6uqE24fvf",
+   "label": "settle_batch_charged RFQ",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-01",
+   "run": "20261112T032202Z-a3a8",
+   "error": null
+  },
+  {
+   "hash": "GznNJZzKJufyfsinp4F7UADhGR7nmCrpUMBFaRnSPHrE",
+   "label": "settle_batch_charged round A",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-02",
+   "run": "20261112T032438Z-98db",
+   "error": null
+  },
+  {
+   "hash": "6h3wb3fUDn3HmrpE6aeS4PebooyCKLSzggumEjDshPG2",
+   "label": "settle_batch_charged round B",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-02",
+   "run": "20261112T032438Z-98db",
+   "error": null
+  },
+  {
+   "hash": "88Mk7LThf7SmAs7qeE4D1Sk7yw6V1Aah2J1eTijq9wFM",
+   "label": "settle_batch_charged ballot",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-SIGNED-LIVE-01",
+   "run": "20261112T032730Z-3b68",
+   "error": null
+  },
+  {
+   "hash": "GkjK2nwiJTmUXVQgHyBTCuXWduhtFBwkpnZru5VqkT9j",
+   "label": "hatch lab-hwmwcztuot-1",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "GJxFm3F1cnvEVibVkharMZKGmovhCpPAHgDMVy7iXrVE",
+   "label": "deposit hztuota.fly-1793636729.testnet -> lab-hwmwcztuot-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "7jKMuUVYuNCNttoPr4CkUrW4mHW1ABXaK5X8iv9zTDpB",
+   "label": "deposit hztuotb.fly-1793636729.testnet -> lab-hwmwcztuot-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "FLPZuC4wBxjF9RYQjVhYUwD72LJ24acB5iM7N48tMd4Y",
+   "label": "deposit hztuotc.fly-1793636729.testnet -> lab-hwmwcztuot-1",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "BdBoT8HUrFicZptJ5EDjMBVhtnD4ZSdC3SDJexUWGgxd",
+   "label": "settle_batch lab-hwmwcztuot-1",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "85gCfXWGn9jRYsVso8SZcSFpXtfhsa9DygN4MTMMjLrC",
+   "label": "REPLAY settle_batch lab-hwmwcztuot-1",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": "Smart contract panicked: panicked at src/lib.rs:964:9: assertion `left == right` failed: [HAQ REJECT] Syndicate is not active. left: Settled"
+  },
+  {
+   "hash": "7bjdESuUdv9wTN3C37jGyEPxxRHhDXkfM1r2iYU8QTCs",
+   "label": "hatch lab-hwmwcztuot-2",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "5yVCtV14GtD3y1VdB7hXXM57USHPiDYdj3sWUAZmovdL",
+   "label": "deposit hztuota.fly-1793636729.testnet -> lab-hwmwcztuot-2",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "4QATTHfaCGUvjPyMfR77yDEYFn9qhU7K7ADUcd37peyi",
+   "label": "deposit hztuotb.fly-1793636729.testnet -> lab-hwmwcztuot-2",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "CepecyPhzVCTQmkEjWbXpc6j6EFSBuPQ1KHk3rtyEupt",
+   "label": "settle_batch lab-hwmwcztuot-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1023:13: [Settle REJECT] Recipient thief-hwmwcztuot.testnet is not in allowed_recipients whi"
+  },
+  {
+   "hash": "4Kxas9mpqJVtoT5U44Up9WZALkSsurfMLXbZ4pCGUGJy",
+   "label": "settle_batch lab-hwmwcztuot-2",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": "Smart contract panicked: panicked at src/lib.rs:1156:17: [HAQ REJECT] Invalid enclave Ed25519 signature over deliberation batch!"
+  },
+  {
+   "hash": "Eg2hqVgoDjhZjQGzib7KY8dqFv9Sye4j6CD7jfb6KS8R",
+   "label": "settle_batch lab-hwmwcztuot-2",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "3USBndGmJviQw5Lbc2mhtCxHL7Zha17RoDADTYM9ahZD",
+   "label": "hatch lab-hwmwcztuot-4",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "DNRCJvq19YeBnZXVh6zUzrVyRrwQXP8Jx2ENnESeT6ij",
+   "label": "deposit hztuota.fly-1793636729.testnet -> lab-hwmwcztuot-4",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "G62NY6rkhCh2vBD39VB8Fj6vixZjftHvWoTHP1vbfpDa",
+   "label": "settle_batch lab-hwmwcztuot-4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "bhFL95Zo6C5fanBnw6EiXWG7zubqKXoF1TwTjB3vixB",
+   "label": "REPLAY settle_batch lab-hwmwcztuot-4 (partial)",
+   "ok": false,
+   "kind": "rejected",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": "Smart contract panicked: panicked at src/lib.rs:991:9: assertion `left == right` failed: [HAQ REJECT] Nonce mismatch. Replay attack blocked."
+  },
+  {
+   "hash": "E2jFhXGFBNjLqvREa9R1Ld1VW7TZAigjQiFtDuWDgbup",
+   "label": "settle_batch lab-hwmwcztuot-4",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "2zQjqxUyoN5kwoSrw9UnFBg7ZXk2jgPFjnxH6mys2dQx",
+   "label": "hatch lab-hwmwcztuot-3",
+   "ok": true,
+   "kind": "hatch",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "9ExSnLV5fZ8Z4xYE1ZwWoYbrsWCxMJCUGgzLDFBMkAe4",
+   "label": "deposit hztuotb.fly-1793636729.testnet -> lab-hwmwcztuot-3",
+   "ok": true,
+   "kind": "deposit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "BCcko2KYW6KkXg4UrNPRgGHyT8UyeJUoeVy4o6KR7Avz",
+   "label": "hatch_out lab-hwmwcztuot-3",
+   "ok": true,
+   "kind": "exit",
+   "exp": "E-HOSTED-LIVE-01",
+   "run": "20261112T033236Z-3fb0",
+   "error": null
+  },
+  {
+   "hash": "BUdWySUKYmNGmRAcijNpBLS5hyV1se1R6gfnzVazX1v",
+   "label": "settle_batch_charged weighted ballot",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PROGRAMS-LIVE-01",
+   "run": "20261112T173152Z-e25d",
+   "error": null
+  },
+  {
+   "hash": "8nt2BPFGYyCTud1NssCbxhpvrYMNDDdfMoBJjQfkcRTJ",
+   "label": "settle_batch_charged pro-rata pool",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PROGRAMS-LIVE-01",
+   "run": "20261112T173152Z-e25d",
+   "error": null
+  },
+  {
+   "hash": "C8owyMBuZi8tahf79HVJgXMbTddLK7tgqWaWSrj3W684",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-02",
+   "run": "20261113T034712Z-5244",
+   "error": null
+  },
+  {
+   "hash": "GNzfiVESGPk28joKJqRrihNw3LqEfJt1S4UqorDPjwWG",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-02",
+   "run": "20261113T041922Z-5bc2",
+   "error": null
+  },
+  {
+   "hash": "FsGJK3yo3cUSUNBEpwsGdJ9CRVxRxpRn42EwAVb6GYpd",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-03",
+   "run": "20261113T084451Z-1582",
+   "error": null
+  },
+  {
+   "hash": "H1Yr5cApGZJp4mHrPNm4Lhb55Lor3jcFko7iCUB9yCmY",
+   "label": "settle_batch_charged block trade",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-CROSS-LIVE-01",
+   "run": "20261113T084759Z-13f0",
+   "error": null
+  },
+  {
+   "hash": "9NqDDEn5bakgYKaZGy52FGkdt7McjPTvQGGC94NhZ5Kk",
+   "label": "settle_batch_charged rfq with an expired quote",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-RFQ-LIVE-03",
+   "run": "20261113T123634Z-e25a",
+   "error": null
+  },
+  {
+   "hash": "2bfmycSyEVuMUzE25gcAqQ9pKU7DFPV3D3SrSPEWe2gm",
+   "label": "settle_batch_charged block trade",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-CROSS-LIVE-02",
+   "run": "20261113T124032Z-1296",
+   "error": null
+  },
+  {
+   "hash": "8qQi55kEbAgTV7VW9GXbNSra3kjKiuiavoaJsBHJDNaE",
+   "label": "settle_batch_charged pay run",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-HOSTED-PAYRUN-LIVE-04",
+   "run": "20261113T125015Z-8922",
+   "error": null
+  },
+  {
+   "hash": "BhjLBGTvyeedpw9o7tzuM4Ns3GKNPTwoNBuGB8rr2nUA",
+   "label": "playground settlement",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-PLAYGROUND-LOCAL-01",
+   "run": "20261113T140928Z-7788",
+   "error": null
+  },
+  {
+   "hash": "4QZQsJd9jp9DjfP6o3r68tdu7z3btRQRbFtbZ2XHfgoA",
+   "label": "playground settlement",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-PLAYGROUND-LOCAL-01",
+   "run": "20261114T041814Z-ce81",
+   "error": null
+  },
+  {
+   "hash": "A9fmWEoCWqTKR1jXcMdHawqNbn5reKpsKvB8LypNW1L6",
+   "label": "playground settlement",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-PLAYGROUND-LIVE-01",
+   "run": "20261114T051812Z-0955",
+   "error": null
+  },
+  {
+   "hash": "27nMHF1K8ZR7SBwcrJNpozAZq2xj4Hpv8X2FFX5C5eKt",
+   "label": "playground settlement",
+   "ok": true,
+   "kind": "settled",
+   "exp": "E-PLAYGROUND-LIVE-01",
+   "run": "20261114T063003Z-8b99",
    "error": null
   },
   {
