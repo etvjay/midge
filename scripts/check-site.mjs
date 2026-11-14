@@ -19,7 +19,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = path.join(root, 'site');
 const SHOTS = path.join(os.homedir(), 'shots-midge');
 const require = createRequire(import.meta.url);
-const pwPath = process.env.PLAYWRIGHT_CORE || (() => { try { return require.resolve('playwright-core'); } catch { return '/home/ubuntu/tools/shots/node_modules/playwright-core'; } })();
+const pwPath = process.env.PLAYWRIGHT_CORE || require.resolve('playwright-core'); // a root devDependency; set PLAYWRIGHT_CORE to use another copy
 const { chromium } = require(pwPath);
 const BUDGET = { minSceneText: 11, minTarget: 24, firstPaintMs: 1000, fieldDrawsPerSec: 75 };
 const SWEEP = [601, 640, 700, 760, 900, 901, 960, 1024, 1100, 1180, 1280]; // widths between the two main ones, where the card layout changes

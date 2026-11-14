@@ -58,7 +58,23 @@
     "verify:contract-payroll": "node scripts/testnet-contract-payroll.js",
     "verify:payroll": "node scripts/testnet-multichain-payroll.js",
     "build:playground": "node scripts/build-playground.mjs",
-    "smoke:playground": "node scripts/playground-smoke.mjs"
+    "smoke:playground": "node scripts/playground-smoke.mjs",
+    "lint": "biome lint",
+    "format:check": "biome format",
+    "typecheck": "tsc -p tsconfig.json",
+    "knip": "knip --no-progress",
+    "dup": "jscpd --config .jscpd.json",
+    "cycles": "depcruise src --config .dependency-cruiser.cjs",
+    "check:large-files": "node scripts/check-large-files.mjs",
+    "quality": "npm run lint && npm run format:check && npm run typecheck && npm run knip && npm run dup && npm run cycles && npm run check:large-files",
+    "test:roost": "node --test tests/browser-client.test.js tests/browser-verify.test.js tests/compose-escrow.test.js tests/compose-failclosed.test.js tests/escrow-reader.test.js tests/hosted-roost-escrow.test.js tests/hosted-roost-invoices.test.js tests/hosted-roost-keycheck-message.test.js tests/hosted-roost-rounds.test.js tests/invoice.test.js tests/payroll-surfaces.test.js tests/playground-page.test.js tests/playground-round.test.js tests/preflight-explainer.test.js tests/preflight.test.js tests/room-abandon-clients.test.js tests/room-service-escrow.test.js tests/roost-client-abandon.test.js tests/roost-compose-rpc.test.js tests/roost-expected.test.js tests/roost-image-stage.test.js tests/roost-server-escrow.test.js tests/roost-server-payroll.test.js tests/roost-server-signed-env.test.js tests/signed-bid-helper.test.js tests/signed-input-keycheck.test.js tests/system-wholeness.test.js",
+    "test:playground": "node --test tests/playground-*.test.js",
+    "test:site": "node --test tests/site-*.test.js tests/replay-data.test.js tests/playground-page.test.js",
+    "test:caller": "cd outlayer/caller && cargo test",
+    "test:room-signer": "cd outlayer/room-signer && cargo test",
+    "test:fly-coordinator": "cd contracts/fly-coordinator && cargo test",
+    "qa:site": "node scripts/check-site.mjs",
+    "qa:roost": "node verifications/10-hosted-roost.js"
   },
   "keywords": [
     "near",
@@ -83,7 +99,14 @@
     "near-api-js": "^7.4.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.6",
+    "@types/node": "24.19.2",
+    "dependency-cruiser": "18.7.2",
     "esbuild": "0.25.10",
-    "three": "0.186.1"
+    "jscpd": "5.4.2",
+    "knip": "6.44.1",
+    "playwright-core": "1.65.0",
+    "three": "0.186.1",
+    "typescript": "7.0.2"
   }
 }

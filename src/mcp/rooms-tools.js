@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * MCP tools for rooms: five tools that mirror the five RoomService verbs. There is no tool per room kind and no tool takes a secret
  * key: a member's input arrives already sealed and signed, and the coordinator's key stays in the transport (the HTTP header, or the

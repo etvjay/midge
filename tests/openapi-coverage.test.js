@@ -11,7 +11,9 @@ const unique = (a) => [...new Set(a)].sort();
 const roostSource = unique([...read('src/roost-service/server.js').matchAll(/url\.pathname === '([^']+)'/g)].map((m) => m[1]));
 const playgroundSource = unique([
   ...[...read('src/playground/service.js').matchAll(/path === '(\/api\/[^']+)'/g)].map((m) => m[1]),
-  '/api/rounds/{ticket}', '/api/rounds/{ticket}/approve', '/api/rounds/{ticket}/abandon', // matched by one regular expression in the source
+  '/api/rounds/{ticket}',
+  '/api/rounds/{ticket}/approve',
+  '/api/rounds/{ticket}/abandon', // matched by one regular expression in the source
 ]);
 
 test('the source has the routes this test expects (so the check below is not empty)', () => {
@@ -34,6 +36,9 @@ test('a route that needs the admin key says so in the room spec', () => {
   for (const r of ['/round', '/settle', '/abandon', '/payrun']) {
     assert.ok(src.includes(`url.pathname === '${r}'`));
     const op = Object.values(s[r])[0];
-    assert.ok(op.parameters?.some((p) => p.name === 'x-roost-admin-key'), r);
+    assert.ok(
+      op.parameters?.some((p) => p.name === 'x-roost-admin-key'),
+      r,
+    );
   }
 });

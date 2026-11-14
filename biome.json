@@ -1,0 +1,72 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "src/**",
+      "scripts/**",
+      "tests/**",
+      "verifications/**",
+      "bin/**",
+      "verify-all.js",
+      "biome.json",
+      "knip.json",
+      "tsconfig.json",
+      "site/main.js",
+      "site/src/**",
+      "site/styles.css",
+      "site/playground/playground.css",
+      "site/replay/replay.css",
+      "!site/src/**/*.bundle.js"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 160,
+    "includes": [
+      "site/main.js",
+      "site/src/**",
+      "site/styles.css",
+      "site/playground/playground.css",
+      "site/replay/replay.css",
+      "scripts/check-large-files.mjs",
+      "tests/agents-md.test.js",
+      "tests/large-files.test.js",
+      "tests/test-naming.test.js",
+      "tests/site-serve.test.js",
+      "tests/openapi-coverage.test.js",
+      "biome.json",
+      "knip.json",
+      "tsconfig.json"
+    ]
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noDuplicateObjectKeys": "warn",
+        "noAssignInExpressions": "warn",
+        "noSparseArray": "warn",
+        "noShorthandPropertyOverrides": "warn",
+        "useIterableCallbackReturn": "warn"
+      }
+    }
+  },
+  "assist": {
+    "enabled": false
+  }
+}

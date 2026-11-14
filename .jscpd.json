@@ -1,0 +1,9 @@
+{
+  "threshold": 2.6,
+  "minTokens": 50,
+  "path": ["src", "scripts", "tests"],
+  "ignore": ["**/node_modules/**", "**/*.bundle.js", "**/*.data.js"],
+  "reporters": ["console"],
+  "absolute": false,
+  "gitignore": true
+}

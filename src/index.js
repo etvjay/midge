@@ -1,3 +1,4 @@
+// @ts-check
 export { FlyNestContract } from './contracts/nest.js';
 export { RoostEnclave } from './enclave/roost.js';
 export { EnclaveCrypto } from './enclave/crypto.js';

@@ -12,7 +12,13 @@ const makeTargets = new Set([...makefile.matchAll(/^([A-Za-z0-9_.-]+):/gm)].map(
 const docs = ['AGENTS.md', 'CLAUDE.md'].map((f) => ({ f, text: fs.readFileSync(path.join(root, f), 'utf8') }));
 
 // Local-only folders the repository deliberately does not publish: AGENTS.md may name them, a fresh clone will not have them.
-const LOCAL_ONLY = [/^docs\/superpowers\//, /^docs\/research\//, /^docs\/WRITING_RULES\.md$/, /^docs\/(srs|rtm|architecture|implementation-plan|use-cases|roost-tee-plan)\.md$/, /^HANDOFF/];
+const LOCAL_ONLY = [
+  /^docs\/superpowers\//,
+  /^docs\/research\//,
+  /^docs\/WRITING_RULES\.md$/,
+  /^docs\/(srs|rtm|architecture|implementation-plan|use-cases|roost-tee-plan)\.md$/,
+  /^HANDOFF/,
+];
 
 test('every `npm run <name>` in the agent files is a script in package.json', () => {
   const missing = [];
@@ -32,7 +38,7 @@ test('every backticked repository path in the agent files exists (local-only fol
     for (const m of text.matchAll(/`([A-Za-z0-9_.@/-]+)`/g)) {
       const p = m[1].replace(/\/$/, '');
       if (!/\//.test(m[1]) && !/\.(md|js|mjs|json|jsonl|toml|yml|yaml)$/.test(p)) continue; // a bare word, not a path
-      if (/^(https?:|@|\.\.?\/)/.test(p) || p.includes('*') || p.startsWith('node ') ) continue;
+      if (/^(https?:|@|\.\.?\/)/.test(p) || p.includes('*') || p.startsWith('node ')) continue;
       if (LOCAL_ONLY.some((re) => re.test(p))) continue;
       if (!fs.existsSync(path.join(root, p))) missing.push(`${f}: ${p}`);
     }

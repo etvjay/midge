@@ -22,7 +22,8 @@ test('every saved proptest regression file sits beside a test file of the same n
   for (const c of crates) {
     const dir = path.join(c, 'tests');
     if (!fs.existsSync(dir)) continue;
-    for (const f of fs.readdirSync(dir)) if (f.endsWith('.proptest-regressions') && !fs.existsSync(path.join(dir, f.replace('.proptest-regressions', '.rs')))) orphans.push(`${dir}/${f}`);
+    for (const f of fs.readdirSync(dir))
+      if (f.endsWith('.proptest-regressions') && !fs.existsSync(path.join(dir, f.replace('.proptest-regressions', '.rs')))) orphans.push(`${dir}/${f}`);
   }
   assert.deepEqual(orphans, []);
 });
