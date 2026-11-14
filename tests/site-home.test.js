@@ -39,17 +39,15 @@ test('recorded numbers enter the content only as {figure} tokens, never typed in
   }
 });
 
-test('every partner status and every "in Midge today" cell rests on a quoted figure', () => {
+test('every partner status rests on a quoted figure', () => {
   for (const p of HOME.proof.partners) assert.ok(F[p.fig]?.quote, `${p.name} status "${p.status}" has no quoted figure`);
-  const today = HOME.parts.hosts.rows.find((r) => r.k === 'In Midge today');
-  assert.ok(today, 'the host table ends with "In Midge today"');
-  for (const c of today.cells) assert.ok(F[c.fig]?.quote, `"${c.t}" has no quoted figure`);
 });
 
-test('the honesty fixes hold: Phala not running, OutLayer only for the signing step, Chain Signatures on two testnets and nothing on Bitcoin, 1Click read-only', () => {
+test('the honesty fixes hold: Phala sleeps when idle, OutLayer only for the signing step, Chain Signatures on two testnets and nothing on Bitcoin, 1Click read-only', () => {
   const all = [...strings(HOME)].map(([, s]) => s).join('\n');
-  assert.match(all, /not running now/);
-  assert.match(all, /Only the signing step: a settlement signed inside OutLayer/, 'the comparison says what OutLayer is used for');
+  assert.match(all, /sleeps when idle/, 'the Phala room is deployed for the playground and sleeps when idle');
+  assert.doesNotMatch(all, /not running now/, 'the old Phala status is gone everywhere');
+  assert.match(all, /[Oo]nly the signing step: a settlement signed inside OutLayer/, 'the comparison says what OutLayer is used for');
   assert.match(all, /Does Midge use OutLayer\?[\s\S]{0,40}Only for one step/, 'the FAQ says it is one step');
   assert.match(all, /does not run there/, 'and says the room does not run on OutLayer');
   assert.doesNotMatch(all, /Not used yet: only a model of its spending limits/);
@@ -60,9 +58,9 @@ test('the honesty fixes hold: Phala not running, OutLayer only for the signing s
   assert.doesNotMatch(all, /running on testnet[^.\n]{0,40}Phala|Phala[^.\n]{0,40}running on testnet/i);
 });
 
-test('the FAQ has four topics and eighteen questions, and keeps the five original answers word for word', () => {
+test('the FAQ has four topics and twenty-one questions, and keeps the five original answers word for word', () => {
   assert.deepEqual(HOME.faq.map((g) => g.name), ['About Midge', 'Money and safety', 'Integrations', 'Partners and tech']);
-  assert.equal(HOME.faq.reduce((n, g) => n + g.items.length, 0), 18);
+  assert.equal(HOME.faq.reduce((n, g) => n + g.items.length, 0), 21);
   const qa = new Map(HOME.faq.flatMap((g) => g.items));
   const ORIGINAL = {
     'Can the room run off with the money?': 'No. The room holds no key to the money. It can only propose a payout, and the contract on NEAR pays it only if it follows the rules every member agreed to: who can be paid, how much per window, and until when.',
@@ -78,9 +76,16 @@ test('no banned word in any content string', () => {
   for (const [at, s] of strings(HOME)) if (!/\.src\./.test(at)) for (const w of BANNED) assert.doesNotMatch(s, new RegExp(`\\b${w}\\b`, 'i'), `${at}: ${w}`); // .src fields are citations, never shown
 });
 
-test('code names appear only in the parts section', () => {
+const CODE_MAP = 'The code keeps older names';
+test('code names appear only in the one FAQ answer that maps them', () => {
   const CODE = /\b(Roost|Nest|flyers?|hatch|settle_batch)\b/;
-  for (const [at, s] of strings(HOME)) if (!at.startsWith('HOME.parts') && !/\.src\./.test(at)) assert.doesNotMatch(s, CODE, `${at}: "${s}"`);
+  let mapped = 0;
+  for (const [at, s] of strings(HOME)) {
+    if (/\.src\./.test(at)) continue;
+    if (s.startsWith(CODE_MAP)) { mapped += 1; continue; }
+    assert.doesNotMatch(s, CODE, `${at}: "${s}"`);
+  }
+  assert.equal(mapped, 1, 'one FAQ answer maps the code names');
 });
 
 // ---- the built page (Task 2)
@@ -88,8 +93,8 @@ const html = read('site/index.html');
 const visibleText = (h) => h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ');
 const sectionOf = (id) => { const m = html.match(new RegExp(`<section[^>]*id="${id}"[\\s\\S]*?\\n</section>`)); assert.ok(m, `section ${id}`); return m[0]; };
 
-test('sections 01 to 10 are built in order after the hero, each named by its heading', () => {
-  const ids = ['problem', 'how', 'who', 'rules', 'uses', 'agents', 'parts', 'proof', 'limits', 'try'];
+test('the eight sections are built in order after the hero, each named by its heading', () => {
+  const ids = ['problem', 'how', 'who', 'rules', 'agents', 'proof', 'limits', 'try'];
   let at = html.indexOf('id="hero"');
   for (const id of ids) {
     const i = html.indexOf(`<section class="section bs`, at); assert.ok(i > at, `${id} after the one before`);
@@ -109,11 +114,13 @@ test('every element main.js looks up exists in the built page', () => {
   for (const id of ['chip', 'chip-text', 'lp-run', 'lp-replay', 'lp-list', 'lp-note', 'chain-list', 'chain-note', 'lens-pub', 'lens-priv', 'proof-grid', 'recent', 'net-count', 'live', 'foot-live', 'rules-json', 'rules-reads-text']) assert.match(html, new RegExp(`id="${id}"`), id);
 });
 
-test('code names are visible only inside Under the hood', () => {
+test('code names are visible only inside the FAQ answer that maps them, and the removed sections are gone', () => {
   const visible = (h) => h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<svg[\s\S]*?<\/svg>/g, ' ').replace(/<[^>]+>/g, ' ');
-  const outside = visible(html.replace(sectionOf('parts'), ''));
-  assert.doesNotMatch(outside, /\b(Roost|Nest|flyers?|hatch|settle_batch)\b/);
-  assert.match(visible(sectionOf('parts')), /code: Roost/);
+  const map = html.match(/<details><summary>What are the parts called in the code\?<\/summary>[\s\S]*?<\/details>/);
+  assert.ok(map, 'the FAQ has the code-name answer');
+  assert.doesNotMatch(visible(html.replace(map[0], '')), /\b(Roost|Nest|flyers?|hatch|settle_batch)\b/);
+  assert.match(visible(map[0]), /Roost is the room/);
+  assert.doesNotMatch(html, /id="parts"|id="uses"/, 'Under the hood and Uses are removed');
 });
 
 test('illustrative amounts are labelled, and the recorded refusal links its transaction', () => {
@@ -121,10 +128,10 @@ test('illustrative amounts are labelled, and the recorded refusal links its tran
   assert.match(sectionOf('proof'), /href="https:\/\/testnet\.nearblocks\.io\/txns\/3gW41Caz1wK4cCDFpixTJ3KweM6qpF7ZGxm6ARB1CmPk"/);
 });
 
-test('the FAQ is four headed groups of native details, eighteen in all, the first open', () => {
+test('the FAQ is four headed groups of native details, twenty-one in all, the first open', () => {
   const groups = [...html.matchAll(/<section class="faq-group" id="faq-g(\d)"[\s\S]*?<\/section>/g)];
   assert.equal(groups.length, 4);
-  assert.equal(groups.reduce((n, g) => n + (g[0].match(/<details/g) || []).length, 0), 18);
+  assert.equal(groups.reduce((n, g) => n + (g[0].match(/<details/g) || []).length, 0), 21);
   assert.match(groups[0][0], /<details open>/);
 });
 
@@ -210,11 +217,7 @@ test('nothing static claims to be live: labels start neutral and main.js switche
   assert.match(js, /did not answer from this browser[\s\S]{0,300}nearblocks/i, 'the chain failure links NearBlocks');
 });
 
-test('every cell of the two comparison tables rests on a quoted source', () => {
-  for (const row of HOME.parts.hosts.rows) for (const c of row.cells) {
-    assert.ok(c.src || c.fig, `host cell "${c.t}" has a source`);
-    if (c.src) assert.ok(read(c.src.file).includes(c.src.quote), `"${c.src.quote}" in ${c.src.file}`);
-  }
+test('every cell of the comparison table rests on a quoted source', () => {
   for (const row of HOME.problem.compare.rows) for (const c of row.cells) {
     if (/^\{[a-zA-Z]+\}$/.test(c.t)) continue;
     assert.ok(c.src && read(c.src.file).includes(c.src.quote), `comparison cell "${c.t}" quotes its source`);

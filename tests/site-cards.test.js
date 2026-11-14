@@ -26,7 +26,7 @@ test('building twice gives the same page', () => {
 });
 
 test('the nav links to the section ids', () => {
-  for (const id of ['problem', 'how', 'who', 'agents', 'parts', 'proof', 'try']) assert.match(html, new RegExp(`<nav[\\s\\S]*href="#${id}"[\\s\\S]*</nav>`), id);
+  for (const id of ['problem', 'how', 'who', 'agents', 'proof', 'try']) assert.match(html, new RegExp(`<nav[\\s\\S]*href="#${id}"[\\s\\S]*</nav>`), id);
 });
 
 test('no canvas scene or retired card markup is left, and the js class is set before first paint', () => {
@@ -61,7 +61,7 @@ const footerHtml = () => { const m = html.match(/<footer class="site-footer[^"]*
 
 test('the footer has the FAQ, and every link points to a repository file that exists or to the explorer', () => {
   const f = footerHtml();
-  assert.equal((f.match(/<details/g) || []).length, 18, 'eighteen questions');
+  assert.equal((f.match(/<details/g) || []).length, 21, 'twenty-one questions');
   assert.equal((f.match(/class="faq-group"/g) || []).length, 4, 'four topics');
   const links = [...f.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(links.length >= 10, `${links.length} links`);
