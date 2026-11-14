@@ -520,3 +520,25 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: var(--t-24); line-h
   .bs *, .bs *::before, .bs *::after { animation: none !important; transition: none !important; }
   .mo-tr, .mo-tr2 { display: none; }
 }
+
+/* Proof section, five boxes (2026-11-14): the lens under the grid, one card with two live checks, one refusal card, one list of what runs where. */
+.lens-line { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-top: 16px; font-size: var(--t-14); color: var(--d-2); }
+.lens-line p { margin: 0; min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.lens-line .bc-label { margin-right: 8px; }
+#lens-priv { color: var(--d-lake); }
+.bs .dots-card .proof-grid { grid-template-columns: repeat(auto-fill, minmax(20px, 1fr)); }
+.halves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.halves > div { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.halves > div + div { border-left: 1px solid var(--d-line); padding-left: 32px; }
+.refusal-head { padding: 24px 24px 20px; display: flex; flex-direction: column; gap: 8px; }
+.runs-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; }
+.runs-list li { display: grid; grid-template-columns: minmax(150px, 200px) minmax(150px, 220px) minmax(0, 1fr); gap: 4px 24px; align-items: baseline; padding: 16px 0; border-top: 1px solid var(--d-line); }
+.runs-list p { margin: 0; min-width: 0; }
+.runs-d { color: var(--d-2); font-size: var(--t-14); line-height: 1.5; }
+.runs-role { display: block; font: 400 var(--t-12) var(--mono); color: var(--d-3); margin-bottom: 2px; }
+@media (max-width: 760px) {
+  .halves { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .halves > div + div { border-left: 0; padding-left: 0; border-top: 1px solid var(--d-line); padding-top: 24px; }
+  .runs-list li { grid-template-columns: minmax(0, 1fr) auto; }
+  .runs-list li > .runs-d { grid-column: 1 / -1; }
+}

@@ -95,12 +95,12 @@ export const HOME = {
     runsTitle: 'What runs where, today', runsNote: 'Testnet only · no audit yet · every test account was ours',
     partners: [
       { name: 'NEAR Protocol', role: 'the contract · testnet', status: 'Live', tone: 'lake', fig: 'contractLive', d: 'Holds every group’s money and rules, pays only within them, and runs the exit.' },
-      { name: 'NEAR AI Cloud', role: 'the model the room seals bids to', status: 'Live', tone: 'lake', fig: 'modelHost', d: 'Bids are sealed to a model in secure hardware; it proposes the split. Check it from your browser above.' },
-      { name: 'Phala Cloud', role: 'dstack · Intel TDX', status: 'Deployed, sleeps when idle', tone: 'lake', fig: 'phalaHosted', d: 'The room as its own program in a confidential VM on Intel TDX. It runs the playground\u2019s pay runs, sleeps when idle and wakes when a visitor arrives; last attested on 14 Nov.' },
-      { name: 'NEAR Chain Signatures', role: 'Bitcoin · Ethereum · Solana', status: 'Rules checked, on testnet', tone: 'lake', fig: 'chainSignatures', d: 'The Midge contract checked a group\u2019s rules, then asked the MPC network to sign a payment on Solana devnet and one on Ethereum Sepolia. It refused three that broke the rules. Money held on other chains is outside the member exit.' },
-      { name: 'NEAR Intents · 1Click', role: 'asset registry', status: 'Read-only', tone: 'glow', fig: 'intentsAssets', d: '{intentsAssets} assets read live across NEAR, Bitcoin, Ethereum and Solana. 1Click has no testnet, so no swap was made.' },
-      { name: 'For agents', role: 'MCP tools · JavaScript SDK · HTTP API', status: 'Runs on your machine', tone: 'lake', fig: 'agentTools', d: 'Every route, SDK method and MCP tool exercised; the API and MCP server run locally. The limited keys that can only take money back are live on testnet.' },
-      { name: 'Simulations', role: 'JavaScript models', status: 'Not on chain', tone: 'mute', fig: 'simulations', wide: true, d: 'Lending quotes, block trades between desks and shared AI requests run as models today, not on the contract.' },
+      { name: 'NEAR AI Cloud', role: 'the model the room seals bids to', status: 'Live', tone: 'lake', fig: 'modelHost', d: 'Bids are sealed to a model in secure hardware; it proposes the split. Check it above.' },
+      { name: 'Phala Cloud', role: 'dstack · Intel TDX', status: 'Deployed, sleeps when idle', tone: 'lake', fig: 'phalaHosted', d: 'The room as its own program in a confidential VM. It runs the playground and sleeps when idle; last attested on 14 Nov.' },
+      { name: 'NEAR Chain Signatures', role: 'Bitcoin · Ethereum · Solana', status: 'Rules checked, on testnet', tone: 'lake', fig: 'chainSignatures', d: 'The contract checked a group\u2019s rules and had payments signed on Solana devnet and Ethereum Sepolia; it refused three that broke the rules. Money on other chains is outside the member exit.' },
+      { name: 'NEAR Intents · 1Click', role: 'asset registry', status: 'Read-only', tone: 'glow', fig: 'intentsAssets', d: '{intentsAssets} assets read live across NEAR, Bitcoin, Ethereum and Solana. No testnet, so no swap was made.' },
+      { name: 'For agents', role: 'MCP tools · JavaScript SDK · HTTP API', status: 'Runs on your machine', tone: 'lake', fig: 'agentTools', d: 'Every route, SDK method and MCP tool exercised locally. The limited keys that can only take money back are live on testnet.' },
+      { name: 'Simulations', role: 'JavaScript models', status: 'Not on chain', tone: 'mute', fig: 'simulations', wide: true, d: 'Lending quotes, block trades and shared AI requests run as models, not on the contract.' },
     ],
   },
 

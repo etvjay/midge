@@ -245,36 +245,33 @@ function proofSection(F, f, proofParts) {
         <p class="kicker center">${f(p.kicker)}</p>
         <h2 id="proof-title" class="display center">${f(p.statementA)}<br><span class="soft">${f(p.statementB)}</span></h2>
       </div>
-      <article class="bc s4 dots-card">
+      <article class="bc s6 dots-card">
         <div class="bc-row"><h3 class="bc-title">${f(p.dotsTitle)}</h3><p class="bc-label">${proofParts.count}</p></div>
         ${proofParts.legend}
         ${proofParts.skip}
         ${proofParts.grid}
+        <div class="lens-line" aria-live="polite"><p><span class="bc-label">${f(p.lensPub)}</span> <span id="lens-pub">${f(p.lensHint)}</span></p><p><span class="bc-label t-lake">${f(p.lensPriv)}</span> <span id="lens-priv">Bids, votes, and who each one-time address belongs to</span></p></div>
         ${proofParts.note}
       </article>
-      <div class="s2 lens" aria-live="polite">
-        <div class="bc bc-raised"><p class="bc-label">${f(p.lensPub)}</p><p id="lens-pub">${f(p.lensHint)}</p></div>
-        <div class="bc bc-lake"><p class="bc-label t-lake">${f(p.lensPriv)}</p><p id="lens-priv">Bids, votes, and who each one-time address belongs to</p></div>
-      </div>
-      <article class="bc s3 live-card" aria-labelledby="chain-title">
-        <div class="bc-row"><h3 id="chain-title" class="bc-title">Read the contract yourself</h3><span class="bc-label" id="chain-state">not read yet</span></div>
-        <p class="bc-text">Straight from NEAR, with no server of ours in between.</p>
-        <ul class="lp-list" id="chain-list"></ul>
-        <p class="panel-note" id="chain-note"></p>
+      <article class="bc s6 live-card check-card" aria-label="Check it yourself">
+        <div class="halves">
+          <div>
+            <div class="bc-row"><h3 id="chain-title" class="bc-title">Read the contract yourself</h3><span class="bc-label" id="chain-state">not read yet</span></div>
+            <p class="bc-text">Straight from NEAR, with no server of ours in between.</p>
+            <ul class="lp-list" id="chain-list"></ul>
+            <p class="panel-note" id="chain-note"></p>
+          </div>
+          <div>
+            <h3 id="lp-title" class="bc-title">Check the AI's secure hardware</h3>
+            <p class="bc-text">Your browser asks NEAR AI Cloud to prove what it is running, using a random number it picks, and checks the answer.</p>
+            <div class="panel-actions"><button class="btn btn-sm btn-light" id="lp-run" type="button">Run the check</button><button class="btn btn-sm btn-ghost-dark" id="lp-replay" type="button">Try a fake replay</button></div>
+            <ul class="lp-list" id="lp-list"></ul>
+            <p class="panel-note" id="lp-note"></p>
+          </div>
+        </div>
       </article>
-      <article class="bc s3 live-card" aria-labelledby="lp-title">
-        <h3 id="lp-title" class="bc-title">Check the AI's secure hardware</h3>
-        <p class="bc-text">Your browser asks NEAR AI Cloud to prove what it is running, using a random number it picks, and checks the answer.</p>
-        <div class="panel-actions"><button class="btn btn-sm btn-light" id="lp-run" type="button">Run the check</button><button class="btn btn-sm btn-ghost-dark" id="lp-replay" type="button">Try a fake replay</button></div>
-        <ul class="lp-list" id="lp-list"></ul>
-        <p class="panel-note" id="lp-note"></p>
-      </article>
-      <article class="bc s2">
-        <p class="bc-label">${f(r.label)}</p>
-        <h3 class="bc-title">${f(r.title)}</h3>
-        <p class="bc-text">${f(r.body)}</p>
-      </article>
-      <article class="bc bc-ink s4 flush">
+      <article class="bc bc-ink s6 flush refusal">
+        <div class="refusal-head"><p class="bc-label">${f(r.label)}</p><h3 class="bc-title">${f(r.title)}</h3><p class="bc-text">${f(r.body)}</p></div>
         <div class="panel-head"><span>${f(r.head)}</span><span>${f(r.run)}</span></div>
         <div class="tbl-wrap mo-rise"><div class="tbl tbl-3" role="table" aria-label="${f(r.title)}">
           <span class="th">Check</span><span class="th">The payout asked</span><span class="th">The rules allow</span>
@@ -285,9 +282,9 @@ function proofSection(F, f, proofParts) {
       </article>
       <div class="bc bc-ink bc-panel s6 runs" id="status">
         <div class="bc-row"><h3 class="bc-title bc-title-lg">${f(p.runsTitle)}</h3><p class="bc-label">${f(p.runsNote)}</p></div>
-        <div class="bento">
-          ${p.partners.map((x) => `<div class="bc ${x.wide ? 's6' : 's2'} partner"><div class="bc-row"><p class="partner-name">${f(x.name)}</p><span class="status t-${x.tone}"><i class="dot${x.status === 'Live' ? ' mo-breathe' : ''}"></i>${f(x.status)}</span></div><p class="mono dim">${f(x.role)}${x.fig === 'contractLive' ? ` · <b id="net-count">${esc(F.groups.value)}</b> groups <span id="net-count-note">(recorded)</span>` : ''}</p><p class="bc-text bc-end">${f(x.d)}</p></div>`).join('\n          ')}
-        </div>
+        <ul class="runs-list">
+          ${p.partners.map((x) => `<li><p class="partner-name">${f(x.name)}</p><span class="status t-${x.tone}"><i class="dot${x.status === 'Live' ? ' mo-breathe' : ''}"></i>${f(x.status)}</span><p class="runs-d">${x.fig === 'contractLive' ? `<span class="runs-role">${f(x.role)} · <b id="net-count">${esc(F.groups.value)}</b> groups <span id="net-count-note">(recorded)</span></span>` : ''}${f(x.d)}</p></li>`).join('\n          ')}
+        </ul>
       </div>
     </div>
     <p class="live" id="live" aria-live="polite"></p>
