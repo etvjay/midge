@@ -23,7 +23,7 @@ const near = (micro) => micro * 10n ** 18n; // micro-NEAR to yoctoNEAR
 const HEX64 = /^[0-9a-f]{64}$/;
 const sleepFor = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export function createRound({ chain, room, keyCheck, ledger, onState = () => {}, approvalTimeoutMs = 10 * 60 * 1000, accountPrefix = (t) => `p${t.slice(0, 8)}`, sleep = sleepFor, log = () => {} }) {
+export function createRound({ chain, room, keyCheck, ledger, prepare = null, onState = () => {}, approvalTimeoutMs = 10 * 60 * 1000, accountPrefix = (t) => `p${t.slice(0, 8)}`, sleep = sleepFor, log = () => {} }) {
   let ready = false;
   const live = new Map(); // ticket -> { state, detail, waiters, approval, abandoned }
   const cleanups = new Set();
@@ -104,6 +104,9 @@ export function createRound({ chain, room, keyCheck, ledger, onState = () => {},
     const service = []; let employer = null; let groupId2 = null;
     const alive = () => { if (rec.abandoned) throw new RoundError('The round was abandoned.'); };
     try {
+      // The room may be asleep: the page wakes it when it opens, which takes about 40 seconds, and a visitor can press Start sooner than that. Waiting here, before
+      // anything is created, means a visitor who is quick waits a moment instead of failing, and a room that cannot be started fails the round with nothing to clean up.
+      if (prepare) { setState(ticket, 'waking-room'); await prepare(); alive(); }
       setState(ticket, 'creating-accounts');
       const session = await room.getSession();
       const gross = grossTotalMicro(lines);

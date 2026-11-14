@@ -200,6 +200,7 @@ function drawReview() {
 
 // ---- step 4: the round and your approval ----
 const PROGRESS = [
+  ['waking-room', 'Starting the room, which takes up to 40 seconds if it was asleep'],
   ['creating-accounts', 'Creating your testnet account and the other accounts'],
   ['hatching', 'Creating the group on the NEAR contract'],
   ['depositing', 'The employer deposits the gross pay into the group'],
