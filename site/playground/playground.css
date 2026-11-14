@@ -267,5 +267,16 @@ details.secret summary {
 .intro::before {
   background:
     linear-gradient(180deg, var(--paper) 0%, rgba(15, 20, 22, 0) 30%, rgba(15, 20, 22, 0) 88%, var(--paper) 100%),
-    linear-gradient(180deg, transparent 66%, rgba(31, 95, 91, 0.6) 72%, rgba(12, 40, 38, 0.5) 76%, rgba(217, 130, 74, 0.42) 81%, rgba(160, 80, 44, 0.3) 84%, rgba(10, 28, 28, 0.65) 88%, rgba(124, 196, 184, 0.3) 92%, rgba(20, 72, 66, 0.6) 96%, transparent 100%);
+    linear-gradient(
+      180deg,
+      transparent 66%,
+      rgba(31, 95, 91, 0.6) 72%,
+      rgba(12, 40, 38, 0.5) 76%,
+      rgba(217, 130, 74, 0.42) 81%,
+      rgba(160, 80, 44, 0.3) 84%,
+      rgba(10, 28, 28, 0.65) 88%,
+      rgba(124, 196, 184, 0.3) 92%,
+      rgba(20, 72, 66, 0.6) 96%,
+      transparent 100%
+    );
 }
