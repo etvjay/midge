@@ -122,6 +122,19 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: 'npm'
+      # The suite includes a test that runs verify-all.js, which needs dcap-qvl (same cache key as the verify job, so it is installed once).
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache dcap-qvl binary
+        uses: actions/cache@v4
+        id: cache-dcap
+        with:
+          path: ~/.cargo/bin/dcap-qvl
+          key: ${{ runner.os }}-dcap-qvl-0.7.0
+      - name: Install dcap-qvl-cli
+        if: steps.cache-dcap.outputs.cache-hit != 'true'
+        run: cargo install dcap-qvl-cli --version 0.7.0
+      - name: Add Cargo bin to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - run: npm ci
       # Thresholds are the values measured on 2026-11-14 (81.80 lines, 78.72 branches, 78.67 functions) minus 2 points. Raise them as coverage grows.
       - name: Tests with coverage gates
