@@ -67,6 +67,7 @@ test('the footer has the FAQ, and every link points to a repository file that ex
   assert.ok(links.length >= 10, `${links.length} links`);
   for (const l of links) {
     if (l.startsWith('#')) { assert.match(html, new RegExp(`id="${l.slice(1)}"`), `${l} exists on the page`); continue; }
+    if (/^(playground|replay)\/$/.test(l)) { assert.ok(fs.existsSync(path.join(root, 'site', l, 'index.html')), `${l} is a page of this site`); continue; }
     const repo = l.match(/^https:\/\/github\.com\/etvjay\/midge\/blob\/master\/(.+)$/);
     if (repo) { assert.ok(fs.existsSync(path.join(root, repo[1])), `${repo[1]} exists`); continue; }
     assert.match(l, /^https:\/\/(github\.com\/etvjay\/midge|testnet\.nearblocks\.io\/address\/c\.fly-1793636729\.testnet)$/, `${l} is the repo or the explorer`);

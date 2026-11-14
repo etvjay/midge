@@ -9,7 +9,7 @@ A group decides in private and pays out under rules that everyone can read. Memb
 **Chain:** NEAR testnet
 **Site:** https://midge.vercel.app (not yet updated for the latest hardware runs)
 **Demo video:** link added at submission
-**Playground:** in progress. Until it exists, the commands below check everything.
+**Playground:** https://midge.vercel.app/playground/ runs a real testnet pay run: a model on NEAR AI Cloud reviews it, a room in a hardware enclave signs it, and you approve with your own key and check your own payslip in the browser. The room sleeps when idle, so the first run waits up to a minute. **Replay:** https://midge.vercel.app/replay/ re-checks six recorded runs in the browser.
 
 ### [Start here](docs/START_HERE.md)
 
