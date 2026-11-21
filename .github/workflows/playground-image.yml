@@ -71,7 +71,7 @@ jobs:
       # so it must not fail the build while the repository is private.
       - name: Attest build provenance
         continue-on-error: true
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ steps.name.outputs.image }}
           subject-digest: ${{ steps.push.outputs.digest }}
